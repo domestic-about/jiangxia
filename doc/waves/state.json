@@ -13,8 +13,15 @@
     {
       "id": "D2",
       "status": "qa_failed",
-      "qa_rounds": 2,
-      "qa_seq": 2
+      "qa_rounds": 0,
+      "qa_seq": 2,
+      "rearms": [
+        {
+          "reason": "Kevin 授权：D2 连红 2 轮的判断成立——两轮抓到的是不同的实现缺陷（r1 3×S0+2×S1 已修并经 r2 复验；r2 新发现 #96 工作台来源单位筛选筛不出内部录的样本，根因清楚、修法机械），不是蓝图/口径问题。授权一批返工修 #96 后重跑 r3。",
+          "from_rounds": 2,
+          "at_seq": 2
+        }
+      ]
     },
     {
       "id": "D3",
@@ -1165,8 +1172,8 @@
       "type": "harness",
       "title": "【高优】db.py --quiet 实测『不打印任何行』，10 张 ticket 的 OID=\"$(db.py --quiet …)\" 句式会拿到空值；AUTH-EXT-001 已因此假绿",
       "detail": "主会话复核：python3 doc/verify/db.py --sql 'SELECT 1' 输出 1；加 --quiet 输出空。doc/verify/db.py:95 是 if not a.quiet 才打印行。受影响 10 张：AUTH-EXT-001 / SAMPLE-EXPORT-001 / SYS-EXPORT-001 / CRYO-FLOW-001 / DOC-RENDER-001 / EMBED-WEB-001 / CRYO-WEB-001 / DOC-PUBLISH-001 / OCR-IMPL-001 / SAMPLE-MP-002。最严重的是 AUTH-EXT-001 accept 3：OID 为空 → PUT /mp/ext/organoid/ → 404，正好落进断言正则 ^(400|403|404) → 假绿（真实行为未被验证）。处置：不改只读区（db.py 与 ticket 都是需求层资产）；【D2 及以后每一轮 QA 必须把所有 $(db.py --quiet …) 插值的段落用『去掉 --quiet』的方式复跑一遍】，因为那些段落是空转的；all_done 时集中报 Kevin 修 db.py（改成只打印值）或改 ticket 生成器。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：Kevin 2026-09-22 拍板：--quiet 改成「只打印值」（每行第一列，无表头/无拼接/不截断）。已改 doc/verify/db.py 并在 doc/verify/README.md 的执行器表里补了一行说明。实测：SELECT 1 → 1；多行只打印首列；空结果打印空；--eq 等断言语义与退出码一字未变；插值 OID 已能拿到真实值。连带修好 5 张导出票的 xlsx_header --rows \"$(db.py --quiet …)\"（原先喂进去的是空串）。"
     },
     {
       "id": 78,
@@ -1375,6 +1382,16 @@
       "type": "harness",
       "title": "返工把两条旧回归断言改成不再约束页面的形态（本片已用正面断言补上）",
       "detail": "WEB-L2-06b 退化成测字典接口、G3-20 退化成测 console 无异常。方向与权威一致、不算迎合实现，但 r2 片已另写正面断言覆盖页面形态。纪律：改 QA 断言要留『原来断的是什么、现在断的是什么』的对照（本轮做到了）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 99,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "连带修好：5 张导出票的 xlsx_header --rows \"$(db.py --quiet …)\" 原先喂的是空串",
+      "detail": "SAMPLE-EXPORT-001 / SYS-EXPORT-001(×2) / EMBED-WEB-001 / CRYO-WEB-001 用 --rows \"$(db.py --quiet --sql 'SELECT count(*) …')\" 取行数；--quiet 原先什么都不打印 → --rows 收到空串。db.py 已按 Kevin 的裁定改成「只打印值」，这 5 处从 D3/D7 起会变成**真断言**（行数必须对得上），届时若红属正常收紧。",
       "status": "open",
       "decision": ""
     }

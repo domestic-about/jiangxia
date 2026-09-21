@@ -92,7 +92,16 @@ def main():
 
     rows = run_sql(a.sql)
     lines = ["|".join("" if c is None else str(c) for c in r) for r in rows]
-    if not a.quiet:
+    if a.quiet:
+        # --quiet 的语义是「只打印值」——给 `X="$(db.py --quiet --sql …)"` 插值用：
+        # 每行取**第一列**，不加表头、不做 | 拼接、不截断、不加「共 N 行」提示。
+        # 2026-09-22 修（Kevin 拍板）：原实现是「什么都不打印」，而 doc/tickets/ 里
+        # 10 张票都写成 OID="$(db.py --quiet --sql "SELECT id …")" → 插值恒为空，
+        # AUTH-EXT-001 的 accept 3 因此假绿过（空 id 让请求变成 `.../organoid/`，
+        # 404 正好落进断言正则 ^(400|403|404)）。断言类用途请用下面那组标志，别用 --quiet。
+        for r in rows:
+            print("" if r[0] is None else str(r[0]))
+    else:
         for ln in lines[:50]:
             print(ln)
         if len(lines) > 50:

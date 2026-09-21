@@ -6,6 +6,7 @@ accept 的 `run` 一律按 **bash** 语义写（别依赖变量的分词展开�
 | 执行器 | 干什么 | 退出码 |
 |---|---|---|
 | `db.py --sql "…" --eq / --rows / --empty / --nonempty / --col-set` | PostgreSQL **只读**断言 | 0 成立 · 1 **不成立** · 2 用法 / 连接 / SQL 错 |
+| `db.py --quiet --sql "…"` | **只取值**（给 `X="$(…)"` 插值用）：每行打印**第一列**，无表头、无 `\|` 拼接、不截断。**别拿它当断言** | 同 `--sql`（断言标志一个都不带时恒 0） |
 | `ddl_vs_ssot.py --table t… --require-public …` | 库里的真实表 vs `authority/field-ssot.yaml` 逐列对账（含部分唯一索引） | 同上 |
 | `api.sh [--as 身份] [--bizcode] [--out 文件] [--fresh-module ruoyi-lqg] METHOD PATH [JSON]` | 登录 + 调接口 + 吐响应体 | 0 拿到响应（**不代表业务成功**）· 2 用法 / 登录 / stale |
 | `xlsx_header.py --file … --template … [--extra …] [--rows N] [--find … --expect …]` | 导出的 Excel vs 甲方模板原件逐字对表头 | 0 / 1 / 2 |
