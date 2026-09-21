@@ -1,18 +1,21 @@
 package org.dromara.lqg.sample.domain.bo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.dromara.common.mybatis.core.page.PageQuery;
 
 import java.io.Serial;
+import java.time.LocalDate;
 
 /**
  * 样本列表筛选（doc/api-contract.md 的 {@code GET /lqg/sample/list}）。
  *
- * <p>★ 本票（SAMPLE-MODEL-001）只落五个条件：{@code sampleKind / verifyStatus / internalNo /
- * donorName（精确）/ hospitalNo（精确）}；其余筛选（来源单位 / 组别 / 收样日期区间 / 组织类型 /
- * 操作人）在 SAMPLE-WEB-001 补。此处**刻意不声明**那些字段，免得写出半截筛选让人以为已经支持。
+ * <p>★ SAMPLE-MODEL-001 落了五个条件：{@code sampleKind / verifyStatus / internalNo /
+ * donorName（精确）/ hospitalNo（精确）}；<b>SAMPLE-WEB-001 补齐工作台剩下的七个</b>：
+ * {@code sourceUnitId / groupId / submitSource / receiveDateBegin / receiveDateEnd /
+ * tissueType（模糊）/ operatorName（模糊）}（UI:admin.sample.list / FLOW:F-SAMPLE-02.step3）。
  *
  * <p>★ <b>SAMPLE-MP-001 加的两个只给小程序内部接口用的参数</b>：{@code sort=recent} 与
  * {@code mine=true}（CR-20260918-07）。它们与上面五个筛选挂在<b>同一个 BO</b> 上，因为
@@ -59,6 +62,65 @@ public class SampleQueryBo extends PageQuery {
 
     @Schema(description = "住院号（精确；加密列）")
     private String hospitalNo;
+
+    // ── SAMPLE-WEB-001 补齐的工作台筛选 ────────────────────────────────────────
+
+    /**
+     * 来源单位（工作台筛选）。
+     *
+     * <p>★ 口径按 {@code submitter_id} 的<b>外部档案</b>（{@code t_lqg_ext_profile.unit_id}），
+     * 与 {@link #groupId} 同一条路 —— 样本行上的 {@code source_unit_id} 是「自填单位名」场景为空、
+     * 内部录入也带值的快照列，工作台的「按来源单位看」问的是「哪个单位送来的」。
+     */
+    @Schema(description = "来源单位 id（按提交人的外部档案）")
+    private Long sourceUnitId;
+
+    /**
+     * 组别（工作台筛选）。
+     *
+     * <p>★ 样本表上<b>没有</b> group_id 这一列（ticket §0 口径复述 2）：组别住在提交人的外部档案
+     * {@code t_lqg_ext_profile.group_id} 上，筛选 = 先查档案、再按 {@code submitter_id} 收窄。
+     * <b>不看档案的核验状态</b>：内部人员筛组别是为了找样本，extE（档案待核验）送的 1007 也要出来。
+     */
+    @Schema(description = "组别 id（按提交人的外部档案；不看档案的核验状态）")
+    private Long groupId;
+
+    /**
+     * 提交来源（工作台筛选）：{@code internal / external}。
+     *
+     * <p>★★ <b>钉死在样本行已落库的 {@code submit_source} 列上做 eq</b>，<b>绝不按提交人当前角色现算</b>：
+     * 该列是「提交当时」的快照（{@code FIELD:t_lqg_sample.submit_source}），外部用户后来被授权成内部，
+     * 他早先送的样本仍然是 {@code external}。按角色现算是这条口径最自然也最错的实现
+     * （SAMPLE-VERIFY-001 的 accept 2 段 5/6 用两侧不同源的独立取证钉住了这一点）。
+     */
+    @Schema(description = "internal / external（样本行上的提交当时快照；不按当前角色现算）")
+    private String submitSource;
+
+    /**
+     * 收样日期区间的起点（含端点）。
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @Schema(description = "收样日期起（含）yyyy-MM-dd")
+    private LocalDate receiveDateBegin;
+
+    /**
+     * 收样日期区间的终点（含端点）。
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @Schema(description = "收样日期止（含）yyyy-MM-dd")
+    private LocalDate receiveDateEnd;
+
+    /**
+     * 组织类型（模糊）。
+     */
+    @Schema(description = "组织类型（模糊）")
+    private String tissueType;
+
+    /**
+     * 操作人（模糊）。
+     */
+    @Schema(description = "操作人（模糊）")
+    private String operatorName;
 
     /**
      * 排序模式（SAMPLE-MP-001 / CR-20260918-07）：只认一个字面量 {@code recent}。

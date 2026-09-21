@@ -13,6 +13,8 @@ import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleQueryBo;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
 import org.dromara.lqg.sample.mapper.SampleMapper;
+import org.dromara.lqg.sample.query.SampleSubmitterProfileQuery;
+import org.dromara.lqg.sample.query.SampleSubmitterProfileVo;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,7 +22,7 @@ import java.util.List;
 /**
  * 样本读侧（doc/api-contract.md 的 {@code GET /lqg/sample/list} / {@code GET /lqg/sample/{id}}）。
  *
- * <p>★ 三条口径都落在这一层：
+ * <p>★ 四条口径都落在这一层：
  * <ol>
  *   <li><b>加密列只支持精确查询</b>（ADR-0006）：{@code donorName} / {@code hospitalNo} 的查询值
  *       先经 {@link SampleFieldCipher#encrypt} 再 {@code eq}。**不做 LIKE** —— 加密列 LIKE 等于
@@ -28,10 +30,14 @@ import java.util.List;
  *   <li><b>软删行永不返回</b>：软删由实体上的 {@code @TableLogic} 兜住，本类不写任何原生 SQL、
  *       不绕过 MyBatis-Plus —— accept 第 2 条倒数第 2 段断的就是 seed 的 1010（{@code del_flag='1'}）；</li>
  *   <li><b>读出即解密</b>：内部人员要对着全名核样本，VO 里是明文（ADR-0006 的 rejected_value
- *       「内部列表也打码显示」不采纳）。</li>
+ *       「内部列表也打码显示」不采纳）；</li>
+ *   <li><b>组别 / 来源单位走提交人的外部档案</b>（SAMPLE-WEB-001）：样本行上没有 group_id，
+ *       两个筛选先由本包 {@link SampleSubmitterProfileQuery#submitterIds} 把档案查成 id 集合，
+ *       再 {@code in(submitter_id)} —— 这样<b>样本侧一条原生 SQL 都不用写</b>，{@code @TableLogic}
+ *       那条不变量继续由实体兜住。</li>
  * </ol>
  *
- * @author SAMPLE-MODEL-001
+ * @author SAMPLE-MODEL-001（SAMPLE-WEB-001 补五个工作台筛选与「待核验置顶」）
  */
 @Slf4j
 @Service
@@ -41,9 +47,14 @@ public class SampleQueryService {
     private final SampleMapper sampleMapper;
     private final SampleFieldCipher fieldCipher;
     private final SampleNameResolver nameResolver;
+    private final SampleSubmitterProfileQuery submitterProfileQuery;
 
     /**
-     * 样本列表（五个筛选条件：sampleKind / verifyStatus / internalNo / donorName / hospitalNo）。
+     * 样本列表。
+     *
+     * <p>筛选：{@code sampleKind / verifyStatus / internalNo / donorName（精确）/ hospitalNo（精确）
+     * / sourceUnitId / groupId / submitSource / receiveDateBegin / receiveDateEnd / tissueType（模糊）
+     * / operatorName（模糊）}，多条件一律 <b>AND</b>（不是 OR）。
      *
      * <p>★ 两个小程序专属参数（SAMPLE-MP-001 / CR-20260918-07，见 {@link SampleQueryBo}）：
      * <ul>
@@ -53,19 +64,40 @@ public class SampleQueryService {
      *   <li>{@code mine=true} —— 默认 <b>不是</b>本人，是<b>中心全部内部人员</b>；
      *       带了这个参数才在上面那个范围里再收窄到 {@code create_by = 我 OR update_by = 我}。</li>
      * </ul>
-     * 两个参数都不带 = 「内部管理」表格页的全表（口径不变）。
+     * 两个参数都不带 = 「内部管理」表格页的全表。
+     *
+     * <p>★ <b>不带 {@code sort=recent} 时「待核验置顶」</b>（UI:admin.sample.list / accept 1 末段）：
+     * {@code ORDER BY (verify_status = 'pending') DESC, create_time DESC, id DESC}
+     * —— 布尔表达式在 PostgreSQL 里 {@code true} 排在 {@code false} 前，所以待核验在最上；
+     * 其余仍按创建时间倒序。带 {@code sort=recent} 时按最后修改时间倒序（小程序那一档的口径不变）。
      */
     public TableDataInfo<SampleVo> list(SampleQueryBo query) {
         SampleQueryBo q = query == null ? new SampleQueryBo() : query;
         return DataPermissionHelper.ignore(() -> {
             Page<Sample> page = q.build();
+            // 组别 / 来源单位：先查提交人的外部档案，拿到 id 集合再收窄（样本行上没有 group_id）
+            List<Long> submitterIds = submitterProfileQuery.submitterIds(q.getSourceUnitId(), q.getGroupId());
+            if (submitterIds != null && submitterIds.isEmpty()) {
+                // 该单位 / 组别下没有任何外部档案 → 空集，直接回空页（别退化成「不过滤 = 全表」）
+                return TableDataInfo.build(new Page<SampleVo>(page.getCurrent(), page.getSize(), 0L).setRecords(List.of()));
+            }
             LambdaQueryWrapper<Sample> wrapper = new LambdaQueryWrapper<Sample>()
                 .eq(StringUtils.isNotBlank(q.getSampleKind()), Sample::getSampleKind, trim(q.getSampleKind()))
                 .eq(StringUtils.isNotBlank(q.getVerifyStatus()), Sample::getVerifyStatus, trim(q.getVerifyStatus()))
                 .eq(StringUtils.isNotBlank(q.getInternalNo()), Sample::getInternalNo, trim(q.getInternalNo()))
+                // ★ 提交来源钉在样本行已落库的列上（提交当时的快照），不按提交人当前角色现算
+                .eq(StringUtils.isNotBlank(q.getSubmitSource()), Sample::getSubmitSource, trim(q.getSubmitSource()))
                 // 加密列：先把查询值加密再 eq（明文 eq 查不到任何东西）
                 .eq(StringUtils.isNotBlank(q.getDonorName()), Sample::getDonorName, fieldCipher.encrypt(q.getDonorName()))
-                .eq(StringUtils.isNotBlank(q.getHospitalNo()), Sample::getHospitalNo, fieldCipher.encrypt(q.getHospitalNo()));
+                .eq(StringUtils.isNotBlank(q.getHospitalNo()), Sample::getHospitalNo, fieldCipher.encrypt(q.getHospitalNo()))
+                // 来源单位 / 组别：外部档案的 id 集合（不看档案核验状态）
+                .in(submitterIds != null, Sample::getSubmitterId, submitterIds == null ? List.of() : submitterIds)
+                // 收样日期区间：两端都含（begin <= receive_date <= end）
+                .ge(q.getReceiveDateBegin() != null, Sample::getReceiveDate, q.getReceiveDateBegin())
+                .le(q.getReceiveDateEnd() != null, Sample::getReceiveDate, q.getReceiveDateEnd())
+                // 自由文本两项走模糊（不是加密列，没有精确匹配的约束）
+                .like(StringUtils.isNotBlank(q.getTissueType()), Sample::getTissueType, trim(q.getTissueType()))
+                .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()));
 
             if (SampleQueryBo.isRecentSort(q.getSort())) {
                 // 「经手过」= create_by 或 update_by 是内部账号（sys_user.user_type='sys_user'）。
@@ -85,11 +117,15 @@ public class SampleQueryService {
                 // 编译期就报 no suitable method found。分页插件的 LIMIT 接在这段 ORDER BY 之后。
                 wrapper.last("ORDER BY COALESCE(update_time, create_time) DESC, id DESC");
             } else {
-                wrapper.orderByDesc(Sample::getCreateTime).orderByDesc(Sample::getId);
+                // ★ 待核验置顶（工作台总表）：布尔表达式 true 在前；再按创建时间倒序。
+                // 与 accept 1 末段「pageSize=2 的前两行 verifyStatus 都是 pending」同源。
+                wrapper.last("ORDER BY (verify_status = 'pending') DESC, create_time DESC, id DESC");
             }
 
             Page<Sample> result = sampleMapper.selectPage(page, wrapper);
             List<SampleVo> rows = result.getRecords().stream().map(this::toVo).toList();
+            // 每行带出提交人姓名 / 组别名（读时 join 外部档案；内部人员与自填单位的行是 null）
+            submitterProfileQuery.fill(rows);
             return TableDataInfo.build(new Page<SampleVo>(result.getCurrent(), result.getSize(), result.getTotal())
                 .setRecords(rows));
         });
@@ -116,6 +152,9 @@ public class SampleQueryService {
 
     /**
      * 单条详情；不存在或已软删 → null（调用方回 404 语义，不泄露存在性）。
+     *
+     * <p>SAMPLE-WEB-001：与列表同形状，补 {@code submitterName / groupId / groupName}
+     * （提交人的外部档案；内部人员提交的行是 null）—— 抽屉的「最后修改」「提交人」都读它。
      */
     public SampleVo detail(Long id) {
         if (id == null) {
@@ -123,7 +162,17 @@ public class SampleQueryService {
         }
         return DataPermissionHelper.ignore(() -> {
             Sample sample = sampleMapper.selectById(id);
-            return sample == null ? null : toVo(sample);
+            if (sample == null) {
+                return null;
+            }
+            SampleVo vo = toVo(sample);
+            SampleSubmitterProfileVo profile = submitterProfileQuery.profileOf(sample.getSubmitterId());
+            if (profile != null) {
+                vo.setSubmitterName(profile.getSubmitterName());
+                vo.setGroupId(profile.getGroupId());
+                vo.setGroupName(profile.getGroupName());
+            }
+            return vo;
         });
     }
 

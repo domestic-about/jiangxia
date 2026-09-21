@@ -1,0 +1,69 @@
+{
+  "title": "核验样本",
+  "sections": [
+    "送检信息",
+    "收样信息"
+  ],
+  "hint": "外部送来的组织样本：收样日期与内部编号必填，内部编号全库唯一。",
+  "radioGroups": [
+    {
+      "buttons": [
+        "组织样本",
+        "类器官"
+      ],
+      "hasSwitch": false
+    },
+    {
+      "buttons": [
+        "男",
+        "女",
+        "未知"
+      ],
+      "hasSwitch": false
+    },
+    {
+      "buttons": [
+        "有",
+        "无"
+      ],
+      "hasSwitch": false
+    },
+    {
+      "buttons": [
+        "有",
+        "无"
+      ],
+      "hasSwitch": false
+    },
+    {
+      "buttons": [
+        "有",
+        "无"
+      ],
+      "hasSwitch": false
+    },
+    {
+      "buttons": [
+        "有",
+        "无"
+      ],
+      "hasSwitch": false
+    }
+  ],
+  "switchCount": 0,
+  "selectCount": 1,
+  "selects": [
+    "A 医院"
+  ],
+  "dateInputs": [
+    "date",
+    "date"
+  ],
+  "footerButtons": [
+    "判为有效并保存",
+    "判为无效",
+    "取 消"
+  ],
+  "moreButtons": [],
+  "hasDrawerText": "核验样本 送检信息 样本类别 组织样本 类器官 送检单号 SJ90000007 核验状态 待核验 提交人 周医生 来源单位 A 医院 操作人 组织类型 供体姓名 性别 男 女 未知 年龄 住院号 有无病理 有 无 备注 收样信息 外部送来的组织样本：收样日期与内部编号必填，内部编号全库唯一。 收样日期 内部编号 处理时间 有无固定 有 无 质控表 有 无 细胞活率报告 有 无 判为有效并保存 判为无效 取 消"
+}

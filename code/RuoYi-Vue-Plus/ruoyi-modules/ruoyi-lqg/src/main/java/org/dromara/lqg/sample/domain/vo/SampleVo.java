@@ -118,6 +118,28 @@ public class SampleVo implements Serializable {
     private Date updateTime;
 
     /**
+     * 提交人姓名（SAMPLE-WEB-001）。
+     *
+     * <p>读时取自提交人的外部档案 {@code t_lqg_ext_profile.real_name}；<b>内部人员提交的行是 null</b>
+     * （内部人员不是「外部用户」，档案表里没有他们的行）—— 前端照 null 渲染成空，不是错误。
+     */
+    @Schema(description = "提交人姓名（外部档案；内部录入的行是 null）")
+    private String submitterName;
+
+    /**
+     * 提交人的组别 id（SAMPLE-WEB-001）。
+     *
+     * <p>★ 组别<b>不在样本行上</b>：按组别筛选与显示都走提交人的外部档案
+     * （{@code t_lqg_ext_profile.group_id} → {@code t_lqg_unit_group.group_name}）。
+     * 内部人员录入、以及自填单位名的外部用户，这个字段是 null。
+     */
+    @Schema(description = "提交人的组别 id（外部档案；内部录入的行是 null）")
+    private Long groupId;
+
+    @Schema(description = "提交人的组别名（外部档案；内部录入的行是 null）")
+    private String groupName;
+
+    /**
      * 最后修改人姓名（REQ-SAMPLE-016 / CR-20260917-04：修改页显示「最后修改：某某 · 时间」）。
      * 读时按 {@code update_by} 回 sys_user 取昵称；没有 update_by 的行取 {@code create_by} 的姓名。
      *

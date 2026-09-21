@@ -1,0 +1,90 @@
+############ SAMPLE-WEB-001 accept 全链 transcript（2026-09-21 23:56:53）############
+
+########## 0) 反 stale 等价证据（--fresh-module 替代：本沙箱 ps 被禁，api.sh 恒 exit 2） ##########
+jar mtime                  : 2026-09-21 23:50:17
+jar epoch                  : 1790005817
+lqg src newer than jar     : []
+admin src newer than jar   : []
+8081 PID                   : 28734
+该 PID 打开 jar 的次数      : 2
+进程启动（日志行）          :  - Started DromaraApplication in 5.367 seconds (process running for 5.634)
+日志 mtime                 : 2026-09-21 23:56:47
+嵌套 jar 内的新类           :
+            0  09-21-2026 23:50   org/dromara/lqg/sample/query/
+            0  09-21-2026 23:50   org/dromara/lqg/sample/query/mapper/
+         5274  09-21-2026 23:50   org/dromara/lqg/sample/query/SampleSubmitterProfileQuery.class
+         1479  09-21-2026 23:50   org/dromara/lqg/sample/query/mapper/SampleSubmitterProfileMapper.class
+         2755  09-21-2026 23:50   org/dromara/lqg/sample/query/mapper/SampleSubmitterProfileMapper__Javadoc.json
+         2256  09-21-2026 23:50   org/dromara/lqg/sample/query/SampleSubmitterProfileQuery__Javadoc.json
+         3974  09-21-2026 23:50   org/dromara/lqg/sample/query/SampleSubmitterProfileVo.class
+          671  09-21-2026 23:50   org/dromara/lqg/sample/query/SampleSubmitterProfileVo__Javadoc.json
+
+########## 0b) 空库端到端迁移（DROP DATABASE → 10 支迁移按序跑，本票 1010 是最后一支） ##########
+202609210800|V202609210800__SYS-BASE-001-ruoyi-postgres-baseline.sql|true
+202609210810|V202609210810__SYS-BASE-001-lqg-dicts.sql|true
+202609210820|V202609210820__SYS-BASE-001-lqg-roles.sql|true
+202609210830|V202609210830__SYS-WEB-001-admin-dict-menu.sql|true
+202609210910|V202609210910__AUTH-LOGIN-001-wx-bind-ext-profile.sql|true
+202609210920|V202609210920__AUTH-STAFF-001-menu.sql|true
+202609210930|V202609210930__AUTH-GROUP-001-unit-group.sql|true
+202609221000|V202609221000__SAMPLE-MODEL-001-sample.sql|true
+202609221001|V202609221001__SAMPLE-VERIFY-001-verify-menu.sql|true
+202609221010|V202609221010__SAMPLE-WEB-001-sample-menu.sql|true
+
+########## 1) accept 1 · API（ticket run 逐字，去掉本沙箱恒 exit 2 的 --fresh-module） ##########
+ROOT=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid
+---- 1) sourceUnitId=9000009001
+["9000001001","9000001002","9000001003","9000001004","9000001005","9000001007"]
+---- 2) groupId=9000009101
+["9000001001","9000001002","9000001003","9000001004","9000001007"]
+---- 3) sampleKind=organoid
+["9000001009"]
+---- 4) submitSource=internal
+["9000001008","9000001009"]
+---- 5) verifyStatus=pending
+["9000001002","9000001007"]
+---- 6) receiveDate 区间
+B=2026-08-26 E=2026-09-02
+["9000001004","9000001005"]
+---- 7) 三条件 AND
+["9000001001","9000001004","9000001005"]
+---- 8) 全量（软删 1010 不出现）
+["9000001001","9000001002","9000001003","9000001004","9000001005","9000001006","9000001007","9000001008","9000001009"]
+---- 9) 待核验置顶（pageSize=2）
+true
+---- 10) 待核验行浅黄底之外的表形状抽样（submitterName / groupName 读时带出）
+true
+ACCEPT-1 GREEN (exit 0)
+
+########## 2) accept 2 · MENU ##########
+ROOT=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid
+---- 1) 菜单 5210 落在 5200 段（C，path/component 逐字）
+5210:sample:lqg/sample/index
+---- 2) 授给 101 与 102
+101
+102
+---- 3) getRouters（--as staff）里 lqg/sample/index 恰好 1 条
+true
+---- 4) 5210 下的按钮权限串集合
+lqg:sample:list
+lqg:sample:query
+lqg:sample:add
+lqg:sample:edit
+lqg:sample:remove
+lqg:sample:verify
+---- 5) 公共按钮组组件在盘上
+---- 6) SampleDrawer.vue 里 SegButtons 出现 ≥4 次
+---- 7) 四个「有无」按钮字段不许用 el-switch / el-select
+ACCEPT-2 GREEN (exit 0)
+
+########## 3) SAMPLE-VERIFY-001 WARN-2 的空转断言现在有意义 ##########
+{"n":7,"ids":["9000001007","9000001002","9000001003","9000001006","9000001005","9000001004","9000001001"],"sources":["external","external","external","external","external","external","external"]}
+external 集合精确匹配: true
+internal 集合精确匹配: true
+
+########## 4) 追加：模糊筛选（tissueType / operatorName）与 updateTime=null 语义 ##########
+tissueType=肝 (模糊，期望 1001/1002/1003/1005) : ["9000001001","9000001003","9000001004","9000001007","9000001008"]
+operatorName=李 (模糊，期望 1001/1004/1005/1006/1008/1009) : ["9000001001","9000001004","9000001005","9000001006","9000001008","9000001009"]
+全表 updateTime 全为 null（SAMPLE-MP-001 的跨票行为）: true
+############ END ############
+      89 /tmp/web001-transcript.txt
