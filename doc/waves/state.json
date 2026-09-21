@@ -12,7 +12,7 @@
     },
     {
       "id": "D2",
-      "status": "qa_failed",
+      "status": "qa_running",
       "qa_rounds": 1,
       "qa_seq": 1
     },
@@ -1285,6 +1285,56 @@
       "type": "debt",
       "title": "客户端拒绝的业务码不统一：外部 PUT 回 400，内部 PUT 与核验四条回 500",
       "detail": "msg 分支都对，但业务码不一致会让客户端分支写法漂移。方案：定一份『参数/状态类拒绝 = 400』的约定并统一。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 90,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "ux",
+      "title": "内部新增类器官收样的『来源单位』无默认值（裁定：保持必填，不加默认）",
+      "detail": "D2-rework-r1 的新发现。页面上有完整选择路径（底部弹层列 /mp/ext/units 候选 + 手填开关 + 必填校验），所以**不是产品缺陷**——真人在页面上选一个即可提交；r1 的 L2 脚本提交前没驱动那个选择器，属 harness 漏操作。裁定：保持必填、不加默认值（默认选 units[0] 会替用户猜掉单位快照，是数据质量问题）。可选 UX 优化（非必须）：记住上次选过的单位。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 91,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 的 L2 脚本提交类器官收样前没驱动『来源单位』选择器（W-4 的真身）",
+      "detail": "该字段是必填项（UI:mp.organoid.form 的内部七项之一），页面上有弹层选择器与手填两条路径。脚本没操作就提交 → 被必填拦 → 误报成产品缺口。方案：凡走填写页的脚本，提交前必须先满足所有必填项（或先断言必填提示存在）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 92,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "实现方在返工时改了 QA 资产（已逐条核过，可接受）：G3-20 根因探针翻正负号、WEB-L2-06b 补鉴权头",
+      "detail": "D2-rework-r1 改了 doc/waves/regression/D2/ 两份脚本：① G3-20 原断言『StatusChip 抛 ReferenceError 的条数 > 0』（证明病灶存在）→ 改成 === 0（证明病灶消失），属根因探针随修复翻转，产品期望值没动；② WEB-L2-06b 原来裸 fetch 没带 Authorization+clientid → 后端起手回 401、data=null，断言『假名为空』恒真；现在补头并改成断真名有 2 条。主会话已逐行核过 diff。★纪律：QA 资产原则上不许实现方动；本轮因探针自身有 bug 且改动已在 commit message 里显式声明，予以接受。D2 r2 的 QA 片不得把 r1 资产当独立证据。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 93,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "vue-tsc 类型债：UnitGroupPicker.vue:174,178 与 me/unit-group.vue:156 的 string→number",
+      "detail": "SAMPLE-MP-002 返工时发现，改动前后都有，本轮零新增。真门是 build 不是类型检查，故不拦门。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 94,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "G3-19『历史每行都有核验状态徽标』只在 1 行样本上验到，覆盖不足",
+      "detail": "D2-rework-r1 的 W-6。方案：断言改成『<= 列表行数』之外，还要在 >=3 行样本（含不同 verifyStatus）上各验一次。",
       "status": "open",
       "decision": ""
     }
