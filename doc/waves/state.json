@@ -12,7 +12,7 @@
     },
     {
       "id": "D2",
-      "status": "qa_failed",
+      "status": "qa_running",
       "qa_rounds": 0,
       "qa_seq": 2,
       "rearms": [
@@ -1392,6 +1392,56 @@
       "type": "harness",
       "title": "连带修好：5 张导出票的 xlsx_header --rows \"$(db.py --quiet …)\" 原先喂的是空串",
       "detail": "SAMPLE-EXPORT-001 / SYS-EXPORT-001(×2) / EMBED-WEB-001 / CRYO-WEB-001 用 --rows \"$(db.py --quiet --sql 'SELECT count(*) …')\" 取行数；--quiet 原先什么都不打印 → --rows 收到空串。db.py 已按 Kevin 的裁定改成「只打印值」，这 5 处从 D3/D7 起会变成**真断言**（行数必须对得上），届时若红属正常收紧。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 100,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "ticket 正文把 sourceUnitId 与 groupId 并列写「join t_lqg_ext_profile」——正是 #96 的实现依据，下个 agent 照抄会带回来",
+      "detail": "doc/tickets/SAMPLE-WEB-001/prompt.md:102。正确口径：来源单位按样本行自己的 source_unit_id 快照筛（内外部一视同仁）；组别才走提交人的外部档案。建议 ① 改 ticket 正文这一句（实现方已把分界写进代码注释 + 加硬断言防回头路）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 101,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 1 的九条筛选没有一条覆盖「来源单位下有内部样本」→ 漏到 r2 才发现 #96",
+      "detail": "建议增一条 sourceUnitId=9000009002 → {1006,1009}（B 大学下既有外部 extD 的 1006、也有内部 staff 的 1009）。这条一旦加上，同类错误在 ticket 自己的 accept 就会红，不用等端到端 QA。属①的断言强度前移。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 102,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "authority 未写「自填单位名 / 同名不同 id」的筛选裁定（现只在代码注释里）",
+      "detail": "现裁定：按名字只走 keyword 的 source_unit_name LIKE；自填单位名（id 空）不落 id 筛选；同名不同 id 以 id 为准。建议写进 authority 或契约。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 103,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "工作台「组别」下拉未选来源单位时 disabled → 无法只按组别筛",
+      "detail": "plus-ui 端的可用性问题；后端 groupId 单独筛是支持的。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 104,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "L2r2-web.mjs 的 R2W-04.1/04.2 期望按 name 现算、产品按 id，seed 恰好等价 → 将来会假红",
+      "detail": "seed 里 B 大学=9000009002 且同名唯一，所以两种口径结果相同；一旦出现同名不同 id 的单位，该断言会假红。方案：断言改成按 id 现算，或在 fixture 里加同名单位作为病灶。",
       "status": "open",
       "decision": ""
     }
