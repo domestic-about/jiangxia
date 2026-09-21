@@ -31,10 +31,13 @@ import java.util.List;
  *       不绕过 MyBatis-Plus —— accept 第 2 条倒数第 2 段断的就是 seed 的 1010（{@code del_flag='1'}）；</li>
  *   <li><b>读出即解密</b>：内部人员要对着全名核样本，VO 里是明文（ADR-0006 的 rejected_value
  *       「内部列表也打码显示」不采纳）；</li>
- *   <li><b>组别 / 来源单位走提交人的外部档案</b>（SAMPLE-WEB-001）：样本行上没有 group_id，
- *       两个筛选先由本包 {@link SampleSubmitterProfileQuery#submitterIds} 把档案查成 id 集合，
- *       再 {@code in(submitter_id)} —— 这样<b>样本侧一条原生 SQL 都不用写</b>，{@code @TableLogic}
- *       那条不变量继续由实体兜住。</li>
+ *   <li><b>组别走提交人的外部档案，来源单位走样本行自己的列</b>（SAMPLE-WEB-001；issue #96 修）：
+ *       样本行上<b>没有</b> {@code group_id}，所以组别只能先由本包
+ *       {@link SampleSubmitterProfileQuery#submitterIds} 把档案查成 id 集合、再 {@code in(submitter_id)}；
+ *       而<b>来源单位在样本行上本来就有</b> {@code source_unit_id} 快照，直接 {@code eq} 样本行
+ *       —— 两条口径<b>各管各的</b>，混在一起会让 <b>内部人员录的行</b>（没有外部档案）永远筛不出来
+ *       （这正是 issue #96 的病灶）。这样<b>样本侧一条原生 SQL 都不用写</b>，
+ *       {@code @TableLogic} 那条不变量继续由实体兜住。</li>
  * </ol>
  *
  * @author SAMPLE-MODEL-001（SAMPLE-WEB-001 补五个工作台筛选与「待核验置顶」）
@@ -56,6 +59,19 @@ public class SampleQueryService {
      * / sourceUnitId / groupId / submitSource / receiveDateBegin / receiveDateEnd / tissueType（模糊）
      * / operatorName（模糊）}，多条件一律 <b>AND</b>（不是 OR）。
      *
+     * <p>★ <b>两个「看起来像同一类」的筛选，口径是分开的</b>（issue #96）：
+     * <ul>
+     *   <li>{@code sourceUnitId} —— 按<b>样本行自己的 {@code source_unit_id} 快照</b>筛。
+     *       内部人员录的行（{@code submit_source='internal'}、提交人没有外部档案）与外部送的行
+     *       <b>一视同仁</b>：界面「来源单位」列显示的就是这一列，筛它必须能筛出来。
+     *       自填单位名（{@code source_unit_id} 为空、只有 {@code source_unit_name}）的行
+     *       <b>不落进按 id 的筛选</b>；同名不同 id 时<b>以 id 为准</b>，按名字找走
+     *       {@code keyword} 的 LIKE 那一支。</li>
+     *   <li>{@code groupId} —— 样本行上<b>没有</b> {@code group_id} 列，只能走提交人的外部档案
+     *       （{@code t_lqg_ext_profile.group_id}）取 id 集合、再 {@code in(submitter_id)}。
+     *       内部人员没有外部档案 → 带组别筛时他们录的行不在结果里（他们没有组别，这是对的）。</li>
+     * </ul>
+     *
      * <p>★ 两个小程序专属参数（SAMPLE-MP-001 / CR-20260918-07，见 {@link SampleQueryBo}）：
      * <ul>
      *   <li>{@code sort=recent} ——「历史编辑记录」的取数口：先把「没人经手过的」挡在外面
@@ -75,10 +91,10 @@ public class SampleQueryService {
         SampleQueryBo q = query == null ? new SampleQueryBo() : query;
         return DataPermissionHelper.ignore(() -> {
             Page<Sample> page = q.build();
-            // 组别 / 来源单位：先查提交人的外部档案，拿到 id 集合再收窄（样本行上没有 group_id）
-            List<Long> submitterIds = submitterProfileQuery.submitterIds(q.getSourceUnitId(), q.getGroupId());
+            // 组别：样本行上没有 group_id → 先查提交人的外部档案拿 id 集合（来源单位不走这条路，见下）
+            List<Long> submitterIds = submitterProfileQuery.submitterIds(q.getGroupId());
             if (submitterIds != null && submitterIds.isEmpty()) {
-                // 该单位 / 组别下没有任何外部档案 → 空集，直接回空页（别退化成「不过滤 = 全表」）
+                // 该组别下没有任何外部档案 → 空集，直接回空页（别退化成「不过滤 = 全表」）
                 return TableDataInfo.build(new Page<SampleVo>(page.getCurrent(), page.getSize(), 0L).setRecords(List.of()));
             }
             LambdaQueryWrapper<Sample> wrapper = new LambdaQueryWrapper<Sample>()
@@ -90,7 +106,13 @@ public class SampleQueryService {
                 // 加密列：先把查询值加密再 eq（明文 eq 查不到任何东西）
                 .eq(StringUtils.isNotBlank(q.getDonorName()), Sample::getDonorName, fieldCipher.encrypt(q.getDonorName()))
                 .eq(StringUtils.isNotBlank(q.getHospitalNo()), Sample::getHospitalNo, fieldCipher.encrypt(q.getHospitalNo()))
-                // 来源单位 / 组别：外部档案的 id 集合（不看档案核验状态）
+                // ★ 来源单位钉在**样本行自己的** source_unit_id 快照上（issue #96）：
+                //   内部人员录的行（submit_source='internal'、提交人没有外部档案）也要能被这个筛选筛出来
+                //   —— 工作台「来源单位」列显示的就是这一列（UI:admin.sample.list / REQ-SAMPLE-011）。
+                //   自填单位名（source_unit_id 为空、只有 source_unit_name）的行不落进按 id 的筛选；
+                //   同名不同 id 时以 id 为准，按名字找走 keyword 的 LIKE 那一支（见 SampleQueryBo）。
+                .eq(q.getSourceUnitId() != null, Sample::getSourceUnitId, q.getSourceUnitId())
+                // 组别：样本行上没有这一列 → 外部档案的 id 集合（不看档案核验状态）
                 .in(submitterIds != null, Sample::getSubmitterId, submitterIds == null ? List.of() : submitterIds)
                 // 收样日期区间：两端都含（begin <= receive_date <= end）
                 .ge(q.getReceiveDateBegin() != null, Sample::getReceiveDate, q.getReceiveDateBegin())

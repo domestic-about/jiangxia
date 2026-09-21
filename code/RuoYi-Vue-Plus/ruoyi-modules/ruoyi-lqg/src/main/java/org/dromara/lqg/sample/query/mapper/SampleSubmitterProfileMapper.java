@@ -10,6 +10,10 @@ import java.util.List;
 /**
  * 样本提交人的外部档案（{@code t_lqg_ext_profile} 及组别名）读侧 —— SAMPLE-WEB-001。
  *
+ * <p>★ <b>只服务「组别」筛选</b>（issue #96 修）：来源单位在样本行上就有 {@code source_unit_id} 快照，
+ * 直接按样本行筛；把它也塞进这条档案查询会让<b>内部人员录的行</b>（提交人没有外部档案）
+ * 永远筛不出来（工作台「来源单位」列明明标着该单位）。
+ *
  * <p>★ 为什么不复用 AUTH 域的 {@code ExtProfileMapper}：那个 mapper 的实体是 {@code ExtProfile}
  * （AUTH-LOGIN-001 的写侧实体），本票只要两列读视图；而组别名在 {@code t_lqg_unit_group}
  * （AUTH-GROUP-001 的表）上，需要一条 join。两个 mapper 各管各的写 / 读形状，互不牵动。
@@ -34,12 +38,11 @@ import java.util.List;
 public interface SampleSubmitterProfileMapper {
 
     /**
-     * 按<b>外部档案</b>里的单位 / 组别筛出提交人 user_id。
+     * 按<b>外部档案</b>里的组别筛出提交人 user_id（★ 只服务组别，不服务来源单位 —— issue #96）。
      *
-     * <p>两个条件都可为 null：都为 null 时返回全部有档案的外部用户
-     * （调用方只有在 {@code sourceUnitId} / {@code groupId} 至少给了一个时才调本方法）。
+     * <p>参数为 null 时返回全部有档案的外部用户
+     * （调用方只有在 {@code groupId} 给了值时才调本方法）。
      *
-     * @param unitId  来源单位 id（对应 {@code t_lqg_ext_profile.unit_id}）
      * @param groupId 组别 id（对应 {@code t_lqg_ext_profile.group_id}）
      * @return 提交人 user_id 列表（可能为空集 → 调用方回空页）
      */
@@ -48,12 +51,11 @@ public interface SampleSubmitterProfileMapper {
         SELECT p.user_id
         FROM t_lqg_ext_profile p
         WHERE p.del_flag = '0'
-        <if test="unitId != null"> AND p.unit_id = #{unitId} </if>
         <if test="groupId != null"> AND p.group_id = #{groupId} </if>
         ORDER BY p.user_id
         </script>
         """)
-    List<Long> selectSubmitterIds(@Param("unitId") Long unitId, @Param("groupId") Long groupId);
+    List<Long> selectSubmitterIds(@Param("groupId") Long groupId);
 
     /**
      * 按 user_id 批量取「提交人姓名 + 组别名」。

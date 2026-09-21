@@ -30,9 +30,13 @@ import org.junit.jupiter.api.Test;
  *   <li><b>日期区间两端都含</b>（{@code >= begin} 且 {@code <= end}）：accept 1 的两个端点取在
  *       两条样本的外侧各一天，开区间 / 漏一端都会让 1004 或 1005 掉出去。</li>
  *   <li><b>组别筛选先查外部档案、再按 {@code submitter_id} 收窄</b>：样本表上<b>没有</b> group_id 列
- *       （ticket §0 口径复述 2），所以必须有一条「按 {@code t_lqg_ext_profile} 的 unit/group 取
+ *       （ticket §0 口径复述 2），所以必须有一条「按 {@code t_lqg_ext_profile} 的 group 取
  *       user_id」的语句，而且它<b>不能</b>去过滤档案的核验状态
  *       （accept 1 的 {@code groupId=9000009101} 期望里含 extE 送来的待核验样本）。</li>
+ *   <li><b>★ 来源单位不走那条档案查询，走样本行自己的 {@code source_unit_id}</b>（issue #96）：
+ *       两条口径曾经被合在一起，导致内部人员录的行（没有外部档案）永远筛不出来 ——
+ *       而工作台「来源单位」列显示的正是样本行那一列。本类用「档案 SQL 里不许出现 unit_id」
+ *       ＋「service 必须 {@code eq(Sample::getSourceUnitId)} 且只把 groupId 传给档案查询」两条钉死。</li>
  *   <li><b>「待核验置顶」是排序</b>，并且与 {@code sort=recent} 那一档互斥（后者仍按最后修改倒序）。</li>
  * </ol>
  *
@@ -76,19 +80,44 @@ class SampleTableQueryContractTest {
 
     @Test
     void groupFilterReadsTheSubmittersProfileAndDoesNotLookAtBindStatus() throws Exception {
-        Method select = SampleSubmitterProfileMapper.class.getMethod("selectSubmitterIds", Long.class, Long.class);
+        Method select = SampleSubmitterProfileMapper.class.getMethod("selectSubmitterIds", Long.class);
         Select select_ = select.getAnnotation(Select.class);
-        assertNotNull(select_, "按单位 / 组别取提交人必须有一条显式 SQL");
+        assertNotNull(select_, "按组别取提交人必须有一条显式 SQL");
         String sql = String.join(" ", select_.value()).toLowerCase();
         assertTrue(sql.contains("t_lqg_ext_profile"), "组别住在提交人的外部档案上，SQL 必须查 t_lqg_ext_profile");
         assertTrue(sql.contains("user_id"), "取的是提交人 user_id（下一步 in(submitter_id) 收窄样本）");
-        assertTrue(sql.contains("unit_id"), "单位筛选读档案的 unit_id");
         assertTrue(sql.contains("group_id"), "组别筛选读档案的 group_id");
         assertTrue(sql.contains("del_flag"), "软删的档案行要排除；不能靠参数拼 SQL");
+        assertTrue(!sql.contains("unit_id"),
+            "★ issue #96：来源单位不在这条档案查询里（它在样本行自己的 source_unit_id 上）。"
+                + "再往里加 unit_id 会让内部人员录的行永远筛不出来");
         assertTrue(!sql.contains("bind_status"),
             "★ 不许按档案的核验状态过滤：核验状态是「这个人的组别认不认」，不是「这条样本算不算这个组的」"
                 + "（accept 1 的 groupId 期望里含 extE 送来的待核验样本 1007）");
-        assertTrue(!sql.contains("${"), "★ 只许 #{} 占位符，不许字符串拼接（单位 / 组别是查询参数）");
+        assertTrue(!sql.contains("${"), "★ 只许 #{} 占位符，不许字符串拼接（组别是查询参数）");
+    }
+
+    /**
+     * ★ issue #96（S1）的静态机器取证：来源单位 = <b>样本行自己的 source_unit_id</b>；
+     * 传给档案查询的<b>只有 groupId</b>。
+     *
+     * <p>端到端的真值由 accept 1（{@code sourceUnitId=9000009001} 仍 6 条、{@code groupId=9000009101}
+     * 仍 5 条）＋ impl 探针（{@code sourceUnitId=9000009002} 必须含内部录的 SJ90000009）钉；
+     * 这里钉的是「实现不许再走回头路」的结构形态。
+     */
+    @Test
+    void sourceUnitFilterReadsTheSampleRowNotTheSubmitterProfile() throws Exception {
+        String source = readSource("SampleQueryService.java");
+        assertTrue(source.contains(".eq(q.getSourceUnitId() != null, Sample::getSourceUnitId, q.getSourceUnitId())"),
+            "★ 来源单位必须 eq 样本行自己的 source_unit_id（内部录的行也要筛得出来）");
+        assertTrue(source.contains("Sample::getSourceUnitId"),
+            "★ 来源单位筛选要打在样本行的列上");
+        assertTrue(source.contains("submitterProfileQuery.submitterIds(q.getGroupId())"),
+            "★ 档案查询只接 groupId（组别）—— 来源单位不许再塞进去");
+        assertTrue(!source.contains("submitterIds(q.getSourceUnitId()"),
+            "★ issue #96 的病灶写法：把 sourceUnitId 传给档案查询取 submitter_id 集合");
+        assertTrue(!source.contains("submitterIds(q.getSourceUnitId(), q.getGroupId())"),
+            "★ issue #96 的病灶写法（两个参数一起传）");
     }
 
     @Test

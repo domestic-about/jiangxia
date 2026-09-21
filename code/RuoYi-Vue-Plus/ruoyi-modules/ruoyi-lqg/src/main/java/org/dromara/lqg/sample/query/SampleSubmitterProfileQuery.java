@@ -14,15 +14,18 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 「提交人的外部档案」读侧（SAMPLE-WEB-001）—— 工作台总表的两个筛选与两个显示列。
+ * 「提交人的外部档案」读侧（SAMPLE-WEB-001）—— 工作台总表的<b>组别筛选</b>与两个显示列。
  *
  * <p>★ 为什么单独一个类、而不是往 {@code SampleQueryService} 里再塞：
  * <ul>
  *   <li><b>组别不住在样本行上</b>（ticket §0 口径复述 2）：筛选只能「先查档案拿 id 集合，
- *       再 {@code in(submitter_id)}」。把这一段独立出来，样本侧那条读路径（五个老筛选 + 排序）
+ *       再 {@code in(submitter_id)}」。把这一段独立出来，样本侧那条读路径（老筛选 + 排序）
  *       一行原生 SQL 都不用沾，{@code @TableLogic} 的不变量继续由实体兜住；</li>
  *   <li>它是**读侧**：只 select，不写库，也不做任何状态判断（核验状态不影响筛选口径）。</li>
  * </ul>
+ *
+ * <p>★ <b>来源单位不在这里</b>（issue #96 修）：来源单位在样本行上就有 {@code source_unit_id} 快照，
+ * 直接按样本行筛；绕外部档案会让内部人员录的行永远筛不出来。所以本类<b>只</b>服务组别与两个显示列。
  *
  * <p>★ <b>档案的核验状态不参与筛选</b>：内部人员按组别找样本，未核验的组也要出
  * （accept 1 的 {@code groupId=9000009101} 期望里含 extE 送来的 1007）。
@@ -40,18 +43,21 @@ public class SampleSubmitterProfileQuery {
     private final SampleSubmitterProfileMapper profileMapper;
 
     /**
-     * 单位 / 组别筛选 → 提交人 id 集合。
+     * 组别筛选 → 提交人 id 集合。
      *
-     * @param unitId  来源单位 id；null = 不按单位筛
+     * <p>★ <b>只服务组别</b>（issue #96）：来源单位在样本行上就有 {@code source_unit_id} 快照，
+     * 工作台那个筛选直接打在样本行上，<b>不再</b>绕提交人的外部档案 —— 否则内部人员录的行
+     * （没有外部档案）永远筛不出来。本方法因此不再接 {@code unitId}。
+     *
      * @param groupId 组别 id；null = 不按组别筛
-     * @return 两个参数都为 null 时 <b>null</b>（= 不加这个条件）；否则是 id 集合（可能为空集，
+     * @return {@code groupId} 为 null 时 <b>null</b>（= 不加这个条件）；否则是 id 集合（可能为空集，
      *         调用方据此回空页而不是退化成全表）
      */
-    public List<Long> submitterIds(Long unitId, Long groupId) {
-        if (unitId == null && groupId == null) {
+    public List<Long> submitterIds(Long groupId) {
+        if (groupId == null) {
             return null;
         }
-        return DataPermissionHelper.ignore(() -> profileMapper.selectSubmitterIds(unitId, groupId));
+        return DataPermissionHelper.ignore(() -> profileMapper.selectSubmitterIds(groupId));
     }
 
     /**

@@ -82,11 +82,18 @@ public class SampleQueryBo extends PageQuery {
     /**
      * 来源单位（工作台筛选）。
      *
-     * <p>★ 口径按 {@code submitter_id} 的<b>外部档案</b>（{@code t_lqg_ext_profile.unit_id}），
-     * 与 {@link #groupId} 同一条路 —— 样本行上的 {@code source_unit_id} 是「自填单位名」场景为空、
-     * 内部录入也带值的快照列，工作台的「按来源单位看」问的是「哪个单位送来的」。
+     * <p>★★ <b>口径 = 样本行自己的 {@code source_unit_id} 快照</b>（issue #96 修；
+     * {@code FIELD:t_lqg_sample.source_unit_id}）—— <b>不走</b>提交人的外部档案：
+     * <ul>
+     *   <li>内部人员录的行（{@code submit_source='internal'}、提交人没有 {@code t_lqg_ext_profile}）
+     *       与外部送的行<b>一视同仁</b>：工作台「来源单位」列显示的就是这一列，筛它必须能筛出来；</li>
+     *   <li>自填单位名（{@code source_unit_id} 为空、只有 {@code source_unit_name} 快照，如 seed 1008「本中心」）
+     *       的行<b>不落进按 id 的筛选</b>——<b>同名不同 id 时以 id 为准</b>，
+     *       按名字找走 {@link #keyword} 的 {@code source_unit_name LIKE} 那一支；</li>
+     *   <li>与 {@link #groupId} <b>不是同一条路</b>：组别在样本行上没有列，只能走提交人的外部档案。</li>
+     * </ul>
      */
-    @Schema(description = "来源单位 id（按提交人的外部档案）")
+    @Schema(description = "来源单位 id（按样本行自己的 source_unit_id 快照；含内部录的行）")
     private Long sourceUnitId;
 
     /**
