@@ -1206,6 +1206,16 @@
       "detail": "内部管理四格现在指向 pages/ledger；admin/*.vue 是 SYS-MP-001 建的占位页，已无引用。方案：后续 MP 票或收尾时删掉。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 82,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "D1 回归包把 flyway 迁移总数写死成 7，D2 起每加一支迁移就假红一条",
+      "detail": "D2 r1 L0+L1 片重放 doc/waves/regression/D1/verify.sh：41 绿 / 1 红，唯一红是 SELECT count(*) FROM flyway_schema_history --eq 7（D1 时代硬编码总数；D2 又加 3 支 → 实际 10）。D1 的 7 支逐个点名、无失败行、迁移文件在源码树全绿 → 是 harness 缺陷，不是『以前好的坏了』。方案：回归包改成断『D1 那 7 支版本号逐个存在且无 success=false』，别断总数。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
