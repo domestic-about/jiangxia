@@ -1347,6 +1347,36 @@
       "detail": "D2 r2 L0+L1 片发现。HTTP 都 200，不影响拿东西/判权限；L3 的越权用例只打 /mp/ext/** 不受影响。方案：内部『查无此物』也回 404（或统一成 400 白名单），别用 500 表达「不存在」。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 96,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S1",
+      "type": "arch",
+      "title": "【S1】工作台「来源单位」筛选筛不出内部录的样本（会传染 D3 导出）",
+      "detail": "纯 seed 即可复现：按内部编号 T-oco01 筛出 SJ90000009，行内来源单位列写『B 大学』；把筛选选成来源单位=B 大学后它消失（total=1 只剩 SJ90000006）。根因：SampleQueryService.list 把『组别/来源单位』一律走 t_lqg_ext_profile（提交人外部档案）取 user_id 集合再 submitter_id IN (...)；注释给的理由『样本行上没有 group_id』只对组别成立——来源单位在样本行上有 source_unit_id/source_unit_name → 内部账号提交的行永远筛不出来。影响：老师按来源单位筛会拿不到界面标着该单位的样本；FLOW:F-SAMPLE-02.step5 的导出范围 = 当前筛选结果 → D3 的样本/类器官导出会静默漏掉内部样本（影响另一个 ticket 的实现路径）。修法：来源单位按样本行自己的 source_unit_id 筛；组别仍走外部档案（或一并按提交人的档案 JOIN，但两条口径要分开写清）。旧 accept 只测 A 医院（其下无内部样本）所以 r1 没暴露。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 97,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "工作台样本总表行不渲染 invalidReason（只在核验抽屉里）",
+      "detail": "权威 UI:admin.sample.list 的列清单没锚它；小程序侧历史行与 edit 表单红条已满足 r1 那条 S1 的真实要求。建议把口径写死：工作台列表行是否显示无效原因（若要显示，SAMPLE-WEB-001 补一列/一个 tooltip）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 98,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "返工把两条旧回归断言改成不再约束页面的形态（本片已用正面断言补上）",
+      "detail": "WEB-L2-06b 退化成测字典接口、G3-20 退化成测 console 无异常。方向与权威一致、不算迎合实现，但 r2 片已另写正面断言覆盖页面形态。纪律：改 QA 断言要留『原来断的是什么、现在断的是什么』的对照（本轮做到了）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

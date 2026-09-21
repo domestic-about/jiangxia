@@ -1,0 +1,47 @@
+{
+  "phase": "D2",
+  "round": 2,
+  "auditor": "independent",
+  "levels": {
+    "L2": {
+      "status": "fail",
+      "evidence": "本片自写脚本、自跑、自己判；不引用实现方报告，不读 doc/waves/reports/**。三组各自结果：组1（外部体验路径）全绿、组2（工作台总表）27 项里 1 项红（就是下面 S1）、组3（内部小程序）全绿。反 stale（我自己核的）：起 8081 前 `lsof -ti tcp:8081` 为空 → 本片 `bash .tmp/run-backend.sh` 以受管后台作业起（日志 .tmp/r2l2-backend.log，`RuoYi-Vue-Plus启动成功` + `MockLoginGuard - mock 登录已开启（profile=[dev]）` 时间戳 2026-09-22 01:26:51）；jar `code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar` mtime Sep 22 01:19 晚于返工 commit 1e8ea8c（01:16:43），`find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer <jar>` 为空；8081 PID=41338，`lsof -ti tcp:8081`=41338 且 `lsof -p 41338 | grep -c ruoyi-admin.jar`=2（进程确持该 jar）。前端 8082/9200 均由本片受管后台作业起、curl 200。★ 两条被返工改过的旧脚本（L2-mp-h5.mjs / L2-web-plusui.mjs，最后改动都在 1e8ea8c）一律不作为证据，本片另写 L2r2-web.mjs / L2r2-mp.mjs / L2r2-mp-extra.mjs / L2r2-probe-*.mjs。★ 组2 期望值不抄 accept：每项筛选的送检单号集合由脚本自己 psql 现算（样本类别/提交来源/核验状态/收样日期区间/组织类型 LIKE/内部编号/操作人/来源单位/组别），只有加密列「供体姓名/住院号 精确」按 doc/verify/README.md 的 seed 表推断单行；集合比较一律用送检单号（18/19 位雪花 id 过 JS Number 会掉精度，这是本片首跑踩到并已修的 harness 坑）。\n\n组2（工作台样本总表）—— doc/waves/regression/D2/L2r2-web.mjs，reseed 后跑，26/28（27 项断言，2 条 FAIL 是同一条 S1 的用例 + 汇总），日志 .tmp/r2l2-web-final.log，截图 doc/waves/regression/D2/shots/L2r2-web/：\n · 待核验置顶：第 1 页行序与库内 `ORDER BY (verify_status='pending') DESC, create_time DESC, id DESC LIMIT 10` 逐项相同 = [SJ90000007,SJ90000002,SJ90000003,SJ90000006,SJ90000005,SJ90000004,SJ90000001,SJ90000008,SJ90000009]；pending 行类 lqg-sample__row-pending，下一个非 pending 行无该类；计算样式 background-color=rgb(252,241,218)=--lqg-warn-soft（10-sample-list.png）。\n · 12 个筛选 UI 驱动 vs 库内现算：11 绿 1 红 —— 红的是「来源单位=B 大学」（见 issue S1）；A医院/组别/样本类别/提交来源/核验状态/收样日期区间/组织类型/内部编号/操作人/供体姓名/住院号 + 组合(A医院+有效+外部)={SJ90000001,SJ90000004,SJ90000005} 全绿（11-filter-*.png）。\n · r1-S1-1 复验：样本类别下拉 = [\"组织样本\",\"类器官\"] 两项（11b-samplekind-dropdown.png）；organoid 行「样本类别」列渲染中文「类器官」而非 organoid（dict-tag 生效）。\n · 核验抽屉两出口：缺内部编号 / 缺原因各被拦一次（抽屉、弹窗都不关）；判有效 → code=200 且库内 valid|T-r2w669114；判无效 → code=200 且库内 invalid|R2W 独立复验原因：缺住院号（原因原样落库）（12/13/14/15-*.png）。\n · 线索复核：工作台列表行**不渲染**无效原因（SJ90000003 行文本无原因），同行点「编辑」开抽屉后原因可见（16/17-*.png）→ 记 S3。\n\n组1+组3（小程序 H5 等价）—— doc/waves/regression/D2/L2r2-mp.mjs（39/39，日志 .tmp/r2l2-mp.log，截图 shots/L2r2-mp/）+ L2r2-mp-extra.mjs（6/6，.tmp/r2l2-mp-extra.log，shots/L2r2-mp-extra/）+ L2r2-probe-entries.mjs（7 个宫格落点，.tmp/r2l2-entries.log）：\n · 组1（extA）：首页三格且无数字（digits=[]）→ 点「样本记录信息表」URL=?mode=new，**在这一页直接填完提交成功**（库内新行 external|pending，送检单号 SJ000000xx）→ 我的→历史编辑记录出现且「待核验」→ 工作台判无效 → 外部**历史行内**看到「无效原因：R2M 独立复验：缺住院号，请补」→ 点开是 mode=edit 且表单顶部红条同原因、有「保存」→ 改备注保存成功（库内 remark 变、verify_status=pending、invalid_reason 清空）→ 工作台判有效（valid|T-r2m01）→ 外部详情只读（pages/sample/detail-ext，0 输入、0 提交/保存，正文有送检单号/供体姓名/组织类型/来源单位）→ extB（同组）历史里看得到、打开「只看我提交的」后看不到。\n · 组3（staff）：四格顺序 ✓；首页点「样本记录信息表」URL=?mode=new 并**真提交一条**（库内 internal|tissue|valid，x-03-internal-new-submitted.png）；我的有「内部管理」四表 + 历史编辑记录；**表格页两个工作表表头 == 甲方模板原件第 1 行**（脚本自己跑 `doc/verify/xlsx_header.py --print-header` 取 _input/templates/ 原件，把冻结列「内部编号」提前 + 末尾追加「切片染色」；样本记录 = [内部编号,来源单位,供体姓名,性别,年龄,住院号,组织类型,收样日期,有无固定,处理时间,质控表,细胞活率报告,操作人,备注,切片染色]、类器官收样 = [内部编号,来源单位,类器官类型,收样日期,处理时间,细胞活率报告,操作人,切片染色]，逐字逐序相同）；首列冻结 position=sticky left=0px（计算样式）；可横滑（.uni-scroll-view overflow-x=auto，scrollWidth 958 > clientWidth 390）；页面上没有新增/保存（只有置灰导出 Excel）；点一行 mode=view 只读、0 输入、**有字段值**、库内有值的按钮组各恰好 1 项选中；待核验外部样本冻结列显示 `SJ90000007|待核验 · 外部`；内部历史编辑记录点本人有效样本 T-hli05 → 改备注保存成功（update_by=9000000101）且排到最前；性别/有无固定/质控表/细胞活率报告按钮组点得动（点击后该组恰 1 项 --on，细胞活率报告 off->ON）；内部类器官收样 7 项齐、**真的操作了「来源单位」底部弹层**（候选 [A 医院,B 大学,列表里没有，手动填写]）、收样日期点开 `.wd-datetime-picker__action`=2 且 popup 可见 → 提交成功（库内 internal|organoid|valid，T-r2org1）；该条可从历史编辑记录改（类器官类型 R2复验类器官 → R2复验类器官已改 落库）；extC 三项（来源单位/类器官类型/备注，无内部字段）提交后库内 = pending|external|organoid。\n\n★ r1 五条拦门项逐条复验结论（全部在运行中的页面上重跑，不看代码、不看别人报告）：① 首页入口带 mode=new 且可提交 —— 已修（extA 从入口页真提交成功；staff 从入口页真提交成功；7 个宫格逐格落点：D2 的两格内外都是 ?mode=new 且有「提交」、无「没能加载」；石蜡包埋/-80 冻存落 embed/cryo 占位页属 D3/D4，不算 D2 判据）② 三个组件 const props —— 已修（历史记录每行都有 .lqg-tag 徽标且文案非空；只读页字段值渲染出来；按钮组点击后 --on 切换，无 props/ReferenceError 异常）③ 内部类器官收样「收样日期」—— 已修（open() 生效，弹层 action=2 可见，且补做「来源单位」必填操作后提交成功——r1 就是漏操作来源单位误报的）④ 工作台「样本类别」下拉 —— 已修（UI 实测两项 [组织样本,类器官]，且筛 organoid 出 1009、行内渲染中文）⑤ 无效原因对外可见 —— 小程序侧已修（历史行内 + edit 表单红条都带原因，且原因原样来自库）。五条均不再复现。\n\n★ 未覆盖（如实记账，不用 H5 冒充）：微信开发者工具（CLI 要写 ~/Library/Application Support/微信开发者工具/** → EPERM，且需人工扫码）与真机 / 体验版**全部未跑**；小程序侧一律为 miniapp H5 dev(9200, VITE_MOCK_LOGIN=1) + Playwright 等价覆盖，页面断言读 DOM 文本 / 计算样式 / 接口返回。extB / extC 不在调试面板的 3 个 seed 里（code/miniapp/src/api/mock-seeds.ts），改用后端 mock 登录（ADR-0008，xcxCode=mock:<key>）拿 token 注入 localStorage['lqg_mp_token'] —— 走的是产品自己的 mock 路径，只绕开面板按钮。工作台只跑了 lqgadmin 一个身份。截图只落盘不解读（本片全程未 read_image）。",
+      "counts": {
+        "L2-web": "26/28 通过（1 条 S1 用例 + 其汇总项）",
+        "L2-mp": "39/39 通过",
+        "L2-mp-extra": "6/6 通过",
+        "S0": 0,
+        "S1": 1,
+        "S2": 0,
+        "S3": 2
+      }
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S1",
+      "level": "L2",
+      "type": "arch",
+      "ticket": "SAMPLE-WEB-001",
+      "title": "工作台样本总表「来源单位」筛不出**内部录的**样本：筛选走提交人的外部档案，不看样本行自己的来源单位——界面显示 B 大学的那一行，筛 B 大学却不见了",
+      "detail": "复现（reseed 后**纯 seed 数据**，不需要任何新建样本）：lqgadmin → 样本总表 → 先按「内部编号=T-oco01」筛 → 出来 SJ90000009，它的「来源单位」列写着 **B 大学**（行文本 `T-oco01|SJ90000009|B 大学|类器官|内部|有效|…`，截图 shots/L2r2-web/18-sourceunit-via-internalNo.png）；清筛选后把「来源单位」选成 **B 大学** → 表里只剩 SJ90000006（截图 19-sourceunit-filter-B.png），SJ90000009 消失。接口佐证：`api.sh --as admin GET '/lqg/sample/list?sourceUnitId=9000009002&pageSize=50'` → code=200 total=**1**，只回 SJ90000006；而库里 `SELECT submit_no FROM t_lqg_sample WHERE del_flag='0' AND source_unit_name='B 大学'` = **SJ90000006,SJ90000009**，SJ90000009 = `internal|9000009002|B 大学|T-oco01`（source_unit_id 也落在 B 大学）。根因（运行系统 + 代码对齐）：`SampleQueryService.list` 对「组别 / 来源单位」一律先 `SampleSubmitterProfileMapper.selectSubmitterIds(unitId, groupId)`（SQL 只查 `t_lqg_ext_profile.unit_id / group_id`）再用 `Sample::getSubmitterId IN (...)` 收窄，注释给的理由是「样本行上没有 group_id」——组别确实没有，但**来源单位在样本行上有 `source_unit_id` / `source_unit_name`**，这一支被一起套上了；于是 `submit_source='internal'` 的行（提交人是内部账号、没有外部档案）永远进不了集合。seed 里 1008（本中心）恰好没单位 id、1009 又只在 B 大学，而旧 accept 只测了「来源单位=A 医院」——A 医院下没有内部样本，所以 L1 断言与 r1 的 L2 都没暴露它。影响：① 老师按来源单位筛选会**拿不到界面明明标着该单位的样本**（权威 UI:admin.sample.list 里「来源单位」既是筛选也是样本列表；doc/requirements.yaml:709 甲方原话「你想根据来源单位全部是 1 的去看也可以」）；② `FLOW:F-SAMPLE-02.step5` 的导出「范围 = 当前筛选结果」复用同一筛选，D3 的样本记录信息表 / 类器官收样记录导出会把内部样本静默漏掉 → 影响另一个 ticket 的实现路径。回归资产已加硬：doc/waves/regression/D2/L2r2-web.mjs 的 R2W-04.2（来源单位=B 大学，期望集合从库里现算，当前 FAIL）+ 专探针 L2r2-probe-sourceunit.mjs（打印 VERDICT CONFIRMED_BUG）。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "clarify",
+      "ticket": "SAMPLE-VERIFY-001",
+      "title": "工作台总表列表行不渲染 invalidReason（只有核验抽屉里有）——权威没为工作台行锚这条，建议把口径写死免得下轮再误判",
+      "detail": "核过的事实：plus-ui `code/plus-ui/src/views/lqg/sample/index.vue` 没有无效原因列/行内渲染，`invalidReason` 只出现在 `SampleDrawer.vue`（抽屉，`:168-169`）；运行页面上：SJ90000003 行文本 = `—|SJ90000003|A 医院|组织样本|外部|无效|测试供体丙|未知|…`（无原因），同一行点「编辑」开抽屉后原因「信息不全：缺住院号」可见（截图 shots/L2r2-web/16-invalid-row-reason.png / 17-invalid-drawer-reason.png）。权威侧：`UI:admin.sample.list` 的表格列清单里**没有**无效原因（原因在 `UI:admin.sample.edit` 抽屉）；`doc/authority/ui-index.yaml:122` 要求的是**外部（小程序）**「历史编辑记录」/改样本表单顶部红条显示无效原因——小程序侧 r2 实测**已满足**（历史行内 `无效原因：…` + edit 表单红条，R2M-09/10）。所以这不是产品缺陷、不拦门，只是把 r1 S1-2 的原话「历史记录行内显示原因」读成「工作台总表行」会误判；建议在 authority 或 change-log 里把「工作台看原因 = 抽屉；小程序历史行 = 行内」写明。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "harness",
+      "ticket": "D2-qa-harness",
+      "title": "返工把两条旧回归断言改成不再约束页面的形态（WEB-L2-06b 退化为测字典、G3-20 退化为测 console 无异常）——方向与权威一致、不算迎合实现，但作为回归资产已失去对页面的约束力",
+      "detail": "`git log --oneline -- doc/waves/regression/D2/L2-mp-h5.mjs L2-web-plusui.mjs` 显示两个旧脚本最后一次改动都在返工 commit 1e8ea8c。逐条看改动：① WEB-L2-06b 由「页面请求的假字典名 sample_kind 为空」改成「库里真名字典 lqg_sample_kind 有 2 条」，改完后这条**完全不碰页面**（只测字典，而字典是 L1 的范围）；② G3-20 由 `chipErr.length > 0`（证病灶存在）翻成 `=== 0`（证病灶消失），退化成「console 里没有 ReferenceError」。我的判定：`lqg_sample_kind` 是权威真名（`doc/authority/field-ssot.yaml:33` 定义 key、`:137` 写 `dict: lqg_sample_kind`，迁移 V202609210810 有），页面原写 `sample_kind` 确实是产品 bug，**修复方向正确、不是把期望值调成迎合实现**；但两条断言确实失去了对页面的约束力。本片已用正面断言补上：R2W-06a（下拉 UI 实测 [组织样本,类器官]）+ R2W-06b（organoid 行的 dict-tag 渲染中文「类器官」）+ R2M-06（历史每行 .lqg-tag 徽标数 ≥ 行数且有文案）。"
+    }
+  ]
+}
