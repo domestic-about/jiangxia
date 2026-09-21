@@ -288,12 +288,12 @@
       "note": "后端 org.dromara.lqg.sample.mp（Controller/Service/QueryBo + 7 例 MpSampleContractTest，java 46 绿）；小程序 pages/sample/{layout.ts,layout.fixture.spec.ts,form.vue,detail-ext.vue}、pages/history/{index.vue,sources.ts}、api/sample.ts、components/lqg/*。accept 1：vitest 22/22 + fixture 结构 6 个数逐项相符（13/7/5/0/2/true）+ 8 段 grep 全过，fixture 一字节未改；accept 2：rm 产物后 build:mp-weixin 通过（form.js/history/index.js 在、无 mine.js）+ API 15 段全绿，含把 AUTH-EXT-001 WARN-3 那段收口（--as extA GET /mp/int/sample/list 现在返 403）。★三条硬坑：① updateTime 是『这行有没有被改过』的唯一判据——删掉了兜底成 createTime 的逻辑，于是工作台 GET /lqg/sample/* 上从没改过的行 updateTime 由 createTime 变 null，这是跨票行为变更，SAMPLE-WEB-001 做修改页会用到；② 组件里只用 easycom 引用 wd-* 会**静默丢掉该模块的 .js 产物**（构建仍报 Build complete，产物只有 .json/.wxml，真机加载不到逻辑）→ 必须显式 import 'wot-design-uni/components/wd-xxx/wd-xxx.vue'；③ 分页接口没有 data 键（TableDataInfo = {code,msg,rows,total}），utils/request.ts 默认只 resolve body.data → 列表恒 undefined，给它加了 raw:true 选项（越出 touches，报告 §2.4 列清），凡用 MP 列表的票都要带。"
     },
     "SAMPLE-MP-002": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "表格页（只读，四张表共用一个列清单来源）：src/pages/ledger/{columns.ts,columns.fixture.spec.ts,sheets.ts,index.vue} + components/lqg/LedgerTable.vue（哑组件、首列 sticky、横滑）+ api/ledger.ts；类器官收样页 src/pages/organoid/{layout.ts,layout.fixture.spec.ts,api.ts,form.vue}；history/sources.ts 注册 organoid 页签。accept 1（DATA）逐段 true（organoid 集合同源 / total==库独立数 / 内部录入 organoid|internal|valid|B 大学|Y / PUT 补丁改成王工 / mine 顺序 / 外部落 pending 且提交人=赵医生 / extA 空集）；accept 2（DATA）pages/ledger/index.js 与 pages/organoid/form.js 都在 + 7 段 grep + 甲方四份 xlsx 原件逐字 diff；accept 3（STATE）vitest 13 例（columns 7 例），全量 vitest 67 例、后端 55 绿。★它抓到 accept 自身的缺陷：db.py --quiet 实测『不打印任何行』（已由主会话复核：SELECT 1 不带 quiet 输出 1、带 quiet 输出空），10 张 ticket 用了这个句式，AUTH-EXT-001 的 accept 3 因此假绿（空 OID → /mp/ext/organoid/ → 404 落进正则）。★越界（已授权，报告 §5.1 逐条）：entries.ts 的 ledgerTarget、FieldRow 加 select 控件、后端 SampleQueryBo/SampleQueryService 补 keyword（SAMPLE-MP-001 明确移交的判据），另给 sample/form.vue 的只读页补 CR-20260918-07 要求的『修改』入口（跨票行为变更）。★另发现：SYS-MP-001 的 accept 有一段 grep 扫整个 src 抓裸 *（本意抓 * 选择器），JSDoc 的 ' * ' 注释块与 a * b 算术都会被命中，会让**上一张票**的 accept 变红。"
     },
     "SAMPLE-VERIFY-001": {
       "status": "done",
@@ -1154,6 +1154,56 @@
       "type": "harness",
       "title": "nohup & 起的后端被杀后仍占住 8081，下一次受管 job 报 Port 8081 already in use",
       "detail": "SAMPLE-MP-001 WARN-2 的第二症状。方案：起后端前先 lsof -ti tcp:8081 拿 PID 清干净；统一用受管后台作业。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 77,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "【高优】db.py --quiet 实测『不打印任何行』，10 张 ticket 的 OID=\"$(db.py --quiet …)\" 句式会拿到空值；AUTH-EXT-001 已因此假绿",
+      "detail": "主会话复核：python3 doc/verify/db.py --sql 'SELECT 1' 输出 1；加 --quiet 输出空。doc/verify/db.py:95 是 if not a.quiet 才打印行。受影响 10 张：AUTH-EXT-001 / SAMPLE-EXPORT-001 / SYS-EXPORT-001 / CRYO-FLOW-001 / DOC-RENDER-001 / EMBED-WEB-001 / CRYO-WEB-001 / DOC-PUBLISH-001 / OCR-IMPL-001 / SAMPLE-MP-002。最严重的是 AUTH-EXT-001 accept 3：OID 为空 → PUT /mp/ext/organoid/ → 404，正好落进断言正则 ^(400|403|404) → 假绿（真实行为未被验证）。处置：不改只读区（db.py 与 ticket 都是需求层资产）；【D2 及以后每一轮 QA 必须把所有 $(db.py --quiet …) 插值的段落用『去掉 --quiet』的方式复跑一遍】，因为那些段落是空转的；all_done 时集中报 Kevin 修 db.py（改成只打印值）或改 ticket 生成器。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 78,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "SYS-MP-001 的 accept 有一段 grep 扫整个 src 抓裸 *，JSDoc 注释与乘法都会命中（会让上一张票变红）",
+      "detail": "grep -rnE ':not\\(|(^|[ ,{])\\*[ ,{]' src --include=*.vue --include=*.scss（本意抓裸 * 选择器，但扫整个 src）。SAMPLE-MP-002 第一版 LedgerTable.vue 的 JSDoc ' * ' 注释块与 a * b 算术两处被命中。方案：把该 grep 收窄到 <style> 块内 / 排除注释，或让后续 MP 票都知道别在 .vue/.scss 里写 JSDoc 块。传下去给每一张 MP 票。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 79,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "跨票行为变更（SAMPLE-MP-002 补的）：sample/form.vue 只读页新增右上角『修改』入口",
+      "detail": "CR-20260918-07 的『只读页右上角修改』覆盖四张表，SAMPLE-MP-001 只做了『view 全只读』。SAMPLE-MP-002 给它补了入口（touches 之外）。D2 QA 复跑 SAMPLE-MP-001 的端侧 11-int-form-view 会多一个『修改』文本，但它断的『保存按钮 0 / 输入控件 0』仍成立。EMBED/CRYO 的 MP 票照此办。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 80,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "ticket §2 写『内部历史 organoid 用 mine=true』与 CR-20260918-07 冲突",
+      "detail": "SAMPLE-MP-002 按 CR 实现（默认全中心 sort=recent + 只看我提交的开关才带 mine），与样本页签同形。建议改 ticket 措辞，免得 EMBED-MP-001 / CRYO-MP-001 / DOC-MP-* 的历史页签照抄 mine=true。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 81,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "src/pages/admin/*.vue 四个占位页已无引用（SAMPLE-MP-002 没删，在 touches 之外）",
+      "detail": "内部管理四格现在指向 pages/ledger；admin/*.vue 是 SYS-MP-001 建的占位页，已无引用。方案：后续 MP 票或收尾时删掉。",
       "status": "open",
       "decision": ""
     }
