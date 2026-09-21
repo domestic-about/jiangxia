@@ -48,12 +48,12 @@
   ],
   "tickets": {
     "AUTH-EXT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "/mp/ext/** 咽喉落成：可见集合只在 ExtScopeServiceImpl（ext 包唯一持 Mapper 的类）算，其余 ext 类只拼装转发；ExtInternalNoSwitch 读 sys_config lqg.ext.show-internal-no（注入 ConfigService 不持 mapper）；ExtSampleAssemblyService 无 mapper；ExtSampleController/ExtOrganoidController 类级 @SaCheckRole('lqg_external')；业务写侧 ExtSampleSubmitService 放 sample 包（遵 ADR-0004 i4）；越出 touches 一处：SampleQueryService 加 selectExtPage(Page, LambdaQueryWrapper)（i4 逼出来的，ext 包不能注 mapper）；无迁移（外部接口无菜单，lqg.ext.show-internal-no 那行由 V202609210830 插）。四条不变量由 ExtChokepointContractTest（逐字节未改 + Tests run: 4）守住；27 条对抗性探针全 PASS。★accept 2 有 1/15 段未绿：--as extA GET /mp/int/sample/list 期望 ^403 实测 404，因为该端点由后置的 SAMPLE-MP-001 注册 —— 是 accept 跨票引用造成的瞬态，不是缺陷；不动 accept（需求层资产），由 D2 QA 门在 SAMPLE-MP-001 落地后用同一条断言收口。★给下游的硬坑：① MP 3.5.16 的 LambdaQueryWrapper 没有按列名排序的重载，表达式排序只能 wrapper.last('ORDER BY …')；② donorName/hospitalNo 是密文，给外部看必须先 SampleFieldCipher.decrypt 再掩码（第一版对密文打码得到 T**）；③ @SaCheckRole 不挡方法不匹配的请求（内部打 GET /mp/ext/organoid 返 405，角色切面没跑），角色断言只能打在真实存在的 METHOD+PATH 上。"
     },
     "AUTH-EXT-002": {
       "status": "pending",
@@ -1014,6 +1014,56 @@
       "type": "debt",
       "title": "resubmitByExternal 本票无运行时入口，只被单测覆盖",
       "detail": "外部重提的 HTTP 入口在 AUTH-EXT-001；AUTH-EXT-001 落地后应把它接上并补一条端到端断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 63,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "accept 2 跨票引用后置端点：--as extA GET /mp/int/sample/list 期望 403，SAMPLE-MP-001 落地前是 404",
+      "detail": "accept 依赖同任务后置票注册的端点，depends_on 里没有这条边。处置：不改 accept（需求层资产）；由 D2 QA 门在 SAMPLE-MP-001 落地后用同一条断言收口（D2 qa_scope L3 本就要求『外部角色打 /lqg/** 与 /mp/int/** 一律 403』）。方案（供 ①xuqiu 参考）：accept 里引用同任务后置票的端点时，要么加 depends_on，要么把断言挪到后置票。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 64,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "ExtChokepointContractTest 的 I3 禁用字段表不含 internalNo，也不拦 ExtEmbedVo 的 operatorName/embedBy",
+      "detail": "i3 是设计豁免（开关控制的字段 + CR-20260918-07 明确放开的外部可见字段），所以『某个 Ext*Vo 声明了 internalNo 却忘了接开关』i3 不会红。AUTH-EXT-001 靠 accept 的 keys 差集兜住；AUTH-EXT-002 的 ExtEmbedVo 要注意：operatorName/embedBy 是 CR 放开的外部可见字段，仍在 I3 禁用表里被精确豁免——别把豁免当默认可加。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 65,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "/mp/ext/units 与 /mp/ext/profile 没有类级 @SaCheckRole('lqg_external')，内部也能调",
+      "detail": "ADR-0004 只说『外部只能调 /mp/ext/**』，没说 /mp/ext/** 只给外部；accept 第 1 条第 3 段只要求 ≥2 处类级注解，AUTH-EXT-001 新增的两个 controller 已满足。实测 admin/staff GET /mp/ext/units → 200、staff PUT /mp/ext/profile → 500 业务校验（内部没有外部档案，不可利用）。AUTH-EXT-001 刻意没动它们（塞进那张票会让 AUTH-GROUP-001 的验收结论失效）。若要收紧，另开小票。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 66,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "invalid→pending（外部重提）没有『名下有下游记录就只放内部』的闸",
+      "detail": "valid→invalid 那条路已在用 SampleChildrenCheckers；重提方向没有。影响 EMBED/CRYO/QC 的后续判断，待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 67,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "doc/verify/db.py 拒写时 exit 0（README 写的是 2），会让人把「没执行」当「执行了」",
+      "detail": "实测：db.py 遇到写语句时返回 exit 0。方案：改成 exit 2 或至少非 0，并把 README 的退出码表对齐。",
       "status": "open",
       "decision": ""
     }
