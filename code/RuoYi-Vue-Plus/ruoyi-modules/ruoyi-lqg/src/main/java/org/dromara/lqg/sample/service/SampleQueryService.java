@@ -97,7 +97,13 @@ public class SampleQueryService {
                 .le(q.getReceiveDateEnd() != null, Sample::getReceiveDate, q.getReceiveDateEnd())
                 // 自由文本两项走模糊（不是加密列，没有精确匹配的约束）
                 .like(StringUtils.isNotBlank(q.getTissueType()), Sample::getTissueType, trim(q.getTissueType()))
-                .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()));
+                .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()))
+                // ★ 表格页搜索框（SAMPLE-MP-002 / 契约第 49 行）：内部编号等值 OR 来源单位模糊。
+                //   单独一个括号（`w -&gt;` 那层会加括号），不把别的筛选卷进 OR 里。
+                .and(StringUtils.isNotBlank(q.getKeyword()), w -> w
+                    .eq(Sample::getInternalNo, trim(q.getKeyword()))
+                    .or()
+                    .like(Sample::getSourceUnitName, trim(q.getKeyword())));
 
             if (SampleQueryBo.isRecentSort(q.getSort())) {
                 // 「经手过」= create_by 或 update_by 是内部账号（sys_user.user_type='sys_user'）。

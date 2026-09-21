@@ -16,6 +16,7 @@ import FieldRow from '@/components/lqg/FieldRow.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
+import StatusChip from '@/components/lqg/StatusChip.vue'
 import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { unitDisplay } from '@/utils/ext-profile'
@@ -91,6 +92,21 @@ const specs = computed<FieldSpec[]>(() => fieldSpecs(layout.value, editable.valu
 const sendSpecs = computed(() => specs.value.filter(s => !(RECEIVE_FIELDS as readonly string[]).includes(s.key)))
 const receiveSpecs = computed(() => specs.value.filter(s => (RECEIVE_FIELDS as readonly string[]).includes(s.key)))
 const showReceive = computed(() => hasReceiveGroup(layout.value))
+
+// ★ 只读页（内部管理表格页点一行进来）右上角的「修改」（CR-20260918-07）：
+//   把 mode 换成 edit **重算同一个纯函数**，算出来可改才显示 —— 「按钮显不显示」与
+//   「能不能改」同源。外部送来还没核验的样本算出来是 false，这一页连「修改」都不出现
+//   （核验在工作台，绕不过去）。
+const canEditFromView = computed(() => mode.value === 'view'
+  && formLayout(identity.value, detail.value?.verifyStatus ?? null, mine.value, 'edit').editable)
+
+/** 点「修改」：切成修改模式，可写性由上面同一个纯函数重算 */
+function toEdit() {
+  if (!canEditFromView.value) {
+    return
+  }
+  mode.value = 'edit'
+}
 
 const topNote = computed(() => {
   if (mode.value !== 'edit' || editable.value) {
@@ -330,6 +346,12 @@ function notYet() {
     </view>
 
     <template v-else>
+      <!-- 只读页的样子：左边核验状态，右上角「修改」（CR-20260918-07） -->
+      <view v-if="mode === 'view'" class="lqg-sec form__sec">
+        <StatusChip :value="detail?.verifyStatus" />
+        <text v-if="canEditFromView" class="form__edit" @click="toEdit">修改</text>
+      </view>
+
       <!-- 识别条插槽（内容在 OCR-MP-001，本张只留位置） -->
       <view v-if="layout.showOcr" class="lqg-ocr">
         <view class="lqg-ocr__row">
@@ -434,6 +456,16 @@ function notYet() {
   border-radius: var(--lqg-radius-card);
   background: var(--lqg-card);
   box-shadow: var(--lqg-shadow-sm);
+}
+
+.form__sec {
+  padding-top: 0;
+}
+
+.form__edit {
+  font-size: var(--lqg-fs-title);
+  font-weight: var(--lqg-fw-semibold);
+  color: var(--lqg-primary);
 }
 
 .form__meta {

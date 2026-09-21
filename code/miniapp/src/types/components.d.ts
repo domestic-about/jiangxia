@@ -14,6 +14,7 @@ declare module 'vue' {
     FieldRow: typeof import('./../components/lqg/FieldRow.vue')['default']
     IdentityBar: typeof import('./../components/ui/IdentityBar.vue')['default']
     InternalAdminBlock: typeof import('./../components/biz/InternalAdminBlock.vue')['default']
+    LedgerTable: typeof import('./../components/lqg/LedgerTable.vue')['default']
     LoadingState: typeof import('./../components/lqg/LoadingState.vue')['default']
     LoadState: typeof import('./../components/ui/LoadState.vue')['default']
     MeHeader: typeof import('./../components/biz/MeHeader.vue')['default']

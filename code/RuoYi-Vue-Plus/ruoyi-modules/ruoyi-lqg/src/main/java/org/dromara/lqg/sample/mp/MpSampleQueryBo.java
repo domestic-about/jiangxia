@@ -23,8 +23,9 @@ import java.io.Serial;
  *
  * <p>★ <b>本票（SAMPLE-MP-001）刻意不声明 {@code keyword}</b>：那个条件是
  * 「内部管理」表格页（SAMPLE-MP-002）的搜索框要的（契约写的是「内部编号 / 来源单位」）。
- * 本票的页签（历史编辑记录）不用它，所以不落半截实现 —— 由 SAMPLE-MP-002 在
- * {@code SampleQueryService} 里补上「内部编号等值 OR 来源单位模糊」那一段。
+ * <b>SAMPLE-MP-002 已把它补在父类 {@link SampleQueryBo} 上</b>（判据只有
+ * {@code SampleQueryService.list} 一条路，落在那里才与别的筛选同源）——本类因此仍然
+ * 一个字段都不用声明。当时留的移交注释见 git 历史。
  *
  * <p>注意上游 {@link org.dromara.common.mybatis.core.page.PageQuery} 只有
  * {@code (pageSize, pageNum)} 这个构造器（5.5.3 没有无参构造），父类已经显式转调过了，
@@ -40,6 +41,6 @@ public class MpSampleQueryBo extends SampleQueryBo {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    // keyword（内部编号 / 来源单位）：SAMPLE-MP-002 的表格页搜索用，本票不声明，见类注释。
+    // keyword（内部编号 / 来源单位）：SAMPLE-MP-002 的表格页搜索用；已落在父类 SampleQueryBo 上。
 
 }

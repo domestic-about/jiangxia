@@ -63,6 +63,20 @@ public class SampleQueryBo extends PageQuery {
     @Schema(description = "住院号（精确；加密列）")
     private String hospitalNo;
 
+    /**
+     * 表格页搜索框（SAMPLE-MP-002 / 契约第 49 行 {@code GET /mp/int/sample/list} 的
+     * {@code keyword}）：<b>内部编号等值 OR 来源单位模糊</b>。
+     *
+     * <p>★ 为什么挂在父 BO 上（而不是只在 {@code MpSampleQueryBo} 里声明）：判据只有
+     * {@code SampleQueryService.list} 一条路，{@code keyword} 要落在那一条路上才与别的筛选同源；
+     * 工作台不发这个参数，行为一字不变（SAMPLE-MP-001 的移交注释也指向这一处）。
+     *
+     * <p>★ 内部编号走等值（不是 LIKE）：移交口径写的是「内部编号等值 OR 来源单位模糊」，按它实现。
+     * 用户要按内部编号找，输入完整编号。
+     */
+    @Schema(description = "搜索：内部编号（精确）或来源单位（模糊）")
+    private String keyword;
+
     // ── SAMPLE-WEB-001 补齐的工作台筛选 ────────────────────────────────────────
 
     /**

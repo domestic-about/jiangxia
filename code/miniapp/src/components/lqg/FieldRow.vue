@@ -12,7 +12,7 @@ import WdTextarea from 'wot-design-uni/components/wd-textarea/wd-textarea.vue'
 //
 // 三种呈现方式（`control`）：
 //   - 文本 / 数字：`wd-input align-right`（原地输入）
-//   - 日期 / 时间：不可输入，点一下由父级弹 `wd-datetime-picker`（§5.4：日期一律底部弹框）
+//   - 日期 / 时间 / 选择（`select`）：不可输入，点一下由父级弹面板（§5.4：日期与选择走底部弹框）
 //   - 按钮组：值插槽里放 `SegButtons`（二态 / 三态），本组件让出右侧空间
 //   - 多行：`wd-textarea`（备注）
 // `readonly` 时不渲染任何输入控件，只显示纯文本 —— 只读页与「不可改的字段」共用这一支。
@@ -21,7 +21,7 @@ withDefaults(defineProps<{
   /** v-model 的值（按钮组 / 日期也走同一份字符串值） */
   modelValue?: string
   /** 控件类型 */
-  control?: 'text' | 'digit' | 'date' | 'datetime' | 'seg' | 'textarea'
+  control?: 'text' | 'digit' | 'date' | 'datetime' | 'seg' | 'textarea' | 'select'
   /** 只读：不渲染输入控件，值以纯文本呈现 */
   readonly?: boolean
   /** 占位提示 */
@@ -85,7 +85,7 @@ const display = computed(() => (props.modelValue === '' ? '' : props.modelValue)
     :placeholder="placeholder"
     :model-value="modelValue"
     @update:model-value="(v: string) => emit('update:modelValue', v)"
-    @click="control === 'date' || control === 'datetime' ? emit('pick') : undefined"
+    @click="control === 'date' || control === 'datetime' || control === 'select' ? emit('pick') : undefined"
   />
 </template>
 

@@ -82,9 +82,9 @@ export const ENTRY_TITLE: Record<EntryKey, string> = {
   cryo: '-80 冻存记录',
 }
 
-/** 内部管理板块四个入口点进去的表格页（SAMPLE-MP-002 起建，本张先放占位页） */
+/** 内部管理板块四个入口点进去的表格页（SAMPLE-MP-002 建页；`sheet` 决定进哪个工作表） */
 export function ledgerTarget(key: EntryKey): string {
-  return `/pages/admin/${key}`
+  return `/pages/ledger/index?sheet=${key}`
 }
 
 /** 「我的」里那些非首页入口的固定目标（占位页，内容在各自 ticket） */

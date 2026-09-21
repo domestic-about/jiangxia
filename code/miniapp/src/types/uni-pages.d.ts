@@ -13,6 +13,7 @@ type _LocationUrl =
   "/pages/docs/index" |
   "/pages/embed/form" |
   "/pages/history/index" |
+  "/pages/ledger/index" |
   "/pages/legal/agreement" |
   "/pages/legal/privacy" |
   "/pages/login/index" |
