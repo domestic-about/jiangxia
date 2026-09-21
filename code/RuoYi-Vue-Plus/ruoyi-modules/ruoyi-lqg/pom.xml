@@ -11,6 +11,19 @@
 
     <artifactId>ruoyi-lqg</artifactId>
 
+    <properties>
+        <!--
+          本模块要跑「不带 @Tag 的用例」：根 pom 在 pluginManagement 里给 surefire 配了
+          <groups>${profiles.active}</groups> / <excludedGroups>exclude</excludedGroups>，
+          而需求层给的契约测试 MockLoginGuardContractTest 没有 @Tag —— 不摘掉过滤器它会被静默跳过。
+          空串在 surefire 里等价于「没有分组过滤」。命令行 -Dgroups=... 仍可覆盖。
+        -->
+        <lqg.test.groups></lqg.test.groups>
+        <lqg.test.excludedGroups></lqg.test.excludedGroups>
+        <!-- 契约测试是 ADR-0008 唯一的机器证据，默认值不能是「跳过」 -->
+        <skipTests>false</skipTests>
+    </properties>
+
     <description>
         类器官送检与样本管理系统业务模块（ADR-0001：全部业务代码只在这一个模块里，包根 org.dromara.lqg.&lt;域&gt;）
     </description>
@@ -59,6 +72,56 @@
             <artifactId>ruoyi-common-encrypt</artifactId>
         </dependency>
 
+        <!-- 系统模块（sys_user / sys_user_role / sys_client 的 mapper 与登录构建：
+             ruoyi-system 不依赖 ruoyi-lqg，方向单一不成环） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-system</artifactId>
+        </dependency>
+
+        <!-- 分布式锁（Redisson；并发首登按手机号加锁，见 WxUserBindService） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-redis</artifactId>
+        </dependency>
+
+        <!-- 微信小程序 SDK（code2session 换 openid + 手机号快速验证换手机号） -->
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-miniapp</artifactId>
+            <version>4.7.0</version>
+        </dependency>
+
+        <!-- 单元测试（MockLoginGuardContractTest 契约测试用；只引 JUnit，不引 Spring 上下文） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+              需求层给的契约测试 MockLoginGuardContractTest 没有 @Tag，而根 pom 的 surefire 配了
+              <groups>${profiles.active}</groups>（跑起来就是 groups=dev）——只跑带 @Tag("dev") 的用例，
+              于是这个类会被**静默跳过**：Surefire 一个用例不跑，构建照样 BUILD SUCCESS，
+              「护栏坏了」这条断言恒绿（accept 里最危险的假绿形态）。
+              契约测试**逐字节不许改**（accept 用 cmp 校验），所以过滤器只能在构建侧摘掉。
+              根 pom 把 surefire 放在 pluginManagement 里，模块这里覆盖**插件级**配置。
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>false</skipTests>
+                    <groups>${lqg.test.groups}</groups>
+                    <excludedGroups>${lqg.test.excludedGroups}</excludedGroups>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

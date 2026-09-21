@@ -57,7 +57,7 @@ public class SysPingVo implements Serializable {
      * SYS-BASE-001 阶段还没有 mock 登录实现，所以这个字段暂时不返回；
      * AUTH-LOGIN-001 落地 mock 登录时把它接上（同一个 /lqg/sys/ping 形状，不用改接口）。
      */
-    @Schema(description = "mock 登录是否可用（AUTH-LOGIN-001 起生效）")
+    @Schema(description = "mock 登录是否可用（读 lqg.auth.mock-login 的运行期值）")
     private Boolean mockLogin;
 
     /**

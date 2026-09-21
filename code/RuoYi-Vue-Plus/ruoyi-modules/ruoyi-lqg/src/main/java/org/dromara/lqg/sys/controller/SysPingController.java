@@ -50,6 +50,13 @@ public class SysPingController {
     @Value("${BUILD_COMMIT:${lqg.build-commit:unknown}}")
     private String buildCommit;
 
+    /**
+     * 小程序 mock 登录开关（ADR-0008）。与 {@code MockLoginGuard} 读同一个键、同一个缺省 false：
+     * 探针报的必须是**运行期真值**而不是常量，否则「prod 下 mock 真的关着吗」读不出来。
+     */
+    @Value("${lqg.auth.mock-login:false}")
+    private boolean mockLogin;
+
     @GetMapping("/ping")
     public R<SysPingVo> ping() {
         SysPingVo vo = new SysPingVo();
@@ -57,6 +64,7 @@ public class SysPingController {
         fillDatabase(vo);
         vo.setTenantEnabled(envBoolean("tenant.enable", false));
         vo.setEncryptEnabled(envBoolean("mybatis-encryptor.enable", false));
+        vo.setMockLogin(mockLogin);
         vo.setProfile(String.join(",", environment.getActiveProfiles()));
         vo.setBuildCommit(buildCommit);
         // 成功 / 失败都回 R：连不上库不该让验收脚本看到一个没有响应体的 500

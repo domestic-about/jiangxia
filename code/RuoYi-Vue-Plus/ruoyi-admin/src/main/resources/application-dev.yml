@@ -279,3 +279,18 @@ mybatis-encryptor:
   algorithm: AES
   encode: BASE64
   password: LqgTestAesKey#01
+
+--- # 本项目（ruoyi-lqg）自有配置
+lqg:
+  auth:
+    # 小程序 mock 登录（ADR-0008）：xcxCode="mock:<key>" 时跳过微信换 openid，手机号直接取
+    # phoneCode="mock:<手机号>"。**只允许 dev / test**：application-prod.yml 里刻意不出现这个键
+    # （缺省 false），prod 下若被打开，MockLoginGuard 会让应用拒绝启动。
+    mock-login: true
+  wx:
+    # 真实微信小程序：appid / secret 走环境变量注入，这里缺省为空（本地一律走 mock）。
+    # 真机联调时 export LQG_WX_APPID=... LQG_WX_SECRET=...
+    miniapp:
+      appid: ${LQG_WX_APPID:}
+      secret: ${LQG_WX_SECRET:}
+
