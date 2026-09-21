@@ -1337,6 +1337,16 @@
       "detail": "D2-rework-r1 的 W-6。方案：断言改成『<= 列表行数』之外，还要在 >=3 行样本（含不同 verifyStatus）上各验一次。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 95,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "同一条「样本不存在」业务码不一致：内部 /lqg/sample/{id} 回 500、外部 /mp/ext/sample/{id} 回 404",
+      "detail": "D2 r2 L0+L1 片发现。HTTP 都 200，不影响拿东西/判权限；L3 的越权用例只打 /mp/ext/** 不受影响。方案：内部『查无此物』也回 404（或统一成 400 白名单），别用 500 表达「不存在」。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
