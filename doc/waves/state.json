@@ -1504,6 +1504,16 @@
       "detail": "#105 的形态（MyBatis-Plus 顶层 .or() 不加括号 → SQL 退化成 (A AND B) OR C）全仓只有一处，已修并有契约测试钉死。建议加一条架构测试/静态检查：wrapper 里出现 .or() 时其上下文必须是 .and(w -> …) 或 .or(w -> …) 的嵌套块。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 111,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S2",
+      "type": "ux",
+      "title": "来源单位（SSOT nullable:false）在创建路径零校验 → 500 + 裸 PostgreSQL 报错串 toast 给用户",
+      "detail": "D2 r4 L0+L1 片真 UI 复现：新外部号（未绑定）点首页『样本记录信息表』→ 填供体姓名+组织类型 → 提交，请求体 sourceUnitName:\"\"，响应 code 500 + 裸 PostgreSQL 报错串（null value in column \"source_unit_name\" … Failing row contains (…)），前端把该 msg 原样 toast。API 同样：--as staff POST /mp/int/sample 不带/空 sourceUnitName → 500；--as extA POST /mp/ext/sample、--as extC POST /mp/ext/organoid 不带 → 500。三个入参 BO 都无 @NotBlank，SampleKindRules 也不查它，前端表单也没给该字段挂必填星号。库里不多出行（回滚）。定 S2 不 S1 的依据：所有 ticket 的 accept 载荷都带 sourceUnitName，没有下游 ticket 因此跑不通；按剧本 1 的『先填单位组别再提交』流程也能避开。方案：三个 BO 补 @NotBlank + 前端挂必填星号 + 新外部号进表单时给『先去我的→单位与组别』的引导；并让 500 不再回吐库内部细节（与 #88 同族）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
