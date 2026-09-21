@@ -1,0 +1,23 @@
+{
+  "url": "/system/config",
+  "primaryButtons": [
+    {
+      "text": "搜索",
+      "bg": "rgb(14, 124, 123)"
+    },
+    {
+      "text": "新增",
+      "bg": "rgb(230, 241, 241)"
+    },
+    {
+      "text": "",
+      "bg": "rgba(0, 0, 0, 0)"
+    }
+  ],
+  "firstTag": {
+    "text": "是",
+    "bg": "rgb(230, 241, 241)"
+  },
+  "tableRows": 7,
+  "bodyHasLqgKeys": true
+}
