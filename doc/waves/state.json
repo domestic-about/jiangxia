@@ -12,9 +12,9 @@
     },
     {
       "id": "D2",
-      "status": "qa_running",
-      "qa_rounds": 0,
-      "qa_seq": 2,
+      "status": "qa_failed",
+      "qa_rounds": 1,
+      "qa_seq": 3,
       "rearms": [
         {
           "reason": "Kevin 授权：D2 连红 2 轮的判断成立——两轮抓到的是不同的实现缺陷（r1 3×S0+2×S1 已修并经 r2 复验；r2 新发现 #96 工作台来源单位筛选筛不出内部录的样本，根因清楚、修法机械），不是蓝图/口径问题。授权一批返工修 #96 后重跑 r3。",
@@ -1452,6 +1452,16 @@
       "type": "arch",
       "title": "【S1】SampleQueryService 顶层 .or() 未加括号 → sort=recent 与其它筛选串味，mine=true 失效",
       "detail": "SampleQueryService.java:136-142 用顶层 .or() 拼「create_by 是内部 OR update_by 是内部」，MyBatis-Plus 不给它加括号 → SQL 退化为 (其它筛选 AND create_by IN 内部) OR update_by IN 内部。实测（reseed + staff 改 1001）：/mp/int/sample/list?sampleKind=organoid&sort=recent = [1001(tissue!),9000001009]；sourceUnitId=9000009002&sort=recent、internalNo=T-oco01&sort=recent、mine=true&… 同样串味。第二形态：admin 建一行（staff 从没碰过），staff sort=recent&mine=true 仍返回它 → 「只看我提交的」开关根本没生效。小程序 history/sources.ts 内部两个页签固定发 sampleKind+sort=recent(+mine)，即「我的→历史编辑记录」的类器官页签会出现组织样本、点进去还进 organoid 表单；违背 CR-20260918-07 与剧本 7，并落到 SAMPLE-MP-002 的取数路径。修法：用 .and(w -> w.in(create_by,…).or().in(update_by,…)) 把 OR 包成一组；mine 同理 .and(w -> w.eq(create_by,me).or().eq(update_by,me))。p6spy 原始 SQL 在 D2-r3-L01.json 的 evidence 里。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 106,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "MpSampleController javadoc 写「待核验/无效 → 400」，实测 500",
+      "detail": "D2 r3 L3 片新记。注释与实现不一致（行为本身正确：拒绝且库里不变）。方案：javadoc 改成 500，或把实现统一到 400（与业务码混用那条 S3 一起收）。",
       "status": "open",
       "decision": ""
     }
