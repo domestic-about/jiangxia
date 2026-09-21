@@ -866,6 +866,46 @@
       "detail": "① resetToLogin 只做 hash 跳转（同 URL goto 不重载），页面内存里的 agreed ref 留到下一次登录 → mockLogin 再点 .login__box 反而取消勾选 → 调试登录被『请先阅读并勾选…』挡下 → 等 .lqg-tile 超时；② page.$$eval('.lqg-tile', els => els.filter(e => e.querySelector(BADGE_SEL))) 把外层常量写进页面函数上下文 → ReferenceError: BADGE_SEL is not defined。两处都由主会话定位并修（改 hash 导航为硬 reload + 勾选做成幂等 + BADGE_SEL 当参数传），修后 mp-h5 脚本 26/26 全绿。教训：分片 agent 死在自己的 harness 上时，先怀疑 harness。另：产品侧 onMockLogin 与 onGetPhoneNumber 一样校验 agreed —— 那是刻意一致，不是缺陷。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 48,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "撤销授权二次确认点「取消」产生未处理 promise rejection",
+      "detail": "staff/index.vue:301 的 await $modal.confirm 没有 catch：dev 报 pageerror('cancel')、build 报 console.error；无用户可见故障，一行可修。D1 r2 L2 片发现。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 49,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "D1 r2 L2 工作台断言脚本 5 处裸 click+waitForSelector 无重试（已加固）",
+      "detail": "曾把 WEB-09 误报成 FAIL（固定 sleep 后单次读文本读到上一步旧文案）。已改成 waitDialogText 轮询 + clickRowAndWait 点击重试；加固后重试计数 0、dev/build 两轮都跑完（dev 39/40、build 40/40）。未改任何 check() 期望值。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 50,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "D1 r2 小程序独立断言脚本 3 处脆弱点（2 处已修、1 处故意不修）",
+      "detail": "① gotoMe 假设 tabbar 恒可点 → 改断可见性并回首页 tab；② MP-33 读 uni-input 包装元素 → 改读内层 input 的 value；③ MP-31 的断言无权威支撑，裁决为 harness 过严（产品无缺陷），故意不修。加固后 37/38。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 51,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "api.sh --fresh-module 在本沙箱恒 exit=1，doc 里 54 处引用它",
+      "detail": "沙箱禁 ps + 回退走 GNU date -d → exit 1，而 README 把 1 定义为「断言不成立」，工具故障与实现红不可分。已有 L23-freshness.sh 作等价替代（jar mtime/sha256 + lsof 持 jar + 启动晚于 jar）。方案：api.sh 换 lsof/日志 mtime 兼容写法，或给一个显式跳过开关。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

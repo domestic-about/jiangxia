@@ -1,0 +1,46 @@
+{
+  "phase": "D1",
+  "round": 2,
+  "auditor": "independent",
+  "levels": {
+    "L2": {
+      "status": "pass",
+      "evidence": "两种产物（同一份 L2-r2-web-plusui-indep.mjs，r1 S1 白屏项独立复验在内）：(a) dev 8082 → 39/40；WEB-04 菜单导航无白屏 bad=0/6 PASS、WEB-09 未知手机号「将预建一个内部账号」PASS、WEB-17/22/23 PASS，唯一 FAIL = WEB-36 未捕获前端异常 ['cancel']（dev 模式把 confirm 取消的未处理 reject 冒成 pageerror）；截图 doc/waves/regression/D1/shots-L23-r2/web-dev/。(b) build 8083（服务 code/plus-ui/dist，/dev-api→8081）→ 40/40 exit 0；WEB-04 bad=0/6 PASS、WEB-36 []，同一条 cancel 只落 [console.error]；截图 doc/waves/regression/D1/shots-L23-r2/web-build/。小程序 H5(9200, VITE_MOCK_LOGIN=1)：L2-r2-mp-h5.mjs 26/26 exit 0（shots-L23-r2/mp-dev/）；L2-r2-mp-h5-indep.mjs 加固后跑到底不抛异常 37/38，唯一 FAIL MP-31 的断言无权威支撑（详见 issues，已裁定 harness 过严，产品侧无缺陷）；shots-L23-r2/mp-h5-indep/。截图一律写 r2 自己的 shots-L23-r2/ 子目录，未覆盖 r1 不可变证据 shots-L23/。反 stale（本轮自跑，不引用别人结论；api.sh --fresh-module 在本沙箱不可用，见 issues，改用 doc/waves/regression/D1/L23-freshness.sh 8081）：四条全 PASS —— jar mtime 2026-09-21 16:32:24、jar sha256 2c10af1121e7f5d1feddf40a49fa6590…；lsof -ti tcp:8081 -sTCP:LISTEN → pid 84839；该 pid 持有这只 jar（fd 命中 2 次）且打开的绝对路径 = 工作区 code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar；后端启动日志 .tmp/r2-backend.log 首条时间戳 2026-09-21 17:26:18 晚于 jar mtime；ruoyi-lqg 模块源码无新于 jar 的文件 → 跑断言的 8081 就是工作区这只 jar，非 stale。未覆盖（如实记，不冒充）：微信开发者工具（CLI 需写 ~/Library/Application Support/微信开发者工具/** 遇 EPERM + 需人工扫码）与真机均未跑；小程序侧一律以 H5 dev server(9200) 等价路径覆盖，结论只对 H5 等价路径成立。harness 加固 6 处（全部只动等待/选择器，未改任何 check() 期望值、未动产品代码，详见 doc/waves/regression/D1/L2-r2-web-notes.md §0）。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "debt",
+      "ticket": "AUTH-STAFF-001",
+      "title": "撤销授权二次确认点「取消」产生未处理的 promise rejection（'cancel'）",
+      "detail": "复现：工作台 dev 8082 → 人员与单位 → 内部人员授权 → 李工行「撤销」→ 在系统提示框点「取消」。code/plus-ui/src/views/lqg/auth/staff/index.vue:301-307 handleRevoke 用 `await proxy?.$modal.confirm(...)` 且无 try/catch；ElMessageBox.confirm 在取消时 reject 字符串 'cancel' → unhandled rejection。证据：dev 日志 [pageerror] cancel（页面级异常，使 L2-r2-web-plusui-indep.mjs 的 WEB-36 判 FAIL），build 8083 同一处只报 [console.error] cancel（Vue prod 不冒成 pageerror）。影响范围：任何真实用户点一次「取消」都触发；**无用户可见故障**——弹窗正常关闭、列表不变（WEB-15 PASS）、数据无错，故按产品影响定 S3 记账。修法一行：`await proxy?.$modal.confirm(...).catch(() => null)`。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "harness",
+      "ticket": "doc/waves/regression/D1（L2 QA harness，无 ticket）",
+      "title": "web 侧 5 处裸 page.click + waitForSelector 无重试，曾把 WEB-09 误报成 FAIL",
+      "detail": "复现：跑 doc/waves/regression/D1/L2-r2-web-plusui-indep.mjs（dev 8082）——前一轮日志 .tmp/qa-r2-l2-indep/web-dev.log 有 ① `FAIL WEB-09 … ['该手机号已登录过小程序，将把原账号升级为内部人员']` 与 ② `脚本异常 page.waitForSelector: Timeout 15000ms (locator('.el-dialog'))`；build 日志有 ③ `脚本异常 page.click: Timeout 30000ms ('.el-table__row:has-text(\"吴同学\") button:has-text(\"核验\")')`。独立查明根因都不是产品：WEB-07 用固定 waitForTimeout(2000) 后单次读文本，读到了上一步手机号 13800000011 的旧文案（间隔轮询实测 13800000091 与 13900001234 均在 0.5s 内显示正确的「将预建」）；②③ 是前一步残留的 overlay/下拉/弹窗过渡把下一次点击吞掉。影响范围：仅 QA 工具，但已导致上一轮对 WEB-09 的错误结论。已加固（只动等待/选择器）：新增 waitDialogText 轮询与 clickRowAndWait 点击重试（≤4 次，必要时整页 hardOpen 清状态），替换 5 处裸 click+wait；加固后 dev 39/40、build 40/40，重试计数 0。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "harness",
+      "ticket": "doc/waves/regression/D1（L2 QA harness，无 ticket）",
+      "title": "mp 侧 indep 脚本：gotoMe 假设 tabbar 恒可点、MP-33 读 uni-input 包装元素、MP-31 断言无权威支撑",
+      "detail": "复现：跑 doc/waves/regression/D1/L2-r2-mp-h5-indep.mjs（H5 9200）。① 首跑 12/13 抛 `page.click: Timeout 30000ms waiting for .uni-tabbar__item:has-text(\"我的\")`：MP-12 落到非 tab 页 /pages/cryo/form，uni-app H5 会把 .uni-tabbar 留在 DOM 但隐藏，count() 仍 >0 而不可点（必须断可见性）。② MP-33 取 `document.querySelectorAll('.profile__input').map(i => i.value)` 得 [null]：.profile__input 是 <uni-input> 包装元素，真值在内层 input.uni-input-input（探针实证内层 value === '王医生'），即表单确实回填了 王医生/A 医院/肝胆外科组，产品无缺陷。③ MP-31 要求页面出现逐字 `当前已核验：A 医院 · 肝胆外科组`，实际只渲染 `当前已核验：A 医院`（code/miniapp/src/pages/me/unit-group.vue:142 + src/utils/ext-profile.ts:40 unitDisplay() 只返回单位名）；权威 UI:mp.me.profile 正文并未要求这条摘要行、也未规定「单位 · 组别」串接格式，组别在下方组别选择器里明确可见 → 断言无权威支撑。影响范围：仅 QA 工具与结论可信度。已修 ①（可见性判断 + 回首页 tab 页）与 ②（改读内层 input）；③ 故意不修（改期望值等于挪球门），按 S3 记账。加固后 37/38，不抛异常。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "harness",
+      "ticket": "doc/verify（verify 工具链，无 ticket）",
+      "title": "api.sh --fresh-module 反 stale 守卫在本沙箱恒失败（exit 1），54 份 doc 引用它",
+      "detail": "复现：`bash doc/verify/api.sh --fresh-module ruoyi-lqg --as admin GET '/lqg/auth/unit'` → 真实 exit=1，stderr：`doc/verify/api.sh: line 71: /bin/ps: Operation not permitted`（沙箱禁 ps，取不到 lstart）`date: illegal option -- d`（回退分支用了 GNU date，macOS 无）。影响范围：doc/verify/api.sh:63-73 的守卫非 0 退出，任何带 --fresh-module 的 accept/verify 步骤在本沙箱**根本发不出请求**；grep 显示 54 份 doc（含 AUTH-STAFF-001/CRYO-REMIND-001/SAMPLE-MP-001 等多数 ticket 的 accept）引用该标志。非产品缺陷，属检查工具在 macOS/受限沙箱下的可移植性问题；本目录已有等价替代 doc/waves/regression/D1/L23-freshness.sh（用 lsof fd + 启动日志时间戳替代 ps，本轮四条全 PASS，见 evidence）。建议：把 L23-freshness.sh 的手段并入 api.sh，或在文档里把 --fresh-module 标为 Linux-only。"
+    }
+  ]
+}
