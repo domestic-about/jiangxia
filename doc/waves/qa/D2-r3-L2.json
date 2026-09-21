@@ -1,0 +1,30 @@
+{
+  "phase": "D2",
+  "round": 3,
+  "auditor": "independent",
+  "levels": {
+    "L2": {
+      "status": "fail",
+      "evidence": "三组独立复跑（H5+Playwright，VITE_MOCK_LOGIN=1，miniapp 9200 / plus-ui 8082 / 后端 8081 dev + api-decrypt=false）。组1 外部体验路径 16/16 绿（shots: doc/waves/regression/D2/shots/L2r2-mp/g1-*.png，日志 .tmp/r3-l2-run-mp.log）：首页三格无数字、点「样本记录信息表」URL=#/pages/sample/form?mode=new 且提交后库内 submit_source=external|verify_status=pending、历史记录出现待核验并带 .lqg-tag 徽标、工作台判无效后行内出现原因原文「R2M 独立复验：缺住院号，请补」、改后重提回 pending 且 invalid_reason 清空、再判有效 valid|T-r2m01 后外部详情无输入控件无提交按钮且正文有送检单号/供体姓名/组织类型/来源单位、extB 历史里看得到该送检单号而打开「只看我提交的」后看不到。组2 工作台样本总表 28/28 绿（shots: .../shots/L2r2-web/10-sample-list.png、11-filter-*.png；日志 .tmp/r3-l2-run-web.log）：12 种筛选 UI 驱动集合逐条等于库内现算（含来源单位=B 大学 → [SJ90000006,SJ90000009]，内部录的 1009 已被筛出）、组合筛=库内现算、待核验行置顶且计算样式 background-color=rgb(252,241,218)、核验抽屉两个出口同屏（判为有效并保存 / 判为无效），缺内部编号被拦、原因为空被拦，判有效 code=200 库内 valid|T-r2w085249，判无效 code=200 库内 invalid+原因原样。组3 内部小程序 23/23 + mp-extra 6/6 绿（shots: g3-*.png / x-*.png）：staff 首页四格、首页入口 mode=new 提交成功 internal|tissue|valid、内部管理四入口、表格页两工作表表头逐字等甲方模板第1行（冻结列前置+末尾切片染色）、首列 position=sticky left=0px、存在 overflow-x 可滚、无新增/保存、点行 mode=view 无输入且有字段值、按钮组选中态与库内值一致、类器官收样 7 项齐+收样日期弹层可见+来源单位底部弹层真选中后提交成功 internal|organoid|valid、历史编辑记录改本人有效样本保存成功且排最前、extC 三项提交后 pending|external|organoid。★组3 硬断言（两页签分类隔离）红：本片自写 L2r3-mp-tabs.mjs（shots: shots/L2r3-mp/t-0*.png，日志 .tmp/r3-l2-run-tabs.log）4/7——样本页签 3 行含 organoid（T-r2org1）、类器官页签 4 行含 tissue（T-hli05/T-r2m01），两页签行集合相交 3 行；类器官页签点 tissue 行竟进 /pages/organoid/form?id=9000001008。根因独立坐实（页面同源口 --as staff，sort=recent&pageSize=100，见 notes）：仅当行被内部账号改过（update_by 非空）后 sampleKind 过滤即失效——把 1008 的 update_by 置为 9000000101 后 sampleKind=organoid 返回 2 行 [T-hli05(tissue), T-oco01(organoid)]，tissue 返回 1 行；重置 update_by 后恢复 1/1。对照 extC 的 /mp/ext/sample/list?sampleKind= 过滤正确（tissue→SJ90000005，organoid→SJ00000066），病灶只在内部 sort=recent 支。反 stale：code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer ruoyi-admin/target/ruoyi-admin.jar 为空；8081 PID=81361 且 lsof 显示其持该 jar（mtime 2026-09-22 06:18:43）；后端启动日志 06:26:01 晚于 jar mtime。微信开发者工具 / 真机在本沙箱跑不通（写 ~/Library/Application Support/微信开发者工具 EPERM + 需扫码）→ 全部以 H5+Playwright 等价覆盖，**开发者工具与真机未覆盖**。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S1",
+      "level": "L2",
+      "type": "arch",
+      "ticket": "SAMPLE-MP-001",
+      "title": "/mp/int/sample/list 的 sort=recent 支把 sampleKind 等筛选条件用未加括号的 OR 吞掉——内部「历史编辑记录」两页签记录互相串台，点错行会进错类别表单",
+      "detail": "复现（H5 9200 @ 127.0.0.1:9200，后端 8081）：① UI：内部（staff 李工）我的→历史编辑记录（URL #/pages/history/index），「样本记录信息表」页签逐行含 T-r2org1(sample_kind=organoid)，「类器官收样记录」页签逐行含 T-hli05/T-r2m01(sample_kind=tissue)，两页签行集合相交 3 行（我的 L2r3-mp-tabs.mjs，shots/L2r3-mp/t-02-tab-sample.png、t-03-tab-organoid.png）。② 同源接口（页面调用口）--as staff GET /mp/int/sample/list?sort=recent&pageSize=100&sampleKind=organoid 返回 [T-hli05(tissue), T-r2org1(organoid), T-r2m01(tissue), T-oco01(organoid)]；sampleKind=tissue 与 sampleKind=bogus 同为 3 行。③ 最小坐实：reseed 后 1008/1009 的 update_by 均为 NULL 时 tissue=1 行[T-hli05]、organoid=1 行[T-oco01]（正确）；把 1008.update_by 置为 9000000101 后 organoid=2 行[T-hli05(tissue),T-oco01]，tissue 仍 1 行。根因在 SampleQueryService.list 的 sort=recent 分支：wrapper.inSql(Sample::getCreateBy, internalUsers).or().inSql(Sample::getUpdateBy, internalUsers) 未用 and(w->…) 括起来，生成 `… AND sample_kind=? AND create_by IN(内部) OR update_by IN(内部)`，OR 左结合把前面全部筛选短路；只要某行被任一内部账号改过，它就无视 sampleKind/verifyStatus/keyword 等条件出现在任何页签。影响：D2 qa_scope L2 明写「内部两个页签每个只应出现该类别记录、点一行进对应类别表单」为硬断言；正常主流程（在历史编辑记录改一个字段保存）之后 update_by 立即非空，页签当场串台。危害升级路径：类器官页签点中 tissue 行 → /pages/organoid/form?id=9000001008&mode=edit，该表单保存时调用 updateIntSample({id, sampleKind:'organoid', …})（code/miniapp/src/pages/organoid/api.ts:69-81），而后端 PUT /mp/int/sample 对 valid 行「谁录的都能改」，即把组织样本静默改成类器官记录。下游 D3（石蜡包埋）/D4（-80 冻存）要在同一 registry 上再加页签，同取数口，此 bug 会继续扩散。疑与本轮 L1 报的 SampleQueryService 筛选拼装 S1 同根，合并时请去重。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "harness",
+      "ticket": "D2-QA",
+      "title": "实现方返工中改动过的 WEB-L2-06b 探针被弱化成「直接打字典接口」，不再验页面是否真的用了真名字典 key（本条不影响结论）",
+      "detail": "git log -1 -p 1e8ea8c -- doc/waves/regression/D2/L2-web-plusui.mjs 显示：WEB-L2-06b 原断言「页面请求的假名 sample_kind 为空、真名 lqg_sample_kind 有 2 条」，返工改成「带页面 token+clientid 打真名接口，断言真名 code=200 且有类器官标签」。改动本身修掉了原探针裸 fetch 401 恒真的问题（属于修 harness），但顺带丢掉了「页面是否改用真名」的页面级验证——只看接口数据无法证明页面 key 已修。G3-20 的正负号翻转（length>0 → ===0，病灶探针跟修复翻转）属合理口径更新，不算迎合。本片结论未依赖这两条：组2 由本片独立跑通的 L2r2-web.mjs 的 R2W-06a/06b 正面覆盖（页面下拉选项 = [组织样本, 类器官]，列表 organoid 行渲染中文「类器官」标签）。"
+    }
+  ]
+}
