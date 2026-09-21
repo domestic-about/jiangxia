@@ -1216,6 +1216,56 @@
       "detail": "D2 r1 L0+L1 片重放 doc/waves/regression/D1/verify.sh：41 绿 / 1 红，唯一红是 SELECT count(*) FROM flyway_schema_history --eq 7（D1 时代硬编码总数；D2 又加 3 支 → 实际 10）。D1 的 7 支逐个点名、无失败行、迁移文件在源码树全绿 → 是 harness 缺陷，不是『以前好的坏了』。方案：回归包改成断『D1 那 7 支版本号逐个存在且无 success=false』，别断总数。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 83,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S0",
+      "type": "arch",
+      "title": "【S0】小程序首页四个入口都不带 mode=new → 填写页进只读错误页，首页送检主流程整条断",
+      "detail": "pages/index/entries.ts 的 ENTRY_FORM_TARGET 是裸路径（不带 ?mode=new）；填写页 normalizeMode(undefined)=='view' 且无 id → 渲染「没能加载这条样本」错误页、没有提交按钮。后果：外部无法从首页开始送检、内部也无法从首页录收样——四个入口全坏（D2 主流程第 1 步）。fixture home-entries-cases.json 也把目标写成裸路径，所以 L0 的 targetCases 全绿、掩盖了它。修法：入口目标带 mode=new（并同步 fixture 的期望——fixture 是需求层资产，需按 CR/权威判定该改哪边）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 84,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S0",
+      "type": "debt",
+      "title": "【S0】withDefaults(defineProps…) 未赋 const props 却引用 props.x → 三个组件运行时 ReferenceError",
+      "detail": "StatusChip.vue:34 / FieldRow.vue:45 / SegButtons.vue:23 都写成 withDefaults(defineProps…) 未赋值却引用 props.x → 运行时 ReferenceError: props is not defined。后果：① 历史编辑记录每行的核验状态徽标全不渲染（UI:mp.history 要求；实测 chips=0）；② 只读表单（内部管理点一行的 mode=view）一个字段值都没有；③ 性别/有无固定/质控表/细胞活率报告等按钮组点不动（点「男」后 --on 仍是「女」）。这是 L0 单测覆盖不到的运行时形态。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 85,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S0",
+      "type": "arch",
+      "title": "【S0】wd-datetime-picker 没有 visible 这个 prop，页面却传 :visible 且从不 open() → 日期面板永不渲染",
+      "detail": "内部类器官收样的「收样日期」必填且只能靠这个控件填 → 内部一条类器官收样都建不出来（库内 0 行）。修法：按 wot-design-uni 1.14 的真实 API（用 v-model:visible 或 ref.open()）改。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 86,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S1",
+      "type": "debt",
+      "title": "【S1】useDict('sample_kind') 与库里真名 lqg_sample_kind 不符 → 「样本类别」下拉永远「无数据」",
+      "detail": "sample/index.vue:266 用 useDict('sample_kind')，字典真名是 lqg_sample_kind → 该类筛选从 UI 走不通（后端接口本身正确，10/11 个筛选集合都对）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 87,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S1",
+      "type": "ux",
+      "title": "【S1】外部看不到无效原因：唯一带红条的 detail-ext 对「本人+editable」不可达",
+      "detail": "历史列表没有原因、点进去是 edit 表单也没有、而唯一带红条的 detail-ext 只对「非本人或不可改」可达（sources.ts 的 target 对本人+editable 走 form?mode=edit）→ 外部只能盲改。REQ/方案流程图要求「无效后能看到原因再改后重提」。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
