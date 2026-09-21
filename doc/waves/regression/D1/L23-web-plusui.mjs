@@ -84,12 +84,16 @@ try {
     (await page.$$('.el-menu-item')).length > 0,
     (await page.$$eval('.el-menu-item', els => els.map(e => e.innerText.trim()).join(' | '))).slice(0, 300))
 
-  // ── 【缺陷复现】dev server 下菜单导航 → 空白页 ──────────────────────────
+  // ── 回归：dev server 下菜单导航必须真的渲染出内容 ────────────────────────
+  // r1 这里是「缺陷复现」断言（blankLen <= 20，留证用）。缺陷已在 cbeaf4f 修掉
+  // （index.vue 顶层注释 → dev 下 Fragment 根 → transition mode=out-in 的 afterLeave 不回调
+  //   → isLeaving 永久 true → 只输出 <!---->），所以这条翻成正向断言。
+  // 这是**加强不是弱化**：r1 那条只对「坏实现」绿，现在只对「好实现」绿。
   await openMenu('内部人员授权')
   const blankLen = await appMainLen()
   await page.screenshot({ path: path.join(SHOTS, '11b-web-menu-nav-blank.png') })
-  check('【缺陷复现】dev server 下点菜单导航后 .app-main 渲染成空注释（不是 pass/fail 断言，留证）',
-    blankLen <= 20, `URL=${page.url()} .app-main innerHTML length=${blankLen}`)
+  check('dev server 下点菜单导航后 .app-main 渲染出真实内容（不是只剩注释 / 空白）',
+    blankLen > 200, `URL=${page.url()} .app-main innerHTML length=${blankLen}`)
 
   // ── ① 内部人员授权 ──────────────────────────────────────────────────────
   await hardOpen('/auth/staff', '按手机号授权')
