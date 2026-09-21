@@ -22,6 +22,8 @@ withDefaults(defineProps<{
   status?: string
   /** 状态徽标文案（默认按字典值） */
   statusText?: string
+  /** 判无效的原因（D2 r1 L2 S1-2；只有 `status='invalid'` 且有值时才由页面传进来） */
+  reason?: string
 }>(), {
   summary: '',
   owner: '',
@@ -29,6 +31,7 @@ withDefaults(defineProps<{
   date: '',
   status: '',
   statusText: '',
+  reason: '',
 })
 </script>
 
@@ -40,6 +43,10 @@ withDefaults(defineProps<{
     </view>
     <view v-if="summary" class="scard__mid">
       <text class="scard__sum">{{ summary }}</text>
+    </view>
+    <!-- 无效原因（D2 r1 L2 S1-2）：外部要在历史编辑记录里看到原因才能照它改后重提 -->
+    <view v-if="reason" class="scard__reason">
+      <text class="scard__reason-t">无效原因：{{ reason }}</text>
     </view>
     <view class="scard__bot">
       <text v-if="owner" class="scard__owner">{{ owner }}</text>
@@ -73,6 +80,18 @@ withDefaults(defineProps<{
 .scard__sum {
   font-size: var(--lqg-fs-body);
   color: var(--lqg-ink-2);
+}
+
+/* 无效原因：色值全部走 token（组件内零色值字面量是硬约束） */
+.scard__reason {
+  padding: var(--lqg-sp-3) var(--lqg-sp-4);
+  background: var(--lqg-danger-soft);
+  border-radius: var(--lqg-radius-ctl);
+}
+
+.scard__reason-t {
+  font-size: var(--lqg-fs-sm);
+  color: var(--lqg-danger);
 }
 
 .scard__bot {

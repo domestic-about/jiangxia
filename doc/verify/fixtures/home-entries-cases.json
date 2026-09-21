@@ -39,37 +39,37 @@
     {
       "identity": "internal",
       "key": "sample",
-      "expect": "/pages/sample/form"
+      "expect": "/pages/sample/form?mode=new"
     },
     {
       "identity": "internal",
       "key": "organoid",
-      "expect": "/pages/organoid/form"
+      "expect": "/pages/organoid/form?mode=new"
     },
     {
       "identity": "internal",
       "key": "embed",
-      "expect": "/pages/embed/form"
+      "expect": "/pages/embed/form?mode=new"
     },
     {
       "identity": "internal",
       "key": "cryo",
-      "expect": "/pages/cryo/form"
+      "expect": "/pages/cryo/form?mode=new"
     },
     {
       "identity": "external",
       "key": "sample",
-      "expect": "/pages/sample/form"
+      "expect": "/pages/sample/form?mode=new"
     },
     {
       "identity": "external",
       "key": "organoid",
-      "expect": "/pages/organoid/form"
+      "expect": "/pages/organoid/form?mode=new"
     },
     {
       "identity": "external",
       "key": "embed",
-      "expect": "/pages/embed/form"
+      "expect": "/pages/embed/form?mode=new"
     },
     {
       "identity": "external",

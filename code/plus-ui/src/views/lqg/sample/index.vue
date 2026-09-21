@@ -42,7 +42,7 @@
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.sample.filter.sampleKind')" prop="sampleKind">
               <el-select v-model="queryParams.sampleKind" clearable class="lqg-sample__control">
-                <el-option v-for="d in sample_kind" :key="d.value" :label="d.label" :value="d.value" />
+                <el-option v-for="d in lqg_sample_kind" :key="d.value" :label="d.label" :value="d.value" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -157,7 +157,7 @@
         <el-table-column :label="t('lqg.sample.col.sourceUnit')" prop="sourceUnitName" min-width="130" :show-overflow-tooltip="true" />
         <el-table-column :label="t('lqg.sample.col.sampleKind')" prop="sampleKind" width="100" align="center">
           <template #default="scope">
-            <dict-tag :options="sample_kind" :value="scope.row.sampleKind" />
+            <dict-tag :options="lqg_sample_kind" :value="scope.row.sampleKind" />
           </template>
         </el-table-column>
         <el-table-column :label="t('lqg.sample.col.submitSource')" prop="submitSource" width="90" align="center">
@@ -262,8 +262,8 @@ const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
 
 // 字典全部走 useDict（ticket §2.2）；文案走 lqg.sample.*
-const { sample_kind, lqg_submit_source, lqg_verify_status, lqg_gender } = toRefs<any>(
-  proxy?.useDict('sample_kind', 'lqg_submit_source', 'lqg_verify_status', 'lqg_gender')
+const { lqg_sample_kind, lqg_submit_source, lqg_verify_status, lqg_gender } = toRefs<any>(
+  proxy?.useDict('lqg_sample_kind', 'lqg_submit_source', 'lqg_verify_status', 'lqg_gender')
 );
 
 const loading = ref(false);

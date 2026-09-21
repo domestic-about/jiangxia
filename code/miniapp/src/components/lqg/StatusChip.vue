@@ -6,7 +6,9 @@ import { computed } from 'vue'
 //
 // 词表（字典 `lqg_verify_status` / `lqg_submit_source` / `lqg_doc_status`）：
 //   pending 琥珀 · valid 绿 · invalid 红 · internal 青绿 · external 蓝 · draft 琥珀 · published 绿
-withDefaults(defineProps<{
+// ★ `const props =` 不能省（D2 r1 L2 S0-2）：只写 `withDefaults(defineProps…)` 时编译器
+//   不生成运行时 `props` 变量，脚本里引用 `props.x` 会抛 ReferenceError → 整个组件渲染不出来。
+const props = withDefaults(defineProps<{
   /** 字典值（未知值不渲染，避免出现一个没有颜色的空徽标） */
   value?: string | null
   /** 自定义文案（默认按字典值给中文） */

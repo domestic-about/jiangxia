@@ -63,10 +63,14 @@ const serverEditable = ref<boolean | null>(null)
 const detail = ref<SampleDetail | null>(null)
 const form = ref<SampleFormValue>(emptyForm())
 const tissueHints = ref<string[]>([])
-/** 日期 / 时间控件的 `wd-datetime-picker`：打开状态、目标字段、以及回填用的毫秒值 */
-const pickerOpen = ref(false)
+/** 日期 / 时间控件的 `wd-datetime-picker`：目标字段、回填用的毫秒值、组件实例 */
 const pickerField = ref<FormFieldKey>('receiveDate')
 const pickerValue = ref<number>(Date.now())
+// ★ wot-design-uni 1.14 的 `wd-datetime-picker` **没有 `visible` 这个 prop**（D2 r1 L2 S0-3）：
+//   面板开关在组件内部的 `popupShow` 上，对外只暴露 `open()` / `close()`（`types.ts`
+//   的 `DatetimePickerExpose`）。所以这里持组件实例、点字段时调 `open()`；
+//   以前写 `:visible="pickerOpen"` 只会变成一个落不到任何逻辑上的普通 HTML 属性 → 面板永不弹出。
+const pickerRef = ref<{ open: () => void } | null>(null)
 
 onLoad((options) => {
   sampleId.value = String(options?.id ?? '')
@@ -118,6 +122,13 @@ const topNote = computed(() => {
   }
   return '这条记录现在不能修改'
 })
+
+// ★ 无效原因（D2 r1 L2 S1-2）：外部从「历史编辑记录」点进来看到的就是这一页，
+//   所以原因在这里也出一条红条（权威 FLOW:F-SAMPLE-01.step5：「看到无效及原因 → 修改 → 重新提交」）。
+//   原因来自详情接口（`ExtSampleDetailVo.invalidReason`，本来就是外部可见字段），不靠列表传参。
+const invalidReason = computed(() => (detail.value?.verifyStatus === 'invalid'
+  ? String(detail.value?.invalidReason || '')
+  : ''))
 
 // 内部修改模式顶部小字：最后修改：某某 · 时间。
 //
@@ -228,7 +239,7 @@ function onPick(key: FormFieldKey) {
   }
   pickerField.value = key
   pickerValue.value = toMs(fieldValue(key))
-  pickerOpen.value = true
+  pickerRef.value?.open()
 }
 
 function onPicked(event: { value: number | string }) {
@@ -238,7 +249,6 @@ function onPicked(event: { value: number | string }) {
   }
   const key = pickerField.value
   setField(key, formatMs(ms, key === 'processTime' ? 'datetime' : 'date'))
-  pickerOpen.value = false
 }
 
 /** 毫秒 → `yyyy-MM-dd`（日期）/ `yyyy-MM-dd HH:mm:ss`（时间），与后端 `@JsonFormat` 同形 */
@@ -366,6 +376,8 @@ function notYet() {
       </view>
 
       <text v-if="lastModified" class="form__meta">{{ lastModified }}</text>
+      <!-- 无效原因红条：外部改后重提要看得见「为什么被判无效」（S1-2） -->
+      <NoteBar v-if="invalidReason" tone="danger" :text="invalidReason" />
       <NoteBar v-if="topNote" tone="warn" :text="topNote" />
 
       <!-- 送检信息 -->
@@ -432,15 +444,13 @@ function notYet() {
       </view>
     </view>
 
-    <!-- 日期 / 时间：底部弹框（落地规范 §5.4） -->
+    <!-- 日期 / 时间：底部弹框（落地规范 §5.4）；开关调组件的 open()，不用不存在的 :visible -->
     <wd-datetime-picker
+      ref="pickerRef"
       v-model="pickerValue"
-      :visible="pickerOpen"
       :type="pickerField === 'processTime' ? 'datetime' : 'date'"
       title="选择时间"
       @confirm="onPicked"
-      @cancel="pickerOpen = false"
-      @close="pickerOpen = false"
     />
   </view>
 </template>

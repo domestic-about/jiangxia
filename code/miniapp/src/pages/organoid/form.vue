@@ -72,10 +72,12 @@ const units = ref<SelectorUnit[]>([])
 /** 来源单位的选择面板（底部弹层）与「手填」开关 */
 const unitSheet = ref(false)
 const manualUnit = ref(false)
-/** 日期 / 时间控件的打开状态与目标字段 */
-const pickerOpen = ref(false)
+/** 日期 / 时间控件的目标字段、回填毫秒值与组件实例 */
 const pickerField = ref<OrganoidFieldKey>('receiveDate')
 const pickerValue = ref<number>(Date.now())
+// ★ wot-design-uni 1.14 的 `wd-datetime-picker` **没有 `visible` 这个 prop**（D2 r1 L2 S0-3）：
+//   面板开关是组件内部的 `popupShow`，对外只暴露 `open()` / `close()`。持实例、点字段时调 `open()`。
+const pickerRef = ref<{ open: () => void } | null>(null)
 
 onLoad((options) => {
   organoidId.value = String(options?.id ?? '')
@@ -225,7 +227,7 @@ function onPick(spec: OrganoidFieldSpec) {
   }
   pickerField.value = spec.key
   pickerValue.value = toMs(fieldValue(spec.key))
-  pickerOpen.value = true
+  pickerRef.value?.open()
 }
 
 function onPicked(event: { value: number | string }) {
@@ -235,7 +237,6 @@ function onPicked(event: { value: number | string }) {
   }
   const key = pickerField.value
   setField(key, formatMs(ms, key === 'processTime' ? 'datetime' : 'date'))
-  pickerOpen.value = false
 }
 
 /** 毫秒 → `yyyy-MM-dd`（日期）/ `yyyy-MM-dd HH:mm:ss`（时间），与后端 `@JsonFormat` 同形 */
@@ -440,13 +441,11 @@ async function submit() {
     </wd-popup>
 
     <wd-datetime-picker
+      ref="pickerRef"
       v-model="pickerValue"
-      :visible="pickerOpen"
       :type="pickerField === 'processTime' ? 'datetime' : 'date'"
       title="选择时间"
       @confirm="onPicked"
-      @cancel="pickerOpen = false"
-      @close="pickerOpen = false"
     />
   </view>
 </template>

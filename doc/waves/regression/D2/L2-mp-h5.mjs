@@ -490,7 +490,10 @@ try {
   }))
   check('G3-19 历史编辑记录每行都有核验状态徽标（UI:mp.history 要求）', chipInfo.chips > 0 && chipInfo.chips >= chipInfo.items, JSON.stringify(chipInfo))
   const chipErr = consoleErrs.filter(e => /StatusChip|props is not defined/.test(e))
-  check('G3-20 StatusChip 渲染抛 ReferenceError（根因）', chipErr.length > 0, JSON.stringify(chipErr.slice(0, 2)))
+  // ★ harness 口径已于 D2-rework-r1 翻转（S0-2 修复后「抛错」不再是期望值）：
+  //   原来断言 `length > 0`（证明病灶存在），现在断言 `length === 0`（证明病灶消失）。
+  //   产品期望值（徽标数、只读值、按钮组）没有动，只是这条「根因探针」的正负号跟着修复翻过来。
+  check('G3-20 StatusChip 不再渲染抛 ReferenceError（S0-2 根因已消）', chipErr.length === 0, JSON.stringify(chipErr.slice(0, 2)))
   check('G3-21 其余流程无未捕获前端异常', pageErrors.length === 0, JSON.stringify(pageErrors.slice(0, 3)))
 } catch (e) {
   check('脚本异常', false, e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : String(e))

@@ -35,6 +35,14 @@ export interface HistoryRow {
   date: string
   status: string
   statusText: string
+  /**
+   * 判无效的原因（D2 r1 L2 S1-2）。
+   *
+   * ★ 权威 FLOW:F-SAMPLE-01.step5 的动作是「在『我的 → 历史编辑记录』**看到无效及原因** →
+   *   修改送检段 → 重新提交」。只给状态不给原因时，外部只能「盲改」。
+   *   只有 `verifyStatus === 'invalid'` 且有值时页面才渲染这一行。
+   */
+  reason: string
   /** 来源对象：点行时判「本人 + 可改」用（外部那条路） */
   raw: SampleRow
 }
@@ -83,8 +91,11 @@ function codeOf(row: SampleRow): string {
 function toHistoryRow(row: SampleRow): HistoryRow {
   const status = String(row.verifyStatus || '')
   const isExternal = row.donorNameMasked !== undefined || row.handlerName === undefined
+  // ★ 无效原因只在「真的无效」时带出来（D2 r1 L2 S1-2）：状态不是 invalid 的话，
+  //   行上纵使有脏值也不显示，免得给已改判有效的行挂一条旧原因。
+  const reason = status === 'invalid' ? String(row.invalidReason || '') : ''
   if (isExternal) {
-    // 外部行：掩码供体 · 组织类型 / 类器官类型 ·「我 / 同组 某某」· 状态 · 日期
+    // 外部行：掩码供体 · 组织类型 / 类器官类型 ·「我 / 同组 某某」· 状态 · 日期（+ 无效原因）
     return {
       id: String(row.id),
       code: String(row.submitNo || ''),
@@ -94,6 +105,7 @@ function toHistoryRow(row: SampleRow): HistoryRow {
       date: latestTime(row),
       status,
       statusText: STATUS_TEXT[status] || '',
+      reason,
       raw: row,
     }
   }
@@ -107,6 +119,7 @@ function toHistoryRow(row: SampleRow): HistoryRow {
     date: latestTime(row),
     status,
     statusText: STATUS_TEXT[status] || '',
+    reason,
     raw: row,
   }
 }

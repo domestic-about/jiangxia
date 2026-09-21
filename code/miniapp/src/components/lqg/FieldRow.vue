@@ -16,7 +16,10 @@ import WdTextarea from 'wot-design-uni/components/wd-textarea/wd-textarea.vue'
 //   - 按钮组：值插槽里放 `SegButtons`（二态 / 三态），本组件让出右侧空间
 //   - 多行：`wd-textarea`（备注）
 // `readonly` 时不渲染任何输入控件，只显示纯文本 —— 只读页与「不可改的字段」共用这一支。
-withDefaults(defineProps<{
+// ★ `const props =` 不能省（D2 r1 L2 S0-2）：只写 `withDefaults(defineProps…)` 时编译器
+//   不生成运行时 `props` 变量，下面 `display` 引用 `props.modelValue` 会抛 ReferenceError
+//   → readonly 分支一个字段值都渲染不出来。
+const props = withDefaults(defineProps<{
   label: string
   /** v-model 的值（按钮组 / 日期也走同一份字符串值） */
   modelValue?: string

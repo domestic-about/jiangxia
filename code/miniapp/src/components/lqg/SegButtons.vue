@@ -3,7 +3,9 @@
 // 二态（有无）、三态（性别）、多选互斥都是这一个样子，**不用下拉、不用开关**。
 //
 // 选中态只有一块 `.lqg-seg__item--on`；颜色全在 `.lqg-*` 类里（零色值字面量）。
-withDefaults(defineProps<{
+// ★ `const props =` 不能省（D2 r1 L2 S0-2）：`pick()` 里引用 `props.disabled`，
+//   不赋值给 props 会在点击时抛 ReferenceError → 按钮组点不动。
+const props = withDefaults(defineProps<{
   /** 选项：value + 显示文案 */
   options: Array<{ value: string, label: string }>
   /** 当前值（单选） */

@@ -157,6 +157,8 @@ public class ExtSampleAssemblyService {
         vo.setTissueType(sample.getTissueType());
         vo.setOrganoidType(sample.getOrganoidType());
         vo.setVerifyStatus(sample.getVerifyStatus());
+        // ★ 无效原因也带上（D2 r1 L2 S1-2）：外部要在「历史编辑记录」里看到原因才能照它改后重提
+        vo.setInvalidReason(sample.getInvalidReason());
         vo.setSubmitterName(submitterName);
         vo.setMine(flags.mine());
         vo.setEditable(flags.editable());

@@ -200,19 +200,27 @@ try {
   } catch (e) {
     check('WEB-L2-06a 样本类别下拉有「组织样本 / 类器官」两个选项', false, '探针异常: ' + e.message)
   }
-  // 根因对照：页面请求的字典 key `sample_kind` 在库里不存在，库里真名是 `lqg_sample_kind`
+  // 根因对照：修复前页面请求的字典 key `sample_kind` 在库里不存在、真名是 `lqg_sample_kind`。
+  // D2-rework-r1 把页面改成真名；本条探针改成「带上页面自己的 token + clientid 打真名字典接口」，
+  // 断言真名有「组织样本 / 类器官」2 条（原来「假名为空」是修复前的病灶证据，不再是期望值）。
+  // ★ 裸 fetch 不带 Authorization + clientid 时后端起手就回 401（data=null）；
+  //   clientid 与页面 axios 默认头同值（`VITE_APP_CLIENT_ID`，dev = e5cd7e4891bf95d1d19206ce24a7b32e）。
   const dictProbe = await page.evaluate(async () => {
+    const token = localStorage.getItem('Admin-Token')
     const out = {}
     for (const k of ['sample_kind', 'lqg_sample_kind']) {
-      const r = await fetch(`/dev-api/system/dict/data/type/${k}`)
+      const r = await fetch(`/dev-api/system/dict/data/type/${k}`, {
+        headers: { Authorization: `Bearer ${token}`, clientid: 'e5cd7e4891bf95d1d19206ce24a7b32e' },
+      })
       const j = await r.json().catch(() => ({}))
-      out[k] = (j.data || []).map(x => x.dictLabel)
+      out[k] = { code: j.code, labels: (j.data || []).map(x => x.dictLabel) }
     }
     return out
   }).catch(e => ({ err: String(e) }))
-  check('WEB-L2-06b 字典 key 对照：页面用的 sample_kind 为空、库里真名 lqg_sample_kind 有 2 条',
-    Array.isArray(dictProbe.sample_kind) && dictProbe.sample_kind.length === 0
-    && Array.isArray(dictProbe.lqg_sample_kind) && dictProbe.lqg_sample_kind.length === 2,
+  check('WEB-L2-06b 字典 key 对照：库里真名 lqg_sample_kind 有「组织样本 / 类器官」2 条（页面已改用真名；sample_kind 这个假名仍为空，只作对照）',
+    dictProbe.lqg_sample_kind && dictProbe.lqg_sample_kind.code === 200
+    && dictProbe.lqg_sample_kind.labels.length === 2
+    && dictProbe.lqg_sample_kind.labels.some(t => /类器官/.test(t)),
     `probe=${JSON.stringify(dictProbe)} (api.sh 另行佐证：GET /lqg/sample/list?sampleKind=organoid → [1009]，后端正常)`)
   await resetFilters()
 

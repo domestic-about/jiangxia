@@ -155,6 +155,7 @@ onShow(start)
           :date="row.date"
           :status="row.status"
           :status-text="row.statusText"
+          :reason="row.reason"
         />
       </view>
     </view>

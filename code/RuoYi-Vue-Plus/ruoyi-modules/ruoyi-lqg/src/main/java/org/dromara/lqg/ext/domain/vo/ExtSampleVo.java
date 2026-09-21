@@ -52,6 +52,18 @@ public class ExtSampleVo implements Serializable {
     @Schema(description = "pending / valid / invalid")
     private String verifyStatus;
 
+    /**
+     * 判无效的原因（D2 r1 L2 S1-2）。
+     *
+     * <p>★ 权威要「外部在『我的 → 历史编辑记录』看到无效及原因」（FLOW:F-SAMPLE-01.step5），
+     * 而列表行以前只给状态、不给原因，外部点进去的表单也不显示原因 —— 本人无效样本
+     * **没有任何入口**能看到原因（详情页那条红条只对「非本人 / 不可改」可达）。
+     * 字段本身在 {@code FIELD:t_lqg_sample.invalid_reason} 就注明「外部可见」，
+     * 也在 {@code ExtSampleDetailVo} 的白名单里，故列表行照详情一样带上它。
+     */
+    @Schema(description = "判无效的原因（仅 verifyStatus=invalid 时有值；外部可见）")
+    private String invalidReason;
+
     @Schema(description = "提交人姓名（外部档案的 real_name）")
     private String submitterName;
 

@@ -24,12 +24,18 @@ export const INTERNAL_ONLY_ENTRY: EntryKey = 'cryo'
 export const ME_SECTION_KEYS = ['history', 'unitGroup', 'internalAdmin'] as const
 export type MeSectionKey = (typeof ME_SECTION_KEYS)[number]
 
-/** 每个入口点进去的页面：一律是该表的填写页（新增一条） */
+// 每个入口点进去的页面：一律是该表的填写页（新增一条）。
+//
+// ★ `?mode=new` **必须由入口自己带**（D2 r1 L2 S0-1）：填写页的 `normalizeMode` 把
+//   「缺失 / 不认识的 mode」一律按只读处理（ticket 明文口径，不能改成默认可写），
+//   所以「点哪格都是新增一条」（UI:mp.home.entries）只能落在这里：
+//   不带 mode 就是 view + 没有 id → 页面直接进「没能加载这条样本」错误态，首页送检整条路断掉。
+//   占位页（embed / cryo）不吃 query，多这一个参数不会有事（它们连 onLoad 都没有）。
 const ENTRY_FORM_TARGET: Record<EntryKey, string> = {
-  sample: '/pages/sample/form',
-  organoid: '/pages/organoid/form',
-  embed: '/pages/embed/form',
-  cryo: '/pages/cryo/form',
+  sample: '/pages/sample/form?mode=new',
+  organoid: '/pages/organoid/form?mode=new',
+  embed: '/pages/embed/form?mode=new',
+  cryo: '/pages/cryo/form?mode=new',
 }
 
 // 首页要渲染哪些入口格。顺序 = ENTRY_KEYS 的模板顺序；
