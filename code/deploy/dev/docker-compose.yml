@@ -1,0 +1,93 @@
+# SYS-BASE-001 · 本地开发环境（只给开发机用，不派生任何生产配置）
+#
+#   docker compose -f code/deploy/dev/docker-compose.yml up -d
+#   docker compose -f code/deploy/dev/docker-compose.yml down          # 停容器，保留数据卷
+#   docker compose -f code/deploy/dev/docker-compose.yml down -v       # 连数据卷一起删（重跑 Flyway 用）
+#
+# ★ 端口纪律：8080 / 5432 / 6379 是 Kevin 本机日常服务占着的，本文件一个都不用。
+#   本票占：PostgreSQL 5433、Redis 6380、MinIO 9002(api) / 9003(console)、后端 8081。
+#   三个服务一律只绑 127.0.0.1，同机其它容器/局域网进不来（栈坑手册 §13.9）。
+#
+# 变量默认值就写在 compose 里；要改（或换成本地不想进仓库的口令）在 code/deploy/dev/.env 里覆盖
+# （.env 已在根 .gitignore 里，不进仓库）。
+name: lqg-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lqg-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LQG_DB_NAME:-lqg_dev}
+      POSTGRES_USER: ${LQG_DB_USER:-lqg}
+      POSTGRES_PASSWORD: ${LQG_DB_PASSWORD:-lqg_dev_pwd}
+      # 中文排序/大小写按 C 排序，避免不同机器上索引行为漂移
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      TZ: Asia/Shanghai
+    ports:
+      # 只绑环回：宿主端口 = LQG_DB_PORT（默认 5433），容器内固定 5432
+      - "127.0.0.1:${LQG_DB_PORT:-5433}:5432"
+    volumes:
+      - lqg-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LQG_DB_USER:-lqg} -d ${LQG_DB_NAME:-lqg_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: lqg-dev-redis
+    restart: unless-stopped
+    # 设口令：若依的 Redisson 客户端配了口令就会发 AUTH，服务端没设口令时 AUTH 直接报错
+    # （ERR AUTH <password> called without any password configured）→ 后端起不来。
+    # 口令值与 code/deploy/dev/.env 的 LQG_REDIS_PASSWORD 一致。
+    environment:
+      LQG_REDIS_PASSWORD: ${LQG_REDIS_PASSWORD:-lqg_dev_redis_pwd}
+    command:
+      - /bin/sh
+      - -c
+      - exec redis-server --requirepass "$$LQG_REDIS_PASSWORD" --save 60 1 --appendonly no
+    ports:
+      - "127.0.0.1:${LQG_REDIS_PORT:-6380}:6379"
+    volumes:
+      - lqg-redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$LQG_REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    container_name: lqg-dev-minio
+    restart: unless-stopped
+    # 只起服务端，不在 compose 里建桶。
+    # 为什么不在 compose 里建：MinIO 的 mc 必须先连上一个**已经起来**的服务端才能建桶，
+    # 塞进同一个 entrypoint 就得先 nohup 起服务端再轮询，启动脚会脆；而桶的内容物（前端预览图、
+    # 渲染产物）是 DOC/QC 域 ticket 才产生的。那时由后端 OSS 配置行决定桶名，
+    # 建桶也跟着走「工作台 → 系统管理 → OSS 配置」，不再多一个一次性容器。
+    # 现在从 console（127.0.0.1:9003）手建同名桶，策略保持默认的 private 即可。
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${LQG_MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${LQG_MINIO_PASSWORD:-minioadmin}
+      # bucket 私有：前端一律拿后端签发的短时签名链接（REQ-SYS-004 的口径）
+      MINIO_BUCKET: ${LQG_MINIO_BUCKET:-lqg}
+      MINIO_BROWSER: "on"
+    ports:
+      - "127.0.0.1:${LQG_MINIO_PORT:-9002}:9000"
+      - "127.0.0.1:${LQG_MINIO_CONSOLE_PORT:-9003}:9001"
+    volumes:
+      - lqg-miniodata:/data
+    healthcheck:
+      # 容器里自带 mc；probe 的别名就用本机服务端，不需要先配 alias
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  lqg-pgdata:
+  lqg-redisdata:
+  lqg-miniodata:

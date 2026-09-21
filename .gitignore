@@ -10,3 +10,16 @@ code/deploy/**/.env
 *.dump
 *.dump.gz
 __pycache__/
+
+# 本地环境变量（密钥不进仓库）；doc/verify/verify.env 见上
+*.env.local
+# 本地构建/依赖缓存（SYS-BASE-001：本机 ~/.m2 在构建沙箱里只读、~/.msp 写不进去，改用工作区内的）
+.m2repo/
+.buildhome/
+# 本机临时脚本（起后端的 run-backend.sh 之类）
+.tmp/
+# 各端构建产物（后端 code/**/target 见上；网页与小程序补这几类）
+code/**/dist-ssr/
+code/**/.vite/
+code/**/unpackage/
+code/**/.hbuilderx/
