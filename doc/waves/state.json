@@ -744,8 +744,8 @@
       "type": "debt",
       "title": "工作台在 pnpm dev 下任何菜单导航都渲染成空白页（构建产物不受影响）",
       "detail": "D1 QA r1 L2 片实测：pnpm dev(8082) 下点侧边栏任何菜单，.app-main innerHTML 长度=7（只剩 <!--->），硬刷新同一 URL 就正常；无 JS 报错。触发点已隔离到 src/layout/components/AppMain.vue 的 <transition mode=\"out-in\">（去 mode 或去 transition 即恢复；keep-alive 单独不影响；清 .vite、禁 vue-devtools 仍复现）。pnpm build:dev 静态产物 + 同一后端三页 appMainLen=16757/18895/20986 全部正常 → 老师拿构建产物不被卡，故不是 S0；但后续每个 WEB ticket 的人工/L2 走查都走 pnpm dev，会持续被卡，故 S1。截图 doc/waves/regression/D1/shots-L23/11b-web-menu-nav-blank.png vs 12-web-staff-list.png。修法在 code/plus-ui/**（touches 允许），但 SYS-WEB-001 §3 写了『不改上游布局组件』，边界待定。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：已由 cbeaf4f 修复（AppMain.vue 去掉 transition mode=out-in；根因是 views/index.vue 顶层注释在 vite dev 下让首页根变 Fragment，卸载 Fragment 不回调 afterLeave → BaseTransition.isLeaving 永久 true）。D1 QA r2 两轮独立复验：dev 8082 与 build 8083 各 bad=0/6，有头 Chrome 也验过。残留：越界改上游布局组件已另记 issue #39。"
     },
     {
       "id": 36,
