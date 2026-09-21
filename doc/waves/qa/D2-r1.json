@@ -1,0 +1,145 @@
+{
+ "phase": "D2",
+ "round": 1,
+ "verdict": "FAIL",
+ "auditor": "independent",
+ "levels": {
+  "L0": {
+   "status": "pass",
+   "evidence": "【回归包重放先行】bash doc/waves/regression/D1/verify.sh（原样，无 --skip-build）→ 40 绿 / 1 红；唯一红是回归资产自身把 flyway 总数写死成 7（D2 又加了 3 支迁移，实际 10，见 issues 第 1 条），D1 的 7 支迁移逐个点名断言全绿、无失败行。全量日志 .tmp/qa-L01-regression.log。【后端编译+单测】verify.sh L0.1 跑 `mvn -pl ruoyi-modules/ruoyi-lqg -am install -s .mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome` → BUILD SUCCESS，Tests run: 55, Failures: 0, Errors: 0, Skipped: 0。逐类：ExtBindStateMachineContractTest 11、StaffGrantRulesContractTest 6、MockLoginGuardContractTest 4、ExtChokepointContractTest 4、VerifyTransitionsContractTest 8、MpSampleContractTest 8、SampleKindRulesContractTest 6、SampleTableQueryContractTest 8（日志 .tmp/regression-D1/mvn-install.log，逐类 `Tests run` 行）。核验转移表全格：VerifyTransitionsContractTest#tissueKind_wholeTransitionTableIsCovered / #organoidKind_wholeTransitionTableIsCovered 穷举 3 状态 × 3 目标 × 2 操作者 = 18 格 × 2 种 sample_kind，合法恰好 5、非法恰好 13，期望值在测试内独立重述；另加 #theFiveLegalTransitionsAreExactlyTheOnesInTheTicket / #externalCanNeverReachValid_andInternalCannotResubmitToPending / #selfLoopsAndUnknownValuesAreRejected / #actionMapsToTargetStatusOnlyThroughTheTable / #transitionTableIsTableAgnosticPureFunction / #requestBodiesCannotCarryVerifyStatus 全绿。ExtChokepointContractTest 四条不变量：`cmp doc/verify/fixtures/java/ExtChokepointContractTest.java <repo>` → 逐字节相同 rc=0；4 个 @Test 全过，每条都有 assertFalse/assertTrue(isEmpty/handlers>0/vos>0) 防空转；辅证 grep：ext 包内类级 @SaCheckRole(\"lqg_external\") 2 处，ext 包外映射 /mp/ext 的 controller 0 处。【两个前端 build】verify.sh L0.3 plus-ui `rm -rf dist && pnpm build:prod` 通过 → code/plus-ui/dist/index.html + assets 435 个文件（脚本自己打印的「1 个文件」是 find 打到单文件上的计数 bug，见 issues 第 3 条）；L0.4 miniapp `rm -rf dist/build/mp-weixin && pnpm build:mp-weixin` 通过 → 247 个文件。独立复核产物：dist/build/mp-weixin 下 pages/sample/form.js、pages/history/index.js、pages/ledger/index.js、pages/organoid/form.js、pages/index/index.js、pages/me/index.js、app.json 全在，且不存在 pages/sample/mine.js（ticket 要求旧的「我的送检」页必须已删）。【miniapp 四份 fixture 单测】npx vitest run 四份 spec 全绿：src/pages/index/entries.fixture.spec.ts 25/25（首页入口 entriesFor + 跳转目标 entryTarget + 「我的」区块 meSections，三组用例都从 doc/verify/fixtures/home-entries-cases.json 读）、src/pages/sample/layout.fixture.spec.ts 22/22（样本表单布局，含 new/edit/view 与缺失 mode 共 13 条 fixture 用例）、src/pages/organoid/layout.fixture.spec.ts 13/13（类器官表单布局，9 条 fixture 用例）、src/pages/ledger/columns.fixture.spec.ts 7/7（表格页列名，4 张工作表）。非空转核查：entriesFor/meSections 被 pages/me/index.vue、pages/history/index.vue 直接 import 使用，formLayout 被 pages/sample/form.vue 使用，ledgerColumns 被 pages/ledger/sheets.ts 使用，不是只给测试用的孤儿函数。【新鲜度（等价 --fresh-module）】jar mtime 2026-09-22 00:09:37；`find ruoyi-modules/ruoyi-lqg/src ruoyi-admin/src -type f -newer <jar>` 为空；pid 18468 经 lsof 确认持有该 jar；进程启动 00:21:46 ≥ jar mtime；jar 内 BOOT-INF/classes/db/migration 含 D2 三支迁移（V202609221000 / 1001 / 1010）。注：本运行时 `api.sh --fresh-module` 必挂（/bin/ps: Operation not permitted + GNU date -d），按回归包 L0.2 的等价手段核实，未改 api.sh。\n\n【★ 证伪抽样（改坏实现看断言红不红，全部已 git checkout 还原）】F1 把「外部 pending→valid」放进 VerifyTransitions.LEGAL、抽掉「invalid→pending(外部)」→ `mvn -pl ruoyi-modules/ruoyi-lqg -am test -Dtest=VerifyTransitionsContractTest` → Tests run: 8, Failures: 5 （wholeTableIsCovered × tissue/organoid、theFiveLegalTransitions、externalCanNeverReachValid、actionMapsToTarget 全红）。F2 一次注入四处：包外新建 @RequestMapping(\"/mp/ext/thief\") 的 controller、ExtSampleController 增一个返回 SampleVo 的 handler、ExtSampleVo 加 operatorName、ExtSampleController 注入 SampleMapper → ExtChokepointContractTest Tests run: 4, Failures: 4（I1/I2/I3/I4 全红），四条不变量都不空转。F3 把 sample/layout.ts 的外部字段也拼上 RECEIVE_FIELDS → layout.fixture.spec.ts 22 例红 7；F4 去掉 entries.ts 的 INTERNAL_ONLY_ENTRY 过滤（外部也出 -80 冻存）→ entries.fixture.spec.ts 25 例红 2（含 entryTarget 跳转目标用例）；F5 organoid/layout.ts 外部给 INTERNAL_FIELDS → organoid layout spec 13 例红 5；F6 ledger/columns.ts 把「质控表」改成「质控表（有/无）」→ columns.fixture.spec.ts 7 例红 1。还原后四份 spec 与单测全部回绿。",
+   "reported": "pass"
+  },
+  "L1": {
+   "status": "pass",
+   "evidence": "全部在 `bash doc/verify/reseed.sh --yes` 的确定性快照上跑，每条断言先用独立 SQL/openssl 对账再看接口。【1. t_lqg_sample ddl_vs_ssot】`python3 doc/verify/ddl_vs_ssot.py --table t_lqg_sample --require-public create_dept,create_by,create_time,update_by,update_time,del_flag` → 「✓ 1 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）」rc=0。【donor_name 密文】`POST /lqg/sample`（staff，内部新增，internalNo=T-probe01，donorName=加密探针，hospitalNo=ZYPROBE01）→ code=200；`doc/verify/db.py --sql \"SELECT donor_name FROM t_lqg_sample WHERE internal_no='T-probe01'\"` → `Jfied4P73vkz5XkxDihNQQ==`，与 `printf '%s' '加密探针' | openssl enc -aes-128-ecb -K 4c7167546573744165734b6579233031 -nosalt -base64 -A` 独立算出的值逐字符相同（hospital_no 同样对得上：`fGn9eNFIUbJMOF0WbGZbtA==`）；接口回读为明文 `[{internalNo:T-probe01,donorName:加密探针,hospitalNo:ZYPROBE01,submitSource:internal,verifyStatus:valid,submitNo:SJ00000023}]`，submitNo 符合 ^SJ[0-9]{8}$。加密列只能精确查：`?donorName=测试供体甲` → `[\"9000001001\"]`；`?donorName=测试供体`（模糊子串）→ rows=0；`?hospitalNo=ZY0000001` → `[\"9000001001\"]`，`?hospitalNo=ZY0000` → 0；`?internalNo=T-hli` → 0。软删不出现：`?pageSize=100` → 10 行（9 条 seed 有效 + 刚建的 1 条），无 9000001010；`?delFlag=1`、`?orderByColumn=del_flag`、/mp/int/sample/list?pageSize=500 都取不到 1010；`GET /lqg/sample/9000001010` → {\"code\":500,\"msg\":\"样本不存在\"}，`GET /mp/ext/sample/9000001010`（extA）→ {\"code\":404,\"msg\":\"样本不存在\",\"data\":null}，`GET /mp/int/sample/9000001010`（staff）→ 404；库里 `del_flag<>'0'` 只有 1010 一行。内部编号唯一+软删可重用：重复 T-hli01 被拒（500「内部编号「T-hli01」已存在」）且库里仍 1 行；类器官缺「类器官类型」被拒。联想词走字典：/mp/dict/hints?type=tissue 含「肝组织」不含「测试供体甲」。【2. 可见集合逐身份】`/mp/ext/sample/list?pageSize=100` 的 id 集合：extA `[\"9000001001\",\"9000001002\",\"9000001003\",\"9000001004\"]`、extB 同、extC `[\"9000001005\"]`、extD `[\"9000001006\"]`、extE `[\"9000001007\"]`、extF `[]`；叠加筛选 extB(onlyMine+pending) `[]`、extA(sampleKind=organoid) `[]`。软删 1010 在外部接口：extA 列表（pageSize=200）只有 1001-1004、详情 404 且 data 为空对象（length 0）；extC/extE 取 1001 均 404（按不存在返回，不泄露存在性）。泄露面：extB 取 1001 的 keys = [age,createTime,docs,donorName,editable,embeds,gender,hasPathology,hospitalNo,id,invalidReason,mine,organoidType,remark,sampleKind,sourceUnitName,submitNo,submitterName,tissueType,verifyStatus] —— 无 internalNo/operatorName/verifyBy；列表行 keys 含 donorNameMasked 且不含 donorName/hospitalNo/internalNo/operatorName。角色闸：extA→/mp/ext/home 404（端点已删）、extA→/lqg/sample/list 403、extA→/mp/int/sample/list 403、staff→/mp/ext/sample/list 403。【3. submit_source 是快照】reseed 后 `POST /lqg/auth/staff {phone:13800000011, roleKey:lqg_internal}` → upgraded=true（user_id 9000000111，角色从 lqg_external 变 lqg_internal）；清 token 缓存后该用户 `POST /lqg/sample`（internalNo=T-snap01）→ 200；`SELECT submit_source||':'||count(*) ... WHERE submitter_id=9000000111 AND del_flag='0' GROUP BY submit_source` → col-set `external:3,internal:1` rc=0（4 行：1001/1002/1003 仍 external + 新 1 条 internal）；两侧不同源的交叉断言：`... JOIN sys_user_role/sys_role WHERE r.role_key='lqg_internal' AND s.submit_source='external'` → count=3；列表 `?submitSource=external` 仍含 9000001001。即「提交当时的快照」，不是按当前角色现算。【4. 只看我提交的 + 内部历史 + 类器官】外部 onlyMine：extA `[\"9000001001\",\"9000001002\",\"9000001003\"]`、extB `[\"9000001004\"]`。内部历史（`/mp/int/sample/list?pageSize=100&sort=recent`，staff）：baseline ids `[\"9000001008\",\"9000001009\"]`（total=2，两行 handlerName=李工、mine=true、updateTime=null），与独立 SQL 「del_flag='0' AND create_by/update_by ∈ sys_user(user_type='sys_user')」的 col-set `9000001008,9000001009` 一致；外部 extA 改 1002 后 staff 历史仍 `[\"9000001008\",\"9000001009\"]`（外部自己改的不算内部经手）；staff `PUT /mp/int/sample {id:9000001001,tissueType:肝组织（更正）}` → 200，库内 `肝组织（更正）|valid|update_by=yes`，再查历史 → order `[\"9000001001\",\"9000001008\",\"9000001009\"]`，集合 {1001,1008,1009}，1001 排在最前，首行 handlerName=李工/mine=true/updateTime 非空；独立 SQL col-set 同样是 `9000001001,9000001008,9000001009`。外部类器官收样：extC `POST /mp/ext/organoid {sourceUnitName:A 医院,organoidType:胃类器官,remark:外部送类器官}` → 200；库内 `organoid|external|pending|-|-|-|-|A 医院|胃类器官|赵医生`（sample_kind|submit_source|verify_status|internal_no|receive_date|tissue_type|donor_name|source_unit_name|organoid_type|提交人 real_name），即收样段（internal_no / receive_date / tissue_type / donor_name）全为空；submit_no ~ '^SJ[0-9]{8}$' = true；extC onlyMine 只看到这一条且 editable=true/mine=true，extA 的类器官列表为 []；详情 keys 里没有 receiveDate / internalNo 键（值为 null）。【工具缺陷补强】AUTH-EXT-001 accept 3 结尾用 `db.py --quiet` 取 OID，实测该写法恒为空串（`--quiet` 不打印行）。已按真实 OID 重跑该段产品行为：real OID=2102071501313404929，extD `PUT /mp/ext/organoid/<real>` → 404「样本不存在」，extC `PUT /mp/ext/sample/<real>`（跨 kind 借组织口改类器官）→ 400「这条记录是「类器官」类样本，不能从「组织」的入口修改」，事后库内该行仍 `胃类器官|-|A 医院`，`count(*) WHERE organoid_type='被外单位改' OR (donor_name IS NOT NULL AND sample_kind='organoid' AND submitter_id=9000000113)` = 0；同时复现了假绿路径：空 OID → `PUT /mp/ext/organoid/` → 404「No endpoint」，正好落进 ticket 的 ^(400|403|404) 正则。产品行为正确，缺陷只在检查工具（issues 第 2 条）。\n\n【★ 证伪抽样（API 级，改坏实现重打 jar + 按 PID 重启，全部已 git checkout 还原并把 jar 换回原 md5 14cf7d50e6c6a80c0d2ca776f4f0d257）】F7 把 SampleFieldCipher.encrypt 改成原样返回明文 → 落库 donor_name 变成「加密探针」≠ openssl 密文 → L1.1 密文断言红。F8 把 ExtScopeServiceImpl 的同组判据换成同单位（ExtProfile::getUnitId）→ extA/extB/extC 都看到 1001-1005 → L1.2 可见集合断言红。F9 去掉 ExtScopeServiceImpl.flagsOf 的「本人」项 → 详情里同组别人的待核验样本 mine=false 但 editable=true（口径被破坏），但写侧仍被 ExtSampleSubmitService:120 的 isMine 拦住（400），accept 3 的「extB 改 1002」断言仍绿 —— 说明产品在这一处有**两道**归属闸（第二道在 SampleVerifyService.resubmitByExternal:145）；再把第二道也去掉（isMine 恒真 + 第二道 if(false)）→ extB `PUT /mp/ext/sample/9000001002` → 200，库内 donor_name 被改成「被同组人篡改」、staff 列表可见 → accept 3 的写保护断言红。即该断言对产品行为敏感，不是空转；而双重闸是产品自己的加固，不算缺陷。还原后（git checkout + mvn install + jar 换回原 md5）重跑 18 条 L1 断言全绿，再跑一次 D1 回归包（--skip-build）结果与首次一致。",
+   "reported": "pass"
+  },
+  "L2": {
+   "status": "fail",
+   "evidence": "本片自跑，全部证据来自代码 / 库 / 运行中的系统（截图只落盘不解读，断言只读 DOM 文本 / 计算样式 / 接口返回）。反 stale：起 8081 前 `lsof -ti tcp:8081` 已空，再由本片 `bash .tmp/run-backend.sh` 起（日志 .tmp/d2l2-backend.log，启动成功时间 2026-09-22 00:32）；`find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer ruoyi-admin/target/ruoyi-admin.jar` 为空；jar mtime Sep 22 00:29；`lsof -p <8081 PID> | grep -c ruoyi-admin.jar` = 2（进程确持该 jar）；`ps` 被沙箱禁（Operation not permitted），启动时刻用后端日志时间戳佐证。三组脚本：doc/waves/regression/D2/L2-web-plusui.mjs（组 2，21/25）、doc/waves/regression/D2/L2-mp-h5.mjs（组 1+3，28/35）。两脚本的完整 stdout 与截图：doc/waves/regression/D2/shots/L2-web/（10-sample-list.png 待核验浅黄置顶、11-filter-*.png 11 个筛选、11b-samplekind-dropdown.png 空下拉、12-verify-drawer-1002.png 两个出口、13/15 after-valid/invalid、14-invalid-reason-dialog.png）、doc/waves/regression/D2/shots/L2-mp/（g1-01…g1-15、g3-01…g3-14）。关键断言值：待核验行序 = [9000001007,9000001002,9000001003,9000001006,9000001005,9000001004,9000001001,9000001008,9000001009]，`tr` 计算样式 background-color = rgb(252, 241, 218)；筛选集合逐项 = 来源单位A医院{1001,1002,1003,1004,1005,1007} / 组别肝胆外科{1001,1002,1003,1004,1007} / 提交来源内部{1008,1009} / 待核验{1002,1007} / 收样日期(今-26..今-19){1004,1005} / 组织类型肝组织(模糊){1001,1003,1004,1007,1008} / 内部编号T-hli01{1001} / 操作人李工{1001,1004,1005,1006,1008,1009} / 供体姓名测试供体甲{1001} / 住院号ZY0000001{1001} / 组合(A医院+有效+外部){1001,1004,1005}；核验抽屉「判为有效并保存」「判为无效」两出口各走一遍 code=200 且库内变 valid|T-l2a01 / invalid。组 1+3：首页三格/四格顺序、首页无数字（digits=[]）、extA 提交成功（库内 SJ00000030）、工作台判无效→改后重提→判有效（库 valid|T-l2ext01）、extB 同组看得到 + 打开「只看我提交的」后只剩 SJ90000004、表格页两工作表表头逐字逐序（样本记录 15 列 / 类器官收样 8 列）、首列冻结 position=sticky left=0px、可横滑（DIV.uni-scroll-view overflowX=auto scrollWidth 958 > clientWidth 390）、无新增/保存按钮且导出置灰、点一行 mode=view 只读、内部改本人有效样本 T-hli05 后 update_by=9000000101 且排到最前、extC 类器官三项提交后库 pending|external|organoid。★ 未覆盖（如实记账，不用 H5 冒充）：微信开发者工具（CLI 要写 ~/Library/Application Support/微信开发者工具/** EPERM + 需扫码）与真机 / 体验版全部未跑，小程序侧一律为 H5 dev(9200, VITE_MOCK_LOGIN=1) + Playwright 等价覆盖；extB / extC 不在调试面板的 3 个 seed 里（src/api/mock-seeds.ts），改用后端 mock 登录（ADR-0008）拿 token 注入 localStorage['lqg_mp_token']，走的仍是产品 mock 路径，仅绕开面板按钮；工作台一栏只跑了 lqgadmin 一个身份。",
+   "counts": {
+    "L2-web": "21/25 通过",
+    "L2-mp": "28/35 通过",
+    "S0": 3,
+    "S1": 2,
+    "S2": 0,
+    "S3": 0
+   },
+   "reported": "fail"
+  },
+  "L3": {
+   "status": "pass",
+   "evidence": "环境（本片自跑，不引用他人结论）：反 stale — `find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer ruoyi-admin/target/ruoyi-admin.jar` = 0 行；jar mtime Sep 22 00:29:46；起前 `lsof -ti tcp:8081` 空，起后 PID 34097，`lsof -p 34097 | grep -c ruoyi-admin.jar` = 2（进程持该 jar），后端日志「启动成功」@ 00:55:42 晚于 jar mtime。跑断言前 `reseed.sh --yes` + `rm -f $TMPDIR/lqg-verify-token-*`。\n\n【1 越权】PASS。`api.sh --as extC GET /mp/ext/sample/9000001001` → `{\"code\":404,\"msg\":\"样本不存在\",\"data\":null}`；`--as extC --bizcode` → `404\t样本不存在`；`--as extE`（同组未核验）同两条输出逐字相同；响应体只含 code/msg/data，`grep -c 'donorName|hospitalNo|internalNo'` = 0、0（无任何样本字段）。对照 `--as extA GET /mp/ext/sample/9000001001` → `200\t操作成功`（端点可用，不是整段 404）。\n\n【2 外部 PUT 夹带 / 同组可看不可改 / 已有效改不了】PASS。基线 1001=`valid|T-hli01|external|2026-08-23`、1002=`pending||external|-`。(a) `--as extA PUT /mp/ext/sample/9000001002` body=legit 8 字段+夹带 internalNo/verifyStatus/submitSource/receiveDate → `{\"code\":200,\"msg\":\"操作成功\"}`；库内 `SELECT count(*) … WHERE id=9000001002 AND verify_status='pending' AND internal_no IS NULL AND submit_source='external' AND receive_date IS NULL` → 1/exit0，同时 `remark='L3夹带探针' AND has_pathology='Y'` → 1/exit0（请求确实走完写路径，夹带被忽略而非整体被拒）。(b) `--as extB PUT /mp/ext/sample/9000001001` 与 `/9000001002` → 均 `{\"code\":400,\"msg\":\"只能修改重提本人提交的样本（同组的样本可以看，但不能改）\"}`；复断 `id=9000001001 AND verify_status='valid' AND internal_no='T-hli01'` → 1/exit0。(c) `--as extA PUT /mp/ext/sample/9000001001`（自己的 valid）→ `{\"code\":400,\"msg\":\"样本当前状态不允许外部修改重提（只有待核验、无效的样本可以）\"}`，1001 不变。\n\n【3 内部经小程序 PUT】PASS。`--as staff PUT /mp/int/sample {\"id\":9000001002,…}` → `{\"code\":500,\"msg\":\"待核验与无效的样本只能在网页工作台核验或改判，小程序里不能改\"}`；`{\"id\":9000001003,…}` 同 msg。库内：1002 仍是 2a 留下的 `remark='L3夹带探针'`、`update_by=9000000111`（extA，不是 staff 的 9000000101）、`verify_status='pending'` → 1/exit0；1003 仍 `remark IS NULL AND update_by IS NULL AND verify_status='invalid'` → 1/exit0；反证 `remark LIKE 'L3内部改待核验%' OR LIKE 'L3内部改无效%'` → 0/exit0（payload 未落盘）。`--as staff PUT /mp/int/sample {\"id\":9000001001,\"remark\":\"L3内部改有效\"}` → `200`，1001 变 `valid|L3内部改有效|update_by=9000000101`；`SELECT count(*) FROM t_lqg_sample s JOIN sys_user u ON u.user_id=s.update_by WHERE s.id=9000001001 AND u.phonenumber='13800000001' AND s.remark='L3内部改有效'` → 1/exit0。\n\n【4 角色闸】PASS。`--as extA /lqg/sample/list`、`--as extA PUT /lqg/sample/9000001001/verify`、`--as extA /mp/int/sample/list`、`--as staff /mp/ext/sample/list`、`--as staff POST /mp/ext/organoid` → 五条全部 `403\t没有访问权限，请联系管理员授权`；对照 `--as extA /mp/ext/sample/list` → `200\t查询成功`、`--as staff /mp/int/sample/list` → `200\t查询成功`、`--as admin /lqg/sample/list` → `200\t查询成功`（证明 403 是权限分支而非端点不存在）。\n\n【5 核验状态机】PASS。1002 整行指纹 `H0 = SELECT md5(t::text) FROM t_lqg_sample t WHERE id=9000001002` = `e7e180cbd0a5748419e7fe7c2159e7c2`。`--as admin PUT /lqg/sample/9000001002/verify`：(a) `{\"action\":\"valid\",\"receiveDate\":\"2026-09-01\"}` → `{\"code\":500,\"msg\":\"判有效必须同时给收样日期与内部编号，缺少：内部编号\"}`；(b) `{\"action\":\"valid\",\"internalNo\":\"T-l3x\"}` → `…缺少：收样日期`；(c) `+internalNo:\"T-hli01\"` → `{\"code\":500,\"msg\":\"内部编号「T-hli01」已存在，请换一个\"}`；(d) `{\"action\":\"invalid\"}` → `{\"code\":500,\"msg\":\"判无效必须写原因\"}`。四条后 `H1` 重算 = 同一个 md5，**H0==H1 → 整行一字未变**；`internal_no='T-hli01'` 行数仍 1/exit0、1001 仍 `valid+T-hli01` → 1/exit0。软删重用：1010 为 `del_flag=1|internal_no=T-del99`；`PUT … {\"action\":\"valid\",\"receiveDate\":\"2026-09-01\",\"internalNo\":\"T-del99\"}` → `{\"code\":200,\"msg\":\"操作成功\"}`；1002 → `del_flag=0|T-del99|valid|2026-09-01|verify_by=9000000100`，1010 原行仍在；`count(*) WHERE internal_no='T-del99' AND del_flag='0'` → 1/exit0（部分唯一索引 `uk_sample_internal_no WHERE del_flag='0'` 成立）。\n\n【6 空数据新外部用户】PASS。`--as phone:newbie1:13800000099 POST /auth/login` → `200`；`GET /mp/me` → `{\"code\":200,…,\"identity\":\"external\",\"ext\":{\"unitId\":null,…,\"bindStatus\":\"unbound\"}}`；`GET /mp/ext/sample/list?pageSize=20`（外部历史编辑记录的数据源）→ `{\"total\":0,\"rows\":[],\"code\":200,\"msg\":\"查询成功\"}`；`GET /mp/ext/units` → `200`。库内该号样本数 0、ext_profile `unbound` 且 unit/group 全 NULL。浅 H5（`doc/waves/regression/D2/L3-mp-shallow.mjs`，17/17 PASS）：首页宫格 3 格、正文无「没能加载/重试」、历史编辑记录走空态「你填过的记录会出现在这里」而非 ErrorState，pageerror 0 / console.error 0。\n\n【7 板块 / 身份缺失 / 类器官夹带】PASS。(a) 浅 H5：外部（extA）「我的」正文不含「内部管理」且含「历史编辑记录」「单位与组别」；内部（staff）「我的」正文含「内部管理（查看 · 筛选 · 导出）」四入口、不含「单位与组别」。(b) Playwright 拦截 `**/mp/me` 把 identity 置 null → 首页 `.lqg-tile` = 0 格、正文只出兜底「没能确认你的身份，请重新登录后再试/去登录」；「我的」不渲染历史编辑记录/内部管理/单位与组别；identity 置 `\"INTERNAL\"`（契约外大小写）→ 首页 0 格（绝不默认内部）；pageerror 0。(c) `--as extC POST /mp/ext/organoid` body=legit 3 项+夹带 `internalNo=T-L3ORG, receiveDate=2026-01-02, verifyStatus=valid, submitSource=internal, isFixed=Y` → `{\"code\":200,\"msg\":\"操作成功\"}`；库内新行 `organoid|external|pending|internal_no 空|receive_date NULL|is_fixed NULL` → 1/exit0；行数 10→11；`internal_no='T-L3ORG'` → 0/exit0。\n\nharness（本片自测复现，非实现缺陷）：`python3 doc/verify/db.py --sql \"SELECT id FROM t_lqg_sample ORDER BY id LIMIT 3\"` 打印 3 行；同一句加 `--quiet` → **空输出 exit 0** → `OID=\"$(db.py --quiet --sql …)\"` 恒空。本片所有插值一律去掉 `--quiet`。本片 L3 = pass：无 S0/S1。",
+   "reported": "pass"
+  }
+ },
+ "escalated_noted": [],
+ "issues": [
+  {
+   "severity": "S2",
+   "level": "L0",
+   "type": "harness",
+   "ticket": "D1 回归包 doc/waves/regression/D1/verify.sh",
+   "title": "回归包把 flyway 迁移总数写死成 7，D2 每加一支迁移就假红一条",
+   "detail": "doc/waves/regression/D1/verify.sh 的 L1.1 有 `db.py --sql \"SELECT count(*) FROM flyway_schema_history\" --eq 7`，注释写「D1 无迁移的只有 SYS-MP-001」。D2 的 SAMPLE-MODEL-001 / SAMPLE-VERIFY-001 / SAMPLE-WEB-001 各加了一支迁移（V202609221000 / 100001 / 1010），库里 10 行，于是这条断言在 D2 快照上必然红：`[FAIL] 期望 '7'，实际 '10'`。同组的其它断言（无失败行、D1 七支逐个点名、迁移文件在源码树）全绿，所以不是产品问题、也不代表「以前好的坏了」——是回归资产用了会随任务增长的绝对值。建议改成「D1 的 7 支逐个点名」+「总数 ≥ 7」或按版本前缀统计。"
+  },
+  {
+   "severity": "S2",
+   "level": "L1",
+   "type": "harness",
+   "ticket": "AUTH-EXT-001 accept 3",
+   "title": "accept 用 db.py --quiet 取 OID 恒为空串，越权断言假绿（产品行为已独立复核为正确）",
+   "detail": "AUTH-EXT-001 accept 3 结尾 `OID=\"$(python3 doc/verify/db.py --quiet --sql \"SELECT id FROM t_lqg_sample WHERE organoid_type='胃类器官' AND submitter_id=9000000113\" | head -1)\"` —— db.py 的 --quiet 语义是「一行都不打印」，于是 OID 恒为空串，紧跟的 `PUT /mp/ext/organoid/` 打的是一个不存在的端点，返回 404「No endpoint PUT /mp/ext/organoid/.」，正好满足该段的正则 `^(400|403|404)` —— 断言恒绿，无论实现是否真的做了越权校验；同段 `PUT /mp/ext/sample/${OID}` 与末尾 count 断言也随之空转。已用真实 OID 重跑：extD 改 extC 的类器官样本 → 404「样本不存在」；extC 借组织样本入口改类器官样本 → 400「这条记录是「类器官」类样本，不能从「组织」的入口修改」；事后库内该行原样（organoid_type 仍「胃类器官」、source_unit_name 仍「A 医院」、donor_name 仍为空），count=0。产品行为正确；缺陷在检查工具。同一句式在 doc/tickets/ 下共 10 张票出现（本张的 accept 2 也有同类写法，不过它那几段还有别的实断言兜底）。"
+  },
+  {
+   "severity": "S3",
+   "level": "L0",
+   "type": "harness",
+   "ticket": "D1 回归包 doc/waves/regression/D1/verify.sh",
+   "title": "回归包前端产物计数打到单文件上，恒定打印「1 个文件」",
+   "detail": "build_front() 里 `find \"${dir}/${out}\" -type f | wc -l`，而 plus-ui 的 out=dist/index.html、miniapp 的 out=dist/build/mp-weixin/app.json 都是文件不是目录，所以恒定输出「1 个文件」。它不影响判定（产物存在性另有 `[ -e ]` 断言），但会让人误以为产物只有一个文件。实际独立复核：plus-ui dist 下 assets 435 个文件、miniapp dist/build/mp-weixin 247 个文件，产物完整。"
+  },
+  {
+   "severity": "S0",
+   "level": "L2",
+   "type": "arch",
+   "ticket": "SAMPLE-MP-001",
+   "title": "小程序首页四个入口都不带 mode=new，填写页变成「没能加载这条样本」——外部无法开始送检、内部无法从首页录收样",
+   "detail": "复现：外部（王医生）或内部（李工）登录 → 首页点「样本记录信息表」→ URL 停在 #/pages/sample/form（无 query）→ 页面正文 = 「样本记录信息表|没能加载这条样本|重试|2026-09-22」，页面上 0 个 uni-button（没有「提交」），截图 doc/waves/regression/D2/shots/L2-mp/g1-02-entry-sample.png 与 g3-02-entry-sample.png。机制（代码对齐）：src/pages/index/entries.ts 的 ENTRY_FORM_TARGET 给的是裸路径 /pages/sample/form，src/router/config.ts 的 goPage() 不追加任何参数；sample/form.vue 的 onLoad 把 undefined 交给 pages/sample/layout.ts:62-64 的 normalizeMode → 'view'，view 且 sampleId 为空 → sample/form.vue:150-153 直接 failed=true（organoid/form.vue 同形）。而 sample/form.vue:38 与 organoid/form.vue:45 的注释自己写的是「首页点表进来 → mode=new」，即实现与自己的契约不一致。影响范围：四个入口（样本记录信息表 / 类器官收样记录 / 石蜡包埋送样记录 / -80 冻存记录）共用同一个 entryTarget，一起坏；D2 主流程第 1 步「外部在小程序填样本记录信息表送检」从首页直接走不通（本片只能改用显式 #/pages/sample/form?mode=new 才把后续主线跑完）。注：doc/verify/fixtures/home-entries-cases.json 的 targetCases 也写的是 /pages/sample/form（L0 fixture 只比字符串、不进页面），所以 L0 全绿掩盖了它。"
+  },
+  {
+   "severity": "S0",
+   "level": "L2",
+   "type": "debt",
+   "ticket": "SAMPLE-MP-001",
+   "title": "StatusChip / FieldRow / SegButtons 三个组件在 <script setup> 里引用未声明的 props → 核验状态徽标不渲染、只读字段值全空、按钮组点不动",
+   "detail": "同一根因：三个组件都写成 `withDefaults(defineProps<{...}>(), {...})`（没有赋给 const props），脚本里却引用 `props.x`，运行时抛 `ReferenceError: props is not defined`。① src/components/lqg/StatusChip.vue:34（`computed(() => props.text || TEXT[props.value||''])`）→ 每次渲染抛错，DOM 里该位置是 <!--v-if--> 空占位：历史编辑记录每一行的「核验状态徽标」全部消失（UI:mp.history 明写外部行要有「核验状态徽标」），本片实测 G3-19 = {items:1, chips:0}，样本详情页「核验状态」只剩标签没有值（shots g1-13-ext-readonly.png），控制台原始栈见 G3-20 输出。② src/components/lqg/FieldRow.vue:45（readonly 分支的 display）→ 只读表单一个值都不渲染：内部管理表格页点一行 → mode=view 页面正文只剩字段名（「来源单位|*|供体姓名|性别|男|女|未知|年龄|住院号|*|组织类型|…|内部编号|有无固定|有|无|处理时间|…」，没有任何值），shots g3-05-ledger-row-readonly.png；独立探针 doc/waves/regression/D2/L2-probe-fieldrow-segbuttons.mjs 的 VIEW TEXT 同样一个值都没有。③ src/components/lqg/SegButtons.vue:23（pick() 里 `if (props.disabled)`）→ 按钮组点不动：独立探针点「性别·男」前后 `.lqg-seg__item--on` 都是 ['女','有','有','有']，即性别 / 有无病理 / 有无固定 / 质控表 / 细胞活率报告这些「模板里写按钮的字段」在小程序端全都选不了。对照：components/ui/IdentityBar.vue、components/biz/UnitGroupPicker.vue、components/biz/MeHeader.vue 都正确写了 `const props = withDefaults(...)`，所以只有这三个炸。影响：内部管理只读表格页点进去看不到任何数据；外部/内部都看不出哪条待核验 / 无效；内部录收样时按钮字段填不了。"
+  },
+  {
+   "severity": "S0",
+   "level": "L2",
+   "type": "arch",
+   "ticket": "SAMPLE-MP-002",
+   "title": "小程序日期/时间选择器永远不弹出（`:visible` 不是 wd-datetime-picker 的 prop）→ 内部类器官收样（收样日期必填）一条也建不出来",
+   "detail": "复现：内部（李工）→ #/pages/organoid/form?mode=new → 点「收样日期」→ `{\"action\":0,\"popup\":0,\"visible\":false}`（.wd-datetime-picker__action 与 .wd-datetime-picker__popup 在 DOM 里都不存在，字段值不变），截图 doc/waves/regression/D2/shots/L2-mp/g3-11-organoid-datepicker.png。机制：organoid/form.vue（sample/form.vue 同形）把 `:visible=\"pickerOpen\"` 传给 wd-datetime-picker，但该组件（node_modules/wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue）根本没有声明 visible 这个 prop —— 内部只有 `const popupShow = ref(false)` + `<wd-popup v-model=\"popupShow\">`（第 56 / 188 行），`:visible` 于是退化成落在根节点的普通 HTML 属性（DOM 上能看到 `visible=\"true\"` 属性但面板不渲染）；页面侧 onPick() 只把 pickerOpen 置 true，也没有调用组件暴露的 open()。影响：内部类器官收样 7 项里的「收样日期」是必填（organoid/form.vue:286-290 的提交校验），且该字段只能靠这个面板填（control='date'，无可输入框）→ 内部录类器官收样在提交处必然被拦（脚本 G3-16 库内 T-l2org01 = 0 行，toast「请选择来源单位」后即便补上单位也会卡在「请填收样日期」）；内部「处理时间」（datetime）同样选不了。"
+  },
+  {
+   "severity": "S1",
+   "level": "L2",
+   "type": "debt",
+   "ticket": "SAMPLE-WEB-001",
+   "title": "工作台样本总表「样本类别」筛选下拉永远是「无数据」——字典 key 写成 sample_kind，库里真名是 lqg_sample_kind",
+   "detail": "复现：lqgadmin → 样本总表 → 点「样本类别」下拉 → 下拉正文只有「无数据」，.el-select-dropdown__item 数量 0，截图 doc/waves/regression/D2/shots/L2-web/11b-samplekind-dropdown.png；用 UI 选「类器官」会一直等到 click 超时（脚本 WEB-L2-04.3 / WEB-L2-06a）。根因三方对齐：code/plus-ui/src/views/lqg/sample/index.vue:266 写 `proxy?.useDict('sample_kind', ...)`；库/迁移里真名是 lqg_sample_kind（V202609210810__SYS-BASE-001-lqg-dicts.sql:13-15），`GET /system/dict/data/type/lqg_sample_kind` → [('组织样本','tissue'),('类器官','organoid')]，而 `GET /system/dict/data/type/sample_kind` → code 200 + data []（脚本 WEB-L2-06b 实测）。后端筛选本身是对的：`api.sh --as staff GET '/lqg/sample/list?pageSize=100&sampleKind=organoid'` → total=1、ids=['9000001009']。影响：权威 UI:admin.sample.list 明写筛选区含「样本类别」，L2 口径「九种筛选各点一遍」里这一项从 UI 走不通——老师按类别找类器官收样/组织样本时拿不到结果（其余 10 个筛选 UI 驱动全部与 accept 的 id 集合一致）。"
+  },
+  {
+   "severity": "S1",
+   "level": "L2",
+   "type": "ux",
+   "ticket": "SAMPLE-VERIFY-001",
+   "title": "外部在「历史编辑记录」看不到无效原因（列表没有、点进去是 edit 表单也没有，detail-ext 红条对本人不可达）",
+   "detail": "复现：工作台把 extA 的样本判无效（原因「L2复验：缺住院号，请补」）→ extA 历史编辑记录：列表正文无该原因（「SJ…|L** · 肝组织|我|2026-09-22」，连核验状态徽标也没有，徽标缺失另记 S0-2），截图 shots/L2-mp/g1-09-history-invalid.png；点这一行进的是 #/pages/sample/form?id=…&mode=edit，页面正文也没有原因（shots g1-10-history-open-invalid.png）——sample/form.vue 的 NoteBar 只在 topNote 时出「这条记录现在不能修改」/「核验与改判请到网页工作台」（第 111-117 行），没有 invalidReason 字段（LABELS 里没有这个 key）。唯一带原因红条的是 pages/sample/detail-ext.vue:61-62/118，而 pages/history/sources.ts 的 target() 对「本人 + editable=true」的行一律进 form?mode=edit，只有「非本人 / 不可改」才进 detail-ext → 本人无效记录**没有任何入口能看到原因**。影响：L2 口径「外部在历史编辑记录看到原因并修改重提」只能盲改（可改可重提本身是通的：改备注保存 → 回 pending → 工作台可再判有效，库内 valid|T-l2ext01 已验证）。"
+  },
+  {
+   "severity": "S2",
+   "level": "L3",
+   "type": "debt",
+   "ticket": "AUTH-EXT-001 / SAMPLE-MP-001",
+   "title": "外部写端点对非法/缺字段的 body 回 500，响应体里回吐完整 SQL 与整行 DB 明细（含加密列密文、内部 user_id）",
+   "detail": "复现：① `bash doc/verify/api.sh --as extA PUT /mp/ext/sample/9000001002 '{\"sourceUnitId\":9000009001,…,\"hasPathology\":\"yes\",…}'`（字典 lqg_yes_no 只给 Y/N）→ `{\"code\":500,\"msg\":\"### Error updating database. Cause: org.postgresql.util.PSQLException: ERROR: value too long for type character(1) … SQL: UPDATE t_lqg_sample SET update_by=?,update_time=?,…\"}`；② 同端点省略 sourceUnitName（或 `--as extC POST /mp/ext/organoid` 省略它）→ msg 里连 `Detail: Failing row contains (9000001002, SJ90000002, tissue, external, 9000000111, pending, … donor_name/hospital_no 密文 …, 9000000111, …)` 一起返回。影响范围：任何**已登录外部账号**都能构造这两个外部写端点的请求，拿到表名/列名清单、加密列密文与内部 user_id（t_lqg_sample 的 schema 与内部主键）。小程序表单只送 Y/N 且全字段，工作台/老师主流程走不到，故不拦门；登记为 debt 待加 @Valid 白名单 + 全局异常不吐 SQL。"
+  },
+  {
+   "severity": "S3",
+   "level": "L3",
+   "type": "debt",
+   "ticket": "SAMPLE-VERIFY-001 / SAMPLE-MP-001",
+   "title": "同一模块里「客户端导致的拒绝」业务码不统一：400 与 500 混用",
+   "detail": "同一轮实测：`PUT /mp/ext/sample/{id}` 的归属拒绝（同组别人的）与状态拒绝（已有效）回 `code=400`；而 `/mp/int/sample` 待核验/无效样本修改拒绝、`PUT /lqg/sample/{id}/verify` 的「缺内部编号 / 缺收样日期 / 编号撞号 / 缺原因」四条全部回 `code=500`。四条的 msg 分支都精确命中，行为正确，仅业务码不规范（前端若按 400 区分子类会漏判）。"
+  },
+  {
+   "severity": "S2",
+   "level": "L3",
+   "type": "harness",
+   "ticket": "AUTH-EXT-001",
+   "title": "doc/verify/db.py --quiet 不打印任何行 → 插值句式恒拿到空值（AUTH-EXT-001 accept 3 因此假绿）",
+   "detail": "本片自测复现：`python3 doc/verify/db.py --sql \"SELECT id FROM t_lqg_sample ORDER BY id LIMIT 3\"` → 打印 9000001001/9000001002/9000001003 exit 0；同一句加 `--quiet` → **空输出 exit 0**。因此 `OID=\"$(db.py --quiet --sql \"SELECT id …\")\"` 类句式永远拿到空值，doc/tickets/ 里 10 张票中招。影响另一个 ticket 的实现路径判定（AUTH-EXT-001 accept 3 假绿），按规则 harness 的 S0/S1 自动压回 S2。未改 db.py 与 ticket 正文；本片所有插值改为去掉 --quiet 取真值。"
+  }
+ ],
+ "merged_from": [
+  {
+   "file": "D2-r1-L01.json",
+   "levels": "L0"
+  },
+  {
+   "file": "D2-r1-L01.json",
+   "levels": "L1"
+  },
+  {
+   "file": "D2-r1-L2.json",
+   "levels": "L2"
+  },
+  {
+   "file": "D2-r1-L3.json",
+   "levels": "L3"
+  }
+ ]
+}

@@ -12,8 +12,9 @@
     },
     {
       "id": "D2",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_failed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D3",
@@ -1264,6 +1265,26 @@
       "type": "ux",
       "title": "【S1】外部看不到无效原因：唯一带红条的 detail-ext 对「本人+editable」不可达",
       "detail": "历史列表没有原因、点进去是 edit 表单也没有、而唯一带红条的 detail-ext 只对「非本人或不可改」可达（sources.ts 的 target 对本人+editable 走 form?mode=edit）→ 外部只能盲改。REQ/方案流程图要求「无效后能看到原因再改后重提」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 88,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "外部写端点对非法/缺字段 body 回 500，msg 回吐完整 SQL + 整行 DB 明细（含密文与内部 user_id）",
+      "detail": "复现：--as extA PUT /mp/ext/sample/9000001002 带 hasPathology:'yes'（字典只给 Y/N）或省略 sourceUnitName；--as extC POST /mp/ext/organoid 省略 sourceUnitName 同样。响应 msg 里带表名列名、donor_name/hospital_no 密文、内部 user_id。小程序表单只送 Y/N 且全字段，主流程走不到，但对外部用户泄露库结构。方案：外部入参校验前置 + 异常处理器不回吐 SQL 明细。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 89,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "客户端拒绝的业务码不统一：外部 PUT 回 400，内部 PUT 与核验四条回 500",
+      "detail": "msg 分支都对，但业务码不一致会让客户端分支写法漂移。方案：定一份『参数/状态类拒绝 = 400』的约定并统一。",
       "status": "open",
       "decision": ""
     }
