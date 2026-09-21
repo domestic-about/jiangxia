@@ -12,7 +12,7 @@
     },
     {
       "id": "D2",
-      "status": "qa_failed",
+      "status": "qa_running",
       "qa_rounds": 1,
       "qa_seq": 3,
       "rearms": [
@@ -1462,6 +1462,46 @@
       "type": "doc-drift",
       "title": "MpSampleController javadoc 写「待核验/无效 → 400」，实测 500",
       "detail": "D2 r3 L3 片新记。注释与实现不一致（行为本身正确：拒绝且库里不变）。方案：javadoc 改成 500，或把实现统一到 400（与业务码混用那条 S3 一起收）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 107,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "网页工作台 PUT /lqg/sample 仍可改 sample_kind（本次只授权收小程序口）",
+      "detail": "D2 #105 返工只收了小程序口（前端不发 + 后端不一致 400）。工作台口按契约第 49 行『有效样本全部字段可改』仍允许改 kind —— 内部管理改判类目是另一件事，需要明确口径：要么一起禁，要么写明只有工作台能改（并留审计）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 108,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "ux",
+      "title": "非页签入口仍能带错 kind 打开表单，只靠后端 400 兜底（无「你点错类别了」引导）",
+      "detail": "修 #105 时前端修改模式已不发 sampleKind、后端不一致回 400，但用户在错类别表单里保存只会看到一个 400，没有明确引导。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 109,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "debt",
+      "title": "跨类字段残留：别类表单保存到该类记录时，别类的类型字段仍会写进去",
+      "detail": "类别（sample_kind）已不可改，但例如组织样本表单里若带了 organoidType 之类别类字段，写侧没有统一拦。建议定一份『按 sample_kind 白名单字段』的写侧校验。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 110,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "全仓没有「顶层裸 .or()」的静态闸，D3/D4 加取数口时可能复发",
+      "detail": "#105 的形态（MyBatis-Plus 顶层 .or() 不加括号 → SQL 退化成 (A AND B) OR C）全仓只有一处，已修并有契约测试钉死。建议加一条架构测试/静态检查：wrapper 里出现 .or() 时其上下文必须是 .and(w -> …) 或 .or(w -> …) 的嵌套块。",
       "status": "open",
       "decision": ""
     }
