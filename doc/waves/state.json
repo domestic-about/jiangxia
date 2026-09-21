@@ -6,9 +6,9 @@
   "phases": [
     {
       "id": "D1",
-      "status": "qa_running",
-      "qa_rounds": 1,
-      "qa_seq": 1
+      "status": "qa_passed",
+      "qa_rounds": 2,
+      "qa_seq": 2
     },
     {
       "id": "D2",
@@ -904,6 +904,46 @@
       "type": "harness",
       "title": "api.sh --fresh-module 在本沙箱恒 exit=1，doc 里 54 处引用它",
       "detail": "沙箱禁 ps + 回退走 GNU date -d → exit 1，而 README 把 1 定义为「断言不成立」，工具故障与实现红不可分。已有 L23-freshness.sh 作等价替代（jar mtime/sha256 + lsof 持 jar + 启动晚于 jar）。方案：api.sh 换 lsof/日志 mtime 兼容写法，或给一个显式跳过开关。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 52,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 的 L3 脚本用黑名单 .code != 200 判「外部被拒」（README 坑 #2）",
+      "detail": "黑名单式断言对「端点不存在 404」也成立，实现什么都没做照样绿。r2 改成正码白名单 .code==500 + .data==null 判。方案：L3 类断言一律正码白名单 + msg 分支关键词 + 库内不变三段式。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 53,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 只在单端点验「撤销后旧 token 401」；GET /mp/ext/profile 恒 405 会漏判",
+      "detail": "405 在鉴权前就定了，照抄该路径会得到假绿。r2 改用真实方法 PUT /mp/ext/profile 探第二端点，撤销后同样 401、而 extA 的 token 仍 200。方案：踢下线类断言至少两个真实端点。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 54,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 未断「被拒响应整体 .data == null」，只查 access_token 单字段",
+      "detail": "只查一个字段会漏掉「token 字段为空但 data 里还塞了别的东西」的形态。r2 补断整个 .data==null。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 55,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "reseed.sh 不清运行时建的账号，README 未写明，易污染「最后管理员」闸门",
+      "detail": "实测建第二个 lqg_admin 后只跑 reseed，库里仍有 2 个 admin → 「不能撤到没有管理员」这条闸门会合理地不触发，看起来像实现没做。受控复现（干净 1 管理员）时闸门正确返 500 且库不变。方案：doc/verify/README.md 写明『收尾必须 reseed + clean-orphan 两步』。",
       "status": "open",
       "decision": ""
     }

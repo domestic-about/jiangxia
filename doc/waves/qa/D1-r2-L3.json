@@ -1,0 +1,46 @@
+{
+  "phase": "D1",
+  "round": 2,
+  "auditor": "independent",
+  "levels": {
+    "L3": {
+      "status": "pass",
+      "evidence": "【反 stale 四项，自跑】\n1) jar: code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar mtime=2026-09-21 16:32:24 sha256=2c10af1121e7f5d1feddf40a49fa65903bd991ffd3bb4576bdfa23d95ea5f6ca（跑前跑后各取一次，一致）\n2) `lsof -ti tcp:8081 -sTCP:LISTEN` → PID 17220（唯一 LISTEN，未碰 8080）\n3) `lsof -p 17220 | grep ruoyi-admin.jar` → 2 个 fd 指向该 jar（进程确实跑这个 jar）\n4) psutil.Process(17220).create_time()=2026-09-21 22:22:35 > jar mtime 16:32:24；`find code/RuoYi-Vue-Plus -name '*.java' -newer <jar>`（排除 target）→ count=0（无源码新于 jar）\n（`--fresh-module` 因沙箱禁 ps 不可用，故用上述等价手段；api.sh 未改）\n\n【回归重放】`bash doc/waves/regression/D1/L23-l3-api.sh` → 尾部 `== L3 32/32 通过 ==`，exit 0（log .tmp/qa-r2-l3-replay.log）。只作对照，不据此判绿；下面每条都独立重跑。\n\n【独立重跑】doc/waves/regression/D1/L3-r2-independent.sh → `== L3 独立重跑 73/73 通过 ==`，exit 0（log .tmp/qa-r2-l3-indep5.log）。每条拒绝都用正码白名单(.code==500)+msg 分支关键词，且每条拒绝后跟库内不变断言（★）。\n\n① 外部带可用口令登工作台被拒且走「无权」\n- 独立证明口令可用（不走 app）：python bcrypt.checkpw('admin123', seed 哈希) → True。\n- cmd `curl -X POST /auth/login -H 'clientid: <PC>' -d '{username:\"wx_13800000012\",password:\"admin123\"}'` → `{\"code\":500,\"msg\":\"该账号无权登录工作台，请使用小程序登录\",\"data\":null}`，无 access_token，data 整体为 null。\n- 正向对照：`lqg_13800000001`+admin123 → code=200 且有 token。\n- 分支反证（关键，排除空断言）：内部错口令 → msg=`Password input error 1 times`（不含「无权」）；**extB 错口令也先走密码分支**（`Password input error 1 times`，不报无权）→ 证明 extB 的「无权」确是口令校验通过后才由角色判定，而非密码失败被误标。\n- 换门：mp client+password、pc client+xcx 均无 token。\n- 库内不变：`SELECT length(password)||'|'||del_flag ... wx_13800000012` = `60|0`；角色仍 `lqg_external`。\n\n② 撤销内部授权\n- 起点确认为 1 个 lqg_admin（否则最后管理员闸门不应触发）。\n- staff(9000000101) mp token 撤销前 /mp/me code=200 identity=internal；admin `DELETE /lqg/auth/staff/9000000101` → code=200。\n- ★撤销后同一旧 token：/mp/me → `{\"code\":401,\"msg\":\"认证失败，无法访问系统资源\"}`；第二端点 `PUT /mp/ext/profile`（真实方法）→ 401。对照：extA 的 token 仍 200（401 非全局）。\n- ★撤销≠删号：sys_user 9000000101 仍 del_flag=0；t_lqg_wx_bind 仍 1 条；角色降回 lqg_external。\n- 不能撤自己：admin `DELETE /lqg/auth/staff/9000000100` → `{\"code\":500,\"msg\":\"不能撤销自己的内部授权\"}`；★DB 角色仍 101、del_flag 仍 0。\n- 不能撤到没有管理员：超管(admin) `DELETE .../9000000100` → `{\"code\":500,\"msg\":\"不能撤销系统里最后一个实验室管理员的权限\"}`；★`count(role_id=101 for 9000000100)`=1 且全库 lqg_admin=1。`PUT .../9000000100/role {\"roleKey\":\"lqg_internal\"}` → `{\"code\":500,\"msg\":\"不能把系统里最后一个实验室管理员改成普通内部人员\"}`；★角色仍只有 101。\n- 正向对照（闸门非一律拒绝）：先建第二个 lqg_admin，再由新管理员撤 9000000100 → code=200；受控复现 sees `role 9000000100 = 102(lqg_internal)` 真正落库。\n- 注：D1 库 information_schema 只有 4 张 t_lqg_* 表（ext_profile/source_unit/unit_group/wx_bind），**没有样本表**，故「他以前录的样本还在」在 D1 不可测，本项以账号/微信绑定/角色保留代替。\n\n③ 外部改单位/组别回待核验 + 自填不选新建/归并不过 + 组别与单位不匹配被拒\n- 起点 extA(9000000111)=verified|9000009001|9000009101|verified_by=9000000100。\n- 不匹配 `PUT /mp/ext/profile {unitId:9000009001,groupId:9000009103(B大学的组)}` → 500 `组别「类器官课题组」不属于单位「A 医院」`；★DB 原样 `verified|9000009001|9000009101|9000000100`（verified_by 未被清、状态未先落盘）。\n- 停用单位 9000009003 + 别单位组 → 500；★DB `verified|9000009001|9000009101`。\n- 独立补强（r1 只改组别）：改【单位】到 9000009002+其匹配组 9000009103 → code=200；★立刻 `pending|9000009002|9000009103|-`（verified_by=NULL）。改【组别】→ ★`pending|9000009102|-`。\n- 夹带 `bindStatus:\"verified\",verifiedBy:9000000100` → ★仍 `pending|-`（外部写不动核验状态）。\n- extF(9000000116) 自填、pending|-|-；裸 `{\"action\":\"approve\"}` → 500 `…必须二选一：「新建」（createUnit+createGroup）或「归并到已有」（unitId+groupId）`；★DB 仍 `pending|-|-`。\n- approve 给不匹配 `unitId:9000009001,groupId:9000009103` → 500 不属于；★DB 仍 `pending|-|-`。\n- 正向对照：归并 9000009001+9000009101 → 200，★`verified|9000009001|9000009101|9000000100`；createUnit+createGroup → 200，★JOIN 三表 `verified|C 研究所|active|肿瘤组`。\n- 非法转移 verified→reject → 500；★仍 verified。\n\n④ 不带 clientid / prod 无 mock-login\n- `POST /auth/login` 不带 clientid（password 与 xcx 两种 grantType）→ 均 `{\"code\":500,\"msg\":\"Auth clientid cannot be blank\"}`，token ABSENT。\n- 空 clientid 头、垃圾 clientid → 同样无 token。\n- 正向对照：带正确 PC clientid 时 admin 拿到 token。\n- `grep -rn mock-login code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/application-prod.yml` → 无匹配；整棵源码树 2 个 application-prod*.yml 里 0 个含 mock-login。\n- 对照 `grep 'mock-login: *true' application-dev.yml` → 命中（证明 grep 有效，不是文件为空）。\n\n【自测踩坑（不改产品代码；我的脚本已修，详见 doc/waves/qa/D1-r2-L3-notes.md）】\n- reseed.sh 不清运行时账号 → 我首轮只 reseed 未 clean-orphan，上一轮正向对照建的第二个 lqg_admin 残留，导致「最后管理员」闸门合理地不触发而误报；改为 reseed 后补 clean-orphan-accounts.sh。\n- GET /mp/ext/profile 恒 405（405 在鉴权前由 handler 映射层决定），拿它断「token 失效 401」永远看不到 401；改用真实方法 PUT。\n- mp token 必须配 MP 的 clientid 头，配成 PC 头会得假 401。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S3",
+      "level": "L3",
+      "type": "harness",
+      "ticket": "AUTH-LOGIN-001",
+      "title": "r1 L3 回归脚本①用黑名单 .code != 200 判「外部账号被拒」",
+      "detail": "doc/waves/regression/D1/L23-l3-api.sh 第 ① 类断言 `[ .code != \"200\" ] && [ .data.access_token == ABSENT ]`。doc/verify/README.md 坑#2 明说 .code != 200 是黑名单式：端点 404/实现什么都没做也满足。该脚本虽补了 msg 含「无权」+ 正向对照，但正码未白名单化。本轮独立重跑改用 .code==500 白名单并额外断言 `.data == null`（token 不藏在别的字段），全绿。影响：仅断言强度，不拦门。"
+    },
+    {
+      "severity": "S3",
+      "level": "L3",
+      "type": "harness",
+      "ticket": "AUTH-STAFF-001",
+      "title": "r1 回归脚本只在单一端点验「撤销后旧 token 401」，且 GET /mp/ext/profile 恒 405 会误导",
+      "detail": "L23-l3-api.sh 第 ② 类只用 GET /mp/me 验撤销后 401，未验第二端点。若照抄思路用 GET /mp/ext/profile 做第二端点会拿到恒定 405（405 在鉴权前由 handler 映射层决定，token 失效也看不到 401），从而漏判或误判。本节独立重跑改用真实方法 `PUT /mp/ext/profile` 探第二端点：撤销后同样 401（log 第 39–41 行）。影响：断言覆盖，不拦门。"
+    },
+    {
+      "severity": "S3",
+      "level": "L3",
+      "type": "harness",
+      "ticket": "AUTH-LOGIN-001",
+      "title": "r1 回归脚本未断言被拒响应整体 .data 为 null",
+      "detail": "L23-l3-api.sh 第 ①/④ 类只检查 `.data.access_token // \"ABSENT\"`；若实现把 token 放在其它字段（如 .data.token/.token）仍会判绿。本轮独立重跑加断 `jq -e '.data == null'`（实际 extB 被拒响应为 {\"code\":500,\"msg\":\"该账号无权登录工作台，请使用小程序登录\",\"data\":null}），全绿。影响：断言覆盖，不拦门。"
+    },
+    {
+      "severity": "S3",
+      "level": "L3",
+      "type": "doc-drift",
+      "ticket": "SYS-BASE-001",
+      "title": "reseed.sh 不清运行时建的账号，README 未写明，脚本只 reseed 会污染「最后一个管理员」闸门",
+      "detail": "复现：建第二个 lqg_admin（POST /lqg/auth/staff phone=13800000079）→ `bash doc/verify/reseed.sh --yes` → `SELECT ... WHERE role_key='lqg_admin'` 仍有 2 行（9000000100 + 2102041564275646466/lqg_13800000079，del_flag=0）。此后「最后一个管理员」闸门（PUT role / DELETE 撤销）会合理地返 200 而非 500。doc/verify/README.md 第 13 行只写 reseed「清空全部 t_lqg_* + seed 账号」，未提示运行时账号需另跑 doc/waves/tools/clean-orphan-accounts.sh。本轮独立脚本因此首跑误报 3 条（我的脚本已修为 reseed 后补 clean-orphan，见 D1-r2-L3-notes.md）；受控复现干净 1 管理员时闸门正确返 500 且库不变。影响：验收工具契约/文档，易致后续 QA 假红或假绿，不拦门。建议 README 补一句或让 reseed 顺带清 orphan。"
+    }
+  ]
+}
