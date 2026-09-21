@@ -304,12 +304,12 @@
       "note": "org.dromara.lqg.sample.verify：VerifyTransitions（与表无关的纯函数，合法 5 条边白名单，供 EMBED-MODEL-001 复用）/ SampleVerifyBo / SampleResubmitBo / SampleVerifyService（4 条内部转移 + resubmitByExternal）/ SampleVerifyController（PUT /lqg/sample/{id}/verify，权限 lqg:sample:verify）；单测 39/39（新增 8 例，18 组合穷举 × tissue/organoid 各一遍）。口径：判有效必须同时给 receiveDate+internalNo（编号唯一）、判无效必须给 reason，缺了拒绝且库里什么都不变；invalid→valid 放开且改判后清旧 invalid_reason；外部不能改成 valid、重提只回 pending；状态机不分 sample_kind。★本票越界加了一支迁移 V202609221001（菜单 5206 授 101/102）——touches 没列 migration，但 lqg:sample:verify 权限串只能本票补，缺它 accept 全 403；已确认可接受。★它推翻了我给的一句 briefing：盘上 GET /lqg/sample/list 并不支持 submitSource 筛选（SampleQueryBo 只声明 5 个），所以 accept 2 第 7 段是空转绿；真正证明『快照』的是同段 SQL join 计数 external:3 / internal:1（实跑通过），快照本身没问题。"
     },
     "SAMPLE-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "工作台样本总表：plus-ui views/lqg/sample/** + api/lqg/sample/** + lang/lqg/sample.*.ts + components/lqg/SegButtons/**，后端 sample/query/**（SampleTableQueryService）+ 迁移 V202609221010（菜单 5210 path=sample component=lqg/sample/index，授 101+102，6 个按钮权限串）。accept 1：9 个筛选逐段精确集合相等（sourceUnitId=9001→6 条、groupId=9101→5 条、sampleKind=organoid→[1009]、submitSource=internal→[1008,1009]、verifyStatus=pending→[1002,1007]、日期区间→[1004,1005]、三条件 AND→3 条、全量 9 条无软删 1010、pageSize=2 前两行都是 pending 且 total=9）；accept 2：菜单/permission 集合/SegButtons 出现 7 次（≥4）/四个有无字段无 el-switch；java 55 绿（新增 8 例 SampleTableQueryContractTest）。★两条派单硬要求落地：① submitSource 用样本行落库快照列 eq（全类不出现 LoginHelper.getLoginUser，契约测试守着），不按当前角色现算；② updateTime==null 显式渲染「从未修改」。★SAMPLE-VERIFY-001 的空转断言已收口（external 精确 7 条 / internal 2 条）。越界：改了 SAMPLE-MODEL-001 的 SampleQueryBo/SampleQueryService/SampleVo 三个文件（只新增字段/分支，SampleController 未动）——accept 要的筛选住在那里，touches 只列了 sample/query/**。"
     },
     "SYS-BACKUP-001": {
       "status": "pending",
@@ -1114,6 +1114,46 @@
       "type": "harness",
       "title": "沙箱里用 nohup & 起的后端会被中途杀（exit 143）——长进程要用受管后台 job",
       "detail": "SAMPLE-MP-001 实测：nohup 起的 java 后端中途被杀（exit 143），改用受管后台作业才稳。影响所有需要常驻后端的 ticket 与 QA 分片。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 73,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越界（已授权）：SAMPLE-WEB-001 改了 SAMPLE-MODEL-001 的 SampleQueryBo/SampleQueryService/SampleVo",
+      "detail": "accept 要的筛选参数（sourceUnitId/groupId/submitSource/receiveDate 区间）住在 SAMPLE-MODEL-001 建的 sample 包里，而 SAMPLE-WEB-001 的 touches 只列了 sample/query/**。主会话已口头授权：只新增字段/分支、无签名变更、SampleController 未动。方案：ticket 生成时把 sample/domain/bo/** 与 SampleQueryService 划给 SAMPLE-WEB-001，或在 SAMPLE-MODEL-001 里就预留全量筛选。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 74,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "UI:admin.sample.edit 的『名下有包埋/冻存/质控文档时禁用改判无效』前端前置禁用做不了",
+      "detail": "详情不带该标记，且 SampleChildrenCheckers 在盘上注册 0 个实现。后端兜底有效（SampleVerifyService 拒绝 + 回原因），但 UI 是点了才知道错。EMBED/CRYO/QC 的 MODEL 票注册 checker 后需补一小改（详情带标记 + 前端前置禁用）——建议排进 D3。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 75,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "契约第 45 行没写行内 submitterName/groupName（ticket §2.1 要求加，已加）",
+      "detail": "总表新增「提交人/组别」两列，UI:admin.sample.list 的列清单里也没有（依据是 ticket §2.1 正文）。方案：契约与 ui-index 的列表行字段补齐。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 76,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "nohup & 起的后端被杀后仍占住 8081，下一次受管 job 报 Port 8081 already in use",
+      "detail": "SAMPLE-MP-001 WARN-2 的第二症状。方案：起后端前先 lsof -ti tcp:8081 拿 PID 清干净；统一用受管后台作业。",
       "status": "open",
       "decision": ""
     }
