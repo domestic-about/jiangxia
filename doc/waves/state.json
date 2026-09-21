@@ -280,12 +280,12 @@
       "note": "迁移 V202609221000（gen_ddl_pg 逐字节输出 + 序列 seq_lqg_submit_no + 菜单 5200/5201-5205 授 101+102）；org.dromara.lqg.sample：SampleController(list/{id}/POST/PUT/DELETE)、HintController(GET /mp/dict/hints)、SampleKindRules、SampleFieldCipher、SampleSubmitNoGenerator、SampleChildrenChecker(s)(0 实现)、SampleKindRulesContractTest 6 例；java 测试 31 绿（含 L0 门 ExtChokepointContractTest 4 绿），对抗性探针 14 组全过。★口径裁定：ticket 字面要『加 @EncryptField』，但框架 EncryptorManager 会加 ENC_ 前缀，而 seed/gen_seed/ADR-0006 既有密文是裸 Base64（openssl -aes-128-ecb -nosalt -base64）→ 照注解做会让 seed 9 行读出来还是密文、accept 的『接口返明文』与『库里 == 裸 Base64』双红。seed 与 accept 都是需求层资产且『别改 seed 迁就实现』是硬规矩，故统一口径定为【裸 Base64 + 层内手工 EncryptUtils 加解密】，本票以 SampleFieldCipher 落地并写进迁移与类注释。后续所有加密列（QC-MODEL-001 的 patient_no 等）照此办。坑：① update(null, LambdaUpdateWrapper) 不会自动填 update_by，MP 的 updateFill 只认 BaseEntity 参数对象；② PageQuery 在 5.5.3 只有两参构造器，继承它的 BO 必须自己写无参构造。"
     },
     "SAMPLE-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "后端 org.dromara.lqg.sample.mp（Controller/Service/QueryBo + 7 例 MpSampleContractTest，java 46 绿）；小程序 pages/sample/{layout.ts,layout.fixture.spec.ts,form.vue,detail-ext.vue}、pages/history/{index.vue,sources.ts}、api/sample.ts、components/lqg/*。accept 1：vitest 22/22 + fixture 结构 6 个数逐项相符（13/7/5/0/2/true）+ 8 段 grep 全过，fixture 一字节未改；accept 2：rm 产物后 build:mp-weixin 通过（form.js/history/index.js 在、无 mine.js）+ API 15 段全绿，含把 AUTH-EXT-001 WARN-3 那段收口（--as extA GET /mp/int/sample/list 现在返 403）。★三条硬坑：① updateTime 是『这行有没有被改过』的唯一判据——删掉了兜底成 createTime 的逻辑，于是工作台 GET /lqg/sample/* 上从没改过的行 updateTime 由 createTime 变 null，这是跨票行为变更，SAMPLE-WEB-001 做修改页会用到；② 组件里只用 easycom 引用 wd-* 会**静默丢掉该模块的 .js 产物**（构建仍报 Build complete，产物只有 .json/.wxml，真机加载不到逻辑）→ 必须显式 import 'wot-design-uni/components/wd-xxx/wd-xxx.vue'；③ 分页接口没有 data 键（TableDataInfo = {code,msg,rows,total}），utils/request.ts 默认只 resolve body.data → 列表恒 undefined，给它加了 raw:true 选项（越出 touches，报告 §2.4 列清），凡用 MP 列表的票都要带。"
     },
     "SAMPLE-MP-002": {
       "status": "pending",
@@ -1064,6 +1064,56 @@
       "type": "harness",
       "title": "doc/verify/db.py 拒写时 exit 0（README 写的是 2），会让人把「没执行」当「执行了」",
       "detail": "实测：db.py 遇到写语句时返回 exit 0。方案：改成 exit 2 或至少非 0，并把 README 的退出码表对齐。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 68,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "跨票行为变更：/lqg/sample/* 上从没改过的行 updateTime 由 createTime 变 null",
+      "detail": "SAMPLE-MP-001 删掉了 SampleNameResolver 里『updateTime 为空时兜底成 createTime』那段（它的 accept 断 updateTime == null = 新增）。影响工作台 GET /lqg/sample/*：从没改过的行 updateTime 现在是 null。SAMPLE-WEB-001 做修改页/列表『最后修改』列时会用到——要么显式处理 null，要么把该口径写进它的 §0。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 69,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "小程序：组件里只用 easycom 引用 wd-* 会静默丢掉该模块的 .js 产物（构建仍报成功）",
+      "detail": "SAMPLE-MP-001 实测 form.vue / history/index.vue / FieldRow.vue 第一版全中招：产物只有 .json/.wxml，没有 .js，页面在真机上加载不到逻辑，而 build 仍打印 Build complete。解法 = 显式 import WdXxx from 'wot-design-uni/components/wd-xxx/wd-xxx.vue'。影响后续每一张 MP 票（SAMPLE-MP-002 / EMBED-MP-001 / CRYO-MP-001 / OCR-MP-001 / DOC-MP-001 / DOC-MP-002）。方案：写进栈包 gotchas，并让 MP 票的 accept 都断『页面 .js 产物存在』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 70,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "分页接口没有 data 键：utils/request.ts 默认只 resolve body.data → MP 列表恒 undefined",
+      "detail": "后端 TableDataInfo = {code,msg,rows,total}，没有 data。SAMPLE-MP-001 给 utils/request.ts 加了 raw:true 选项（越出 touches，已在报告 §2.4 列清）。凡是要用 MP 分页列表的票都必须带这个选项，否则列表恒 undefined。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 71,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "/mp/int/** 用 --as admin 实测 403：lqgadmin 只有角色 101，契约要求 lqg_internal",
+      "detail": "下游 MP 票与 QA 别写 --as admin 断 200；内部视角一律用 --as staff。若确实要让管理员也能用小程序内部功能，得有票把它同时挂 102（AUTH-STAFF-001 的 grant 已实现 lqg_admin 同时挂 lqg_internal，但 seed 里的 lqgadmin 是直接插的、没走那条路）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 72,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "沙箱里用 nohup & 起的后端会被中途杀（exit 143）——长进程要用受管后台 job",
+      "detail": "SAMPLE-MP-001 实测：nohup 起的 java 后端中途被杀（exit 143），改用受管后台作业才稳。影响所有需要常驻后端的 ticket 与 QA 分片。",
       "status": "open",
       "decision": ""
     }
