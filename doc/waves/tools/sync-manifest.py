@@ -31,10 +31,14 @@ by_sev = collections.Counter((i or {}).get("severity") for i in issues)
 open_s01 = [i["title"] for i in issues
             if (i or {}).get("severity") in ("S0", "S1") and (i or {}).get("status") != "decided"]
 esc = sorted(t for t, s in tickets.items() if s == "escalated")
+# needs_human 只留给「真的停在等人」的状态：有 escalated 票，或某任务 QA 连红 2 轮（exception）。
+# 光有未决 S0/S1 不算——那是 qa_rework 循环正在做的事，报成 needs_human 会误导管家去催 Kevin。
+stuck = [p for p in phases.values()
+         if p.get("status") == "qa_failed" and int(p.get("qa_rounds") or 0) >= 2]
 
 m = collections.OrderedDict()
 m["skill"] = "zhixing"
-m["status"] = "done" if cur == "all_done" else ("needs_human" if (esc or open_s01) else "running")
+m["status"] = "done" if cur == "all_done" else ("needs_human" if (esc or stuck) else "running")
 m["task"] = collections.OrderedDict([
     ("current", cur),
     ("status", phases.get(cur, {}).get("status", "impl")),
@@ -63,8 +67,10 @@ m["summary"] = ("ticket %d/%d done；已通过 QA 门的任务：%s。当前 %s�
                    len(issues), len(open_s01)))
 m["needs_human"] = collections.OrderedDict([
     ("route", "kevin"),
-    ("why", ("zhixing 有未决 S0/S1 或 escalated 项，需要人拍板" if (esc or open_s01)
-             else "①需求拆解阶段留给 Kevin 的待办仍未决；zhixing 这边当前无需人介入")),
+    ("why", ("zhixing 停在等人：" + ("escalated 票 %s" % ",".join(esc) if esc else "")
+             + ("；QA 连红 2 轮的任务 %s" % ",".join(p["id"] for p in stuck) if stuck else "")
+             if (esc or stuck) else
+             "①需求拆解阶段留给 Kevin 的待办仍未决；zhixing 这边当前无需人介入（未决台账见 open_issues）")),
     ("what", (old.get("needs_human") or {}).get("what")),
 ])
 for k in ("known_gaps", "artifacts", "coverage"):

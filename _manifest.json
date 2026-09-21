@@ -1,6 +1,6 @@
 {
  "skill": "zhixing",
- "status": "needs_human",
+ "status": "running",
  "task": {
   "current": "D2",
   "status": "qa_failed",
@@ -82,7 +82,7 @@
  "summary": "ticket 12/43 done；已通过 QA 门的任务：D1。当前 D2（qa_failed，QA 第 1 轮）。未决台账 89 条（S0/S1 5 条）。",
  "needs_human": {
   "route": "kevin",
-  "why": "zhixing 有未决 S0/S1 或 escalated 项，需要人拍板",
+  "why": "①需求拆解阶段留给 Kevin 的待办仍未决；zhixing 这边当前无需人介入（未决台账见 open_issues）",
   "what": "① 设计稿 v3（14 张图）与确认单是否发甲方：这一版含 9-18 的 5 条改动；② 图廊链接要不要继续给甲方（已清内部话术，但它仍是内部视觉基准，每次改都会即时对外可见）；③ 计费：CR-20260918-07 估约 1.3 人日，加上 CR-04 的 2.5-3、CR-05 的 1.5，累计约 5.3-5.8 人日，算不算二次开发（合同第六条第 5 款）；④ 新开的 OQ-17：中心内部人员之间能否互改对方录的记录，现按不分级做，已写进确认单第 5 条请甲方答；⑤ 外部版质控文档里的内部编号仍留空（开关只作用于页面），已写进确认单 05，甲方若要一并放开需另记变更；⑥ 过目 8 份 proposed ADR（0004 本次更新了 decision）"
  },
  "known_gaps": [
