@@ -272,12 +272,12 @@
       "note": ""
     },
     "SAMPLE-MODEL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609221000（gen_ddl_pg 逐字节输出 + 序列 seq_lqg_submit_no + 菜单 5200/5201-5205 授 101+102）；org.dromara.lqg.sample：SampleController(list/{id}/POST/PUT/DELETE)、HintController(GET /mp/dict/hints)、SampleKindRules、SampleFieldCipher、SampleSubmitNoGenerator、SampleChildrenChecker(s)(0 实现)、SampleKindRulesContractTest 6 例；java 测试 31 绿（含 L0 门 ExtChokepointContractTest 4 绿），对抗性探针 14 组全过。★口径裁定：ticket 字面要『加 @EncryptField』，但框架 EncryptorManager 会加 ENC_ 前缀，而 seed/gen_seed/ADR-0006 既有密文是裸 Base64（openssl -aes-128-ecb -nosalt -base64）→ 照注解做会让 seed 9 行读出来还是密文、accept 的『接口返明文』与『库里 == 裸 Base64』双红。seed 与 accept 都是需求层资产且『别改 seed 迁就实现』是硬规矩，故统一口径定为【裸 Base64 + 层内手工 EncryptUtils 加解密】，本票以 SampleFieldCipher 落地并写进迁移与类注释。后续所有加密列（QC-MODEL-001 的 patient_no 等）照此办。坑：① update(null, LambdaUpdateWrapper) 不会自动填 update_by，MP 的 updateFill 只认 BaseEntity 参数对象；② PageQuery 在 5.5.3 只有两参构造器，继承它的 BO 必须自己写无参构造。"
     },
     "SAMPLE-MP-001": {
       "status": "pending",
@@ -944,6 +944,36 @@
       "type": "doc-drift",
       "title": "reseed.sh 不清运行时建的账号，README 未写明，易污染「最后管理员」闸门",
       "detail": "实测建第二个 lqg_admin 后只跑 reseed，库里仍有 2 个 admin → 「不能撤到没有管理员」这条闸门会合理地不触发，看起来像实现没做。受控复现（干净 1 管理员）时闸门正确返 500 且库不变。方案：doc/verify/README.md 写明『收尾必须 reseed + clean-orphan 两步』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 56,
+      "ticket": "SAMPLE-MODEL-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "加密载体口径已裁定为裸 Base64 + 手工 EncryptUtils（ticket 字面『加 @EncryptField』与 seed/gen_seed 的裸 Base64 不是一套编码）",
+      "detail": "框架 EncryptorManager.encrypt 会加 ENC_ 前缀，而 doc/verify/seed/、gen_seed.py、ADR-0006 的既有密文是裸 Base64（openssl -aes-128-ecb -nosalt -base64，密钥 LqgTestAesKey#01）。照 ticket 字面加注解 → seed 9 行 decrypt 见不到 ENC_ 就原样返回 → accept 2 双红。裁定：统一裸 Base64 + 层内手工 EncryptUtils（语义与 ADR-0006 一致，只是载体从注解换成 SampleFieldCipher），因为 seed 与 accept 是需求层资产且『别改 seed 迁就实现』是硬规矩。影响：QC-MODEL-001 的 patient_no、DOC 域若有加密列一律照此办；ADR-0006 措辞建议由 Kevin 改成『用 EncryptUtils 加密落库』。请 Kevin 在 all_done 时过目。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 57,
+      "ticket": "SAMPLE-MODEL-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "ADR-0004 字面『外部只能调 /mp/ext/**』与 /mp/dict/hints 冲突（契约第 21 行本就列了 /mp/dict/**）",
+      "detail": "accept 3 用 --as extA 调 GET /mp/dict/hints；按 accept 实现（契约第 21 行把 /mp/dict/** 列进内外部都能调），已跑 ExtChokepointContractTest 证明四条咽喉不变量不受影响（新 controller 在 ext 包外、路径 /mp/dict）。建议 ADR-0004 的 decision 补成『业务**数据**接口只有 /mp/ext/**』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 58,
+      "ticket": "SAMPLE-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT /lqg/sample/{id} 的语义未写死（哪些字段可改、是否触发重核验）",
+      "detail": "ticket 未写死；本票按『只改本票范围内字段、不改核验状态』实现。SAMPLE-VERIFY-001 / SAMPLE-WEB-001 若要改状态需自己显式处理。",
       "status": "open",
       "decision": ""
     }
