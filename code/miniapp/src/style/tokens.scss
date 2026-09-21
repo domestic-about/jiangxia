@@ -1,0 +1,115 @@
+// 类器官送检 · 方向 A「清爽卡片」设计 Token（唯一真源）
+// 规范：doc/design-options/direction-a/落地规范.md · 视觉参照：doc/design-options/directions/设计方向对比.html §A
+// 落地位置：code/miniapp/src/style/tokens.scss，由 src/style/index.scss 全局 @import 一次。
+// 挂在 page 上：小程序里 page 是每页渲染根，CSS 变量向下级联到全部 wd-* 组件。
+// 业务样式一律引用变量，禁止裸十六进制色值。本文件是全仓唯一允许出现色值的地方。
+// 色值与网页工作台 src/assets/styles/lqg-tokens.scss 同一组（design-authority.md §B）。
+page {
+  /* —— 主色 —— */
+  --lqg-primary: #0e7c7b;        /* 主按钮、选中、链接、内部身份 */
+  --lqg-primary-deep: #0a5f5e;   /* 按下态 */
+  --lqg-primary-soft: #ddf0ee;   /* 图标井、选中底、识别条次按钮底 */
+  --lqg-on-primary: #ffffff;
+
+  /* —— 表面 —— */
+  --lqg-bg: #f3f6f6;             /* 页面底 */
+  --lqg-card: #ffffff;           /* 卡片、cell 组、表格、底部栏 */
+  --lqg-inset: #f3f6f6;          /* 未选中的按钮组块、搜索框内底 */
+  --lqg-table-head: #eef6f5;     /* 表格表头底 */
+
+  /* —— 文字 —— */
+  --lqg-ink: #16232b;            /* 主文字 */
+  --lqg-ink-2: #5a6b74;          /* 次文字、说明 */
+  --lqg-ink-3: #93a1a8;          /* 弱文字、占位、箭头 */
+
+  /* —— 分隔 —— */
+  --lqg-line: #e2e9ea;           /* cell 分隔线、表格行线；卡片本身不描边 */
+
+  /* —— 身份 —— */
+  --lqg-ext: #2b5f9e;            /* 合作单位徽标 */
+  --lqg-ext-soft: #e1ecf8;
+
+  /* —— 语义状态（与字典值一一对应）—— */
+  --lqg-warn: #b7791f;           /* 待核验、草稿、「识别 · 请核对」 */
+  --lqg-warn-soft: #fcf1da;
+  --lqg-warn-row: #fff8ea;       /* 表格待核验整行底 */
+  --lqg-ok: #2f7d4f;             /* 有效、已完成、已核验 */
+  --lqg-ok-soft: #dff1e6;
+  --lqg-danger: #b3362b;         /* 无效、-80 超期、已驳回 */
+  --lqg-danger-soft: #fbe4e1;
+  --lqg-danger-row: #fdf1ef;     /* 表格超期整行底 */
+  --lqg-mask: rgba(22, 35, 43, 0.45);
+
+  /* —— 阴影（方向 A 的分层手段；卡片不描边）—— */
+  --lqg-shadow-sm: 0 1px 2px rgba(16, 52, 51, 0.04), 0 6px 16px -4px rgba(16, 52, 51, 0.09);  /* 静止卡片、cell 组、宫格、筛选件 */
+  --lqg-shadow-md: 0 8px 24px -6px rgba(16, 52, 51, 0.16);   /* 底部弹层 */
+  --lqg-shadow-brand: 0 8px 18px -8px rgba(14, 124, 123, 0.75); /* 主按钮辉光，只给主按钮 */
+  --lqg-shadow-freeze: 8px 0 10px -8px rgba(16, 52, 51, 0.18);  /* 表格冻结列右缘 */
+
+  /* —— 圆角 —— */
+  --lqg-radius-card: 14px;       /* 卡片、cell 组、宫格、表格容器 */
+  --lqg-radius-ctl: 12px;        /* 主按钮、识别条按钮、工作表切换条外框、提示条 */
+  --lqg-radius-field: 10px;      /* 搜索框、筛选件 */
+  --lqg-radius-seg: 9px;         /* 按钮组单块、工作表切换条选中块 */
+  --lqg-radius-badge: 6px;       /* 徽标、「识别 · 请核对」小标 */
+  --lqg-radius-sheet: 16px;      /* 底部弹层上两角 */
+
+  /* —— 字号（px，375 基线）—— */
+  --lqg-fs-greet: 21px;          /* 首页问候 */
+  --lqg-fs-nav: 17px;            /* 导航标题 */
+  --lqg-fs-lg: 16px;             /* 主按钮 */
+  --lqg-fs-title: 15px;          /* 区块标题、宫格表名、cell 标签与值 */
+  --lqg-fs-base: 14px;           /* 默认 UI、按钮组 */
+  --lqg-fs-body: 13px;           /* 表格正文、工作表切换条、次按钮 */
+  --lqg-fs-sm: 12px;             /* 说明、表头、计数行 */
+  --lqg-fs-xs: 11px;             /* 徽标、冻结格第二行 */
+
+  /* —— 字重 —— */
+  --lqg-fw-regular: 400;
+  --lqg-fw-medium: 500;
+  --lqg-fw-semibold: 600;
+
+  /* —— 间距（4 基）—— */
+  --lqg-sp-1: 4px;
+  --lqg-sp-2: 6px;
+  --lqg-sp-3: 8px;
+  --lqg-sp-4: 10px;
+  --lqg-sp-5: 12px;
+  --lqg-sp-6: 14px;
+  --lqg-sp-7: 16px;
+  --lqg-sp-8: 20px;
+  --lqg-gutter: 16px;            /* 屏边距 */
+  --lqg-gap: 12px;               /* 卡片间距、宫格间距 */
+  --lqg-cell-h: 52px;            /* 表单行最小高 */
+  --lqg-btn-h: 48px;             /* 主按钮高 */
+
+  /* —— 字体（系统栈，不引入字体文件）—— */
+  --lqg-font: -apple-system, blinkmacsystemfont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --lqg-font-mono: menlo, consolas, 'SF Mono', monospace;   /* 编号类：内部编号、送检单号、石蜡块编号、冻存样品名称、住院号、手机号 */
+
+  // wot-design-uni 1.14 主题接入：设在 page 即覆盖全部 wd-*。
+// 键名以仓库里 wot-design-uni 的 abstracts/variable.scss 为准；版本冲突时以代码为准、视觉目标不变。
+  --wot-color-theme: var(--lqg-primary);
+  --wot-color-success: var(--lqg-ok);
+  --wot-color-warning: var(--lqg-warn);
+  --wot-color-danger: var(--lqg-danger);
+
+  --wot-button-primary-bg-color: var(--lqg-primary);
+  --wot-button-primary-color: var(--lqg-on-primary);
+
+  /* Cell 表单：标签与值 15px，分组卡圆角 14；不覆盖 --wot-cell-padding（它是单侧 padding，传两值会污染 cell-group） */
+  --wot-cell-title-fs: var(--lqg-fs-title);
+  --wot-cell-value-fs: var(--lqg-fs-title);
+  --wot-cell-title-color: var(--lqg-ink);
+  --wot-cell-value-color: var(--lqg-ink);
+  --wot-cell-group-insert-radius: var(--lqg-radius-card);
+  --wot-cell-required-color: var(--lqg-danger);
+
+  /* wd-tag 非 plain 时文字恒白，浅底深字的状态徽标用 .lqg-tag，不走 wd-tag primary */
+  --wot-tag-primary-bg: var(--lqg-primary);
+  --wot-tag-primary-color: var(--lqg-primary);
+
+  /* 占位：未填必须比已填浅 */
+  --wot-input-placeholder-color: var(--lqg-ink-3);
+  --wot-search-placeholder-color: var(--lqg-ink-3);
+}
