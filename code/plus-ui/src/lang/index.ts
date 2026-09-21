@@ -29,8 +29,14 @@ type LqgDomainMessages = Record<string, Record<string, unknown>>;
 const mergeLqgMessages = (modules: Record<string, unknown>, suffix: string): LqgDomainMessages => {
   const merged: LqgDomainMessages = {};
   for (const [path, mod] of Object.entries(modules)) {
-    const domain = path.replace('./lqg/', '').replace(suffix, '');
-    merged[domain] = ((mod as { default?: Record<string, unknown> }).default ?? {}) as Record<string, unknown>;
+    const base = path.replace('./lqg/', '').replace(suffix, '');
+    // 文件名 = `<域>[-<票>]`：'-' 之前是域名（与后端子包一致，决定键路径 lqg.<域>.*），
+    // '-' 之后的段只是让**同一个域的多张票**各占一个文件（auth-staff / auth-group 都进 lqg.auth，
+    // 不互相覆盖）。键路径写死的示例：src/lang/lqg/sys.zh_CN.ts → lqg.sys.*；
+    // src/lang/lqg/auth-staff.zh_CN.ts 导出 { staff: {...} } → lqg.auth.staff.*。
+    const domain = base.split('-')[0];
+    const messages = ((mod as { default?: Record<string, unknown> }).default ?? {}) as Record<string, unknown>;
+    merged[domain] = { ...(merged[domain] ?? {}), ...messages };
   }
   return merged;
 };
