@@ -6,7 +6,7 @@
   "phases": [
     {
       "id": "D1",
-      "status": "pending",
+      "status": "qa_running",
       "qa_rounds": 0
     },
     {
@@ -71,28 +71,28 @@
       "note": ""
     },
     "AUTH-GROUP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D1",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609210930 建 t_lqg_source_unit / t_lqg_unit_group（部分唯一索引 uk_unit_group=(unit_id,group_name) WHERE del_flag='0'）+ seed 菜单 5120 unit / 5130 extuser 及按钮，授 101 与 102（核验组别是内部日常工作）。后端 auth/group（含 guard/ExtBindStateMachine 状态机纯函数 + 11 条契约测试）、ext（GET /mp/ext/units、PUT /mp/ext/profile）；前端 views/lqg/auth/{unit,extuser} + lang/lqg/auth-group.*；小程序在 pages/me/unit-group.vue 实现（touches 写的是 pages/me/profile/**，实际占位页是 unit-group，已记偏差）+ components/biz/UnitGroupPicker.vue。★两个真问题（都属 counterfeit-risk 一类）：① MyBatis-Plus updateById 默认忽略 null 字段 →『清空』清不掉，实测 bind_status 回 pending 但 verified_by 还是老核验人，而 accept 恰好断这一格；三处写侧改成 LambdaUpdateWrapper 显式 .set(col,null)；② ADR-0004 的 i4 比 ticket 正文严——ExtChokepointContractTest 扫整个 ext 包，任何类持 *Mapper 字段就红；第一版把两个 service 放 ext 包直接红，改成读写在 auth.group、ext 包只拼装转发后绿，已把 fixture 拷进测试树跑绿（Tests run: 4）。坑：headless 下侧边栏 router.push 后 .router-view 不换，需整页加载。"
     },
     "AUTH-LOGIN-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D1",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "新增 ruoyi-lqg/org.dromara.lqg.auth（入参只声明 xcxCode/phoneCode、mock 与真实唯一分叉点 WxIdentityResolver、按手机号建号绑定的 WxAccountBindService、GET /mp/me），ruoyi-admin 只多一个接线类 LqgXcxAuthStrategy。迁移 V202609210910 用 gen_ddl_pg.py --migration 逐字节输出 + 同支幂等插 mp client 行(client_id=md5('mp'||secret))。坑：① IAuthStrategy 按 bean 名取策略，同名 bean 必冲突、@Primary 对 getBean(name) 无效，故删了上游 XcxAuthStrategy 空壳；② 登录/mp/me 读 sys_* 必须包 DataPermissionHelper.ignore，否则无 token 时 LoginHelper 抛『token 已被冻结』被包成 401（现象是账号建出来了接口却 401）；③ PostgreSQL 会规划整条语句，写在 CASE WHEN to_regclass() IS NULL 不可达分支里的子查询照样报缺表，单位/组别名称的 join 改在 Java 侧探针判表；④ 根 pom 的 surefire groups+skipTests 会让 java 契约测试 0 用例却 BUILD SUCCESS 假绿，在 ruoyi-lqg/pom.xml 构建侧摘掉过滤器后实测 Tests run: 4。"
     },
     "AUTH-STAFF-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D1",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "后端 /lqg/auth/staff（list/grant/edit/resetPwd/revoke，权限串 lqg:auth:staff:* 只授 101）+ 迁移 V202609210920（目录 5100 人员与单位 / 菜单 5110 component=lqg/auth/staff/index / 按钮 5111-5115，父目录一起授）+ 工作台拒外部登录（@AfterReturning 装饰，msg 含『无权』）+ plus-ui 授权页（弹窗含 check 预检提示升级）。口径：授权=找到就改角色、删 103 加目标角色、返回 upgraded:true，不新建账号不动 wx_bind；撤销=角色改回只剩 103 + 补 unbound 档案 + 踢 token，不能撤自己、不能撤到没有管理员。★真问题（上一任落盘的代码，接手时修掉）：① 上游 roleService.cleanOnlineUser → PlusSaTokenDao.searchData 把 Redis 扫描结果缓存进 Caffeine(expireAfterWrite=5s)，撤销前 5 秒内刚签发的 token 不在快照里 → 漏踢，被撤销的人拿旧 token 继续 200；ticket accept 的顺序恰好让快照新鲜所以那段断言对旧实现恒绿 —— 改为 StpUtil.logout(userType+':'+userId)，并写 5 秒窗口负对照探针实测旧实现红、修复后绿；② reset-pwd/revoke 上多余的 response.setStatus(500) 会让 axios 落 error 分支，上游约定是 HTTP 200 + code:500，已删。坑：api.sh 的 token 缓存只按 mtime 判新鲜，陈旧 token 会造成假 401，跑 accept 前建议清 $TMPDIR/lqg-verify-token-*。"
     },
     "CRYO-FLOW-001": {
       "status": "pending",
@@ -351,12 +351,12 @@
       "note": ""
     },
     "SYS-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D1",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "code/miniapp 从 unibest base-wot-ui @3.18.11（wot-design-uni 1.14.0）起建，99 文件/37 源文件 2462 行。三条 accept 全绿：build:mp-weixin + jq 页签【首页/文档/我的】+ biz 桶口与 :not()/* 两条 grep 空 + 生产包无 mock:ext；vitest entries.fixture.spec.ts 25/25 且 fixture(6/10/6) 未改；tokens 变量名集合 75=75 相等 + 两条 @import + 色值字面量 grep 空。口径：entriesFor/entryTarget/meSections 只认字面量 internal/external（INTERNAL/''/null/admin → 空），页面 v-else 兜底重新登录；点哪格都是 /pages/<key>/form；内部管理板块 v-if（外部不进 DOM）；小字常量逐字『核验、冻存取用请到网页工作台』。坑：① uni CLI 的 initEnv 先读 src/manifest.json（必须留空壳种子）；② SFC 模板里禁止写 <!-- #ifdef/#ifndef -->（与 @uni-ku/root 根节点注入打架 → Cannot destructure property tabBar of this.meta）；③ dev 判定别只用 import.meta.env.DEV，用 MODE==='development' && VITE_MOCK_LOGIN；④ App.ku.vue 不能删（uni-ku/root 从 main.ts 注入引用）；⑤ 本机 pnpm/npm 全局缓存只读 → .npmrc 的 store-dir 与 XDG_CACHE_HOME 都要指到工作区内。"
     },
     "SYS-PROD-001": {
       "status": "pending",
@@ -383,12 +383,12 @@
       "note": ""
     },
     "SYS-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D1",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "code/plus-ui 按 v5.5.3-v2.5.3（commit 5c9c940，与后端 5.5.3 精确配套）干净落盘；品牌『类器官样本管理』、登录页去租户/注册/演示第三方登录、lqg-tokens.scss 主色 #0E7C7B（运行期 getComputedStyle 实测 rgb(14,124,123)）；i18n 按域拆分用 src/lang/index.ts 的 import.meta.glob('./lqg/*.zh_CN.ts',{eager:true}) 合并到 lqg.<域>.*，不碰上游两个大文件。迁移 V202609210830 按上游真实 menu_id 给 101 授系统管理父目录+字典管理/参数设置及按钮（13 行），102 一行不授，插 lqg.ext.show-internal-no=false 与 lqg.cryo.overdue-days=14。坑：① 上游 getChildPerms 建树必须先授父目录，否则子菜单不出现；② 指定的 0830 落在已应用的 0910 之前 + out-of-order=false → FlywayValidateException，本票重建 dev 库解决（D1 后续 0920/0930 都大于已有版本，不再撞）。"
     }
   },
   "open_issues": [
@@ -439,6 +439,300 @@
       "type": "clarify",
       "title": "ruoyi-workflow 模块仍在上游 pom（只关运行）",
       "detail": "ADR-0001 说「不引 ruoyi-workflow」，本票只关运行未从 pom 剔除；彻底剔除需改上游两个 pom。是否要彻底剔除待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 6,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "ticket accept 里的 mvn 命令在本机原样跑必挂（缺 -s/-Dmaven.repo.local/-Duser.home）",
+      "detail": "accept 第 3 条与 D1 qa_scope L0 都写 mvn -pl ruoyi-modules/ruoyi-lqg -am install/test；本机 ~/.m2 只读，原样跑 FileSystemException: spring-boot-dependencies: Operation not permitted。必须带 -s .mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome。影响所有 Maven 类 accept 与 QA 门 L0；普通开发机不受影响。方案：ticket 模板加一句，或在仓库根放 mvnw 包装参数。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 7,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "根 pom surefire groups+skipTests 让 java 契约测试 0 用例仍 BUILD SUCCESS（假绿形态）",
+      "detail": "根 pom 配 <groups>${profiles.active}</groups>(=dev) + <skipTests>true</skipTests>，而需求层 fixture 没有 @Tag → mvn test 报 Tests run: 0 却 BUILD SUCCESS，「护栏坏了」恒绿。本票已在 ruoyi-lqg/pom.xml 覆盖（实测 Tests run: 4）。后续所有跑 mvn test 的 ticket 都会踩同一形态。方案：验收清单加『核 surefire Tests run > 0』，或主会话决定在根 pom 去掉该 groups 默认值。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 8,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越出 touches：删除了上游空壳 ruoyi-admin/.../web/service/impl/XcxAuthStrategy.java",
+      "detail": "IAuthStrategy.login 用 SpringUtils.getBean(grantType+'AuthStrategy') 按 bean 名取策略，同名的 LqgXcxAuthStrategy 与上游 XcxAuthStrategy 直接 ConflictingBeanDefinitionException；@Primary 对 getBean(name) 无效。不删就得改上游代码或让 xcx 登录恒 500。删的是无调用方的 TODO 空壳。新增的 LqgXcxAuthStrategy 落在 ruoyi-admin（IAuthStrategy/LoginVo 是那里的类型，放 ruoyi-lqg 会成环），类里只有框架接线。请 Kevin 过目这个边界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 9,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "api-contract 的 /mp/me 未写 name 的取值来源",
+      "detail": "契约 data.name 没说明是 sys_user.nick_name（本票实现）还是 t_lqg_ext_profile.real_name。accept 断 extA.name==王医生 两边恰好同值，两种实现都能过。方案：契约写明 name = 账号昵称(nick_name)；AUTH-EXT-001 改 real_name 时是否同步昵称待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 10,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "ruoyi-lqg 现在依赖 ruoyi-system（为拿 sys_user/角色 mapper）",
+      "detail": "与 ADR-0001『业务代码只在一个模块』不冲突（方向单一不成环），但后续 ticket 容易把 ruoyi-system 当自家的用。约定：只读框架账号/角色表用它的 mapper，不往 sys_user 写业务字段。目前只写了 login_date 与两条审计字段。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 11,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "mp client 的 client_secret 是 dev 常量 mpDevSecret#2026",
+      "detail": "只用于 dev/test 的 xcx 登录（token 签发不校验 secret，secret 只在 sys_client 留档），client_id 与它的 md5 关系写在注释里。上线前由部署 ticket 换随机值并同步 client_id。本票不引入密钥管理。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 12,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "迁移跨域补号撞 out-of-order=false：0830 指定在已应用的 0910 之前，后端启动即 FlywayValidateException",
+      "detail": "SYS 域 08xx 的票排在 AUTH 域 09xx 之后做时必撞（lint-profile 的 HHmm 域分段假设实现顺序与号段顺序一致）。本票靠 DROP+CREATE dev 库重建按序跑 5 支解决；真部署按序不受影响。方案二选一：① ticket 生成器禁止跨域补号（同任务内做票顺序必须与号段一致）；② dev 显式 spring.flyway.out-of-order=true（prod 保持 false）。已实测 D1 剩余 0920/0930 都大于当前最大版本，不再撞。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 13,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "api.sh --fresh-module 的 ps -o lstart= 在 subagent 沙箱被禁（已连续三张票命中）",
+      "detail": "SYS-BASE-001 / AUTH-LOGIN-001 / SYS-WEB-001 三张都命中。只影响 subagent 沙箱，人工/CI 正常。方案：api.sh 把启动时间换成 lsof / 日志 mtime 的兼容写法（三张票都按规矩没改 api.sh）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 14,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "ticket §4.2 与 accept 第 1 条 + CR-20260918-07 冲突：侧边栏不可能只有字典管理一项",
+      "detail": "accept 要求 system/config/index 路由可达、CR 要求两个开关在「参数设置」里改，而上游 getChildPerms 建树必须先授父目录「系统管理」→ 侧边栏必为「系统管理 › 字典管理 / 参数设置」。本票按 accept + CR 办、截图如实呈现。方案：§4.2 改成「除字典管理与参数设置外不应有别的菜单」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 15,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "code/plus-ui 未提交 pnpm-lock.yaml（上游 .gitignore 忽略它）→ 前端构建不可复现",
+      "detail": "依赖版本随镜像漂移，影响 CI/他人重建。方案：git add -f code/plus-ui/pnpm-lock.yaml 或项目自己维护一份。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 16,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "上游 /register 路由与页面仍在（只摘了登录页入口）",
+      "detail": "URL 直达会渲染一个必然失败的注册页。已实测后端开关兜底：POST /auth/register → code 500『当前系统没有开启注册功能！』（sys.account.registerUser=false），不是安全口子。方案：AUTH-STAFF-001 或后续壳票顺手删路由+页面+白名单。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 17,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "并行 ticket 共用同一 worktree：.pnpm-store 未跟踪、提交易互相夹带",
+      "detail": "SYS-WEB-001 与 SYS-MP-001 同批派单（touches 不冲突但共用 worktree）。已处置：根 .gitignore 补 .pnpm-store/（826MB）并单独 commit。后续同批并行的 ticket 保持『只 git add 自己路径』纪律；若并行度再提高，考虑各自 worktree。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 18,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "同一手机号两行 sys_user：并行 reseed 窗口里 extA 被自动建号，会挡下游 MP ticket 的 --as extA",
+      "detail": "根因（主会话已定位，非 AUTH-LOGIN-001 实现缺陷）：reseed.sh 先 TRUNCATE t_lqg_* 再 DELETE sys_user(9000000000-9000009999)，两步之间有一个窗口；窗口内进来的 mock 登录按手机号查 sys_user 查不到 → 走 createExternalUser 建了 snowflake id 新号（2101930592395362306, create_time 2026-09-21 15:04:39）。而 reseed 只删 9000000000-9000009999 段的账号，snowflake id 的孤儿号**永远留在库里**，导致同一手机号两行 → 之后 selectOne(eq(phonenumber)) 会 TooManyResults。触发条件：SYS-WEB-001 / SYS-MP-001 / AUTH-STAFF-001 同批并行、共用 PG 5433 与同一个 reseed。处置：① 已定纪律——之后同一时刻只允许一个 ticket 碰 PG 5433（DB 是容量 1 的共享资源）；② QA 门之前清理孤儿号。建议：reseed.sh 追加按 seed 手机号清非种子段账号（属验收执行器，需求层资产，本批未改）。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 19,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "微信开发者工具 CLI 在 subagent 沙箱跑不通（EPERM + 需扫码）",
+      "detail": "CLI 要写 ~/Library/Application Support/微信开发者工具/** → EPERM，且需人工扫码登录。本票 DevTools 截图/录屏项改用 H5 + Playwright 覆盖（13 张截图 + 3 段 webm）。只影响 subagent 沙箱；L2 真机/开发者工具那几项按 zhixing 规矩记 blocked/集中上报，不算 QA 失败。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 20,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "pnpm type-check 被 wot-design-uni 1.14.0 自身 SFC 类型错误挡红",
+      "detail": "错误在 node_modules/.pnpm/wot-design-uni@1.14.0/**，skipLibCheck 管不到 SFC；第一方代码已零错误。方案：type-check 只对 src 跑，或在落地规范里写明该上游噪音。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 21,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "CR-20260921-08 未写模板版本基线",
+      "detail": "本票用 unibest base-wot-ui @3.18.11 + wot-design-uni 1.14.0，未写进落地规范。方案：补进 doc/design-options/direction-a/落地规范.md §0 作为复现基线。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 22,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 的 mock:ext grep 抓不到同义改写（dist/api/mock-seeds.js 仍被 emit）",
+      "detail": "accept 只 grep 字面量 mock:ext，抓到的是『入口不可达 + 关键字面量不存在』；dist/api/mock-seeds.js（446B，含 extA 与手机号）仍被 emit（无调用方、v-if 恒 false）。若换成 xcxCode:'mock:extA' 这种写法同一 grep 拦不住。方案：断言加强（断 dist 里不存在任何 mock seed 模块）或显式 rollup exclude。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 23,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "上游 cleanOnlineUser 的 Caffeine 5 秒缓存会漏踢刚签发的 token（一类问题的载体，本票实例已修）",
+      "detail": "上游 PlusSaTokenDao.searchData 把 StpUtil.searchTokenValue 的 Redis 扫描结果缓存进 Caffeine(expireAfterWrite=5s)：撤销前 5 秒内刚签发的 token 不在快照里 → 撤销返回 200、库也改了，被撤销的人拿旧 token 继续 200。影响所有『改角色/停用/撤销后踢下线』的票（AUTH-EXT-002、AUTH-GROUP-001、SYS-*），且 accept 很容易恒绿（ticket 原文的断言顺序恰好让快照新鲜）。本票实例已改 StpUtil.logout(loginType+':'+userId) 并留 5 秒窗口负对照探针（旧实现实测红、修复后绿）。方案：① 生成器/验收清单加『凡踢人断言先构造 5 秒窗口的负对照』；② 长期换掉 cleanOnlineUser 的缓存枚举（属上游 ruoyi-system）。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 24,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越出 touches：改了 code/plus-ui/src/lang/index.ts（i18n 同域多文件的键路径解析）",
+      "detail": "ticket touches 未列它，但不改则 auth-staff.* 的键路径退化成 lqg['auth-staff']，且与后续 auth-group.* 互相覆盖。已改成 base.split('-')[0] 归并到 lqg.<域>，向后兼容（sys.* 行为不变，pnpm build:prod 过），随本票提交。影响后续所有按域拆 i18n 的 WEB 票（auth-group / sample-* 等都靠这条解析）。方案：把 src/lang/index.ts 加进相关 ticket 的 touches，或把『同域多文件』解析约定写进 SYS-WEB-001 立的 src/lang/lqg/ 规范。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 25,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "api-contract.md 的 AUTH 一节没列 GET /lqg/auth/staff/check?phone=",
+      "detail": "ticket §2.3 明确要求这个只读预检接口（前端授权弹窗用它提示『该手机号已登录过小程序，将把原账号升级为内部人员』），实现已按 ticket 落地。契约是只读区，本票未改。方案：补一行 GET /lqg/auth/staff/check?phone= → data:{exists, external, name?}。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 26,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "api.sh 的 token 缓存只按 mtime 判新鲜，陈旧 token 造成假 401",
+      "detail": "接手本票时被它误导过一次（一上来 401，误以为实现坏了）。方案：api.sh 命中缓存后先探一次轻接口（如 GET /lqg/sys/ping），非 200 就重登；或写明『跑 accept 前清 $TMPDIR/lqg-verify-token-*』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 27,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "工作台拒外部用 @AfterReturning：token 已签发（存 Redis 未返回客户端）",
+      "detail": "不构成可利用口子（客户端拿不到 token），但会给 Redis 留一个到 TTL 才消失的会话。方案：保持现状 + 文档写明；若要在签发前拦，需在本模块复制口令校验逻辑（不划算且会与上游策略漂移）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 28,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "MyBatis-Plus updateById 默认忽略 null →『清空字段』清不掉（一类问题，本票实例已修）",
+      "detail": "实测 bind_status 已回 pending 但 verified_by 还是老核验人，而只看业务码的断言全绿。影响所有『改状态顺带清字段』的票（退回/撤销/驳回/重填/解绑）。本票三处写侧改成 LambdaUpdateWrapper 显式 .set(col,null) 并写负对照。方案：生成器加『凡断言 COALESCE(col,'-') 的票必须用 UpdateWrapper 且写负对照』。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 29,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "ADR-0004 的 i4 比 ticket 正文严：ExtChokepointContractTest 扫整个 ext 包（任何类持 *Mapper 即红）",
+      "detail": "本票第一版把两个 service 放 ext 包（各持 mapper）→ fixture 直接红；改成读写在 auth.group、ext 包只拼装+转发后绿（Tests run: 4）。D1 之后的 EXT 域票（AUTH-EXT-001/002/003 与各域 /mp/ext/**）若不先跑这个 fixture，会在 D2/返工时才发现，那时 ext 包已写满。方案：EXT 域票的 accept 必含 ExtChokepointContractTest。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 30,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "api-contract.md 第 38 行为单位/组别列了 DELETE，但 ticket + 权威是只启用/停用",
+      "detail": "FLOW:F-AUTH-03.step1 与 ticket §2.2 都是『不物理删，只启用/停用』；实现按 ticket+权威走（PUT …/{id}/status）。契约是只读区，本票未改。方案：改契约那一行。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 31,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "归并核验要不要清自填名 / 内部能否归并到停用单位——ticket 未写",
+      "detail": "① PUT /mp/ext/profile 归并后 group_name_input / unit_name_input 是否清空，ticket 没写；② 内部核验时把外部归并到一个已停用单位，口径待定。本票按保守口径实现（见报告 §8）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 32,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "headless 下侧边栏 router.push 后 .router-view 不换，需整页加载",
+      "detail": "影响后续所有工作台 UI 自动化（D2-D7 的 L2 断言）。本票截图/探针改用整页加载绕过。方案：在 plus-ui 的 L2 自动化约定里写明用整页导航，或查明是 keep-alive/transition 与 headless 的交互。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 33,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "api.sh --fresh-module 在沙箱里 exit 1（不是 2）：工具故障伪装成『断言不成立』",
+      "detail": "L0+L1 QA 片实测：/bin/ps 被禁 → 落到 macOS 不支持的 date -d → set -e 提前退出，exit code 1。而 doc/verify/README.md 把 1 定义为『断言不成立』，于是工具故障与实现红不可分（README 坑 #3 还要求每条 API accept 都带这个开关，照做必假红）。已连续五张票命中此坑的另一种表现（exit 2）。方案：api.sh 把启动时间换成 lsof / 日志 mtime 兼容写法，或给一个跳过启动时间守卫的显式开关。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 34,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "clean-orphan-accounts.sh 只清 app_user，漏掉授权路径建的 sys_user（已修）",
+      "detail": "L0+L1 QA 片实测：AUTH-STAFF-001 的授权路径会建 user_type='sys_user' 的账号（2101952990830182401|13900000002），原脚本按 user_type='app_user' 过滤 → 清不掉，自称的『清回确定性 seed 快照』做不到。已修：改成『非 seed 段 + 手机号非空』（上游自带账号手机号是空串，天然豁免），复核查询同步收窄。",
       "status": "open",
       "decision": ""
     }

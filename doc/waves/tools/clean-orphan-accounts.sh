@@ -26,12 +26,18 @@ PSQL=(psql -v ON_ERROR_STOP=1 -q -h "${LQG_DB_HOST}" -p "${LQG_DB_PORT:-5432}" -
 
 "${PSQL[@]}" <<'SQL'
 BEGIN;
--- 孤儿 = 不在 seed 段（9000000000-9000009999）的 app_user 账号（都是登录链路自动建出来的）
+-- 孤儿 = 不在 seed 段（9000000000-9000009999）、且用户名是运行时按手机号生成的两种形态：
+--   wx_<手机号>  = 微信首登自动建（WxAccountBindService#createExternalUser）
+--   lqg_<手机号> = AUTH-STAFF-001 按手机号授权预建
+-- ★ 不要用「手机号非空」当判据：上游自带的 admin 手机号是 15888888888，会被误删。
+--   seed 段的账号虽然也叫 lqg_<手机号>，但被 user_id 区间排除，天然安全。
 CREATE TEMP TABLE _lqg_orphan ON COMMIT DROP AS
 SELECT user_id, user_name, phonenumber
 FROM sys_user
 WHERE user_id NOT BETWEEN 9000000000 AND 9000009999
-  AND user_type = 'app_user';
+  AND (user_name LIKE 'wx\_%' OR user_name LIKE 'lqg\_%')
+  AND phonenumber IS NOT NULL
+  AND phonenumber <> '';
 
 DELETE FROM sys_user_role     WHERE user_id IN (SELECT user_id FROM _lqg_orphan);
 DELETE FROM t_lqg_ext_profile WHERE user_id IN (SELECT user_id FROM _lqg_orphan);
@@ -45,5 +51,5 @@ SQL
 
 echo "── 复核：同手机号多行（应为空；空串手机号是上游自带账号，不算）──"
 "${PSQL[@]}" -c "SELECT phonenumber, count(*) FROM sys_user WHERE del_flag='0' AND phonenumber IS NOT NULL AND phonenumber <> '' GROUP BY phonenumber HAVING count(*) > 1;"
-echo "── 复核：非 seed 段 app_user（应为空）──"
-"${PSQL[@]}" -c "SELECT user_id, user_name FROM sys_user WHERE user_id NOT BETWEEN 9000000000 AND 9000009999 AND user_type='app_user';"
+echo "── 复核：非 seed 段的运行时账号 wx_* / lqg_*（应为空）──"
+"${PSQL[@]}" -c "SELECT user_id, user_name, phonenumber, user_type FROM sys_user WHERE user_id NOT BETWEEN 9000000000 AND 9000009999 AND (user_name LIKE 'wx\_%' OR user_name LIKE 'lqg\_%');"
