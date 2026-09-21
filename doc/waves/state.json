@@ -296,12 +296,12 @@
       "note": ""
     },
     "SAMPLE-VERIFY-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "org.dromara.lqg.sample.verify：VerifyTransitions（与表无关的纯函数，合法 5 条边白名单，供 EMBED-MODEL-001 复用）/ SampleVerifyBo / SampleResubmitBo / SampleVerifyService（4 条内部转移 + resubmitByExternal）/ SampleVerifyController（PUT /lqg/sample/{id}/verify，权限 lqg:sample:verify）；单测 39/39（新增 8 例，18 组合穷举 × tissue/organoid 各一遍）。口径：判有效必须同时给 receiveDate+internalNo（编号唯一）、判无效必须给 reason，缺了拒绝且库里什么都不变；invalid→valid 放开且改判后清旧 invalid_reason；外部不能改成 valid、重提只回 pending；状态机不分 sample_kind。★本票越界加了一支迁移 V202609221001（菜单 5206 授 101/102）——touches 没列 migration，但 lqg:sample:verify 权限串只能本票补，缺它 accept 全 403；已确认可接受。★它推翻了我给的一句 briefing：盘上 GET /lqg/sample/list 并不支持 submitSource 筛选（SampleQueryBo 只声明 5 个），所以 accept 2 第 7 段是空转绿；真正证明『快照』的是同段 SQL join 计数 external:3 / internal:1（实跑通过），快照本身没问题。"
     },
     "SAMPLE-WEB-001": {
       "status": "pending",
@@ -974,6 +974,46 @@
       "type": "clarify",
       "title": "PUT /lqg/sample/{id} 的语义未写死（哪些字段可改、是否触发重核验）",
       "detail": "ticket 未写死；本票按『只改本票范围内字段、不改核验状态』实现。SAMPLE-VERIFY-001 / SAMPLE-WEB-001 若要改状态需自己显式处理。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 59,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 里 submitSource 筛选是空转绿：盘上 /lqg/sample/list 没有这个筛选参数",
+      "detail": "SAMPLE-VERIFY-001 accept 2 第 7 段用 GET /lqg/sample/list?submitSource=external 断 1001 在其中，但 SampleQueryBo 只声明 sampleKind/verifyStatus/internalNo/donorName/hospitalNo 五个筛选，submitSource 被 Spring 当未知参数忽略 → total=9 且含 internal 的 1008/1009，断言恒真。SAMPLE-WEB-001 的 accept 会真正用到 submitSource 筛选（q 'submitSource=internal'）。要求：实现时用【样本行上已落库的 submit_source 列】eq 筛选，**不许按提交人当前角色现算**（那是这条口径最自然也最错的实现）；同时把该段断言改成集合精确相等。★另记一条主会话的教训：我在 briefing 里断言『list 已支持 submitSource』是我从 accept 反推的、没先验盘上代码，错的。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 60,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "D3 定时炸弹：注册 SampleChildrenChecker 后 D2 的 valid→invalid 会变红（种子 1002 名下有待核验送样 2006）",
+      "detail": "本票 checker 注册数=0 所以跑得通；EMBED-MODEL-001 注册实现后，seed 里 1002 名下有 extA 提交的**待核验**石蜡包埋送样 2006 → SAMPLE-VERIFY-001 accept 1 的 valid→invalid 会在 D3 之后复跑时变红。权威口径（D3 qa_scope L3『有已核验石蜡块的样本改判无效被拒』）支持：checker **只把已生效（非软删）的下游记录算 children，待核验的外部送样不算**。EMBED-MODEL-001 必须照此实现，否则 D3 的 QA 回归会连带打红 D2。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 61,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "判有效时『其余字段』的 null 语义未写死（本实现取 patch 语义）",
+      "detail": "请求体里没给的字段不动（patch），不是整体覆盖。后续若有人按 PUT 全量语义写会踩。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 62,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "resubmitByExternal 本票无运行时入口，只被单测覆盖",
+      "detail": "外部重提的 HTTP 入口在 AUTH-EXT-001；AUTH-EXT-001 落地后应把它接上并补一条端到端断言。",
       "status": "open",
       "decision": ""
     }
