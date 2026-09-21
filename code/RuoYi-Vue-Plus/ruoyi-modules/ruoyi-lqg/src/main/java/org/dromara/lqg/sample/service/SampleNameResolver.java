@@ -1,7 +1,6 @@
 package org.dromara.lqg.sample.service;
 
 import lombok.RequiredArgsConstructor;
-import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
@@ -53,14 +52,17 @@ public class SampleNameResolver {
 
     /**
      * 把「最后修改人姓名」填进行 VO（详情与列表共用）。
+     *
+     * <p>★ <b>只填姓名，不动 {@code updateTime}</b>（SAMPLE-MP-001 改）：
+     * 这里曾经在 {@code updateTime} 为空时把它兜底成 {@code createTime}，
+     * 但那个兜底把「<b>从没被改过</b>」这个信息抹掉了 —— 小程序「历史编辑记录」正是靠
+     * {@code updateTime} 空不空显示「新增 / 修改」（CR-20260918-07），而库里
+     * {@code update_by} 为空的行 {@code update_time} 本来就是 NULL。
+     * 修完就是：<b>{@code updateTime == null} ⇔ 这一行从没被改过</b>（新增），
+     * 非空 ⇔ 被改过（修改）。「最后修改人是谁」仍由本方法给的姓名回答（没改过 = 创建人）。
      */
     public void fill(Sample sample, SampleVo vo) {
         vo.setUpdateByName(resolveLastModifierName(sample));
-        if (vo.getUpdateTime() == null && !StringUtils.isBlank(vo.getUpdateByName())) {
-            // updateTime 列由 BaseEntity 的 INSERT_UPDATE 填充，正常情况下非空；这里只保证
-            // 「显示最后修改」这件事在从没改过的行上也有个时间可显示（回落到创建时间）。
-            vo.setUpdateTime(sample.getCreateTime());
-        }
     }
 
 }

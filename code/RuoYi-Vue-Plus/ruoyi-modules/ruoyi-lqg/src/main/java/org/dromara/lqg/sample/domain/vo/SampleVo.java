@@ -120,8 +120,45 @@ public class SampleVo implements Serializable {
     /**
      * 最后修改人姓名（REQ-SAMPLE-016 / CR-20260917-04：修改页显示「最后修改：某某 · 时间」）。
      * 读时按 {@code update_by} 回 sys_user 取昵称；没有 update_by 的行取 {@code create_by} 的姓名。
+     *
+     * <p>★ <b>「最后修改」的判据是 {@code update_by} 非空</b>（见 {@code SampleQueryService.toVo}）：
+     * 从没改过的行这里会有「创建人姓名」，但 {@code updateTime} 是 {@code null}
+     * —— 小程序「历史编辑记录」靠 {@code updateTime} 空不空显示「新增 / 修改」。
      */
     @Schema(description = "最后修改人姓名")
     private String updateByName;
+
+    /**
+     * 经手人姓名（SAMPLE-MP-001 / CR-20260918-07）：<b>最后修改人</b>，没改过就是<b>创建人</b>。
+     *
+     * <p>与 {@link #updateByName} 同一个值，刻意各留一个键：
+     * {@code updateByName} 是工作台从 REQ-SAMPLE-016 起就在用的名字（不能改名，改了就破契约），
+     * {@code handlerName} 是 {@code doc/api-contract.md} 第 49 行给小程序「历史编辑记录」定的键。
+     * 取 {@code sys_user.nick_name}，内部账号才有意义（外部账号不是「中心经手人」）。
+     */
+    @Schema(description = "经手人姓名（最后修改人；没改过就是创建人）")
+    private String handlerName;
+
+    /**
+     * 这一行是不是<b>当前登录人</b>经手的（SAMPLE-MP-001 / CR-20260918-07）：
+     * {@code create_by = 我 OR update_by = 我} —— 与 {@code mine=true} 的收窄口径同一个判据，
+     * 前端据此在行上把经手人显示成「我」。
+     *
+     * <p>匿名 / 取不到登录人时是 {@code false}（不猜、不默认本人）。
+     */
+    @Schema(description = "是否当前登录人经手（create_by 或 update_by 是我）")
+    private Boolean mine;
+
+    /**
+     * 这一行在<b>小程序内部接口</b>上能不能改（SAMPLE-MP-001 / CR-20260918-07）：
+     * {@code verify_status = 'valid'}（内部录入的直接有效；外部送来待核验 / 无效的一律只读，
+     * 核验与改判在工作台）。
+     *
+     * <p>★ 前端拿这个值决定渲染成表单还是只读页，<b>不自己按状态重新判断</b>
+     * ——「editable 以后端详情里的为准」是 ticket §0 的口径复述第 2 条。
+     * {@code /lqg/sample/**} 的工作台路径不读它（那里本来就没有只读模式）。
+     */
+    @Schema(description = "小程序内部接口上是否可改（valid 才可改）")
+    private Boolean editable;
 
 }

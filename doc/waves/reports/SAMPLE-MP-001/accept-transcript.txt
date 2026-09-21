@@ -1,0 +1,80 @@
+########## ACCEPT 1 · STATE ##########
+########## accept 1 · STATE（fixture + 各种 grep）##########
+true
+ACCEPT-1 GREEN (exit 0)
+
+---- vitest 计数（accept 里 jq 断的就是它）----
+{"numTotalTests":22,"numPassedTests":22,"numFailedTests":0}
+---- fixture 结构（node 断言的输入）----
+{"cases":13,"receiveFields":7,"internalReadonly":5,"viewEditable":0,"view":2,"unknownMode":true}
+
+########## ACCEPT 2 · BUILD ##########
+ACCEPT-2-BUILD GREEN (exit 0)
+dist/build/mp-weixin/pages/history/:
+index.js
+index.json
+index.wxml
+index.wxss
+sources.js
+
+dist/build/mp-weixin/pages/sample/:
+detail-ext.js
+detail-ext.json
+detail-ext.wxml
+detail-ext.wxss
+form.js
+form.json
+form.wxml
+form.wxss
+layout.js
+
+########## ACCEPT 2 · API ##########
+
+──── 0) reseed
+
+──── 1) staff GET /mp/int/sample/list?pageSize=100 → 9 条 + 1001 的 internalNo
+true
+
+──── 2) extA GET /mp/int/sample/list → 403（角色闸，AUTH-EXT-001 那段从此收口）
+
+──── 3) sort=recent → 只有中心内部人员经手过的两条，且 updateTime 为空 = 新增
+true
+
+──── 4) sort=recent&mine=true → 同上（本人）
+true
+
+──── 5) extA 改自己的待核验 1002（外部侧，用来验证「外部自己改的不算内部经手」）
+true
+
+──── 6) recent 里没有 1002
+true
+
+──── 7) staff PUT /mp/int/sample {"id":1001,"tissueType":…}（部分字段补丁）
+true
+
+──── 8) 库内：tissue_type 改了、verify_status 仍是 valid、update_by 记了人
+肝组织（更正）|valid|yes
+
+──── 9) staff PUT /mp/int/sample 改别人录的 1004（CR-20260918-07）
+true
+
+──── 10) recent 顺序：刚改的排最前，1001 行带经手人 / mine / updateTime
+true
+
+──── 11) 库侧独立数（create_by / update_by 是不是内部账号）—— 与接口两侧同源
+9000001008
+9000001009
+9000001001
+9000001004
+
+──── 12) sort=recent&mine=true → 四条（本人都经手过）
+true
+
+──── 13) staff 改待核验的 1002 → 被拒（400/500）
+
+──── 14) 库里没有被改进去
+0
+
+──── 15) 收尾 reseed
+
+ACCEPT-2-API GREEN (exit 0)

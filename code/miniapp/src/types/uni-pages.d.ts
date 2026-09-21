@@ -19,6 +19,7 @@ type _LocationUrl =
   "/pages/me/index" |
   "/pages/me/unit-group" |
   "/pages/organoid/form" |
+  "/pages/sample/detail-ext" |
   "/pages/sample/form";
 
 interface NavigateToOptions {

@@ -126,6 +126,13 @@
       "style": {
         "navigationBarTitleText": "样本记录信息表"
       }
+    },
+    {
+      "path": "pages/sample/detail-ext",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "样本详情"
+      }
     }
   ],
   "subPackages": [],

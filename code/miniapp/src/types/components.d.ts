@@ -7,15 +7,23 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    EmptyState: typeof import('./../components/lqg/EmptyState.vue')['default']
     EntryGrid: typeof import('./../components/biz/EntryGrid.vue')['default']
     EntryTile: typeof import('./../components/ui/EntryTile.vue')['default']
+    ErrorState: typeof import('./../components/lqg/ErrorState.vue')['default']
+    FieldRow: typeof import('./../components/lqg/FieldRow.vue')['default']
     IdentityBar: typeof import('./../components/ui/IdentityBar.vue')['default']
     InternalAdminBlock: typeof import('./../components/biz/InternalAdminBlock.vue')['default']
+    LoadingState: typeof import('./../components/lqg/LoadingState.vue')['default']
     LoadState: typeof import('./../components/ui/LoadState.vue')['default']
     MeHeader: typeof import('./../components/biz/MeHeader.vue')['default']
     MeRow: typeof import('./../components/biz/MeRow.vue')['default']
     MeSectionTitle: typeof import('./../components/biz/MeSectionTitle.vue')['default']
+    NoteBar: typeof import('./../components/lqg/NoteBar.vue')['default']
     PlaceholderPage: typeof import('./../components/ui/PlaceholderPage.vue')['default']
+    SampleCard: typeof import('./../components/lqg/SampleCard.vue')['default']
+    SegButtons: typeof import('./../components/lqg/SegButtons.vue')['default']
+    StatusChip: typeof import('./../components/lqg/StatusChip.vue')['default']
     UnitGroupPicker: typeof import('./../components/biz/UnitGroupPicker.vue')['default']
     WdMessageBox: typeof import('wot-design-uni/components/wd-message-box/wd-message-box.vue')['default']
     WdPopup: typeof import('wot-design-uni/components/wd-popup/wd-popup.vue')['default']
