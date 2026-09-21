@@ -59,7 +59,8 @@ tail -f doc/waves/ops/watchdog.log                              # 看它做了�
 | 2 | 有 `PAUSE` 哨兵 | 不接手 —— 主会话明确停在等人 |
 | 3 | 所有任务 `qa_passed`/`accepted` | all_done，不跑 |
 | 4 | 有 ticket `escalated`，或某任务 `qa_failed` 且轮次 ≥2 | 不接手 —— 按 zhixing 规矩这是人的决策点 |
-| 5 | `heartbeat` 比 `STALE_SECS` 新 | 有人活着，不抢（正常情况都走这里，不写日志免得刷屏） |
+| 5a | **没有 `heartbeat` 文件** | 不接手 —— 「本次会话没 arm 看门狗」，不是断线。**没有这条，一个没起心跳的活会话会被当成死人、起出第二个 driver** |
+| 5b | `heartbeat` 比 `STALE_SECS` 新 | 有人活着，不抢（正常情况都走这里，不写日志免得刷屏） |
 | 6 | 抢不到 `.resume-lock`（`mkdir` 原子锁） | 已有 resume 在跑，不重复起 |
 | 7 | 最近一小时 `RESUME` 次数 ≥ `MAX_PER_HOUR` | 停手等人 —— 多半不是断线，是别的问题 |
 | 8 | 否则 | `cd <ws> && dsh --profile headless "$(cat resume-prompt.txt)"` |

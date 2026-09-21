@@ -87,14 +87,16 @@ case "$VERDICT" in
 esac
 
 # ── 5. 心跳新鲜度 ────────────────────────────────────────────────────────────
-if [ -f "$HB" ]; then
-  NOW=$(date +%s); MT=$(date -r "$HB" +%s 2>/dev/null || stat -f %m "$HB")
-  AGE=$((NOW - MT))
-  if [ "$AGE" -lt "$STALE_SECS" ]; then
-    exit 0            # 有人活着，正常情况走这里，不写日志免得刷屏
-  fi
-else
-  AGE=-1
+# ★ 心跳文件**不存在**时一律不接手：那是「本次会话没arm」的意思，不是「断线」。
+#   没有这条，一个没起心跳的活会话会被看门狗当成死人，起出第二个 driver。
+if [ ! -f "$HB" ]; then
+  log "SKIP 没有 heartbeat 文件（本次会话没 arm 看门狗），不接手"
+  exit 0
+fi
+NOW=$(date +%s); MT=$(date -r "$HB" +%s 2>/dev/null || stat -f %m "$HB")
+AGE=$((NOW - MT))
+if [ "$AGE" -lt "$STALE_SECS" ]; then
+  exit 0            # 有人活着，正常情况走这里，不写日志免得刷屏
 fi
 
 # ── 6. resume 锁（macOS 没有 flock，用 mkdir 的原子性）────────────────────────
