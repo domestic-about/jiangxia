@@ -1,0 +1,97 @@
+{
+ "phase": "D1",
+ "round": 1,
+ "verdict": "FAIL",
+ "auditor": "independent",
+ "levels": {
+  "L0": {
+   "status": "pass",
+   "evidence": "【后端】`mvn -pl ruoyi-modules/ruoyi-lqg -am install -s <ws>/.mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome` 于 16:31:51 结束：Reactor 24 个模块全 SUCCESS，`[INFO] BUILD SUCCESS`；surefire 汇总 `[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0` —— 4 个测试类实跑（ExtBindStateMachineContractTest 11 / StaffGrantRulesContractTest 6 / MockLoginGuardContractTest 4 / ExtChokepointContractTest 4），qa_scope 点名的 MockLoginGuardContractTest 在列，N=25>0（不是 0 用例的假绿）。随后又跑 `-am clean install` 从零重编：同样 `BUILD SUCCESS` / `Tests run: 25`，且 `Building jar: .../ruoyi-lqg-5.5.3.jar` 真出包。src/test 下只有这 4 个测试类（find 全列），无 @Disabled/@Ignore/Assumptions，surefire-reports 4 个 .txt 齐 —— 没有「存在但没跑」的契约测试。另跑 AUTH-LOGIN-001 的契约完整性：`cmp doc/verify/fixtures/java/MockLoginGuardContractTest.java <模块里的同名文件>` 逐字节相同（exit 0，测试没被改过）；prod 配置 `grep -rn mock-login application-prod.yml` 无命中；`grep -rn 'MockLoginGuard.check' src/main/java` 命中 MockLoginGuardAutoConfiguration:45（护栏真被启动调用，不是装饰品）。\n【前端-真门是 build】plus-ui：`rm -rf dist && pnpm --store-dir=<ws>/.pnpm-store build:prod` → exit 0，dist/index.html + assets/*.js|css|.gz 全部重建（旧产物已先删）。miniapp：`rm -rf dist/build/mp-weixin && pnpm --store-dir=<ws>/.pnpm-store build:mp-weixin` → `DONE Build complete.` exit 0，app.json 存在。附带核了产物内容（SYS-MP-001 的产物级断言）：`jq '[.tabBar.list[].text]' dist/build/mp-weixin/app.json` = [\"首页\",\"文档\",\"我的\"]；`grep -rl 'mock:ext' dist/build/mp-weixin` 无命中（调试登录入口没进生产包）；src 里 `:not(`/`*` 选择器与 `@/components/biz` 运行期桶口导入两条小程序专属坑均无命中。注：`--store-dir` 必须用等号形式，空格形式 `pnpm --store-dir <path> build:prod` 实测报 `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL` + `EACCES`，会把 0 变成 243。\n【迁移在源码树且已 commit】`git ls-files code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/db/migration/` 列出 D1 的 7 支（V202609210800/0810/0820/0830/0910/0920/0930），非只在 target/。\n【反 stale（api.sh --fresh-module 在本沙箱 DOA，见 issue #1，故自行等价核实）】后端 `bash .tmp/run-backend.sh` 16:32:41 起在 127.0.0.1:8081；jar mtime 2026-09-21 16:32:24（epoch 1789979544，inode 120507791）；`find ruoyi-modules/ruoyi-lqg/src ruoyi-admin/src -type f -newer ruoyi-admin/target/ruoyi-admin.jar` = 空（源码不新于 jar）；`lsof -ti tcp:8081 -sTCP:LISTEN` = pid 90476 且 `lsof -p 90476 | grep ruoyi-admin.jar` 命中该 jar（inode 一致，跑的就是这个包）；`ps` 被禁，用 psutil/libproc.proc_pidinfo 取进程启动时间 = 16:32:35 ≥ jar 16:32:24（打了包也重启了）。",
+   "reported": "pass"
+  },
+  "L1": {
+   "status": "pass",
+   "evidence": "【1. Flyway / 字典 / 角色】`SELECT count(*) FROM flyway_schema_history WHERE success IS NOT TRUE` = 0（只有成功行，用 IS NOT TRUE 而非 =false，NULL 也逃不掉）；总行数 7，version 202609210800/0810/0820/0830/0910/0920/0930 各 1 且 success=true —— D1 的 5 张带迁移的 ticket 全在（SYS-MP-001 只有小程序，无迁移）。26 个 lqg_ 字典 `--col-set` 精确相等（lqg_sample_kind,lqg_submit_source,lqg_verify_status,lqg_gender,lqg_has_none,lqg_yes_no,lqg_stain_type,lqg_marker_expr,lqg_cryo_flow_type,lqg_cryo_location,lqg_doc_status,lqg_doc_type,lqg_doc_kind,lqg_doc_audience,lqg_file_format,lqg_render_status,lqg_image_slot,lqg_unit_status,lqg_bind_status,lqg_hint_tissue_type,lqg_hint_organoid_type,lqg_hint_sample_type,lqg_score_pre_culture,lqg_score_culture_days,lqg_score_count,lqg_score_diameter），且 26 个都有数据行（最少 lqg_cryo_location 等 2 行，最多 lqg_hint_tissue_type 7 行），没有「点得出名、选项是空的」。评分四字典分值在 remark：pre_culture {lt40:8, 40to80:16, gt80:20}、culture_days {gt14:0, le14:10}、count {lt100:0, 100to1500:10, 1500to4000:25, gt4000:40}、diameter {lt30:10, 30to100:20, gt100:30} —— 与 doc/authority/field-ssot.yaml:57-60 的 scores 逐个同值。角色 `SELECT role_id||':'||role_key FROM sys_role WHERE role_id BETWEEN 101 AND 103 AND del_flag='0'` = 101:lqg_admin, 102:lqg_internal, 103:lqg_external。\n【2. reseed 后 8 个账号 + 四张表】reseed 完成（3 段 seed 灌入；04-07 段因 D2/D3/D4 的表还没建而跳过，符合阶段）。逐账号对账（直连库，非接口自证）：`13800000000|sys_user|lqg_admin, 13800000001|sys_user|lqg_internal, 13800000011..13800000016|app_user|lqg_external`（8 条，与 doc/verify/README.md 身份表逐行一致）。外部档案单位/组别/核验：`13800000011|verified|A 医院|肝胆外科组, 13800000012|verified|A 医院|肝胆外科组, 13800000013|verified|A 医院|消化内科组, 13800000014|verified|B 大学|类器官课题组, 13800000015|pending|A 医院|肝胆外科组, 13800000016|pending|-|-`；extF 自填『C 研究所|肿瘤组』原样留在 unit_name_input/group_name_input（未核验不落 unit_id），与 README 的 A 同组/C 同单位异组/D 异单位/E 待核验/F 自填完全对上。`ddl_vs_ssot.py --table t_lqg_wx_bind --table t_lqg_ext_profile --table t_lqg_source_unit --table t_lqg_unit_group --require-public create_dept,create_by,create_time,update_by,update_time,del_flag` → `✓ 4 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）` exit 0；我又独立看了 pg_indexes：uk_wx_openid(openid WHERE del_flag='0')、uk_ext_profile_user(user_id WHERE del_flag='0')、uk_unit_name(unit_name WHERE del_flag='0')、uk_unit_group(unit_id,group_name WHERE del_flag='0') 都是部分唯一索引，与 SSOT 一致。全表扫描无任何手机号有 2 行活跃账号（HAVING count(*)>1 为空）。\n【3. 同一手机号恒为 1 行（三条路径各查一次）】13800000098：①首登自动建 → `{\"code\":200,\"identity\":\"external\",\"bindStatus\":\"unbound\",\"phoneMasked\":\"138****0098\"}`，查库 `count(*)=1`；②换微信号再登（另一 mock openid）→ 仍是 external，查库 `count(*)=1` 且是同一 user_id（该 user 下 2 个 openid，不是建了第二个账号）；③按手机号授权升级（admin POST /lqg/auth/staff）→ `{code:200,data:{upgraded:true}}`，查库 `count(*)=1`、角色变 lqg_internal、原 2 条微信绑定原样保留，清 token 缓存后用原微信号再登 `identity=internal`。另补了交叉路径 13800000097：先授权（upgraded=false，账号由授权建出）再首登 → 登录认到授权建出的同一个账号（identity=internal），`count(*)=1`，没有出现「授权建一个、登录再建一个」。三条路径后各查一次，均为 1 行。\n【回归包原子】doc/waves/regression/D1/verify.sh（L0.0 环境前置 + L0.1 mvn 含 Tests run 解析 + L0.2 反 stale 等价守卫(psutil/libproc+lsof+find) + L0.3/L0.4 两个前端构建 + L1.1/L1.2/L1.3 全部断言；退出码 0/1/2 语义分开，失败逐条打印；EXIT trap 里 reseed + clean-orphan + 清 token 缓存 + 补删授权路径建的回归手机号）。以 `--skip-build` 与全量（含 mvn/两个 pnpm build）各实跑一次，两次都 `D1 L0+L1 全绿` exit 0 —— 幂等成立。\n【未越界】只读 doc/verify/api.sh 与 doc/verify/seed/**、authority/**、change-log.md，未改一个字节；未读 doc/waves/reports/**。",
+   "reported": "pass"
+  },
+  "L2": {
+   "status": "fail",
+   "evidence": "独立重跑（不引用 L0+L1 分片）。反 stale 先自证：bash doc/waves/regression/D1/L23-freshness.sh → jar mtime 2026-09-21 16:32:24 / sha256 2c10af1121e7f5d1feddf40a49fa6590… / 8081 pid=21694 持有该 jar / ruoyi-lqg 源码无文件比 jar 新 / 后端日志首条 16:39:53 晚于 jar。★ 没用 api.sh --fresh-module：它用 `ps -o lstart=`，本沙箱 ps 被禁会 exit 2（未改 api.sh）。\n(1) 小程序（qa_scope L2-1）——**H5 等价覆盖**：node doc/waves/regression/D1/L23-mp-h5.mjs → 22/22 通过。截图 doc/waves/regression/D1/shots-L23/{00-login,00-login-reject-phone,01-home-internal,02-me-internal,03-home-external,04-me-external,05-unit-group}.png。关键断言值：内部首页 .lqg-tile 标题 == [\"样本记录信息表\",\"类器官收样记录\",\"石蜡包埋送样记录\",\"-80 冻存记录\"]；外部 == 前三个且正文不含「冻存」字样、.lqg-tile--full 恰好 1 个；两种首页去掉表名里的 -80 后正则 /\\d/ 命中 0 个数字、[class*=badge|is-dot|StatTile] 命中 0 个；内部「我的」= 历史编辑记录 + 内部管理（无「单位与组别」），板块小字逐字 == 「核验、冻存取用请到网页工作台」；外部「我的」= 历史编辑记录 + 单位与组别（无「内部管理」）；单位与组别页 URL = http://127.0.0.1:9200/#/pages/me/unit-group，正文含「当前已核验：A 医院 / 单位 / 组别 / 保存」；拒绝授权手机号（派发 getphonenumber 且 detail 无 code）→ URL 仍停在 /#/pages/login/index、toast 逐字「需要手机号才能送检和查看结果」、未落到首页。\n(2) 工作台（qa_scope L2-2）：node doc/waves/regression/D1/L23-web-plusui.mjs → 16/16 通过（内容与截图：10-web-login / 11-web-home / 12-web-staff-list / 13-web-staff-grant-dialog-empty / 14-web-staff-grant-dialog-upgrade / 15-web-unit-group / 16-web-unit-group-master-detail / 17-web-extuser-list / 18-web-extuser-verify-dialog）。lqgadmin 登录后侧边栏 = 首页|字典管理|参数设置|内部人员授权|来源单位与组别|外部用户；staff 页列表恰好 seed 两行（测试管理员 13800000000 实验室管理员 / 李工 13800000001 内部人员）；授权弹窗填 13800000011（extA，已登录过小程序）出「该手机号已登录过小程序，将把原账号升级为内部人员」，填 13800000091（无账号）出「该手机号还没有账号，将预建一个内部账号」（正反两侧都断）；unit 页左栏 A 医院(2)/B 大学(1)/已停用单位(0)，点 A 医院右栏联动出 肝胆外科组+消化内科组 且不含 B 大学的「类器官课题组」；extuser 页含 周医生(extE) 与 吴同学(extF)、自填带「自填」标记、王医生等已核验行入口是「改归组」，吴同学的核验弹窗出现「新建单位与组别 / 归并到已有」二选一 + 通过/驳回两个出口。\n★ 但**这三个页面在 `pnpm dev`(8082) 下点菜单进不去**：点任一菜单后 .app-main 的 innerHTML 长度 = 7（内容只剩 `<!---->`，见 shots-L23/11b-web-menu-nav-blank.png），必须硬刷新到该 URL 才渲染 —— 上面的截图全部是硬刷新取得的。见 issues[0]（S1）。\n★ 沙箱不可用、未覆盖项：微信开发者工具与真机：沙箱不可用（CLI 要写 ~/Library/Application Support/微信开发者工具/** EPERM，且需人工扫码登录），如实记为未覆盖，已用 H5 构建 + Playwright 做等价覆盖（不等于开发者工具结果）。",
+   "reported": "fail"
+  },
+  "L3": {
+   "status": "pass",
+   "evidence": "bash doc/waves/regression/D1/L23-l3-api.sh → 32/32 通过（脚本自带正反对照，可重放；每段改完库都 reseed + 清 $TMPDIR/lqg-verify-token-*）。另外 live 手工打了 5 条外延邪路。\n(1) 外部带口令登工作台（L3-1）：病灶确认 `wx_13800000012|len=60|role=lqg_external`；正向对照 lqg_13800000001 密码登录 {\"code\":200,\"token\":\"PRESENT(len=363)\"}；邪路 wx_13800000012+admin123 → {\"code\":500,\"msg\":\"该账号无权登录工作台，请使用小程序登录\",\"token\":\"ABSENT\"}，msg 含「无权」；对照口令错的内部分支 msg=\"Password input error 1 times\"（两个分支确实分开）。换门也不行：mp client+password → \"Auth grant type error\"、pc client+xcx → \"Auth grant type error\"。给外部账号 9000000111 设口令被拒（\"该账号不是内部人员\"）且 ciphertext 长度 0→0。\n(2) 撤销（L3-2）：新手机号 13800000078 首登建外部账号 → admin 授权 → 返回 upgraded=true 且 userId 就是原 snowflake id；库内 `1|lqg_internal|1`（一个账号 / 角色 lqg_internal / 微信绑定 1 行）；同一个旧 token 仍能 200 看到 internal；admin DELETE 该 userId → 200；**同一个旧 token 立刻** `401\\t认证失败，无法访问系统资源`；库内 `1|lqg_external|1`（没删号、绑定还在、角色降回 103）。不能撤销自己：DELETE 9000000100 → 500「不能撤销自己的内部授权」+ 紧接着 role 101 行仍在（没有先落盘）。不能撤到没有管理员：PUT role 降级唯一管理员 → 500「不能把系统里最后一个实验室管理员改成普通内部人员」+ 库里仍只有 101；再用**上游超管 admin** 发起 DELETE（绕开「不能撤自己」，单独打最后管理员闸门）→ 500「不能撤销系统里最后一个实验室管理员的权限」+ role 101 仍在。正向对照：先建第二个管理员再用它撤掉原管理员 → 200（证明闸门不是一律拒绝）。\n(3) 核验状态机（L3-3）：extA 起点 verified|9000009001|9000009101|9000000100；提交 A 医院 + B 大学的 9000009103 → 500「组别「类器官课题组」不属于单位「A 医院」」且库内原样；合法改组别 9000009102 → 200 且立刻 `pending|9000009102|-`（verified_by 清空）；PDF 夹带 bindStatus:verified/verifiedBy → 200 但库内仍 `pending|-`（夹带不生效）；自填档案 extF approve 不选新建/归并 → 500「…必须二选一…」且库内仍 `pending|-|-`；createUnit+createGroup → 200 且 `verified|C 研究所|active|肿瘤组`（JOIN 出单位+组别）；非法转移 verified→reject → 500 且库内仍 verified；reject 缺 reason → 500「驳回必须填写原因」且库内 pending；action 乱填 → 500「action 只能是 approve（通过）或 reject（驳回）」。另外：extA 改自己档案后 extB 的行原样（9000000112|verified|9000009101 未变）。\n(4) 护栏（L3-4）：密码登录无 clientid → `{\"code\":500,\"msg\":\"Auth clientid cannot be blank\",\"token\":\"ABSENT\"}`；xcx 登录无 clientid → 同上（另测：body 里带 clientId 而 header 不带仍能登录，属上游允许形态，不算缺陷）；`grep -rn mock-login application-prod.yml` 零命中；`mock-login: true` 只出现在 application-dev.yml。\n附加邪路：外部 token 打 /lqg/auth/ext-user/{id}/verify → 403「没有访问权限」；撤销外部账号（9000000111）→ 500「该账号不是内部人员」且角色原样。\n★ 另有一条授权入参校验缺陷（不计入 L3 通过/失败，已记 issues[3]，S2）：POST /lqg/auth/staff 与 PUT /role 传非法 roleKey 都被静默接受成 lqg_internal（200），见 issues。",
+   "reported": "pass"
+  }
+ },
+ "escalated_noted": [],
+ "issues": [
+  {
+   "severity": "S2",
+   "level": "L1",
+   "type": "harness",
+   "ticket": "SYS-BASE-001",
+   "title": "api.sh 的反 stale 守卫 --fresh-module 在本运行时 exit 1（README 语义里 1 = 断言不成立），把工具故障伪装成实现红",
+   "detail": "复现：`bash doc/verify/api.sh --as admin --fresh-module ruoyi-lqg GET /system/config/configKey/lqg.cryo.overdue-days; echo $?` → stderr 打印两遍 `doc/verify/api.sh: line 71: /bin/ps: Operation not permitted` + `date: illegal option -- d`，**EXIT=1**，请求根本没发出去。成因：doc/verify/api.sh:71 用 `ps -o lstart=` 取进程启动时间，本沙箱 /bin/ps 被禁（exit 126），落到 macOS 不支持的 `date -d`，命令替换失败后 `set -e` 让脚本在赋值那行就退出，状态码取到 1 —— 而 README『退出码』表里 1 是「断言不成立」、2 才是用法/连接/stale；api.sh 自己也从没文档化过 1。影响：doc/verify/README.md 的坑 #3 要求每条 API accept 的第一次调用都带 `--fresh-module ruoyi-lqg`，照做的 accept 在本机一律拿到 exit 1，与「实现做错了」在流水线和人眼里长得一模一样（假红比漏洞更贵）；QA 分片若据此判红会白烧一轮。我没有改 api.sh（禁止），改用等价手段在 doc/waves/regression/D1/verify.sh 的 L0.2 里自建守卫：`find <模块>/src -newer <jar>` 必须为空 + `lsof -ti tcp:<port>` 拿到的 pid 必须持有该 jar（lsof -p | grep）+ 用 psutil（本机 7.0.0）/ libproc.proc_pidinfo(PROC_PIDTBSDINFO.pbi_start_tvsec) 取进程启动时间必须 ≥ jar mtime，三者在本次后端上全部通过（pid 90476 / jar 16:32:24 / 启动 16:32:35）。同一文件的次要弱点：token 缓存 $TMPDIR/lqg-verify-token-* 只按 mtime 判 20 分钟新鲜，不校验库状态，授权/撤销/换角色后不清就是陈旧 token 的假 200/假 401（本脚本在每次改库前后都清）。"
+  },
+  {
+   "severity": "S2",
+   "level": "L1",
+   "type": "harness",
+   "ticket": "SYS-BASE-001",
+   "title": "clean-orphan-accounts.sh 漏清 AUTH-STAFF-001 授权路径建出的账号（user_type='sys_user'），库清不回确定性 seed 快照",
+   "detail": "复现：reseed 后在干净的库上走一次『按手机号给一个从没登录过的号授权』（`--as admin POST /lqg/auth/staff '{\"phone\":\"13900000002\",\"name\":\"QA先授权\",\"roleKey\":\"lqg_internal\",\"password\":\"Lqg@test123\"}'` → `{code:200,data:{upgraded:false}}`，建出 user_id=2101952990830182401），再 `bash doc/waves/tools/clean-orphan-accounts.sh --yes`，然后 `SELECT user_id||'|'||phonenumber||'|'||user_name||'|'||user_type FROM sys_user WHERE user_id NOT BETWEEN 9000000000 AND 9000009999` 仍然返回 `2101952990830182401|13900000002|lqg_13900000002|sys_user|0`。成因：该脚本把自己定义为「孤儿 = 不在 seed 段且 `user_type='app_user'`」，注释里假设孤儿只来自登录链路；但 AUTH-STAFF-001 的按手机号授权（接口契约 `POST /lqg/auth/staff {phone,...}`，accept 明确要求未登录过的号也能建号 upgraded=false）建出的是 `user_type='sys_user'`，正好落在它的 WHERE 之外。影响：脚本自称『把库拉回确定性 seed 状态』，实际在授权路径跑过后做不到——残留的内部账号会污染后续 QA / ticket 里「非 seed 段账号为空」「内部人员列表 = {李工}」这类断言，也会让『reseed + clean-orphan 后的快照』不再是快照。属长在检查/清理工具上的洞，不拦老师用，故封顶 S2；我在 doc/waves/regression/D1/verify.sh 的收尾里按手机号补删了自己建的回归账号，并已手工清掉本次复现留下的 13900000002（当前库非 seed 段只剩上游自带 user_id 1/3/4）。建议由 SYS-BASE-001 把脚本的孤儿定义改成「不在 seed 段的所有账号（或至少覆盖 sys_user 类型）」，或让 AUTH-STAFF-001 授权建号也走 app_user。"
+  },
+  {
+   "severity": "S1",
+   "level": "L2",
+   "type": "debt",
+   "ticket": "SYS-WEB-001",
+   "title": "工作台在 `pnpm dev` 下任何菜单导航都渲染成空白页（构建产物不受影响）",
+   "detail": "复现（后端 8081 + code/plus-ui `pnpm dev` 8082，后端 dev profile、--api-decrypt.enabled=false）：lqgadmin/admin123 登录 → 落地首页正常 → 点左侧「人员与单位 → 内部人员授权」→ section.app-main 的 innerHTML 长度 = 7（只剩 `<!---->`），页面全空；同一操作对「来源单位与组别」「外部用户」「字典管理」（上游页面）以及再点回「首页」全部一样。直接 goto http://127.0.0.1:8082/auth/staff 硬刷新（或从地址栏刷新）→ 同一页面正常渲染（innerHTML 17524）。截图：doc/waves/regression/D1/shots-L23/11b-web-menu-nav-blank.png（空）与 12-web-staff-list.png（硬刷新后的同页）。\n触发点已定位到 layout：src/layout/components/AppMain.vue 的 `<transition :enter-active-class=\"animate\" mode=\"out-in\">`。隔离实验（每次改完都 git 还原，收尾 git status 已确认干净）：① 整块去掉 transition+keep-alive → 三页 appMainLen=17524/19320/21732；② 只留 keep-alive（去掉 transition）→ 三页正常；③ 只留 transition mode=\"out-in\"（去掉 keep-alive）→ 三页 appMainLen=7；④ `<transition :enter-active-class=\"animate\">` 去掉 mode → 三页正常；⑤ `<transition mode=\"out-in\">`（连 animate class 也去掉）→ 三页 appMainLen=7。即 mode=\"out-in\" 单独就能触发。另排除：清 node_modules/.vite 后重启 dev server 仍复现；禁用 vite-plugin-vue-devtools 仍复现；无 pageerror / console.error；route.matched 有正常 component（comp=object, hasDefault=true），meta.link=null。\n影响范围（为什么不是 S0）：**构建产物不受影响**。用 `pnpm build:dev` 得到静态产物（.env.development → BASE_API=/dev-api）+ 同一后端（node 静态服务器把 /dev-api 代理到 8081）复跑同一路径：home/内部人员授权/来源单位与组别/外部用户 appMainLen = 453/16757/18895/20986，菜单导航全部正常，且三个接口都真的发出（/lqg/auth/staff、/lqg/auth/unit、/lqg/auth/group?unitId=9000009001、/lqg/auth/ext-user/list 均 200）。doc/verify/README 与 SYS-WEB-001 accept 把 build 当唯一前端门，所以老师拿构建产物不会被卡。\n为什么是 S1：项目自己的开发/人工验收路径（本任务与后续每个 WEB ticket 的 L2 走查）走的正是 `pnpm dev`；在这个路径下工作台除了首屏等于不可用（必须每次手改地址栏刷新），会持续消耗后续 WEB ticket 的验收时间。注：AppMain.vue 是上游布局文件，SYS-WEB-001 §3 写了「不改上游布局组件」，修法（去掉 mode=\"out-in\" 或整块去掉 transition）需要主会话判断是否越界。"
+  },
+  {
+   "severity": "S2",
+   "level": "L2",
+   "type": "harness",
+   "ticket": "SYS-MP-001",
+   "title": "accept 2 的「内部管理小字」断言 grep 的是注释，不是真正渲染的值 → 文案改错也全绿",
+   "detail": "断言原文：`grep -q '核验、冻存取用请到网页工作台' src/pages/me/index.vue && ! grep -q '修改、核验、冻存取用请到网页工作台' src/pages/me/index.vue`。这两条 grep 命中的是 src/pages/me/index.vue 第 31 行的**注释**；真正渲染的文案来自 src/pages/index/entries.ts 的 INTERNAL_ADMIN_NOTE，两个文件没有任何一致性约束。\n证伪实测（改坏→跑→还原，已还原）：把 entries.ts 的 INTERNAL_ADMIN_NOTE 改成被 CR-20260918-07 明确禁止的旧串「修改、核验、冻存取用请到网页工作台」，同时给首页注入一个数字（见 issues[2]，两条一起注入）后：accept 2 的 7 条 grep 与 vitest（numFailedTests=0 / numPassedTests>=22）**全绿**；而我的端侧断言 node doc/waves/regression/D1/L23-mp-h5.mjs 变成 19/22，明确报 `FAIL 内部管理板块底部小字 = 「核验、冻存取用请到网页工作台」 — [\"修改、核验、冻存取用请到网页工作台\"]`。即产品文案错了、accept 看不见。\n归属：产品当前是对的（已还原，H5 spec 复跑 22/22），所以只是断言不够狠 → type=harness，封顶 S2，不拦门。建议：断言改成在 H5/小程序产物或 entries.ts 的导出值上断，别 grep 页面文件的注释。"
+  },
+  {
+   "severity": "S2",
+   "level": "L2",
+   "type": "harness",
+   "ticket": "SYS-MP-001",
+   "title": "accept 2 的「首页没有任何计数」是黑名单 grep，换个 class 名就能绕过",
+   "detail": "断言原文：`! grep -nE 'wd-badge|is-dot|角标|StatTile|pendingSamples|todayNew|cryoOverdue|recent' src/pages/index/index.vue`。这是对**元素名**的黑名单，不是对「页面上有没有数字」的判据。\n证伪实测（已还原）：往 src/pages/index/index.vue 的首页模板里插一行 `<view class=\"lqg-counter\"><text class=\"lqg-counter__n\">7</text></view>`（名字避开黑名单里的每一个词）→ accept 2 的整段 grep 依然全绿；而我的端侧断言 node doc/waves/regression/D1/L23-mp-h5.mjs 明确报 `FAIL 内部首页没有任何数字 — digits=[\"7\"]` 与 `FAIL 外部首页没有任何数字 — digits=[\"7\"]`（判据是「去掉表名里的 -80 后正文不再出现任何数字」+ 角标类元素计数为 0）。\n归属：产品当前首页确实没有任何数字（已还原，H5 spec 复跑 22/22），所以只是断言不够狠 → type=harness，封顶 S2，不拦门。建议：断言改成读渲染后正文里的数字（或直接用回归包里的 H5 断言）。"
+  },
+  {
+   "severity": "S2",
+   "level": "L3",
+   "type": "debt",
+   "ticket": "AUTH-STAFF-001",
+   "title": "roleKey 白名单在校验前就被折叠成 lqg_internal：非法值被静默接受（200）而不是被拒",
+   "detail": "复现（后端 8081，admin 身份）：\n① `POST /lqg/auth/staff {\"phone\":\"13800000095\",\"name\":\"x\",\"roleKey\":\"lqg_external\",\"password\":\"Lqg@test123\"}` → `{\"code\":200,\"msg\":\"操作成功\"}`，库内 `lqg_13800000095|sys_user|roles=lqg_internal`；第二次同请求返回 upgraded=true，roles 仍是 lqg_internal。\n② `PUT /lqg/auth/staff/9000000101/role {\"roleKey\":\"totally-bogus\"}` → `{\"code\":200,\"msg\":\"操作成功\"}`，库内角色仍/变为 `lqg_internal`。\n原因（代码）：StaffGrantRules.grantedRoleKeys() 对任何不等于 \"lqg_admin\" 的入参一律返回 [lqg_internal]，因此 StaffGrantService.requireGrantableRole() 的白名单分支（会抛「只能授内部人员（lqg_internal）或实验室管理员（lqg_admin）」）在 grant / changeRole 两条路径上都**不可达**；StaffGrantBo.roleKey 只有 @NotBlank，没有取值白名单。契约测试只钉了 `grantedRoleKeys(\"lqg_external\")` 不含 103（即 roleKey=lqg_external → internal 这个折叠是被 pin 住的有意行为），没有钉「乱填必须报错」。\n影响：调用方（含 UI 之外的脚本 / 以后的管理端）传错或传一个不支持的 roleKey 时，接口回 200 且账号被挂上 lqg_internal —— 想建管理员却打成 \"lqg_Admin\" 也会静默变成普通内部人员，没有报错、没有留痕。方向上是「外部→内部」，不构成越权提权（调用方本来就是 lqg_admin），UI 的下拉也只有两个合法项，所以不拦门；但 BO 的注释与 requireGrantableRole 的错误文案都宣称有白名单，实际没有。\n复现遗留已清理：孤儿账号 lqg_13800000095 已用 doc/waves/tools/clean-orphan-accounts.sh --yes 清掉，李工角色已 reseed 还原。"
+  }
+ ],
+ "merged_from": [
+  {
+   "file": "D1-r1-L01.json",
+   "levels": "L0"
+  },
+  {
+   "file": "D1-r1-L01.json",
+   "levels": "L1"
+  },
+  {
+   "file": "D1-r1-L23.json",
+   "levels": "L2"
+  },
+  {
+   "file": "D1-r1-L23.json",
+   "levels": "L3"
+  }
+ ]
+}

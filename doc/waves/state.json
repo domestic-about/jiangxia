@@ -6,8 +6,9 @@
   "phases": [
     {
       "id": "D1",
-      "status": "qa_running",
-      "qa_rounds": 0
+      "status": "qa_failed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D2",
@@ -733,6 +734,46 @@
       "type": "harness",
       "title": "clean-orphan-accounts.sh 只清 app_user，漏掉授权路径建的 sys_user（已修）",
       "detail": "L0+L1 QA 片实测：AUTH-STAFF-001 的授权路径会建 user_type='sys_user' 的账号（2101952990830182401|13900000002），原脚本按 user_type='app_user' 过滤 → 清不掉，自称的『清回确定性 seed 快照』做不到。已修：改成『非 seed 段 + 手机号非空』（上游自带账号手机号是空串，天然豁免），复核查询同步收窄。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 35,
+      "ticket": "SYS-WEB-001",
+      "severity": "S1",
+      "type": "debt",
+      "title": "工作台在 pnpm dev 下任何菜单导航都渲染成空白页（构建产物不受影响）",
+      "detail": "D1 QA r1 L2 片实测：pnpm dev(8082) 下点侧边栏任何菜单，.app-main innerHTML 长度=7（只剩 <!--->），硬刷新同一 URL 就正常；无 JS 报错。触发点已隔离到 src/layout/components/AppMain.vue 的 <transition mode=\"out-in\">（去 mode 或去 transition 即恢复；keep-alive 单独不影响；清 .vite、禁 vue-devtools 仍复现）。pnpm build:dev 静态产物 + 同一后端三页 appMainLen=16757/18895/20986 全部正常 → 老师拿构建产物不被卡，故不是 S0；但后续每个 WEB ticket 的人工/L2 走查都走 pnpm dev，会持续被卡，故 S1。截图 doc/waves/regression/D1/shots-L23/11b-web-menu-nav-blank.png vs 12-web-staff-list.png。修法在 code/plus-ui/**（touches 允许），但 SYS-WEB-001 §3 写了『不改上游布局组件』，边界待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 36,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 2 的小字断言 grep 的是注释，文案改错也全绿",
+      "detail": "grep -q '核验、冻存取用请到网页工作台' src/pages/me/index.vue 命中的是第 31 行注释，真正渲染值在 entries.ts 的 INTERNAL_ADMIN_NOTE。证伪实测：把它改成 CR 禁止的旧串『修改、核验…』后 accept 2 的 7 条 grep + vitest 全绿，只有 QA 的 H5 渲染断言报红。方案：断言改成断渲染结果（H5/DOM 或读 entries.ts 常量），别 grep 源码。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 37,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "「首页没有任何计数」是黑名单 grep，换个 class 名即绕过",
+      "detail": "accept 里是 ! grep -nE 'wd-badge|is-dot|角标|StatTile|pendingSamples|todayNew|cryoOverdue|recent' src/pages/index/index.vue。证伪实测：注入 <text class=\"lqg-counter__n\">7</text>（名字避开黑名单）后 accept 全绿，QA 的 H5 断言明报 digits=[\"7\"] 才红。方案：改成白名单式断渲染（首页正文不含数字节点），而不是列举已知的计数组件类名。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 38,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "roleKey 白名单在校验前被折叠，requireGrantableRole 不可达（非法值静默 200）",
+      "detail": "grantedRoleKeys() 先把 roleKey 折叠成 lqg_internal，requireGrantableRole() 因此不可达：POST /lqg/auth/staff {\"roleKey\":\"lqg_external\"} 与 PUT /{id}/role {\"roleKey\":\"totally-bogus\"} 都回 200 并把角色弄成 lqg_internal（无报错）。方向是外部→内部、只有 lqg_admin 能调，不构成越权，故 S2 不拦门；但 BO 注释与错误文案都宣称有白名单，属实现与自述不一致。",
       "status": "open",
       "decision": ""
     }
