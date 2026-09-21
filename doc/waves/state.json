@@ -12,9 +12,9 @@
     },
     {
       "id": "D2",
-      "status": "qa_running",
-      "qa_rounds": 1,
-      "qa_seq": 1
+      "status": "qa_failed",
+      "qa_rounds": 2,
+      "qa_seq": 2
     },
     {
       "id": "D3",
