@@ -71,16 +71,11 @@
   },
   "escalated_tickets": [],
   "s0_s1_unresolved": [
-   "【S0】小程序首页四个入口都不带 mode=new → 填写页进只读错误页，首页送检主流程整条断",
-   "【S0】withDefaults(defineProps…) 未赋 const props 却引用 props.x → 三个组件运行时 ReferenceError",
-   "【S0】wd-datetime-picker 没有 visible 这个 prop，页面却传 :visible 且从不 open() → 日期面板永不渲染",
-   "【S1】useDict('sample_kind') 与库里真名 lqg_sample_kind 不符 → 「样本类别」下拉永远「无数据」",
-   "【S1】外部看不到无效原因：唯一带红条的 detail-ext 对「本人+editable」不可达",
    "【S1】工作台「来源单位」筛选筛不出内部录的样本（会传染 D3 导出）"
   ],
   "note": "S0/S1 会在 qa_gate 的 pending_issues 里被拦；S2/S3 推到 all_done 一起清（载体是 doc/waves/state.json 的 open_issues，勿另建台账）"
  },
- "summary": "ticket 12/43 done；已通过 QA 门的任务：D1。当前 D2（qa_failed，QA 第 2 轮）。未决台账 98 条（S0/S1 6 条）。",
+ "summary": "ticket 12/43 done；已通过 QA 门的任务：D1。当前 D2（qa_failed，QA 第 2 轮）。未决台账 98 条（S0/S1 1 条）。",
  "needs_human": {
   "route": "kevin",
   "why": "zhixing 停在等人：；QA 连红 2 轮的任务 D2",
