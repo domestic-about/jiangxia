@@ -16,7 +16,9 @@ declare module 'vue' {
     MeRow: typeof import('./../components/biz/MeRow.vue')['default']
     MeSectionTitle: typeof import('./../components/biz/MeSectionTitle.vue')['default']
     PlaceholderPage: typeof import('./../components/ui/PlaceholderPage.vue')['default']
+    UnitGroupPicker: typeof import('./../components/biz/UnitGroupPicker.vue')['default']
     WdMessageBox: typeof import('wot-design-uni/components/wd-message-box/wd-message-box.vue')['default']
+    WdPopup: typeof import('wot-design-uni/components/wd-popup/wd-popup.vue')['default']
     WdToast: typeof import('wot-design-uni/components/wd-toast/wd-toast.vue')['default']
   }
 }

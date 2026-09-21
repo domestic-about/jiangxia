@@ -100,6 +100,19 @@
             <scope>test</scope>
         </dependency>
 
+        <!--
+          AUTH-GROUP-001：需求层给的 ExtChokepointContractTest（ADR-0004 咽喉的四条结构性不变量）
+          用 Spring 的 ClassPathScanningCandidateComponentProvider 扫包、用 RequestMapping /
+          RestController 注解判类型，所以本模块的**测试**类路径要有 spring-context / spring-web。
+          scope=test，版本交给上游的依赖管理（**不要**在这里写死版本，也不要重复声明 spring-web：
+          它已经由 ruoyi-common-web 传递进来，再声明一次会把版本降下来、把整个模块编挂）。
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
