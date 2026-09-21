@@ -65,6 +65,25 @@ public class SampleQueryService {
     }
 
     /**
+     * 按<b>调用方给定的</b> wrapper 分页查样本行 —— 给外部接口（AUTH-EXT-001）用。
+     *
+     * <p>★ 为什么外部接口不自己注入 {@code SampleMapper}：ADR-0004 的不变量 I4 规定 ext 包里除
+     * {@code ExtScopeServiceImpl} 外任何类都不得持有 {@code *Mapper} 字段
+     * （{@code ExtChokepointContractTest} 扫整个 ext 包）。所以「按可见 id 集合查一页」这个读操作
+     * 放在 sample 包，ext 包只把算好的 wrapper 传进来拼装。
+     *
+     * <p>调用方负责把可见性条件写进 wrapper（外部那侧是 {@code in(Sample::getId, visibleSampleIds)}）；
+     * 本方法只执行查询、不额外加任何过滤 —— 免得两处过滤口径打架。
+     *
+     * @param page    分页对象（页号 / 页大小 / 排序）
+     * @param wrapper 查询条件（含排序）
+     * @return 一页实体
+     */
+    public Page<Sample> selectExtPage(Page<Sample> page, LambdaQueryWrapper<Sample> wrapper) {
+        return DataPermissionHelper.ignore(() -> sampleMapper.selectPage(page, wrapper));
+    }
+
+    /**
      * 单条详情；不存在或已软删 → null（调用方回 404 语义，不泄露存在性）。
      */
     public SampleVo detail(Long id) {
