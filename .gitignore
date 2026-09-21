@@ -18,6 +18,8 @@ __pycache__/
 .buildhome/
 # 本机临时脚本（起后端的 run-backend.sh 之类）
 .tmp/
+# pnpm 内容寻址仓库（本机 ~/.pnpm-store 写不进去，改放工作区内；826MB，绝不进仓库）
+.pnpm-store/
 # 各端构建产物（后端 code/**/target 见上；网页与小程序补这几类）
 code/**/dist-ssr/
 code/**/.vite/
