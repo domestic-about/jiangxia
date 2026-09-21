@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYS-BASE-001：本机 ~/.m2 在本会话的沙箱里只读（且缺 3.5.10 的 BOM），所以构建时
+  用 -s .mvn-settings.xml -Dmaven.repo.local=<工作区>/.m2repo。
+  镜像换成阿里云：华为云镜像实测 ~75 KB/s，阿里云 ~2 MB/s（同一台机器同一天）。
+  这个文件只是本机构建加速用，不影响任何交付物。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <mirrors>
+    <!-- id 刻意取 public：工作区 .m2repo 里的缓存是从 id=public 的仓库拉的，
+         换个 id 会让 maven-resolver 对每个缓存件重新联网校验一遍（几分钟起步）。 -->
+    <mirror>
+      <id>public</id>
+      <name>aliyun public</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>

@@ -1,0 +1,6 @@
+// 全局样式入口（方向 A，CR-20260921-08）
+// 顺序固定：先 tokens（变量定义，挂在 page 上）再 components（范式类，只引用变量）。
+// 本文件由 src/main.ts 全局引入一次；页面与组件里不要各自再引。
+// 落地规范：doc/design-options/direction-a/落地规范.md §0
+@import './tokens.scss';
+@import './components.scss';

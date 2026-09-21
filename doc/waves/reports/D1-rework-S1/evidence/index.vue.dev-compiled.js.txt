@@ -1,0 +1,60 @@
+import { createHotContext as __vite__createHotContext } from "/@vite/client";import.meta.hot = __vite__createHotContext("/src/views/index.vue");/* unplugin-vue-components disabled */import { ElCard as __unplugin_components_0 } from "/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec";import "/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec";import "/node_modules/.vite/deps/element-plus_es_components_card_style_css.js?v=d1e4a4ec";
+/* Injection by vite-plugin-vue-inspector Start */
+import { createElementVNode as __createElementVNode,createVNode as __createVNode,createElementBlock as __createElementBlock } from "/node_modules/.vite/deps/vue.js?v=d1e4a4ec"
+function _interopVNode(vnode) {
+  if (vnode && vnode.props && 'data-v-inspector' in vnode.props) {
+    const data = vnode.props['data-v-inspector']
+    delete vnode.props['data-v-inspector']
+    Object.defineProperty(vnode.props, '__v_inspector', { value: data, enumerable: false })
+  }
+  return vnode
+}
+function _createElementVNode(...args) { return _interopVNode(__createElementVNode(...args)) }
+function _createVNode(...args) { return _interopVNode(__createVNode(...args)) }
+function _createElementBlock(...args) { return _interopVNode(__createElementBlock(...args)) }
+/* Injection by vite-plugin-vue-inspector End */
+const _sfc_main = {  }
+import { createCommentVNode as _createCommentVNode, toDisplayString as _toDisplayString,  resolveComponent as _resolveComponent, withCtx as _withCtx,  Fragment as _Fragment, openBlock as _openBlock,  } from "/node_modules/.vite/deps/vue.js?v=d1e4a4ec"
+
+const _hoisted_1 = {
+  class: "app-container home",
+  "data-v-inspector": "src/views/index.vue:6:3"
+}
+const _hoisted_2 = {
+  class: "lqg-home-title",
+  "data-v-inspector": "src/views/index.vue:8:7"
+}
+const _hoisted_3 = {
+  class: "lqg-home-line",
+  "data-v-inspector": "src/views/index.vue:9:7"
+}
+const _hoisted_4 = {
+  class: "lqg-home-hint",
+  "data-v-inspector": "src/views/index.vue:10:7"
+}
+
+function _sfc_render(_ctx, _cache) {
+  const _component_el_card = __unplugin_components_0
+
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createCommentVNode("\n    SYS-WEB-001：上游的演示首页（RuoYi-Vue-Plus / RuoYi-Cloud-Plus 两栏介绍 + 外链按钮）整段去掉。\n    首页待办五张卡片的内容属 SYS-HOME-001（UI:admin.home），本票只放一句占位。\n  "),
+    _createElementVNode("div", _hoisted_1, [
+      _createVNode(_component_el_card, {
+        shadow: "never",
+        class: "lqg-home-placeholder",
+        "data-v-inspector": "src/views/index.vue:7:5"
+      }, {
+        default: _withCtx(() => [
+          _createElementVNode("h2", _hoisted_2, _toDisplayString(_ctx.$t('lqg.sys.brand')), 1 /* TEXT */),
+          _createElementVNode("p", _hoisted_3, _toDisplayString(_ctx.$t('lqg.sys.homePlaceholder')), 1 /* TEXT */),
+          _createElementVNode("p", _hoisted_4, _toDisplayString(_ctx.$t('lqg.sys.homePlaceholderHint')), 1 /* TEXT */)
+        ]),
+        _: 1 /* STABLE */
+      })
+    ])
+  ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+}
+
+import "/src/views/index.vue?vue&type=style&index=0&scoped=b301384e&lang.scss"
+
+_sfc_main.__hmrId = "b301384e"

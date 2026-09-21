@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  zhixing 断线重连看门狗（launchd 用户级 agent，每 60 秒跑一轮 watchdog.sh）。
+
+  安装（Kevin 自己跑，需要写 ~/Library/LaunchAgents，主会话沙箱外）：
+    cp doc/waves/ops/com.kevin.lqg-zhixing-watchdog.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kevin.lqg-zhixing-watchdog.plist
+    # 先干跑观察一轮（不会真的 resume）：
+    bash doc/waves/ops/watchdog.sh --dry-run ; tail -5 doc/waves/ops/watchdog.log
+    # 确认判据对了，再把下面的 ProgramArguments 第二行从 --dry-run 改成 --run 并重载：
+    launchctl bootout gui/$(id -u)/com.kevin.lqg-zhixing-watchdog 2>/dev/null
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kevin.lqg-zhixing-watchdog.plist
+
+  卸载：launchctl bootout gui/$(id -u)/com.kevin.lqg-zhixing-watchdog
+  临时停：touch doc/waves/ops/PAUSE      （看门狗见哨兵即不接手）
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kevin.lqg-zhixing-watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/ops/watchdog.sh</string>
+    <string>--dry-run</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid</string>
+  <key>StartInterval</key>
+  <integer>60</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/ops/watchdog.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/ops/watchdog.err.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>STALE_SECS</key><string>600</string>
+    <key>MAX_PER_HOUR</key><string>6</string>
+  </dict>
+</dict>
+</plist>

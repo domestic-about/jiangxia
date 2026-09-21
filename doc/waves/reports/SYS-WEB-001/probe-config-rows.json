@@ -1,0 +1,9 @@
+[
+  "主框架页-默认皮肤样式名称 sys.index.skinName skin-blue 是 蓝色 skin-blue、绿色 skin-green、紫色 skin-purple、红色 skin-red、黄色 skin-yellow 2026-09-21 15:04:00",
+  "用户管理-账号初始密码 sys.user.initPassword 123456 是 初始化密码 123456 2026-09-21 15:04:00",
+  "主框架页-侧边栏主题 sys.index.sideTheme theme-dark 是 深色主题theme-dark，浅色主题theme-light 2026-09-21 15:04:00",
+  "账号自助-是否开启用户注册功能 sys.account.registerUser false 是 是否开启注册用户功能（true开启，false关闭） 2026-09-21 15:04:00",
+  "OSS预览列表资源开关 sys.oss.previewListResource true 是 true:开启, false:关闭 2026-09-21 15:04:00",
+  "合作单位可见内部编号 lqg.ext.show-internal-no false 否 CR-20260918-07：false = 外部样本详情与外部 VO 里不带内部编号；true = 多显示一行内部编号（只作用于接口返回的页面数据） 2026-09-21 15:04:01",
+  "-80 冻存超期提醒天数 lqg.cryo.overdue-days 14 否 CR-20260918-07：超期判定每次读时取这个值，改完下一次读即生效（FLOW:F-CRYO-01.step2） 2026-09-21 15:04:01"
+]

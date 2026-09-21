@@ -1,0 +1,101 @@
+import type { Identity, ResolvedIdentity } from '@/types/identity'
+import { normalizeIdentity } from '@/types/identity'
+
+// 首页「填写」入口与「我的」区块的纯函数（SYS-MP-001）。
+//
+// 权威：UI:mp.home / UI:mp.home.entries / UI:mp.me / FLOW:F-MP-01.step1 / FLOW:F-AUTH-01.step4，
+// 结构来源 CR-20260917-05（2026-09-17 晚 Kevin 定）。
+// 期望值全部在 doc/verify/fixtures/home-entries-cases.json 里，本文件不自带期望表。
+//
+// 三条硬口径（做反了就是事故）：
+// 1. 只认后端 /mp/me 的 identity——缺失、空串、不认识的值 → 入口为空、无跳转目标、
+//    「我的」一个区块都不出；**绝不默认当内部**。
+// 2. 内部四格、外部三格（没有 -80 冻存记录），顺序 = 甲方模板顺序。
+// 3. 点哪格都是进该表的**填写页**新增一条，内部外部一样。
+
+/** 四张表的入口 key，顺序即宫格顺序（甲方的模板顺序） */
+export const ENTRY_KEYS = ['sample', 'organoid', 'embed', 'cryo'] as const
+export type EntryKey = (typeof ENTRY_KEYS)[number]
+
+/** 外部人员看不到的那张表：-80 冻存记录（CR-20260917-05） */
+export const INTERNAL_ONLY_ENTRY: EntryKey = 'cryo'
+
+/** 「我的」页里的区块 key */
+export const ME_SECTION_KEYS = ['history', 'unitGroup', 'internalAdmin'] as const
+export type MeSectionKey = (typeof ME_SECTION_KEYS)[number]
+
+/** 每个入口点进去的页面：一律是该表的填写页（新增一条） */
+const ENTRY_FORM_TARGET: Record<EntryKey, string> = {
+  sample: '/pages/sample/form',
+  organoid: '/pages/organoid/form',
+  embed: '/pages/embed/form',
+  cryo: '/pages/cryo/form',
+}
+
+// 首页要渲染哪些入口格。顺序 = ENTRY_KEYS 的模板顺序；
+// 外部去掉 cryo；身份未知 → 空数组。
+export function entriesFor(identity: unknown): EntryKey[] {
+  const resolved = normalizeIdentity(identity)
+  if (resolved === null) {
+    return []
+  }
+  if (resolved === 'internal') {
+    return [...ENTRY_KEYS]
+  }
+  return ENTRY_KEYS.filter(key => key !== INTERNAL_ONLY_ENTRY)
+}
+
+// 点这个入口去哪。内部外部一样都是该表的填写页；
+// 外部点 cryo、身份未知、key 不认识 → null（调用方不渲染成可点项）。
+export function entryTarget(identity: unknown, key: string): string | null {
+  const allowed = entriesFor(identity)
+  if (!allowed.includes(key as EntryKey)) {
+    return null
+  }
+  return ENTRY_FORM_TARGET[key as EntryKey]
+}
+
+// 「我的」页里按身份出现的区块，顺序即渲染顺序。
+// - 所有人：history（历史编辑记录）
+// - 外部：unitGroup（单位与组别，本张只展示 /mp/me 的值，修改页在 AUTH-GROUP-001）
+// - 内部：internalAdmin（内部管理板块，外部**不渲染**而不是置灰）
+// 身份未知 → 空数组。
+export function meSections(identity: unknown): MeSectionKey[] {
+  const resolved: ResolvedIdentity = normalizeIdentity(identity)
+  if (resolved === null) {
+    return []
+  }
+  if (resolved === 'internal') {
+    return ['history', 'internalAdmin']
+  }
+  return ['history', 'unitGroup']
+}
+
+/** 「内部管理」板块底部小字：逐字照 UI:mp.me —— 没有「修改」二字（CR-20260918-07） */
+export const INTERNAL_ADMIN_NOTE = '核验、冻存取用请到网页工作台'
+
+/** 入口 key → 该表的全称（宫格与内部管理板块共用） */
+export const ENTRY_TITLE: Record<EntryKey, string> = {
+  sample: '样本记录信息表',
+  organoid: '类器官收样记录',
+  embed: '石蜡包埋送样记录',
+  cryo: '-80 冻存记录',
+}
+
+/** 内部管理板块四个入口点进去的表格页（SAMPLE-MP-002 起建，本张先放占位页） */
+export function ledgerTarget(key: EntryKey): string {
+  return `/pages/admin/${key}`
+}
+
+/** 「我的」里那些非首页入口的固定目标（占位页，内容在各自 ticket） */
+export const ME_TARGET = {
+  history: '/pages/history/index',
+  unitGroup: '/pages/me/unit-group',
+  agreement: '/pages/legal/agreement',
+  privacy: '/pages/legal/privacy',
+} as const
+
+/** 类型守卫：这个字符串是不是合法的身份（供 mock 调试入口用） */
+export function isIdentity(raw: unknown): raw is Identity {
+  return raw === 'internal' || raw === 'external'
+}

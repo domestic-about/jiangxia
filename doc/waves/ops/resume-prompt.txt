@@ -1,0 +1,25 @@
+/zhixing 续跑（**这是看门狗自动接手的 headless 会话，不是新任务**）
+
+工作区：/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid（cwd 已是它）。
+上一轮会话断线了，**权威状态在 doc/waves/state.json**，直接从那续，**不要重放历史、不要重新 init**。
+
+开工动作（按顺序）：
+1. 读 ~/claude-config/skills/zhixing/SKILL.md 与 templates/task-loop.md（照它跑），再读 doc/waves/state.json 的当前任务与 ticket 状态。
+2. `python3 ~/claude-config/skills/zhixing/scripts/task_state.py next`，按返回的 action 分支，**处理完一个 action 立刻重跑 next，直到 all_done**。
+3. 主会话是薄调度器：重活（读代码/写代码/跑测试/看截图）全部派**全新上下文的 subagent**，主会话只做「读 JSON → 派单 → 记状态」。
+4. 先起心跳（看门狗靠它判断你还活着）：`nohup bash doc/waves/ops/heartbeat.sh > /dev/null 2>&1 &`。
+
+硬约束（违反就是弄坏项目）：
+- **不 push、不合 main、不删分支、不改写历史**；只在 `integration` 与 `task/D<N>` 上 commit。all_done 收尾的「合分支 push」只做到合进 integration。
+- 端口纪律：**8080 / 5432 / 6379 永远留给 Kevin**；后端用 8081 起、PG 5433、Redis 6380。**关进程只许按 PID**（`lsof -ti tcp:<端口> -sTCP:LISTEN` 再 kill），**禁止 `pkill -f 'ruoyi-admin.jar'`**（8080 上有 Kevin 在跑的另一个服务）。起过的长进程用完关掉。
+- **同一时刻只允许一个 ticket 碰 PG 5433**（DB 是容量 1 的共享资源；D1 实测过两条 reseed 交错会建出孤儿账号）。
+- `doc/verify/seed/` 与 `gen_seed.py`、`doc/verify/api.sh`、`doc/requirements.yaml` 的 text、`doc/authority/*.yaml`、`doc/change-log.md` **只读，一个字节都不许改**。
+- 本机 Maven 必须带 `-s .mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome`；pnpm 的 store 只能用环境变量传 `npm_config_store_dir=<ws>/.pnpm-store`（`pnpm --store-dir` 在 10.33 会 EACCES）。
+- 微信开发者工具在沙箱跑不通（EPERM + 需扫码）→ 小程序端侧用 H5 + Playwright 等价覆盖并如实标注「未覆盖」，不算 QA 失败。
+
+停手规矩（**停下来之前必须先写 PAUSE 哨兵**，看门狗才不会一直自动接手）：
+- 只在 exception（QA 门连红 2 轮）/ blocked / blueprint_changed / inconsistent / qa_gate 带 S0-S1 未决 / all_done 才停。
+- 停法：把结论写进 `doc/waves/ops/PAUSE`（第一行一句话原因），更新 `_manifest.json`，然后输出给 Kevin。
+- **rearm 只能 Kevin 跑，主会话不许自调。** 判红只看严重度：S0/S1 拦门，S2/S3 记台账推到 all_done，返工只修 S0/S1。
+
+汇报用中文，结论先说。

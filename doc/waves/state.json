@@ -1,0 +1,1153 @@
+{
+  "plan_mode": "task",
+  "tickets_dir": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/tickets",
+  "authority_baseline": "9bab0e47682642359c99fe05ea6a69f14b3555b90b26f8d202605db01d8a3521",
+  "authority_snapshot_path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/authority/_snapshot.json",
+  "phases": [
+    {
+      "id": "D1",
+      "status": "qa_passed",
+      "qa_rounds": 2,
+      "qa_seq": 2
+    },
+    {
+      "id": "D2",
+      "status": "pending",
+      "qa_rounds": 0
+    },
+    {
+      "id": "D3",
+      "status": "pending",
+      "qa_rounds": 0
+    },
+    {
+      "id": "D4",
+      "status": "pending",
+      "qa_rounds": 0
+    },
+    {
+      "id": "D5",
+      "status": "pending",
+      "qa_rounds": 0
+    },
+    {
+      "id": "D6",
+      "status": "pending",
+      "qa_rounds": 0
+    },
+    {
+      "id": "D7",
+      "status": "pending",
+      "qa_rounds": 0
+    },
+    {
+      "id": "D8",
+      "status": "pending",
+      "qa_rounds": 0
+    }
+  ],
+  "tickets": {
+    "AUTH-EXT-001": {
+      "status": "pending",
+      "phase": "D2",
+      "track": "AUTH",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "AUTH-EXT-002": {
+      "status": "pending",
+      "phase": "D3",
+      "track": "AUTH",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "AUTH-EXT-003": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "AUTH",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "AUTH-GROUP-001": {
+      "status": "done",
+      "phase": "D1",
+      "track": "AUTH",
+      "system": "",
+      "fix_attempts": 0,
+      "note": "迁移 V202609210930 建 t_lqg_source_unit / t_lqg_unit_group（部分唯一索引 uk_unit_group=(unit_id,group_name) WHERE del_flag='0'）+ seed 菜单 5120 unit / 5130 extuser 及按钮，授 101 与 102（核验组别是内部日常工作）。后端 auth/group（含 guard/ExtBindStateMachine 状态机纯函数 + 11 条契约测试）、ext（GET /mp/ext/units、PUT /mp/ext/profile）；前端 views/lqg/auth/{unit,extuser} + lang/lqg/auth-group.*；小程序在 pages/me/unit-group.vue 实现（touches 写的是 pages/me/profile/**，实际占位页是 unit-group，已记偏差）+ components/biz/UnitGroupPicker.vue。★两个真问题（都属 counterfeit-risk 一类）：① MyBatis-Plus updateById 默认忽略 null 字段 →『清空』清不掉，实测 bind_status 回 pending 但 verified_by 还是老核验人，而 accept 恰好断这一格；三处写侧改成 LambdaUpdateWrapper 显式 .set(col,null)；② ADR-0004 的 i4 比 ticket 正文严——ExtChokepointContractTest 扫整个 ext 包，任何类持 *Mapper 字段就红；第一版把两个 service 放 ext 包直接红，改成读写在 auth.group、ext 包只拼装转发后绿，已把 fixture 拷进测试树跑绿（Tests run: 4）。坑：headless 下侧边栏 router.push 后 .router-view 不换，需整页加载。"
+    },
+    "AUTH-LOGIN-001": {
+      "status": "done",
+      "phase": "D1",
+      "track": "AUTH",
+      "system": "",
+      "fix_attempts": 0,
+      "note": "新增 ruoyi-lqg/org.dromara.lqg.auth（入参只声明 xcxCode/phoneCode、mock 与真实唯一分叉点 WxIdentityResolver、按手机号建号绑定的 WxAccountBindService、GET /mp/me），ruoyi-admin 只多一个接线类 LqgXcxAuthStrategy。迁移 V202609210910 用 gen_ddl_pg.py --migration 逐字节输出 + 同支幂等插 mp client 行(client_id=md5('mp'||secret))。坑：① IAuthStrategy 按 bean 名取策略，同名 bean 必冲突、@Primary 对 getBean(name) 无效，故删了上游 XcxAuthStrategy 空壳；② 登录/mp/me 读 sys_* 必须包 DataPermissionHelper.ignore，否则无 token 时 LoginHelper 抛『token 已被冻结』被包成 401（现象是账号建出来了接口却 401）；③ PostgreSQL 会规划整条语句，写在 CASE WHEN to_regclass() IS NULL 不可达分支里的子查询照样报缺表，单位/组别名称的 join 改在 Java 侧探针判表；④ 根 pom 的 surefire groups+skipTests 会让 java 契约测试 0 用例却 BUILD SUCCESS 假绿，在 ruoyi-lqg/pom.xml 构建侧摘掉过滤器后实测 Tests run: 4。"
+    },
+    "AUTH-STAFF-001": {
+      "status": "done",
+      "phase": "D1",
+      "track": "AUTH",
+      "system": "",
+      "fix_attempts": 0,
+      "note": "后端 /lqg/auth/staff（list/grant/edit/resetPwd/revoke，权限串 lqg:auth:staff:* 只授 101）+ 迁移 V202609210920（目录 5100 人员与单位 / 菜单 5110 component=lqg/auth/staff/index / 按钮 5111-5115，父目录一起授）+ 工作台拒外部登录（@AfterReturning 装饰，msg 含『无权』）+ plus-ui 授权页（弹窗含 check 预检提示升级）。口径：授权=找到就改角色、删 103 加目标角色、返回 upgraded:true，不新建账号不动 wx_bind；撤销=角色改回只剩 103 + 补 unbound 档案 + 踢 token，不能撤自己、不能撤到没有管理员。★真问题（上一任落盘的代码，接手时修掉）：① 上游 roleService.cleanOnlineUser → PlusSaTokenDao.searchData 把 Redis 扫描结果缓存进 Caffeine(expireAfterWrite=5s)，撤销前 5 秒内刚签发的 token 不在快照里 → 漏踢，被撤销的人拿旧 token 继续 200；ticket accept 的顺序恰好让快照新鲜所以那段断言对旧实现恒绿 —— 改为 StpUtil.logout(userType+':'+userId)，并写 5 秒窗口负对照探针实测旧实现红、修复后绿；② reset-pwd/revoke 上多余的 response.setStatus(500) 会让 axios 落 error 分支，上游约定是 HTTP 200 + code:500，已删。坑：api.sh 的 token 缓存只按 mtime 判新鲜，陈旧 token 会造成假 401，跑 accept 前建议清 $TMPDIR/lqg-verify-token-*。"
+    },
+    "CRYO-FLOW-001": {
+      "status": "pending",
+      "phase": "D4",
+      "track": "CRYO",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "CRYO-MODEL-001": {
+      "status": "pending",
+      "phase": "D4",
+      "track": "CRYO",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "CRYO-MP-001": {
+      "status": "pending",
+      "phase": "D4",
+      "track": "CRYO",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "CRYO-REMIND-001": {
+      "status": "pending",
+      "phase": "D4",
+      "track": "CRYO",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "CRYO-WEB-001": {
+      "status": "pending",
+      "phase": "D4",
+      "track": "CRYO",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "DOC-MP-001": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "DOC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "DOC-MP-002": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "DOC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "DOC-PDF-001": {
+      "status": "pending",
+      "phase": "D6",
+      "track": "DOC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "DOC-PROOF-001": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "DOC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "DOC-PUBLISH-001": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "DOC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "DOC-RENDER-001": {
+      "status": "pending",
+      "phase": "D6",
+      "track": "DOC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "EMBED-MODEL-001": {
+      "status": "pending",
+      "phase": "D3",
+      "track": "EMBED",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "EMBED-MP-001": {
+      "status": "pending",
+      "phase": "D3",
+      "track": "EMBED",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "EMBED-WEB-001": {
+      "status": "pending",
+      "phase": "D3",
+      "track": "EMBED",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "OCR-IMPL-001": {
+      "status": "pending",
+      "phase": "D5",
+      "track": "OCR",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "OCR-MP-001": {
+      "status": "pending",
+      "phase": "D5",
+      "track": "OCR",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "OCR-SPIKE-001": {
+      "status": "pending",
+      "phase": "D5",
+      "track": "OCR",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "QC-MODEL-001": {
+      "status": "pending",
+      "phase": "D6",
+      "track": "QC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "QC-WEB-001": {
+      "status": "pending",
+      "phase": "D6",
+      "track": "QC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "QC-WEB-002": {
+      "status": "pending",
+      "phase": "D6",
+      "track": "QC",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SAMPLE-EXPORT-001": {
+      "status": "pending",
+      "phase": "D3",
+      "track": "SAMPLE",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SAMPLE-HINT-001": {
+      "status": "pending",
+      "phase": "D3",
+      "track": "SAMPLE",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SAMPLE-MODEL-001": {
+      "status": "pending",
+      "phase": "D2",
+      "track": "SAMPLE",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SAMPLE-MP-001": {
+      "status": "pending",
+      "phase": "D2",
+      "track": "SAMPLE",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SAMPLE-MP-002": {
+      "status": "pending",
+      "phase": "D2",
+      "track": "SAMPLE",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SAMPLE-VERIFY-001": {
+      "status": "pending",
+      "phase": "D2",
+      "track": "SAMPLE",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SAMPLE-WEB-001": {
+      "status": "pending",
+      "phase": "D2",
+      "track": "SAMPLE",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-BACKUP-001": {
+      "status": "pending",
+      "phase": "D8",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-BASE-001": {
+      "status": "done",
+      "phase": "D1",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": "上游 RuoYi-Vue-Plus v5.5.3(91ba3869) 落 code/RuoYi-Vue-Plus，Flyway 三支(V202609210800 上游 PG 基线原样 / 0810 gen_ddl_pg --dicts 输出逐字节 / 0820 角色101-103)，空库端到端复验过；tenant.enable=false、dev 字段加密 LqgTestAesKey#01；ruoyi-lqg 两处接入 + GET /lqg/sys/ping 的 db/dbVersion 取自运行期 DatabaseMetaData。坑：snail-job 配置段不能删(TestBroadcastJob 有 @Value(${snail-job.port}))；Redis 服务端必须设口令(配了口令就发 AUTH)；本机构建需 -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome。端口 5433/6380/9002/9003 全绑 127.0.0.1，8080/5432/6379 未占。"
+    },
+    "SYS-EXPORT-001": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-HOME-001": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-MANUAL-001": {
+      "status": "pending",
+      "phase": "D8",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-MP-001": {
+      "status": "done",
+      "phase": "D1",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": "code/miniapp 从 unibest base-wot-ui @3.18.11（wot-design-uni 1.14.0）起建，99 文件/37 源文件 2462 行。三条 accept 全绿：build:mp-weixin + jq 页签【首页/文档/我的】+ biz 桶口与 :not()/* 两条 grep 空 + 生产包无 mock:ext；vitest entries.fixture.spec.ts 25/25 且 fixture(6/10/6) 未改；tokens 变量名集合 75=75 相等 + 两条 @import + 色值字面量 grep 空。口径：entriesFor/entryTarget/meSections 只认字面量 internal/external（INTERNAL/''/null/admin → 空），页面 v-else 兜底重新登录；点哪格都是 /pages/<key>/form；内部管理板块 v-if（外部不进 DOM）；小字常量逐字『核验、冻存取用请到网页工作台』。坑：① uni CLI 的 initEnv 先读 src/manifest.json（必须留空壳种子）；② SFC 模板里禁止写 <!-- #ifdef/#ifndef -->（与 @uni-ku/root 根节点注入打架 → Cannot destructure property tabBar of this.meta）；③ dev 判定别只用 import.meta.env.DEV，用 MODE==='development' && VITE_MOCK_LOGIN；④ App.ku.vue 不能删（uni-ku/root 从 main.ts 注入引用）；⑤ 本机 pnpm/npm 全局缓存只读 → .npmrc 的 store-dir 与 XDG_CACHE_HOME 都要指到工作区内。"
+    },
+    "SYS-PROD-001": {
+      "status": "pending",
+      "phase": "D8",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-RELEASE-001": {
+      "status": "pending",
+      "phase": "D8",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-STAGING-001": {
+      "status": "pending",
+      "phase": "D5",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
+    },
+    "SYS-WEB-001": {
+      "status": "done",
+      "phase": "D1",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": "code/plus-ui 按 v5.5.3-v2.5.3（commit 5c9c940，与后端 5.5.3 精确配套）干净落盘；品牌『类器官样本管理』、登录页去租户/注册/演示第三方登录、lqg-tokens.scss 主色 #0E7C7B（运行期 getComputedStyle 实测 rgb(14,124,123)）；i18n 按域拆分用 src/lang/index.ts 的 import.meta.glob('./lqg/*.zh_CN.ts',{eager:true}) 合并到 lqg.<域>.*，不碰上游两个大文件。迁移 V202609210830 按上游真实 menu_id 给 101 授系统管理父目录+字典管理/参数设置及按钮（13 行），102 一行不授，插 lqg.ext.show-internal-no=false 与 lqg.cryo.overdue-days=14。坑：① 上游 getChildPerms 建树必须先授父目录，否则子菜单不出现；② 指定的 0830 落在已应用的 0910 之前 + out-of-order=false → FlywayValidateException，本票重建 dev 库解决（D1 后续 0920/0930 都大于已有版本，不再撞）。"
+    }
+  },
+  "open_issues": [
+    {
+      "id": 1,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "api.sh --fresh-module 在本沙箱 ps 被禁（exit 2）",
+      "detail": "反 stale 守卫依赖 ps，本沙箱 ps 返回空导致 exit 2；SYS-BASE-001 用 find -newer jar + lsof -ti tcp:8081 + 进程启动时间手工替代。人工/CI 不受影响；后续 ticket 每条 API accept 首调都会撞到。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 2,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "lqg.auth.mock-login 配置项未定义",
+      "detail": "AUTH-LOGIN-001 的 SysPingVo 要返回 mockLogin；本票未定义该配置项，留给 AUTH-LOGIN-001 加（只在 dev/test，ADR-0008）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 3,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "MinIO bucket 需 console 手建（minio/mc 镜像拉不动）",
+      "detail": "docker-compose 里没有自动建 bucket 的 init 容器，dev 环境 bucket 需手工在 9003 console 建；影响 D5 之后的对象存储相关 ticket。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 4,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "ticket 正文写上游 5.5.x，实取 v5.5.3；dongjiaoshan 参照是 5.6.1+MySQL",
+      "detail": "ticket §0 写 5.5.x；实取 v5.5.3（github 镜像 tag 与 gitee 同 commit）。dongjiaoshan 参照为 5.6.1 + MySQL，配置结构有差异，参照时注意。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 5,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "ruoyi-workflow 模块仍在上游 pom（只关运行）",
+      "detail": "ADR-0001 说「不引 ruoyi-workflow」，本票只关运行未从 pom 剔除；彻底剔除需改上游两个 pom。是否要彻底剔除待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 6,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "ticket accept 里的 mvn 命令在本机原样跑必挂（缺 -s/-Dmaven.repo.local/-Duser.home）",
+      "detail": "accept 第 3 条与 D1 qa_scope L0 都写 mvn -pl ruoyi-modules/ruoyi-lqg -am install/test；本机 ~/.m2 只读，原样跑 FileSystemException: spring-boot-dependencies: Operation not permitted。必须带 -s .mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome。影响所有 Maven 类 accept 与 QA 门 L0；普通开发机不受影响。方案：ticket 模板加一句，或在仓库根放 mvnw 包装参数。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 7,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "根 pom surefire groups+skipTests 让 java 契约测试 0 用例仍 BUILD SUCCESS（假绿形态）",
+      "detail": "根 pom 配 <groups>${profiles.active}</groups>(=dev) + <skipTests>true</skipTests>，而需求层 fixture 没有 @Tag → mvn test 报 Tests run: 0 却 BUILD SUCCESS，「护栏坏了」恒绿。本票已在 ruoyi-lqg/pom.xml 覆盖（实测 Tests run: 4）。后续所有跑 mvn test 的 ticket 都会踩同一形态。方案：验收清单加『核 surefire Tests run > 0』，或主会话决定在根 pom 去掉该 groups 默认值。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 8,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越出 touches：删除了上游空壳 ruoyi-admin/.../web/service/impl/XcxAuthStrategy.java",
+      "detail": "IAuthStrategy.login 用 SpringUtils.getBean(grantType+'AuthStrategy') 按 bean 名取策略，同名的 LqgXcxAuthStrategy 与上游 XcxAuthStrategy 直接 ConflictingBeanDefinitionException；@Primary 对 getBean(name) 无效。不删就得改上游代码或让 xcx 登录恒 500。删的是无调用方的 TODO 空壳。新增的 LqgXcxAuthStrategy 落在 ruoyi-admin（IAuthStrategy/LoginVo 是那里的类型，放 ruoyi-lqg 会成环），类里只有框架接线。请 Kevin 过目这个边界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 9,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "api-contract 的 /mp/me 未写 name 的取值来源",
+      "detail": "契约 data.name 没说明是 sys_user.nick_name（本票实现）还是 t_lqg_ext_profile.real_name。accept 断 extA.name==王医生 两边恰好同值，两种实现都能过。方案：契约写明 name = 账号昵称(nick_name)；AUTH-EXT-001 改 real_name 时是否同步昵称待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 10,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "ruoyi-lqg 现在依赖 ruoyi-system（为拿 sys_user/角色 mapper）",
+      "detail": "与 ADR-0001『业务代码只在一个模块』不冲突（方向单一不成环），但后续 ticket 容易把 ruoyi-system 当自家的用。约定：只读框架账号/角色表用它的 mapper，不往 sys_user 写业务字段。目前只写了 login_date 与两条审计字段。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 11,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "mp client 的 client_secret 是 dev 常量 mpDevSecret#2026",
+      "detail": "只用于 dev/test 的 xcx 登录（token 签发不校验 secret，secret 只在 sys_client 留档），client_id 与它的 md5 关系写在注释里。上线前由部署 ticket 换随机值并同步 client_id。本票不引入密钥管理。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 12,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "迁移跨域补号撞 out-of-order=false：0830 指定在已应用的 0910 之前，后端启动即 FlywayValidateException",
+      "detail": "SYS 域 08xx 的票排在 AUTH 域 09xx 之后做时必撞（lint-profile 的 HHmm 域分段假设实现顺序与号段顺序一致）。本票靠 DROP+CREATE dev 库重建按序跑 5 支解决；真部署按序不受影响。方案二选一：① ticket 生成器禁止跨域补号（同任务内做票顺序必须与号段一致）；② dev 显式 spring.flyway.out-of-order=true（prod 保持 false）。已实测 D1 剩余 0920/0930 都大于当前最大版本，不再撞。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 13,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "api.sh --fresh-module 的 ps -o lstart= 在 subagent 沙箱被禁（已连续三张票命中）",
+      "detail": "SYS-BASE-001 / AUTH-LOGIN-001 / SYS-WEB-001 三张都命中。只影响 subagent 沙箱，人工/CI 正常。方案：api.sh 把启动时间换成 lsof / 日志 mtime 的兼容写法（三张票都按规矩没改 api.sh）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 14,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "ticket §4.2 与 accept 第 1 条 + CR-20260918-07 冲突：侧边栏不可能只有字典管理一项",
+      "detail": "accept 要求 system/config/index 路由可达、CR 要求两个开关在「参数设置」里改，而上游 getChildPerms 建树必须先授父目录「系统管理」→ 侧边栏必为「系统管理 › 字典管理 / 参数设置」。本票按 accept + CR 办、截图如实呈现。方案：§4.2 改成「除字典管理与参数设置外不应有别的菜单」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 15,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "code/plus-ui 未提交 pnpm-lock.yaml（上游 .gitignore 忽略它）→ 前端构建不可复现",
+      "detail": "依赖版本随镜像漂移，影响 CI/他人重建。方案：git add -f code/plus-ui/pnpm-lock.yaml 或项目自己维护一份。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 16,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "上游 /register 路由与页面仍在（只摘了登录页入口）",
+      "detail": "URL 直达会渲染一个必然失败的注册页。已实测后端开关兜底：POST /auth/register → code 500『当前系统没有开启注册功能！』（sys.account.registerUser=false），不是安全口子。方案：AUTH-STAFF-001 或后续壳票顺手删路由+页面+白名单。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 17,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "并行 ticket 共用同一 worktree：.pnpm-store 未跟踪、提交易互相夹带",
+      "detail": "SYS-WEB-001 与 SYS-MP-001 同批派单（touches 不冲突但共用 worktree）。已处置：根 .gitignore 补 .pnpm-store/（826MB）并单独 commit。后续同批并行的 ticket 保持『只 git add 自己路径』纪律；若并行度再提高，考虑各自 worktree。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 18,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "同一手机号两行 sys_user：并行 reseed 窗口里 extA 被自动建号，会挡下游 MP ticket 的 --as extA",
+      "detail": "根因（主会话已定位，非 AUTH-LOGIN-001 实现缺陷）：reseed.sh 先 TRUNCATE t_lqg_* 再 DELETE sys_user(9000000000-9000009999)，两步之间有一个窗口；窗口内进来的 mock 登录按手机号查 sys_user 查不到 → 走 createExternalUser 建了 snowflake id 新号（2101930592395362306, create_time 2026-09-21 15:04:39）。而 reseed 只删 9000000000-9000009999 段的账号，snowflake id 的孤儿号**永远留在库里**，导致同一手机号两行 → 之后 selectOne(eq(phonenumber)) 会 TooManyResults。触发条件：SYS-WEB-001 / SYS-MP-001 / AUTH-STAFF-001 同批并行、共用 PG 5433 与同一个 reseed。处置：① 已定纪律——之后同一时刻只允许一个 ticket 碰 PG 5433（DB 是容量 1 的共享资源）；② QA 门之前清理孤儿号。建议：reseed.sh 追加按 seed 手机号清非种子段账号（属验收执行器，需求层资产，本批未改）。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 19,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "微信开发者工具 CLI 在 subagent 沙箱跑不通（EPERM + 需扫码）",
+      "detail": "CLI 要写 ~/Library/Application Support/微信开发者工具/** → EPERM，且需人工扫码登录。本票 DevTools 截图/录屏项改用 H5 + Playwright 覆盖（13 张截图 + 3 段 webm）。只影响 subagent 沙箱；L2 真机/开发者工具那几项按 zhixing 规矩记 blocked/集中上报，不算 QA 失败。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 20,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "pnpm type-check 被 wot-design-uni 1.14.0 自身 SFC 类型错误挡红",
+      "detail": "错误在 node_modules/.pnpm/wot-design-uni@1.14.0/**，skipLibCheck 管不到 SFC；第一方代码已零错误。方案：type-check 只对 src 跑，或在落地规范里写明该上游噪音。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 21,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "CR-20260921-08 未写模板版本基线",
+      "detail": "本票用 unibest base-wot-ui @3.18.11 + wot-design-uni 1.14.0，未写进落地规范。方案：补进 doc/design-options/direction-a/落地规范.md §0 作为复现基线。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 22,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 的 mock:ext grep 抓不到同义改写（dist/api/mock-seeds.js 仍被 emit）",
+      "detail": "accept 只 grep 字面量 mock:ext，抓到的是『入口不可达 + 关键字面量不存在』；dist/api/mock-seeds.js（446B，含 extA 与手机号）仍被 emit（无调用方、v-if 恒 false）。若换成 xcxCode:'mock:extA' 这种写法同一 grep 拦不住。方案：断言加强（断 dist 里不存在任何 mock seed 模块）或显式 rollup exclude。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 23,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "上游 cleanOnlineUser 的 Caffeine 5 秒缓存会漏踢刚签发的 token（一类问题的载体，本票实例已修）",
+      "detail": "上游 PlusSaTokenDao.searchData 把 StpUtil.searchTokenValue 的 Redis 扫描结果缓存进 Caffeine(expireAfterWrite=5s)：撤销前 5 秒内刚签发的 token 不在快照里 → 撤销返回 200、库也改了，被撤销的人拿旧 token 继续 200。影响所有『改角色/停用/撤销后踢下线』的票（AUTH-EXT-002、AUTH-GROUP-001、SYS-*），且 accept 很容易恒绿（ticket 原文的断言顺序恰好让快照新鲜）。本票实例已改 StpUtil.logout(loginType+':'+userId) 并留 5 秒窗口负对照探针（旧实现实测红、修复后绿）。方案：① 生成器/验收清单加『凡踢人断言先构造 5 秒窗口的负对照』；② 长期换掉 cleanOnlineUser 的缓存枚举（属上游 ruoyi-system）。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 24,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越出 touches：改了 code/plus-ui/src/lang/index.ts（i18n 同域多文件的键路径解析）",
+      "detail": "ticket touches 未列它，但不改则 auth-staff.* 的键路径退化成 lqg['auth-staff']，且与后续 auth-group.* 互相覆盖。已改成 base.split('-')[0] 归并到 lqg.<域>，向后兼容（sys.* 行为不变，pnpm build:prod 过），随本票提交。影响后续所有按域拆 i18n 的 WEB 票（auth-group / sample-* 等都靠这条解析）。方案：把 src/lang/index.ts 加进相关 ticket 的 touches，或把『同域多文件』解析约定写进 SYS-WEB-001 立的 src/lang/lqg/ 规范。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 25,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "api-contract.md 的 AUTH 一节没列 GET /lqg/auth/staff/check?phone=",
+      "detail": "ticket §2.3 明确要求这个只读预检接口（前端授权弹窗用它提示『该手机号已登录过小程序，将把原账号升级为内部人员』），实现已按 ticket 落地。契约是只读区，本票未改。方案：补一行 GET /lqg/auth/staff/check?phone= → data:{exists, external, name?}。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 26,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "api.sh 的 token 缓存只按 mtime 判新鲜，陈旧 token 造成假 401",
+      "detail": "接手本票时被它误导过一次（一上来 401，误以为实现坏了）。方案：api.sh 命中缓存后先探一次轻接口（如 GET /lqg/sys/ping），非 200 就重登；或写明『跑 accept 前清 $TMPDIR/lqg-verify-token-*』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 27,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "工作台拒外部用 @AfterReturning：token 已签发（存 Redis 未返回客户端）",
+      "detail": "不构成可利用口子（客户端拿不到 token），但会给 Redis 留一个到 TTL 才消失的会话。方案：保持现状 + 文档写明；若要在签发前拦，需在本模块复制口令校验逻辑（不划算且会与上游策略漂移）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 28,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "MyBatis-Plus updateById 默认忽略 null →『清空字段』清不掉（一类问题，本票实例已修）",
+      "detail": "实测 bind_status 已回 pending 但 verified_by 还是老核验人，而只看业务码的断言全绿。影响所有『改状态顺带清字段』的票（退回/撤销/驳回/重填/解绑）。本票三处写侧改成 LambdaUpdateWrapper 显式 .set(col,null) 并写负对照。方案：生成器加『凡断言 COALESCE(col,'-') 的票必须用 UpdateWrapper 且写负对照』。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 29,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "ADR-0004 的 i4 比 ticket 正文严：ExtChokepointContractTest 扫整个 ext 包（任何类持 *Mapper 即红）",
+      "detail": "本票第一版把两个 service 放 ext 包（各持 mapper）→ fixture 直接红；改成读写在 auth.group、ext 包只拼装+转发后绿（Tests run: 4）。D1 之后的 EXT 域票（AUTH-EXT-001/002/003 与各域 /mp/ext/**）若不先跑这个 fixture，会在 D2/返工时才发现，那时 ext 包已写满。方案：EXT 域票的 accept 必含 ExtChokepointContractTest。",
+      "status": "open",
+      "decision": "",
+      "severity_reported": "S1"
+    },
+    {
+      "id": 30,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "api-contract.md 第 38 行为单位/组别列了 DELETE，但 ticket + 权威是只启用/停用",
+      "detail": "FLOW:F-AUTH-03.step1 与 ticket §2.2 都是『不物理删，只启用/停用』；实现按 ticket+权威走（PUT …/{id}/status）。契约是只读区，本票未改。方案：改契约那一行。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 31,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "归并核验要不要清自填名 / 内部能否归并到停用单位——ticket 未写",
+      "detail": "① PUT /mp/ext/profile 归并后 group_name_input / unit_name_input 是否清空，ticket 没写；② 内部核验时把外部归并到一个已停用单位，口径待定。本票按保守口径实现（见报告 §8）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 32,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "headless 下侧边栏 router.push 后 .router-view 不换，需整页加载",
+      "detail": "影响后续所有工作台 UI 自动化（D2-D7 的 L2 断言）。本票截图/探针改用整页加载绕过。方案：在 plus-ui 的 L2 自动化约定里写明用整页导航，或查明是 keep-alive/transition 与 headless 的交互。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 33,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "api.sh --fresh-module 在沙箱里 exit 1（不是 2）：工具故障伪装成『断言不成立』",
+      "detail": "L0+L1 QA 片实测：/bin/ps 被禁 → 落到 macOS 不支持的 date -d → set -e 提前退出，exit code 1。而 doc/verify/README.md 把 1 定义为『断言不成立』，于是工具故障与实现红不可分（README 坑 #3 还要求每条 API accept 都带这个开关，照做必假红）。已连续五张票命中此坑的另一种表现（exit 2）。方案：api.sh 把启动时间换成 lsof / 日志 mtime 兼容写法，或给一个跳过启动时间守卫的显式开关。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 34,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "clean-orphan-accounts.sh 只清 app_user，漏掉授权路径建的 sys_user（已修）",
+      "detail": "L0+L1 QA 片实测：AUTH-STAFF-001 的授权路径会建 user_type='sys_user' 的账号（2101952990830182401|13900000002），原脚本按 user_type='app_user' 过滤 → 清不掉，自称的『清回确定性 seed 快照』做不到。已修：改成『非 seed 段 + 手机号非空』（上游自带账号手机号是空串，天然豁免），复核查询同步收窄。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 35,
+      "ticket": "SYS-WEB-001",
+      "severity": "S1",
+      "type": "debt",
+      "title": "工作台在 pnpm dev 下任何菜单导航都渲染成空白页（构建产物不受影响）",
+      "detail": "D1 QA r1 L2 片实测：pnpm dev(8082) 下点侧边栏任何菜单，.app-main innerHTML 长度=7（只剩 <!--->），硬刷新同一 URL 就正常；无 JS 报错。触发点已隔离到 src/layout/components/AppMain.vue 的 <transition mode=\"out-in\">（去 mode 或去 transition 即恢复；keep-alive 单独不影响；清 .vite、禁 vue-devtools 仍复现）。pnpm build:dev 静态产物 + 同一后端三页 appMainLen=16757/18895/20986 全部正常 → 老师拿构建产物不被卡，故不是 S0；但后续每个 WEB ticket 的人工/L2 走查都走 pnpm dev，会持续被卡，故 S1。截图 doc/waves/regression/D1/shots-L23/11b-web-menu-nav-blank.png vs 12-web-staff-list.png。修法在 code/plus-ui/**（touches 允许），但 SYS-WEB-001 §3 写了『不改上游布局组件』，边界待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 36,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 2 的小字断言 grep 的是注释，文案改错也全绿",
+      "detail": "grep -q '核验、冻存取用请到网页工作台' src/pages/me/index.vue 命中的是第 31 行注释，真正渲染值在 entries.ts 的 INTERNAL_ADMIN_NOTE。证伪实测：把它改成 CR 禁止的旧串『修改、核验…』后 accept 2 的 7 条 grep + vitest 全绿，只有 QA 的 H5 渲染断言报红。方案：断言改成断渲染结果（H5/DOM 或读 entries.ts 常量），别 grep 源码。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 37,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "「首页没有任何计数」是黑名单 grep，换个 class 名即绕过",
+      "detail": "accept 里是 ! grep -nE 'wd-badge|is-dot|角标|StatTile|pendingSamples|todayNew|cryoOverdue|recent' src/pages/index/index.vue。证伪实测：注入 <text class=\"lqg-counter__n\">7</text>（名字避开黑名单）后 accept 全绿，QA 的 H5 断言明报 digits=[\"7\"] 才红。方案：改成白名单式断渲染（首页正文不含数字节点），而不是列举已知的计数组件类名。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 38,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "roleKey 白名单在校验前被折叠，requireGrantableRole 不可达（非法值静默 200）",
+      "detail": "grantedRoleKeys() 先把 roleKey 折叠成 lqg_internal，requireGrantableRole() 因此不可达：POST /lqg/auth/staff {\"roleKey\":\"lqg_external\"} 与 PUT /{id}/role {\"roleKey\":\"totally-bogus\"} 都回 200 并把角色弄成 lqg_internal（无报错）。方向是外部→内部、只有 lqg_admin 能调，不构成越权，故 S2 不拦门；但 BO 注释与错误文案都宣称有白名单，属实现与自述不一致。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 39,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越界：修 S1 时改了上游布局组件 code/plus-ui/src/layout/components/AppMain.vue（突破 §3「不改上游布局组件」）",
+      "detail": "回滚方式 git revert cbeaf4f。非改不可的理由：唯一可行根因修复点是 AppMain.vue——根因是 views/index.vue 顶层注释让首页在 vite dev 下变成 Fragment 根，transition mode=out-in 把钩子挂 Fragment 上，卸载 Fragment 不回调 afterLeave → BaseTransition.isLeaving 永久 true → 之后只输出 <!--->。负对照证明「只挪 index.vue 注释 / 改成多根节点」都不是修复（多根节点照样白屏），必须改 AppMain.vue。备选方案逐条否决见 doc/waves/reports/D1-rework-S1.md §7。风险：与上游分叉（上游 master 与本地 5.6.1 参考至今都写 mode=out-in，无官方 backport），将来同步上游时这行会冲突，须人工保留。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 40,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "pnpm --store-dir 在 pnpm 10.33 不解析（把路径当脚本名 spawn → EACCES）",
+      "detail": "本机必须用 npm_config_store_dir=<abs> pnpm <script>。之前几张票的 accept 与调度指令都写了 --store-dir 形式，会误红。方案：后续 ticket 的 accept 与提示统一改成 npm_config_store_dir 前缀。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 41,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "dev 下首页 enter 动画本来就不播（index.vue 顶层注释的既有副作用，未动）",
+      "detail": "Vue 对非元素根不做动画。SYS-WEB-001 的 index.vue 顶层注释导致 dev 下首页根是 Fragment，所以 enter 动画不播；生产构建丢注释后正常。本轮回工刻意没动 index.vue（否则会掩盖本轮缺陷的可复现性）。方案：SYS-HOME-001 顺手把那行注释挪进根 <div>。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 42,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "给 D2-D7 的硬约束：路由页模板必须恰好一个元素根；绝不要给 AppMain 的 transition 加回 mode",
+      "detail": "① 路由页模板顶层注释会让根 vnode 变成 Fragment，dev 与生产表现不一致（本轮白屏事故的成因）；② 给该 transition 加回 mode=out-in/in-out 会重新引入白屏 S1。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 43,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "回归包反 stale 守卫只扫 ruoyi-modules/ruoyi-lqg/src，改 ruoyi-admin 或其它模块不会被发现",
+      "detail": "D1 r2 L0+L1 片实测：改了 ruoyi-admin 的 application*.yml（或任何 ruoyi-lqg/src 之外的后端源）后不重打包，回归包仍打印『新鲜度 ✓』→ 在 ruoyi-lqg/src 之外重演 gotcha #3 的假绿。本轮真值不脏（两个 yml 与 jar 内副本只差 Maven 占位符，已逐字比过）。方案：守卫扫 code/RuoYi-Vue-Plus 下全部 src 与 resources（排除 target/），或改用 jar 内 .class md5 与当前源码重编译结果对比（r2 片已用后者做独立自证）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 44,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "回归包 build_front 打印的『产物已重建（N 个文件）』恒为 1，证据行无信息量",
+      "detail": "find 指向的是文件 dist/index.html / app.json，所以计数恒 1。方案：改成数目录下文件总数（dist 430 / mp-weixin 171），或直接打印产物指纹。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 45,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "authority 里 t_lqg_source_unit.unit_status 的表/列注释写『外部自填的新单位先落 pending』，accept 期望 approve+createUnit 后是 active",
+      "detail": "D1 r2 L0+L1 片范围外发现。accept 第 2 段断 verified|C 研究所|active|肿瘤组，ticket §2.2 也写『把自填名建成 active 单位 / 组别』，实现按 active 走；authority 的注释措辞更松（可能指的是『未经核验的外部自填单位』这一中间态）。权威是只读区，本批未改。方案：请 Kevin 定注释措辞是否要与 accept 对齐。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 46,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "清理手段隐患：pkill -f 'ruoyi-admin.jar' 会误杀 Kevin 在 8080 上跑的 dongjiaoshan 后端",
+      "detail": "本机 8080 上有一个 java 进程（PID 33586）在监听，命令行可能同样含 ruoyi-admin.jar，模式匹配 kill 有误杀风险。D1 r2 L0+L1 片改用 PID 精确 kill 规避。纪律：之后所有派单一律『先 lsof -ti tcp:<自己的端口> 拿 PID，再 kill 该 PID』，禁用 pkill -f 模式匹配。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 47,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "D1 r2 L2 资产自身两个 bug 卡死两任 QA subagent（已修，非产品缺陷）",
+      "detail": "① resetToLogin 只做 hash 跳转（同 URL goto 不重载），页面内存里的 agreed ref 留到下一次登录 → mockLogin 再点 .login__box 反而取消勾选 → 调试登录被『请先阅读并勾选…』挡下 → 等 .lqg-tile 超时；② page.$$eval('.lqg-tile', els => els.filter(e => e.querySelector(BADGE_SEL))) 把外层常量写进页面函数上下文 → ReferenceError: BADGE_SEL is not defined。两处都由主会话定位并修（改 hash 导航为硬 reload + 勾选做成幂等 + BADGE_SEL 当参数传），修后 mp-h5 脚本 26/26 全绿。教训：分片 agent 死在自己的 harness 上时，先怀疑 harness。另：产品侧 onMockLogin 与 onGetPhoneNumber 一样校验 agreed —— 那是刻意一致，不是缺陷。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 48,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "撤销授权二次确认点「取消」产生未处理 promise rejection",
+      "detail": "staff/index.vue:301 的 await $modal.confirm 没有 catch：dev 报 pageerror('cancel')、build 报 console.error；无用户可见故障，一行可修。D1 r2 L2 片发现。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 49,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "D1 r2 L2 工作台断言脚本 5 处裸 click+waitForSelector 无重试（已加固）",
+      "detail": "曾把 WEB-09 误报成 FAIL（固定 sleep 后单次读文本读到上一步旧文案）。已改成 waitDialogText 轮询 + clickRowAndWait 点击重试；加固后重试计数 0、dev/build 两轮都跑完（dev 39/40、build 40/40）。未改任何 check() 期望值。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 50,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "D1 r2 小程序独立断言脚本 3 处脆弱点（2 处已修、1 处故意不修）",
+      "detail": "① gotoMe 假设 tabbar 恒可点 → 改断可见性并回首页 tab；② MP-33 读 uni-input 包装元素 → 改读内层 input 的 value；③ MP-31 的断言无权威支撑，裁决为 harness 过严（产品无缺陷），故意不修。加固后 37/38。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 51,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "api.sh --fresh-module 在本沙箱恒 exit=1，doc 里 54 处引用它",
+      "detail": "沙箱禁 ps + 回退走 GNU date -d → exit 1，而 README 把 1 定义为「断言不成立」，工具故障与实现红不可分。已有 L23-freshness.sh 作等价替代（jar mtime/sha256 + lsof 持 jar + 启动晚于 jar）。方案：api.sh 换 lsof/日志 mtime 兼容写法，或给一个显式跳过开关。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 52,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 的 L3 脚本用黑名单 .code != 200 判「外部被拒」（README 坑 #2）",
+      "detail": "黑名单式断言对「端点不存在 404」也成立，实现什么都没做照样绿。r2 改成正码白名单 .code==500 + .data==null 判。方案：L3 类断言一律正码白名单 + msg 分支关键词 + 库内不变三段式。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 53,
+      "ticket": "AUTH-STAFF-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 只在单端点验「撤销后旧 token 401」；GET /mp/ext/profile 恒 405 会漏判",
+      "detail": "405 在鉴权前就定了，照抄该路径会得到假绿。r2 改用真实方法 PUT /mp/ext/profile 探第二端点，撤销后同样 401、而 extA 的 token 仍 200。方案：踢下线类断言至少两个真实端点。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 54,
+      "ticket": "AUTH-LOGIN-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 未断「被拒响应整体 .data == null」，只查 access_token 单字段",
+      "detail": "只查一个字段会漏掉「token 字段为空但 data 里还塞了别的东西」的形态。r2 补断整个 .data==null。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 55,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "reseed.sh 不清运行时建的账号，README 未写明，易污染「最后管理员」闸门",
+      "detail": "实测建第二个 lqg_admin 后只跑 reseed，库里仍有 2 个 admin → 「不能撤到没有管理员」这条闸门会合理地不触发，看起来像实现没做。受控复现（干净 1 管理员）时闸门正确返 500 且库不变。方案：doc/verify/README.md 写明『收尾必须 reseed + clean-orphan 两步』。",
+      "status": "open",
+      "decision": ""
+    }
+  ],
+  "phase_plan": {
+    "qa_scope": {
+      "D1": {
+        "L0": [
+          "mvn -pl ruoyi-modules/ruoyi-lqg -am install 全绿（含 MockLoginGuardContractTest）；plus-ui `pnpm build:prod`、miniapp `pnpm build:mp-weixin` 通过（真门是 build 不是类型检查）"
+        ],
+        "L1": [
+          "flyway_schema_history 只有成功行且 D1 的迁移都在；26 个 lqg_ 字典逐个点名、评分四个字典的分值在 remark；角色 101 / 102 / 103 的 role_key 精确",
+          "reseed 后 8 个测试账号与角色逐一对上（doc/verify/README.md 的身份表）；t_lqg_wx_bind / t_lqg_ext_profile / 单位 / 组别四张表 ddl_vs_ssot 全过",
+          "同一手机号在 sys_user 里恒为 1 行：分别走「首登自动建」「换微信号再登」「按手机号授权升级」三条路径后各查一次"
+        ],
+        "L2": [
+          "微信开发者工具：登录页 → 内部首页四个入口 / 外部首页三个入口（没有 -80 冻存记录），两种首页都没有数字 → 我的（内部有「内部管理」板块、外部有「单位与组别」，都有「历史编辑记录」）→ 单位与组别页（截图留证）；拒绝授权手机号停在登录页",
+          "工作台：lqgadmin 登录 → 人员与单位三个页面（授权弹窗、单位组别主从、外部用户核验弹窗）各走一遍（截图）"
+        ],
+        "L3": [
+          "外部账号带着可用口令登工作台必须被拒，且 msg 走到「无权」分支（seed 里 extB 就带着口令）",
+          "撤销内部授权后旧 token 立即 401；不能撤销自己；不能撤到没有管理员",
+          "外部改单位或组别后立刻回到待核验；自填单位不选「新建 / 归并」不许通过；组别与单位不匹配被拒",
+          "不带 clientid 的登录请求拿不到 token；prod 配置文件里没有 mock-login 这个键"
+        ]
+      },
+      "D2": {
+        "L0": [
+          "后端编译 + 单测（核验转移表全格、ExtChokepointContractTest 四条不变量）；两个前端 build；miniapp 四份 fixture 单测（首页入口与「我的」区块含跳转目标、样本表单布局含入口模式、类器官表单布局、表格页列名）"
+        ],
+        "L1": [
+          "t_lqg_sample ddl_vs_ssot；新建样本的 donor_name 落库值 = openssl 独立算出的密文；按供体姓名只能精确查到、模糊查不到",
+          "可见集合逐身份核对：extA = extB = {1001-1004}、extC = {1005}、extD = {1006}、extE = {1007}、extF = ∅；软删的 1010 在任何接口都不出现",
+          "submit_source 是快照：把 extA 授权成内部之后，他以前的 3 条仍是 external",
+          "「只看我提交的」：extA = {1001-1003}、extB = {1004}；内部历史编辑记录（staff）= {1008, 1009}，改一条 1001 后变成 {1001, 1008, 1009} 且 1001 在最前；外部类器官收样落 organoid / external / pending、收样段为空"
+        ],
+        "L2": [
+          "小程序体验路径（开发者工具 automator 或手点，page.data 断言）：外部首页三格、没有数字 → 点样本记录信息表新增送检 → 我的 → 历史编辑记录出现待核验 → 工作台核验为无效 → 外部在历史编辑记录看到原因并修改重提 → 工作台核验为有效 → 外部详情只读；同组 extB 的历史编辑记录里看得到这一条，打开「只看我提交的」后看不到",
+          "工作台样本总表：九种筛选各点一遍与 accept 里的 id 集合一致；待核验行浅黄置顶；核验抽屉两个出口（截图）",
+          "内部小程序：首页四格点「样本记录信息表」直接进填写页新增；我的 → 历史编辑记录里点本人录的有效样本改一个字段保存成功、排到最前；我的 → 内部管理 → 表格页两个工作表的列名列序与模板一致、首列冻结、左右滑动看全部列、页面上没有新增与保存，点一行是只读；类器官收样 7 列可新增、可从历史编辑记录修改；外部（extC）填类器官收样三项提交后是待核验"
+        ],
+        "L3": [
+          "越权：extC 猜 id 取 1001 详情必须 404 且响应体不含任何样本字段；extE（同组未核验）同样 404",
+          "外部 PUT 里夹带 internalNo / verifyStatus / submitSource / receiveDate 不生效；同组别人的样本可看不可改；已有效的自己也改不了",
+          "内部经小程序 PUT 待核验 / 无效的外部样本被拒且库里不变；内部改有效样本后 update_by 有值",
+          "外部角色打 /lqg/** 与 /mp/int/** 一律 403；内部打 /mp/ext/** 403",
+          "判有效缺内部编号 / 内部编号撞号 / 判无效缺原因：被拒且库里不变；软删的内部编号可重用",
+          "空数据：新外部用户（无任何样本、未填组别）首页与历史编辑记录不报错",
+          "「内部管理」板块外部不渲染；身份缺失时首页与「我的」什么都不渲染；外部类器官入参夹带内部编号、收样日期不生效"
+        ]
+      },
+      "D3": {
+        "L0": [
+          "后端编译 + 单测（染色校验、SampleHint 单次查询）；两个前端 build；stain-toggle fixture 在 plus-ui 与 miniapp 两边都过；miniapp 的 embed-form fixture"
+        ],
+        "L1": [
+          "t_lqg_embed / t_lqg_embed_marker ddl_vs_ssot",
+          "三张导出文件的表头与 _input/templates/ 下甲方原件逐字逐序一致（xlsx_header.py）；行数 = 同条件列表 total；加密列导出为明文、按钮字段为「有 / 无」",
+          "切片染色提示逐样本：1001 = 2 块 / 已切片 / HE+IHC，1004 = 1 块 / 已切片 / 无，1008 = 0 块（软删不计），1002 = 0 块（待核验送样不算）；各行块数之和 = 库里未删且有效的块数",
+          "外部看得到的石蜡包埋记录：extA = extB = {2001, 2002, 2003, 2006}、extD = {2004}；「只看我提交的」extA = {2006}；工作台列表 2006 置顶、所挂样本状态 = pending"
+        ],
+        "L2": [
+          "工作台：石蜡包埋列表与抽屉、核验抽屉（所挂样本未核验时「判为有效」置灰并说明）；总表提示列悬停与跳转；三个导出按钮真的下到文件（截图 + 文件）",
+          "小程序内部：首页点「石蜡包埋送样记录」新增 → 我的 → 历史编辑记录点这一条补填脱水时间 → 内部管理的石蜡包埋工作表里冻结格的工序圆点变化（只读）；样本修改页的「给这个样本加石蜡块」带着样本进填写页",
+          "小程序外部（extA）：首页点石蜡包埋送样记录 → 选自己的 1001 → 提交 → 工作台石蜡包埋页置顶浅黄 → 判有效给编号 → extA 在历史编辑记录与 1001 详情里看到这块石蜡；extB 打开 1001 详情看到石蜡块卡片，标识是石蜡块编号"
+        ],
+        "L3": [
+          "无染色 + HE 同时提交被拒；选其他不写名称被拒；字典外的染色值被拒；挂到待核验样本被拒——且库里都没多出行",
+          "有已核验石蜡块的样本改判无效被拒",
+          "外部送样：替同组别人的样本送样、挂到自己无效的样本、夹带石蜡块编号与染色——被拒或不生效且库里不变；所挂样本未核验时判有效被拒；普通保存改不动待核验送样；外部改不了实验室录的石蜡块",
+          "外部详情的 embeds 里没有 embedBy / operatorName / internalNo 键；extC 取 1001 仍 404",
+          "导出：外部角色调导出 403；带筛选导出只出筛选结果；空结果导出只有表头不报错"
+        ]
+      },
+      "D4": {
+        "L0": [
+          "后端编译 + 单测（超期边界四例、并发取样 10 线程恰好成功 3 次、CryoBalanceCheckerTest 最终为正但中途为负必须拒绝）；两个前端 build"
+        ],
+        "L1": [
+          "t_lqg_cryo_batch / t_lqg_cryo_flow ddl_vs_ssot；批次表上没有任何 remain / current / stock 类的列",
+          "剩余逐批：接口值 = db.py 独立汇总 = seed 期望（3001→6 … 3007→5，3004→0）",
+          "超期集合 = {3001, 3005}，已超天数 {6, 0}；四处同源：/lqg/cryo/overdue、工作台列表 tabCounts.overdue、overdueOnly 列表、小程序内部管理 /mp/int/cryo/batch/list 的 tabCounts.overdue 都是 2",
+          "冻存导出表头 = 模板 9 列 + 代数 + 当前剩余/支；「冻存数量/支」是初始不是剩余"
+        ],
+        "L2": [
+          "工作台：超期行置顶标红、取走 / 补入 / 盘点调整 / 转液氮四个动作、流水抽屉（截图）",
+          "小程序内部：我的 → 内部管理 → 「-80 冻存」工作表三个页签计数、超期行浅红置顶；点一行出批次详情（只读：取用登记每行有操作后剩余，没有取走 / 改按钮）；首页点「-80 冻存记录」新增一批 → 历史编辑记录里改冻存数量（改到剩余为负被拒、提示原样显示）"
+        ],
+        "L3": [
+          "并发：5 个请求同时取最后 2 支，只成功 1 个，剩余恰好 0",
+          "超取、取走数为负、调整缺原因、调成负数：被拒且不产生流水",
+          "改登记：把一笔取走挪早并加量、让中途剩余为负（最终为正）被拒；删掉一笔补入让后面的取走不够被拒；改登记类型被拒；flowId 不属于该批次被拒——全部库里不变",
+          "边界：恰好第 14 天算超期、第 13 天不算、取空了不算、直接进液氮不算、软删不算；转了液氮立刻出清单",
+          "小程序 /mp/int/cryo 上没有取走、改删登记、转液氮接口（调用得到「接口不存在」且库里不变）；外部调任何冻存接口 403",
+          "初始支数改到让剩余为负被拒、改到不为负成功；有流水的批次删除被拒；有冻存批次的样本改判无效被拒"
+        ]
+      },
+      "D5": {
+        "L0": [
+          "后端编译 + 单测（OcrFieldParserFixtureTest 五例、OcrProviderSelectionTest）；miniapp build + prefill fixture"
+        ],
+        "L1": [
+          "识别前后 t_lqg_sample 与 sys_oss 行数不变（识别不落库、不存图）",
+          "ocr_spike_check.py 通过：报告里的命中率与 results.csv 重算一致（**依赖甲方照片；没到则本条记 blocked，不算 QA 失败**）"
+        ],
+        "L2": [
+          "真机（体验版）：拍一张带字的标签 → 预填 → 改一项 → 小标消失 → 提交；识别失败 / 被限流时仍能手填提交（录屏）",
+          "测试环境：/lqg/sys/ping 的 buildCommit = 本地 HEAD、profile=test；甲方对接人能用体验版登录并看到试用说明"
+        ],
+        "L3": [
+          "fixture 03：噪声里的 2-8℃ 与日期不得被解析成年龄 / 住院号；fixture 05：不在单位表里的单位名不得硬匹配",
+          "已手填的项不被识别结果覆盖；识别返回了表单里没有的键（internalNo）不进表单",
+          "一分钟内第 7 次识别被限流；没配 provider 时提示「请手动填写」而不是系统异常",
+          "小程序包与源码里搜不到任何第三方识别服务域名或 key；prod 配置里没有 paid-enabled 与 provider: stub",
+          "测试机 5432 / 6379 / 9000 端口公网不可达"
+        ]
+      },
+      "D6": {
+        "L0": [
+          "后端编译 + 单测（DocFingerprintTest：逐项改一个输入指纹必变）；plus-ui build + score fixture"
+        ],
+        "L1": [
+          "五张文档表 + t_lqg_doc_file ddl_vs_ssot",
+          "评分对账：每行 total_score = 四个档位在字典 remark 里的分值之和（SQL JOIN 字典表）；前端夹带的分值不生效；0 分档照算；没选全合计为空",
+          "渲染出的 Word（docx_check.py）：带出字段与填写字段都在、两句注逐字保留、无残留占位符、图片数达标；外部版搜不到内部编号",
+          "PDF：pdftotext 抽得出中文、pdffonts 显示思源 / Noto 已嵌入且无 DejaVu / Liberation；页面图片页数 = pdfinfo 页数；合并文件内三份按固定顺序"
+        ],
+        "L2": [
+          "工作台编辑页：三个页签、图片位传 3 张后上传按钮消失、点图放大、TIFF 显示预览图、评分选含 0 分档的组合合计正确（截图）",
+          "渲染出的 PDF 与甲方 Word 原件并排人工比一眼，差异记入 DOC-PROOF-001 要用的清单"
+        ],
+        "L3": [
+          "首次打开质控文档并发两次只建一份草稿；待核验样本打不开质控文档",
+          "图片位：第 4 张被拒、slot 归属错被拒、评分表挂图被拒——库里不变",
+          "停掉 gotenberg 后渲染：状态 failed 带原因、pages 不返回旧图；恢复后重新生成成功（测完容器要启回来）",
+          "同一份文档连续渲染两次不重出（oss_id 与 rendered_time 不变）；改一个字、换一张图、升模板版本各自都会重出",
+          "图片地址取不到时整份文档 failed，而不是静默出一份缺图的文件"
+        ]
+      },
+      "D7": {
+        "L0": [
+          "后端编译 + 单测（发布状态机、ExtChokepointContractTest 在加了文档接口后仍过）；两个前端 build；miniapp 的 doc-group 与 download fixture、表格页 export.spec"
+        ],
+        "L1": [
+          "发布后 doc_file 里内外部版 × (docx, pdf, png) 六种产物齐；改内容 / 加图片 / 改评分任何一种之后 doc_status 回到 draft",
+          "外部文档清单（extB）= {1001:organoid_score, 1004:sample_qc}：1004 的类器官质控表是草稿不给、1001 的两份因图片是假地址外部版渲染失败不给",
+          "工作台首页五个数 = 待核验样本 2、待核验送样 1、超期 2、待核验外部用户 2、渲染失败 0，且与 db.py 独立数的一致；外部新交一条类器官收样与一条送样后两个待核验数各加一；故意渲染失败一份后 renderFailed 跟着变；超期数与超期清单同源",
+          "小程序导出的四个 xlsx 表头与甲方模板原件逐字一致、行数与库内计数一致；同一筛选下与工作台导出的文件逐列一致"
+        ],
+        "L2": [
+          "真机（体验版）：文档页签 → 分组卡片上直接「下载」PDF 打开、「合并下载」Word 发送到文件传输助手 → 点进预览 → 顶部在三份之间切换 → 点页面全屏缩放 → 点缩略图看原图（录屏）；内部与外部（extB）各走一遍，外部也看得到三份中已完成的那几份",
+          "真机：我的 → 内部管理 → 表格页筛待核验 → 导出 Excel → 打开 → 右上角转发给自己；文件里只有筛出来的行",
+          "工作台：预览面板内外部版切换、四个下载按钮真下载、完成前后徽标变化；首页五张卡片点击直达且为 0 的变灰不隐藏、菜单角标（含石蜡包埋）与卡片数字一致",
+          "样张目录齐全，差异清单逐条有结论；给甲方的说明可直接转发"
+        ],
+        "L3": [
+          "外部下载接口带 audience=internal：链接里仍是 /external/，下载下来的文件里搜不到内部编号",
+          "extC 取 1001 的文档 pages / download 均 404；extA 取 1004 草稿 404；外部角色直接打 /lqg/doc/** 403；extC 带 sampleId=1001 取外部文档清单为空",
+          "外部角色调 /mp/int/export/** 403；未知工作表被拒",
+          "重复完成、对草稿撤回被拒",
+          "签名链接 10 分钟后失效（等过期后 curl -f 失败）；猜 sampleId 拿不到别人的链接",
+          "文档生成中 / 失败时小程序预览页的提示不泄露内部错误；空文档列表有空状态"
+        ]
+      },
+      "D8": {
+        "L0": [
+          "生产镜像构建成功；`docker compose -f code/deploy/prod/docker-compose.yml config` 校验通过；miniapp 生产构建"
+        ],
+        "L1": [
+          "生产 /lqg/sys/ping：profile=prod、mockLogin=false、encryptEnabled=true、buildCommit = HEAD",
+          "最新备份 < 26 小时且 > 10KB；恢复演练报告里 15 张业务表逐表行数与生产一致",
+          "全量导出清单：各表行数、OSS 文件数、加密列已验证为明文、导出包已删除"
+        ],
+        "L2": [
+          "线上小程序真实微信登录走通（生产库里出现第一个外部用户）；工作台用甲方管理员手机号授权后可登录",
+          "两份操作说明 PDF 人工通读：外部版一页、无内部用语；内部版的 14 行对照表能对上合同附件"
+        ],
+        "L3": [
+          "对生产地址发 mock 登录请求被拒",
+          "生产 5432 / 6379 / 3000 / 8080 端口公网不可达；OSS 对象裸地址匿名 GET = 403",
+          "仓库里搜不到 .env、AK、生产口令；prod 配置文件里没有 mock-login / paid-enabled / provider: stub 三个键",
+          "http 访问自动跳 https；证书剩余 > 20 天",
+          "小程序生产包里没有调试登录入口、没有指向测试环境或内网的地址"
+        ]
+      }
+    },
+    "goal": {
+      "D1": "底座与登录：后端（若依 + PostgreSQL + Flyway + ruoyi-lqg）、工作台壳、小程序壳三端立住；微信 + 手机号登录后按手机号判定内外部；实验室能按手机号给人授权、维护单位组别、核验外部用户的组别",
+      "D2": "样本送检主线闭环：外部小程序填样本记录信息表（也能填类器官收样记录）→ 实时出现在工作台总表 → 内部核验（有效给内部编号 / 无效写原因）→ 外部在「我的 → 历史编辑记录」看到状态、无效的改后重提；内部在小程序（首页填写、历史编辑记录修改）和工作台录两种收样；内部人员「我的 → 内部管理」的只读表格页（样本两个工作表：像 Excel 一行一条、可筛选，CR-20260917-04 / 05）；外部隔离咽喉立住",
+      "D3": "石蜡包埋与导出：石蜡包埋送样记录两端可陆续补填（染色五按钮、marker 三按钮）；外部可提交石蜡包埋送样、实验室在工作台核验时给石蜡块编号（CR-20260917-05）；总表出现切片染色提示；外部在样本详情看到包埋情况（含待核验的送样）；样本记录信息表、类器官收样记录、石蜡包埋三张 Excel 按甲方模板列序导出",
+      "D4": "冻存：建批（挂样本、记代数）→ 超两周提醒 → 转液氮；取走 / 补入 / 盘点调整全程留痕，登记填错了可改可删、初始支数可改（逐笔剩余不得为负，CR-20260917-04），剩余支数恒等于初始 + 未删流水累计；两端页面（小程序：首页新增冻存记录、历史编辑记录修改、内部管理里只读的 -80 冻存工作表与批次详情；取走 / 补入 / 转液氮 / 改删登记只在工作台，CR-20260917-05）+ 按模板导出",
+      "D5": "拍照识别与可试用版：识别只做预填（只填空项、标「请核对」、失败不挡手填），识别服务可插拔、付费通道默认关；探路报告给出方案对比；测试环境 + 小程序体验版交到甲方手里（合同 3 周节点）",
+      "D6": "质控文档编辑与渲染：三份文档在工作台整页编辑（带图、带附件、评分后端回填）；一份 docx 模板渲染出 Word → PDF → 页面图片，内部版与外部版各一套，按内容指纹缓存",
+      "D7": "文档同步给送检方：完成并同步 / 改了自动撤回；外部只拿得到本人与同组、已完成且外部版渲染成功的文档；小程序文档页签（每份可直接下载、可合并下载）、预览（顶部三份切换、可放大、看原图）、Word / PDF 打开或发送到微信；小程序「我的 → 内部管理」导出四张 Excel（与工作台同一个导出视图，CR-20260917-04 / 05）；样张发甲方确认；工作台首页待办（五张卡片，含待核验石蜡包埋送样）",
+      "D8": "上线收口（合同里的联调测试一周）：生产环境部署并守住护栏、每日备份 + 一次真实恢复演练 + 全量导出脚本、小程序以甲方主体提审发布、两份操作说明；然后跑 final_rehearsal"
+    },
+    "rehearsal": [
+      "剧本 1 · 一份外部样本的完整一生（合同附件第 1-7、9-11、13 行）：新手机号用微信登录 → 自动成为外部用户 → 填单位组别 → 拍照识别预填（故意拍一张识别不全的，手工补全）→ 提交 → 工作台总表实时出现待核验 → 实验室核验其组别并判样本有效、给内部编号 → 外部再交一条石蜡包埋送样、实验室判有效给石蜡块编号 → 内部在小程序补两个石蜡块（一个 HE + IHC 已切片，一个无染色）→ 小程序首页建一批 -80 冻存（P2）→ 工作台取走 2 支、转液氮 → 工作台编辑三份质控文档（各传图、评分含一个 0 分档）→ 预览 → 完成并同步 → 该外部用户在「我的 → 历史编辑记录」看到状态一路变化，在样本详情看到包埋情况与三份文档、预览可放大、打开 PDF、发送 Word 到微信。对账点：总表的切片染色提示 = 实际录入；冻存剩余 = 初始 − 2；外部全程没看到内部编号、操作人、冻存信息。",
+      "剧本 2 · 同组互看与越权（合同附件第 6 行）：同单位同组的第二个外部用户登录并被核验 → 能看到剧本 1 那条样本及其三份文档、但没有任何编辑入口；同单位另一组的第三个用户、另一单位的第四个用户都看不到，猜 id 直接访问详情与文档下载均按不存在返回；第二个用户改了组别 → 立刻看不到了，直到重新核验。",
+      "剧本 3 · 无效与改后重提、撤回与重新同步：外部提交一条缺住院号的样本 → 判无效写原因 → 外部看到原因、修改后重提 → 判有效；实验室发现质控表写错 → 直接修改保存 → 该文档对外立即消失、合并文件失效 → 重新完成并同步 → 外部再次看到且内容是新的（下载下来的 PDF 里是改后的文字）。",
+      "剧本 4 · 冻存超期与追溯（合同附件第 12 行）：把一批测试冻存的冻存时间设为 14 天前 → 工作台首页待办与菜单角标、冻存列表置顶标红、小程序「我的 → 内部管理」冻存表格页的超期页签三处同时出现且数字一致 → 两人同时各取该批最后几支，只成功一人、剩余不为负 → 登记转液氮后三处同时消失 → 流水抽屉里每一笔的人、时间、取自位置、用途都在 → 把其中一笔取走的支数改错再改回、删掉一笔补入（剩余会不够时被拒并指出哪一笔），剩余与超期标记跟着变，改过的登记显示最后修改人；小程序内部管理里同一批的取用登记（只读）与工作台一致。",
+      "剧本 5 · 四张 Excel 与内外部区分（合同附件第 8、9 行）：按来源单位 + 收样日期区间筛选后导出样本记录信息表 → 与甲方模板原件并排核对表头逐字一致、行数 = 列表总数、供体姓名是明文、按钮字段是「有 / 无」；同样核对类器官收样记录、石蜡包埋送样记录、-80 冻存三张；把一个外部用户授权成内部后，他以前送的样本在总表里仍标「外部」；内部人员在小程序「我的 → 内部管理」用同样的筛选导出一份，与工作台导出的逐列一致，打开后能转发；在「我的 → 历史编辑记录」点一条自己录的已核验样本改掉一个错字，工作台总表立即看到新值和最后修改人，内部管理表格页点同一条是只读。",
+      "剧本 7 · 小程序结构（2026-09-17 晚 Kevin 定，CR-20260917-05）：外部首页三格（没有 -80 冻存记录）、内部四格，都没有数字，点哪格都是填写；外部分别交一条样本记录、一条类器官收样、一条石蜡包埋送样 → 三条都在「我的 → 历史编辑记录」对应页签里，同组同事也看得到、打开「只看我提交的」后只剩自己的 → 实验室判其中一条无效 → 外部在历史里改后重提；内部人员的「我的」里有「内部管理」板块（四张表只读、可筛选、可导出），外部没有这个板块。",
+      "剧本 6 · 上线护栏与数据安全（合同附件第 14 行、第四条 2(5)）：生产地址上 mock 登录被拒；数据库与缓存端口公网不可达；OSS 文件匿名不可读；库里供体姓名、住院号、患者编号三列是密文；拿最新备份恢复到空库、行数与生产一致；全量导出包里加密列是明文、用完即删。"
+    ]
+  }
+}
