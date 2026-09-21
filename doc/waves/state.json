@@ -6,7 +6,7 @@
   "phases": [
     {
       "id": "D1",
-      "status": "qa_failed",
+      "status": "qa_running",
       "qa_rounds": 1,
       "qa_seq": 1
     },
@@ -774,6 +774,96 @@
       "type": "debt",
       "title": "roleKey 白名单在校验前被折叠，requireGrantableRole 不可达（非法值静默 200）",
       "detail": "grantedRoleKeys() 先把 roleKey 折叠成 lqg_internal，requireGrantableRole() 因此不可达：POST /lqg/auth/staff {\"roleKey\":\"lqg_external\"} 与 PUT /{id}/role {\"roleKey\":\"totally-bogus\"} 都回 200 并把角色弄成 lqg_internal（无报错）。方向是外部→内部、只有 lqg_admin 能调，不构成越权，故 S2 不拦门；但 BO 注释与错误文案都宣称有白名单，属实现与自述不一致。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 39,
+      "ticket": "SYS-WEB-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越界：修 S1 时改了上游布局组件 code/plus-ui/src/layout/components/AppMain.vue（突破 §3「不改上游布局组件」）",
+      "detail": "回滚方式 git revert cbeaf4f。非改不可的理由：唯一可行根因修复点是 AppMain.vue——根因是 views/index.vue 顶层注释让首页在 vite dev 下变成 Fragment 根，transition mode=out-in 把钩子挂 Fragment 上，卸载 Fragment 不回调 afterLeave → BaseTransition.isLeaving 永久 true → 之后只输出 <!--->。负对照证明「只挪 index.vue 注释 / 改成多根节点」都不是修复（多根节点照样白屏），必须改 AppMain.vue。备选方案逐条否决见 doc/waves/reports/D1-rework-S1.md §7。风险：与上游分叉（上游 master 与本地 5.6.1 参考至今都写 mode=out-in，无官方 backport），将来同步上游时这行会冲突，须人工保留。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 40,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "pnpm --store-dir 在 pnpm 10.33 不解析（把路径当脚本名 spawn → EACCES）",
+      "detail": "本机必须用 npm_config_store_dir=<abs> pnpm <script>。之前几张票的 accept 与调度指令都写了 --store-dir 形式，会误红。方案：后续 ticket 的 accept 与提示统一改成 npm_config_store_dir 前缀。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 41,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "dev 下首页 enter 动画本来就不播（index.vue 顶层注释的既有副作用，未动）",
+      "detail": "Vue 对非元素根不做动画。SYS-WEB-001 的 index.vue 顶层注释导致 dev 下首页根是 Fragment，所以 enter 动画不播；生产构建丢注释后正常。本轮回工刻意没动 index.vue（否则会掩盖本轮缺陷的可复现性）。方案：SYS-HOME-001 顺手把那行注释挪进根 <div>。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 42,
+      "ticket": "SYS-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "给 D2-D7 的硬约束：路由页模板必须恰好一个元素根；绝不要给 AppMain 的 transition 加回 mode",
+      "detail": "① 路由页模板顶层注释会让根 vnode 变成 Fragment，dev 与生产表现不一致（本轮白屏事故的成因）；② 给该 transition 加回 mode=out-in/in-out 会重新引入白屏 S1。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 43,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "回归包反 stale 守卫只扫 ruoyi-modules/ruoyi-lqg/src，改 ruoyi-admin 或其它模块不会被发现",
+      "detail": "D1 r2 L0+L1 片实测：改了 ruoyi-admin 的 application*.yml（或任何 ruoyi-lqg/src 之外的后端源）后不重打包，回归包仍打印『新鲜度 ✓』→ 在 ruoyi-lqg/src 之外重演 gotcha #3 的假绿。本轮真值不脏（两个 yml 与 jar 内副本只差 Maven 占位符，已逐字比过）。方案：守卫扫 code/RuoYi-Vue-Plus 下全部 src 与 resources（排除 target/），或改用 jar 内 .class md5 与当前源码重编译结果对比（r2 片已用后者做独立自证）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 44,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "回归包 build_front 打印的『产物已重建（N 个文件）』恒为 1，证据行无信息量",
+      "detail": "find 指向的是文件 dist/index.html / app.json，所以计数恒 1。方案：改成数目录下文件总数（dist 430 / mp-weixin 171），或直接打印产物指纹。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 45,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "authority 里 t_lqg_source_unit.unit_status 的表/列注释写『外部自填的新单位先落 pending』，accept 期望 approve+createUnit 后是 active",
+      "detail": "D1 r2 L0+L1 片范围外发现。accept 第 2 段断 verified|C 研究所|active|肿瘤组，ticket §2.2 也写『把自填名建成 active 单位 / 组别』，实现按 active 走；authority 的注释措辞更松（可能指的是『未经核验的外部自填单位』这一中间态）。权威是只读区，本批未改。方案：请 Kevin 定注释措辞是否要与 accept 对齐。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 46,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "清理手段隐患：pkill -f 'ruoyi-admin.jar' 会误杀 Kevin 在 8080 上跑的 dongjiaoshan 后端",
+      "detail": "本机 8080 上有一个 java 进程（PID 33586）在监听，命令行可能同样含 ruoyi-admin.jar，模式匹配 kill 有误杀风险。D1 r2 L0+L1 片改用 PID 精确 kill 规避。纪律：之后所有派单一律『先 lsof -ti tcp:<自己的端口> 拿 PID，再 kill 该 PID』，禁用 pkill -f 模式匹配。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 47,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "D1 r2 L2 资产自身两个 bug 卡死两任 QA subagent（已修，非产品缺陷）",
+      "detail": "① resetToLogin 只做 hash 跳转（同 URL goto 不重载），页面内存里的 agreed ref 留到下一次登录 → mockLogin 再点 .login__box 反而取消勾选 → 调试登录被『请先阅读并勾选…』挡下 → 等 .lqg-tile 超时；② page.$$eval('.lqg-tile', els => els.filter(e => e.querySelector(BADGE_SEL))) 把外层常量写进页面函数上下文 → ReferenceError: BADGE_SEL is not defined。两处都由主会话定位并修（改 hash 导航为硬 reload + 勾选做成幂等 + BADGE_SEL 当参数传），修后 mp-h5 脚本 26/26 全绿。教训：分片 agent 死在自己的 harness 上时，先怀疑 harness。另：产品侧 onMockLogin 与 onGetPhoneNumber 一样校验 agreed —— 那是刻意一致，不是缺陷。",
       "status": "open",
       "decision": ""
     }
