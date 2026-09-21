@@ -1,0 +1,90 @@
+{
+  "_doc": "EMBED-MP-001 / EMBED-WEB-001 共用的验收用例。被测函数：toggleStain(current, clicked) → 新的选中数组（按 HE, IF, IHC, OTHER, NONE 的固定顺序输出）。规则：染色五个按钮多选；「无染色 NONE」与其余四个互斥——点 NONE 清掉其余，点其余任何一个清掉 NONE；再点一次已选中的 = 取消。",
+  "cases": [
+    {
+      "current": [],
+      "clicked": "HE",
+      "expect": [
+        "HE"
+      ]
+    },
+    {
+      "current": [
+        "HE"
+      ],
+      "clicked": "IHC",
+      "expect": [
+        "HE",
+        "IHC"
+      ]
+    },
+    {
+      "current": [
+        "IHC",
+        "HE"
+      ],
+      "clicked": "IF",
+      "expect": [
+        "HE",
+        "IF",
+        "IHC"
+      ]
+    },
+    {
+      "current": [
+        "HE",
+        "IHC"
+      ],
+      "clicked": "HE",
+      "expect": [
+        "IHC"
+      ]
+    },
+    {
+      "current": [
+        "HE",
+        "IHC",
+        "OTHER"
+      ],
+      "clicked": "NONE",
+      "expect": [
+        "NONE"
+      ]
+    },
+    {
+      "current": [
+        "NONE"
+      ],
+      "clicked": "HE",
+      "expect": [
+        "HE"
+      ]
+    },
+    {
+      "current": [
+        "NONE"
+      ],
+      "clicked": "NONE",
+      "expect": []
+    },
+    {
+      "current": [
+        "HE"
+      ],
+      "clicked": "OTHER",
+      "expect": [
+        "HE",
+        "OTHER"
+      ]
+    },
+    {
+      "current": [
+        "HE"
+      ],
+      "clicked": "PAS",
+      "expect": [
+        "HE"
+      ]
+    }
+  ]
+}

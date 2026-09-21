@@ -1,0 +1,132 @@
+{
+  "_doc": "OCR-MP-001 的验收用例。被测函数签名：mergeOcrPrefill(form, ocrFields) → { form, marks }；marks = 被预填的字段名数组（升序）。规则：只填空项（trim 后为空才算空）、识别值为空不填、表单里没有的键忽略。",
+  "cases": [
+    {
+      "case": "A-空表单全部预填",
+      "form": {
+        "donorName": "",
+        "gender": "",
+        "age": "",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "ocr": {
+        "donorName": "测试供体甲",
+        "gender": "male",
+        "age": "56",
+        "hospitalNo": "ZY0000001"
+      },
+      "expectForm": {
+        "donorName": "测试供体甲",
+        "gender": "male",
+        "age": "56",
+        "hospitalNo": "ZY0000001",
+        "tissueType": ""
+      },
+      "expectMarks": [
+        "age",
+        "donorName",
+        "gender",
+        "hospitalNo"
+      ]
+    },
+    {
+      "case": "B-已手填的不覆盖（病灶）",
+      "form": {
+        "donorName": "手填姓名",
+        "gender": "female",
+        "age": "",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "ocr": {
+        "donorName": "识别姓名",
+        "gender": "male",
+        "age": "48"
+      },
+      "expectForm": {
+        "donorName": "手填姓名",
+        "gender": "female",
+        "age": "48",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "expectMarks": [
+        "age"
+      ]
+    },
+    {
+      "case": "C-识别值为空的不填不标",
+      "form": {
+        "donorName": "",
+        "gender": "",
+        "age": "",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "ocr": {
+        "donorName": "",
+        "age": null,
+        "hospitalNo": "ZY0000002"
+      },
+      "expectForm": {
+        "donorName": "",
+        "gender": "",
+        "age": "",
+        "hospitalNo": "ZY0000002",
+        "tissueType": ""
+      },
+      "expectMarks": [
+        "hospitalNo"
+      ]
+    },
+    {
+      "case": "D-只有空白字符算空",
+      "form": {
+        "donorName": "   ",
+        "gender": "",
+        "age": "",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "ocr": {
+        "donorName": "测试供体乙"
+      },
+      "expectForm": {
+        "donorName": "测试供体乙",
+        "gender": "",
+        "age": "",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "expectMarks": [
+        "donorName"
+      ]
+    },
+    {
+      "case": "E-识别返回了表单里没有的键要忽略",
+      "form": {
+        "donorName": "",
+        "gender": "",
+        "age": "",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "ocr": {
+        "internalNo": "hli99",
+        "verifyStatus": "valid",
+        "donorName": "测试供体丙"
+      },
+      "expectForm": {
+        "donorName": "测试供体丙",
+        "gender": "",
+        "age": "",
+        "hospitalNo": "",
+        "tissueType": ""
+      },
+      "expectMarks": [
+        "donorName"
+      ]
+    }
+  ]
+}

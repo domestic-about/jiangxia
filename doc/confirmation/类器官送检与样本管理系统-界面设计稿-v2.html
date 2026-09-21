@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>类器官送检系统 界面设计稿</title>
+<style>
+:root{
+  color-scheme:light;
+  --ground:#EDF2F2; --surface:#FFFFFF; --ink:#15232A; --ink-2:#44565F; --ink-3:#6E7F87;
+  --line:#D3DEDF; --accent:#0E7C7B; --accent-soft:#D6ECEA;
+  --shadow:0 1px 2px rgba(21,35,42,.06),0 8px 24px rgba(21,35,42,.08);
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC",sans-serif;
+  --monof:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75}
+.d-wrap{max-width:1020px;margin:0 auto;padding-inline:20px;padding-block:40px 72px;display:flex;flex-direction:column;gap:48px}
+.d-eyebrow{margin:0;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
+.d-top h1{margin:6px 0 0;font-size:30px;line-height:1.3;font-weight:700;text-wrap:balance}
+.d-sub{display:block;margin-top:2px;font-size:20px;font-weight:500;color:var(--ink-2)}
+.d-meta{margin:10px 0 0;font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.d-lead{margin:18px 0 0;max-width:40em;color:var(--ink-2)}
+.d-chg{margin:26px 0 0;padding:18px 20px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px}
+.d-chg h2{margin:0 0 10px;font-size:17px;line-height:1.4}
+.d-chg ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:12px}
+.d-chg li{padding-left:2px}
+.d-chg li::marker{color:var(--accent);font-weight:700}
+.d-chg .q{display:block;font-weight:700;color:var(--ink)}
+.d-chg .a{display:block;color:var(--ink-2);font-size:14px;line-height:1.7}
+.d-chg .f{display:inline-block;margin-top:3px;font-size:12px;color:var(--accent);font-weight:700}
+.d-how{list-style:none;margin:22px 0 0;padding:16px 20px;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px 36px;font-size:13.5px;line-height:1.65;color:var(--ink-2)}
+.d-how b{display:block;color:var(--ink)}
+.d-toc{display:flex;flex-direction:column;gap:10px;margin-top:22px;font-size:13.5px}
+.d-toc-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 8px}
+.d-toc-row>span{color:var(--ink-3);min-width:6em}
+.d-toc a{color:var(--ink-2);text-decoration:none;padding:2px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.d-toc a:hover,.d-toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+.d-part{display:flex;flex-direction:column;gap:44px;scroll-margin-top:12px}
+.d-part-head{padding-bottom:14px;border-bottom:2px solid var(--ink)}
+.d-part-head h2{margin:0;font-size:22px;line-height:1.35}
+.d-part-head p{margin:6px 0 0;max-width:40em;color:var(--ink-2)}
+.d-fig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px 40px;align-items:start;scroll-margin-top:12px}
+.d-fig.d-wide{grid-template-columns:minmax(0,1fr)}
+.d-cap{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.d-no{font-family:var(--monof);font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.d-cap h3{margin:0;font-size:17px;line-height:1.4}
+.d-who{font-size:12.5px;color:var(--ink-3)}
+.d-shot{min-width:0}
+.d-swipe{display:none;margin:6px 0 0;font-size:12.5px;color:var(--ink-3)}
+.d-say{min-width:0;max-width:36em;padding-top:2px}
+.d-say p{margin:0 0 10px}
+.d-say ul{margin:0;padding-left:1.25em;display:flex;flex-direction:column;gap:7px;color:var(--ink-2);font-size:14px;line-height:1.7}
+.d-say li::marker{color:var(--accent)}
+.d-say b{color:var(--ink)}
+.d-fig.d-wide .d-say{max-width:none}
+.d-fig.d-wide .d-say p{max-width:40em}
+.d-fig.d-wide .d-say ul{display:block;columns:2 340px;column-gap:44px}
+.d-fig.d-wide .d-say li{break-inside:avoid;margin-bottom:7px}
+.d-ask{padding-top:18px;border-top:2px solid var(--ink)}
+.d-ask h2{margin:0 0 10px;font-size:20px;line-height:1.35}
+.d-ask ol{margin:0;padding-left:1.4em;max-width:40em;display:flex;flex-direction:column;gap:6px}
+.d-ask p{margin:14px 0 0;max-width:40em;color:var(--ink-2)}
+.d-foot{margin:0;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3)}
+/* 帧里的等宽字与「Word 标题」不再依赖网络字体 */
+.mono{font-family:var(--monof)}
+.pg h6{font-family:"Songti SC","STSong","SimSun",serif}
+@media (max-width:980px){.d-swipe{display:block}}
+@media (max-width:760px){
+  .d-wrap{padding-block:26px 56px;gap:38px}
+  .d-top h1{font-size:25px}
+  .d-sub{font-size:18px}
+  .d-fig{grid-template-columns:minmax(0,1fr)}
+  .d-shot{justify-self:center}
+  .d-fig.d-wide .d-shot{justify-self:stretch}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff}
+  .d-wrap{max-width:none;padding:0}
+  .d-toc,.d-swipe{display:none}
+  .d-fig{break-inside:avoid}
+  .br{zoom:.72}
+}
+
+/* ── 以下为产品界面（设备帧）的样式，由 build_client_preview.py 从 gallery.html 原样抽取 ── */
+.scr{
+  --s-bg:#F3F6F6; --s-card:#FFFFFF; --s-ink:#16232B; --s-ink2:#5A6B74; --s-ink3:#93A1A8; --s-line:#E2E9EA;
+  --s-teal:#0E7C7B; --s-teal-soft:#DDF0EE; --s-amber:#B7791F; --s-amber-soft:#FCF1DA;
+  --s-red:#B3362B; --s-red-soft:#FBE4E1; --s-green:#2F7D4F; --s-green-soft:#DFF1E6; --s-blue:#2B5F9E; --s-blue-soft:#E1ECF8;
+  background:var(--s-bg); color:var(--s-ink);
+}
+/* ── 手机框 ─────────────────────────────────────────────────────────── */
+.ph{width:296px;max-width:100%;border-radius:30px;padding:9px;background:#1B262C;box-shadow:var(--shadow)}
+.ph .scr{border-radius:22px;overflow:hidden;height:600px;display:flex;flex-direction:column;font-size:12.5px;line-height:1.5;position:relative}
+.nav{display:flex;align-items:center;justify-content:center;height:40px;font-weight:700;font-size:13.5px;background:var(--s-card);border-bottom:1px solid var(--s-line);flex:none;position:relative}
+.nav i{position:absolute;left:12px;font-style:normal;color:var(--s-ink2);font-weight:400}
+.bd{flex:1;overflow:hidden;padding:10px;display:flex;flex-direction:column;gap:8px}
+.tabbar{display:flex;flex:none;background:var(--s-card);border-top:1px solid var(--s-line);height:46px}
+.tabbar span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10.5px;color:var(--s-ink3);gap:1px}
+.tabbar span::before{content:"";width:16px;height:16px;border-radius:5px;background:currentColor;opacity:.35}
+.tabbar span.on{color:var(--s-teal);font-weight:700}
+.tabbar span.on::before{opacity:1}
+.c{background:var(--s-card);border-radius:10px;padding:10px;border:1px solid var(--s-line)}
+.row{display:flex;align-items:center;gap:8px}
+.row.sb{justify-content:space-between}
+.mut{color:var(--s-ink2)} .tiny{font-size:10.5px;color:var(--s-ink3)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:11.5px;letter-spacing:-.01em}
+.chip{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:0 6px;height:18px;border-radius:5px;white-space:nowrap}
+.chip.t{background:var(--s-teal-soft);color:var(--s-teal)} .chip.a{background:var(--s-amber-soft);color:var(--s-amber)}
+.chip.r{background:var(--s-red-soft);color:var(--s-red)} .chip.g{background:var(--s-green-soft);color:var(--s-green)}
+.chip.b{background:var(--s-blue-soft);color:var(--s-blue)} .chip.n{background:#EDF1F2;color:var(--s-ink2)}
+.ident{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:linear-gradient(135deg,#0E7C7B,#0B5F6B);color:#fff}
+.ident .av{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.25);flex:none}
+.ident small{display:block;font-size:10.5px;opacity:.85}
+.entry{display:flex;align-items:center;gap:10px;padding:11px 10px;background:var(--s-card);border:1px solid var(--s-line);border-radius:10px;position:relative}
+.entry .ico{width:34px;height:34px;border-radius:9px;flex:none;background:var(--s-teal-soft);display:grid;place-items:center;color:var(--s-teal);font-weight:700;font-size:13px}
+.entry b{display:block;font-size:13px} .entry small{font-size:10.5px;color:var(--s-ink3)}
+.badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);min-width:18px;height:18px;border-radius:9px;background:var(--s-red);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{background:var(--s-card);border:1px solid var(--s-line);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;gap:4px;position:relative}
+.tile .ico{width:30px;height:30px;border-radius:8px;background:var(--s-teal-soft);color:var(--s-teal);display:grid;place-items:center;font-weight:700;font-size:12px}
+.tile b{font-size:12.5px}
+.stat{display:flex;gap:8px}
+.stat div{flex:1;background:var(--s-card);border:1px solid var(--s-line);border-radius:10px;padding:8px 10px}
+.stat div b{display:block;font-size:18px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat div.hot b{color:var(--s-red)}
+.h{font-size:11px;font-weight:700;color:var(--s-ink2);letter-spacing:.04em;margin:4px 2px 0}
+.li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--s-line)}
+.li:last-child{border-bottom:0}
+.fld{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px;border-bottom:1px solid var(--s-line);padding:4px 0}
+.fld:last-child{border-bottom:0}
+.fld label{color:var(--s-ink2);flex:none;width:72px}
+.fld .v{flex:1;text-align:right;min-width:0}
+.fld .v.ph0{color:var(--s-ink3)}
+.seg{display:inline-flex;gap:4px}
+.seg i{font-style:normal;font-size:11px;padding:2px 9px;border-radius:6px;border:1px solid var(--s-line);color:var(--s-ink2);background:var(--s-card)}
+.seg i.on{background:var(--s-teal);border-color:var(--s-teal);color:#fff;font-weight:700}
+.ocr{display:flex;gap:6px;align-items:stretch}
+.ocr span{flex:1;text-align:center;padding:8px 4px;border-radius:9px;border:1px dashed var(--s-teal);color:var(--s-teal);font-weight:700;background:var(--s-teal-soft);font-size:12px}
+.hint{font-size:10.5px;color:var(--s-ink3);text-align:center}
+.mk{font-size:9.5px;font-weight:700;color:var(--s-amber);background:var(--s-amber-soft);border-radius:4px;padding:0 4px;margin-left:4px;white-space:nowrap}
+.btn{display:block;text-align:center;padding:9px;border-radius:9px;background:var(--s-teal);color:#fff;font-weight:700;font-size:13px}
+.btn.gh{background:var(--s-card);color:var(--s-teal);border:1px solid var(--s-teal)}
+.foot{flex:none;padding:8px 10px;background:var(--s-card);border-top:1px solid var(--s-line);display:flex;gap:8px;align-items:center}
+.foot .btn{flex:1;white-space:nowrap}
+.steps{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--s-ink3)}
+.steps b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#DCE4E6;color:var(--s-ink2);font-size:10px}
+.steps .on{color:var(--s-teal);font-weight:700}.steps .on b{background:var(--s-teal);color:#fff}
+.steps u{flex:1;height:1px;background:var(--s-line);text-decoration:none}
+.fab{position:absolute;right:14px;bottom:60px;width:44px;height:44px;border-radius:50%;background:var(--s-teal);color:#fff;display:grid;place-items:center;font-size:24px;line-height:1;box-shadow:0 4px 12px rgba(14,124,123,.4)}
+.pg{background:#fff;border:1px solid var(--s-line);border-radius:4px;padding:10px 9px;font-size:7.5px;line-height:1.35;color:#222;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pg h6{margin:0 0 5px;text-align:center;font-size:10px;font-family:"Noto Serif SC","Songti SC",serif}
+.pg table{width:100%;border-collapse:collapse;font-size:inherit;line-height:inherit}
+/* 本地直接打开时没有 doctype（发布为 artifact 时由外壳补），怪异模式下表格不继承字号——显式写死 */
+table{font-size:inherit}
+.pg td{border:.6px solid #555;padding:2px 3px;vertical-align:middle}
+.pg td.k{background:#F2F2F2;white-space:nowrap;width:22%}
+.pg .im{height:34px;background:repeating-linear-gradient(135deg,#E9D9E4 0 5px,#F4EAF1 5px 10px);display:grid;place-items:center;color:#8A5C7A;font-size:7px}
+.thumbs{display:flex;gap:6px}
+.thumbs i{flex:none;width:52px;height:40px;border-radius:6px;background:repeating-linear-gradient(135deg,#E9D9E4 0 6px,#F4EAF1 6px 12px);border:1px solid var(--s-line)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s-card);border-radius:16px 16px 0 0;padding:12px;box-shadow:0 -8px 30px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:8px}
+.dim{position:absolute;inset:0;background:rgba(15,24,28,.45)}
+.sheet .li{padding:10px 2px;font-size:13px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--s-line);border-radius:7px;overflow:hidden}
+.stepper i{font-style:normal;width:26px;text-align:center;color:var(--s-ink2);background:#F3F6F6}
+.stepper b{width:34px;text-align:center}
+
+/* ── 浏览器框（工作台）──────────────────────────────────────────────── */
+.brwrap{overflow-x:auto;padding-bottom:6px}
+.br{width:100%;min-width:900px;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid #1B262C}
+.br .bar{height:26px;background:#1B262C;display:flex;align-items:center;gap:5px;padding:0 10px}
+.br .bar i{width:8px;height:8px;border-radius:50%;background:#52626A}
+.br .scr{display:grid;grid-template-columns:150px 1fr;height:500px;font-size:12px;line-height:1.5}
+.side{background:#12303A;color:#B9CCD2;padding:12px 0;display:flex;flex-direction:column;gap:1px;font-size:12px}
+.side b{color:#fff;padding:0 14px 10px;font-size:13px}
+.side span{padding:7px 14px}.side span.on{background:#0E7C7B;color:#fff;font-weight:700}
+.side em{font-style:normal;float:right;background:#B3362B;color:#fff;border-radius:8px;font-size:10px;padding:0 5px;font-weight:700}
+.wk{padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0;position:relative;overflow:hidden}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.filters span{border:1px solid var(--s-line);background:var(--s-card);border-radius:6px;padding:3px 8px;color:var(--s-ink3);font-size:11px;min-width:88px}
+.filters span.b1{background:var(--s-teal);color:#fff;border-color:var(--s-teal);min-width:0;font-weight:700}
+.filters span.b2{min-width:0;color:var(--s-teal);border-color:var(--s-teal);font-weight:700}
+table.g{width:100%;border-collapse:collapse;background:var(--s-card);font-size:11px}
+table.g th{background:#F0F4F5;color:var(--s-ink2);font-weight:500;text-align:left;padding:6px 7px;white-space:nowrap;border-bottom:1px solid var(--s-line)}
+table.g td{padding:6px 7px;border-bottom:1px solid var(--s-line);white-space:nowrap}
+table.g tr.pend td{background:#FFF9E8}
+table.g tr.sel td{background:var(--s-teal-soft)}
+table.g tr.over td{background:#FDECEA}
+table.g a{color:var(--s-teal);font-weight:700;text-decoration:none;margin-right:6px}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:340px;background:var(--s-card);border-left:1px solid var(--s-line);box-shadow:-10px 0 30px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;gap:8px}
+.drawer h5,.pane h5{margin:0;font-size:13px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.in{border:1px solid var(--s-line);border-radius:6px;padding:3px 7px;min-height:24px;background:#fff;font-size:11px}
+.in small{display:block;color:var(--s-ink3);font-size:9.5px;line-height:1.2}
+.split{display:grid;grid-template-columns:1.25fr 1fr;gap:10px;flex:1;min-height:0}
+.pane{background:var(--s-card);border:1px solid var(--s-line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--s-line)}
+.tabs span{padding:5px 10px;border-radius:6px 6px 0 0;color:var(--s-ink2)}
+.tabs span.on{background:var(--s-teal-soft);color:var(--s-teal);font-weight:700}
+.up{display:flex;gap:6px}
+.up i{width:60px;height:44px;border-radius:6px;background:repeating-linear-gradient(135deg,#E9D9E4 0 6px,#F4EAF1 6px 12px);border:1px solid var(--s-line)}
+.up i.add{background:#F3F6F6;border-style:dashed;display:grid;place-items:center;color:var(--s-ink3);font-style:normal;font-size:16px}
+.todo{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.todo div{background:var(--s-card);border:1px solid var(--s-line);border-radius:8px;padding:10px 12px}
+.todo div b{display:block;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums}
+.todo div.hot b{color:var(--s-red)}.todo div.zero{opacity:.5}
+.modal{position:absolute;inset:26px 90px;background:var(--s-card);border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:12px;display:flex;flex-direction:column;gap:8px}
+
+/* ── 表格页（内部人员）────────────────────────────────────── */
+.sheets{display:flex;gap:4px;overflow:hidden;flex:none}
+.sheets span{flex:none;font-size:11px;padding:3px 9px;border-radius:7px;background:var(--s-card);border:1px solid var(--s-line);color:var(--s-ink2);white-space:nowrap}
+.sheets span.on{background:var(--s-teal);border-color:var(--s-teal);color:#fff;font-weight:700}
+.lgwrap{position:relative;overflow:hidden;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);flex:none}
+.lgwrap::after{content:"";position:absolute;top:0;right:0;bottom:0;width:22px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);pointer-events:none}
+table.lg{border-collapse:separate;border-spacing:0;font-size:11px;white-space:nowrap}
+table.lg th{background:#F0F4F5;color:var(--s-ink2);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--s-line)}
+table.lg td{padding:6px 8px;border-bottom:1px solid var(--s-line);vertical-align:middle;background:var(--s-card)}
+table.lg tr:last-child td{border-bottom:0}
+table.lg .fz{position:sticky;left:0;z-index:1;border-right:1px solid var(--s-line);box-shadow:3px 0 5px -3px rgba(0,0,0,.16)}
+table.lg th.fz{background:#E8EEEF}
+table.lg td.fz small{display:block;font-size:9.5px;color:var(--s-ink3);line-height:1.3;margin-top:1px}
+table.lg .mono{font-size:10.5px}
+table.lg tr.pend td{background:#FFF9E8}
+table.lg tr.over td{background:#FDECEA}
+.sbtn{font-size:10.5px;font-weight:700;color:var(--s-teal);border:1px solid var(--s-teal);border-radius:6px;padding:0 7px;line-height:18px;white-space:nowrap;background:var(--s-card)}
+.doctabs{display:flex;gap:4px;flex:none;overflow:hidden}
+.doctabs span{flex:none;font-size:10.5px;padding:3px 8px;border-radius:6px;border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink2);white-space:nowrap}
+.doctabs span.on{background:var(--s-teal-soft);border-color:var(--s-teal);color:var(--s-teal);font-weight:700}
+
+/* ── 首页三格、「我的」、历史编辑记录、外部送样 ──────────────────── */
+.tile.full{grid-column:1/-1;flex-direction:row;align-items:center;gap:10px}
+.mi{width:22px;height:22px;border-radius:6px;background:var(--s-teal-soft);color:var(--s-teal);display:inline-grid;place-items:center;font-weight:700;font-size:11px;flex:none}
+.tog{display:inline-block;width:30px;height:17px;border-radius:9px;background:#CDD8DA;position:relative;flex:none}
+.tog::after{content:"";position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tog.on{background:var(--s-teal)}
+.tog.on::after{left:15px}
+.note{background:var(--s-teal-soft);border-radius:10px;padding:8px 10px;font-size:11.5px;line-height:1.55;color:var(--s-ink)}
+.todo.five{grid-template-columns:repeat(5,1fr)}
+
+/* ── 「我的」页 ───────────────────────────────────────────────────── */
+.bd.me{gap:9px;padding-top:12px}
+.mehead{display:flex;align-items:center;gap:12px;padding:2px 4px 4px}
+.meav{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:17px;font-weight:700;background:var(--s-teal-soft);color:var(--s-teal);box-shadow:inset 0 0 0 1px rgba(14,124,123,.2)}
+.mehead.ext .meav{background:var(--s-blue-soft);color:var(--s-blue);box-shadow:inset 0 0 0 1px rgba(43,95,158,.2)}
+.meid{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mename{font-size:15.5px;line-height:1.3}
+.mesec{font-size:10.5px;font-weight:700;color:var(--s-ink2);letter-spacing:.08em;margin:3px 4px -5px}
+.mehint{font-weight:400;letter-spacing:0;color:var(--s-ink3)}
+.melist{background:var(--s-card);border:1px solid var(--s-line);border-radius:12px;overflow:hidden;flex:none}
+.merow{display:flex;align-items:center;gap:10px;padding:9px 12px;min-height:40px}
+.merow+.merow{border-top:1px solid var(--s-line)}
+.merow>i,.meend i{font-style:normal;color:var(--s-ink3)}
+.merow>i{margin-left:auto}
+.meend{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none}
+.meico{width:28px;height:28px;border-radius:8px;flex:none;display:grid;place-items:center;background:var(--s-teal-soft);color:var(--s-teal)}
+.meico.b{background:var(--s-blue-soft);color:var(--s-blue)}
+.meico.n{background:#EEF2F3;color:var(--s-ink2)}
+.metxt{display:flex;flex-direction:column;min-width:0}
+.metxt b{font-size:13px;font-weight:600;line-height:1.35}
+.metxt small{font-size:10.5px;color:var(--s-ink3);line-height:1.4}
+.adm{background:var(--s-card);border:1px solid var(--s-line);border-radius:12px;padding:9px;display:flex;flex-direction:column;gap:8px;flex:none}
+.admgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.admtile{display:flex;align-items:center;gap:8px;padding:8px;border-radius:9px;background:var(--s-bg);border:1px solid #E8EEEF}
+.admtile b{display:block;font-size:12px;line-height:1.3}
+.admtile small{display:block;font-size:10px;color:var(--s-ink3);line-height:1.3}
+.admnote{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--s-ink2);padding:6px 8px;border-radius:8px;background:#EEF2F3}
+.melogout{text-align:center;color:var(--s-red);font-weight:600;font-size:13px;padding:9px;background:var(--s-card);border:1px solid var(--s-line);border-radius:12px;flex:none}
+</style>
+</head>
+<body>
+<div class="d-wrap">
+<header class="d-top">
+  <p class="d-eyebrow">湖北江夏实验室类器官研究中心</p>
+  <h1>类器官送检与样本管理系统<span class="d-sub">界面设计稿</span></h1>
+  <p class="d-meta">第 2 版 · 2026 年 9 月 17 日 · 小程序 11 张图，网页工作台 3 张图</p>
+  <p class="d-lead">这份稿子把系统的主要页面画了出来，方便您在开发之前先看一眼：页面上的内容、叫法和操作顺序，和您平时的做法是否对得上。第 1 版您看过之后提的意见，这一版都改进去了，首页和「我的」也一起重新整理了。看完有想法，直接说图号告诉我们就行。</p>
+  <section class="d-chg" aria-label="这一版改了什么">
+    <h2>和第 1 版相比，这一版改了 7 处</h2>
+    <ol>
+    <li><span class="q">首页四张表点进去是什么？能不能像 Excel 表？</span><span class="a">首页点哪张表，<b>就是新增一条这张表的记录</b>，内部人员和合作单位一样。<b>像 Excel 一样看整张表</b>，在内部人员的「我的 → 内部管理」里。首页顶部的数字去掉了，需要处理的事在网页工作台首页集中提醒。</span><span class="f">看图 1、图 7、图 12</span></li>
+    <li><span class="q">合作单位能填哪几张表</span><span class="a">合作单位首页有<b>三张表</b>：样本记录信息表、类器官收样记录、石蜡包埋送样记录，提交后都由中心核验；-80 冻存记录只有内部人员能看到。</span><span class="f">看图 2、图 4</span></li>
+    <li><span class="q">填过的记录去哪找、怎么改</span><span class="a">「我的」里加了<b>历史编辑记录</b>：每个人都能找回自己填过的记录，点进去修改；合作单位还能看到同组同事送的。</span><span class="f">看图 5、图 6</span></li>
+    <li><span class="q">四张表内部人员都要能下载，导出为 Excel</span><span class="a">内部管理的四张表底部都有「导出 Excel」，按当前筛选导出；网页工作台的四张表原本就能导出，两边格式一样。</span><span class="f">看图 7、图 8、图 13</span></li>
+    <li><span class="q">-80 冻存以及其他所有表，提交后都要能修改</span><span class="a">都能改：自己填的在历史编辑记录里改；网页工作台能改全部，包括已核验有效的样本；冻存的取走、补入登记填错了在工作台直接改或删，剩余支数自动重算。</span><span class="f">看图 3、图 6、图 8</span></li>
+    <li><span class="q">文档要能单份下载 PDF 或 Word，也能合并下载</span><span class="a">文档列表上每份文档旁边加了「下载」，每个样本加了「合并下载」，不用先点进预览。</span><span class="f">看图 10、图 11</span></li>
+    <li><span class="q">合作单位要能看到三份 Word</span><span class="a">三份都看得到：样本质控表、类器官质控表、类器官质量评分表；在图上逐份写明了。</span><span class="f">看图 9、图 10、图 11</span></li>
+    </ol>
+  </section>
+  <ul class="d-how">
+    <li><b>图里的数据都是示意</b>姓名、编号、单位都是编的，只为了让页面看起来像真的在用。</li>
+    <li><b>手机样子的是小程序，电脑样子的是网页工作台</b>小程序合作单位和内部人员都用；网页工作台只有内部人员用。</li>
+    <li><b>颜色、图标、文字细节还会微调</b>功能范围与合同附件一致，这份稿子是把它画出来给您看。</li>
+    <li><b>没有单独画出来的页面</b>类器官收样记录、-80 冻存记录的填写页，样式和图 3 相同，字段按您给的模板来；合作单位的「我的」、内部人员的历史编辑记录、人员管理页也没单独画，区别写在了文字里。</li>
+  </ul>
+  <nav class="d-toc" aria-label="图目录">
+    <div class="d-toc-row"><span>微信小程序</span><a href="#fig-1">图 1 首页（内部人员）</a><a href="#fig-2">图 2 首页（合作单位）</a><a href="#fig-3">图 3 填写与修改样本记录信息表</a><a href="#fig-4">图 4 合作单位填石蜡包埋送样</a><a href="#fig-5">图 5 我的（内部人员）</a><a href="#fig-6">图 6 历史编辑记录</a><a href="#fig-7">图 7 内部管理 · 四张表</a><a href="#fig-8">图 8 内部管理 · -80 冻存</a><a href="#fig-9">图 9 样本详情（合作单位）</a><a href="#fig-10">图 10 文档列表</a><a href="#fig-11">图 11 文档预览与下载</a></div>
+    <div class="d-toc-row"><span>网页工作台</span><a href="#fig-12">图 12 工作台首页</a><a href="#fig-13">图 13 样本总表与核验</a><a href="#fig-14">图 14 质控文档编辑</a></div>
+  </nav>
+</header>
+
+<section class="d-part" id="mp">
+  <div class="d-part-head">
+    <h2>一、微信小程序</h2>
+    <p>所有人从同一个入口用微信手机号登录，系统按手机号判断是内部人员还是合作单位的人。底部三个页签：首页、文档、我的。首页用来填表，「我的」里找回填过的记录；内部人员的「我的」里还能看四张表的全部记录。</p>
+  </div>
+  <article class="d-fig" id="fig-1">
+    <div class="d-cap"><span class="d-no">图 1</span><h3>首页</h3><span class="d-who">内部人员看到的</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav">类器官送检</div>
+  <div class="bd">
+    <div class="row sb"><b>李工，上午好</b><span class="chip t">内部人员</span></div>
+    <div class="tiny" style="margin-top:-4px">类器官研究中心</div>
+    <div class="h row sb"><span>填写</span><span class="tiny" style="font-weight:400;letter-spacing:0">点表新增一条</span></div>
+    <div class="grid2">
+      <div class="tile"><span class="ico">样</span><b>样本记录信息表</b><span class="tiny">组织样本送检与收样</span></div>
+      <div class="tile"><span class="ico">类</span><b>类器官收样记录</b><span class="tiny">收到的类器官</span></div>
+      <div class="tile"><span class="ico">蜡</span><b>石蜡包埋送样记录</b><span class="tiny">包埋、切片、染色</span></div>
+      <div class="tile"><span class="ico">冻</span><b>-80 冻存记录</b><span class="tiny">冻存批次</span></div>
+    </div>
+    <div class="hint">填过的记录在「我的 → 历史编辑记录」里找回和修改</div>
+  </div>
+  <div class="tabbar"><span class="on">首页</span><span>文档</span><span>我的</span></div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>内部人员登录后的第一页，用来填表。</p>
+      <ul>
+        <li>四个入口对应您的四个 Excel：样本记录信息表、类器官收样记录、石蜡包埋送样记录、-80 冻存记录。<b>点哪张表，就是新增一条这张表的记录</b>（图 3）。</li>
+        <li>首页不放数字和提醒，页面保持简单。待核验、冻存超期这些需要处理的事，在网页工作台首页集中提醒（图 12）。</li>
+        <li>填过的记录在「我的 → 历史编辑记录」里找回和修改（图 6）；四张表的全部记录在「我的 → 内部管理」里看（图 7）。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-2">
+    <div class="d-cap"><span class="d-no">图 2</span><h3>首页</h3><span class="d-who">合作单位的人看到的</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav">类器官送检</div>
+  <div class="bd">
+    <div class="row sb"><b>王医生，上午好</b><span class="chip b">合作单位</span></div>
+    <div class="tiny" style="margin-top:-4px">A 医院 · 肝胆外科组 · 已核验</div>
+    <div class="h">填写</div>
+    <div class="grid2">
+      <div class="tile"><span class="ico">样</span><b>样本记录信息表</b><span class="tiny">可拍照识别</span></div>
+      <div class="tile"><span class="ico">类</span><b>类器官收样记录</b><span class="tiny">送类器官</span></div>
+      <div class="tile full"><span class="ico">蜡</span><div><b>石蜡包埋送样记录</b><br><span class="tiny">挂在自己送检过的样本上</span></div></div>
+    </div>
+    <div class="hint">提交后由实验室核验；填过的记录在「我的 → 历史编辑记录」</div>
+  </div>
+  <div class="tabbar"><span class="on">首页</span><span>文档</span><span>我的</span></div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>合作单位的人登录后看到的首页，和内部人员是同一个样子。</p>
+      <ul>
+        <li><b>三张表</b>：样本记录信息表、类器官收样记录、石蜡包埋送样记录。-80 冻存记录只有中心内部人员能看到。</li>
+        <li>点哪张表就是填写这张表，提交后由中心核验。</li>
+        <li>样本用系统自动生成的「送检单号」指代，全程不出现内部编号。</li>
+        <li>自己和同组同事送过的记录，在「我的 → 历史编辑记录」里查看（图 6）。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-3">
+    <div class="d-cap"><span class="d-no">图 3</span><h3>填写与修改样本记录信息表</h3><span class="d-who">合作单位和内部人员都用</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav"><i>‹</i>样本记录信息表</div>
+  <div class="bd">
+    <div class="ocr"><span>拍照识别</span><span>从相册选</span></div>
+    <div class="hint">识别结果仅作预填，请核对后提交 · <u>查看识别到的原文</u></div>
+    <div class="h">送检信息</div>
+    <div class="c" style="padding:2px 10px">
+      <div class="fld"><label>来源单位</label><span class="v">A 医院</span></div>
+      <div class="fld"><label>供体姓名</label><span class="v">张某某<span class="mk">识别 · 请核对</span></span></div>
+      <div class="fld"><label>性别</label><span class="seg"><i class="on">男</i><i>女</i><i>未知</i></span></div>
+      <div class="fld"><label>年龄</label><span class="v">56<span class="mk">识别 · 请核对</span></span></div>
+      <div class="fld"><label>住院号</label><span class="v mono">Z2609170<span class="mk">识别 · 请核对</span></span></div>
+      <div class="fld"><label>组织类型</label><span class="v ph0">请输入，如 肝组织</span></div>
+      <div class="fld"><label>有无病理</label><span class="seg"><i>有</i><i>无</i></span></div>
+      <div class="fld"><label>备注</label><span class="v ph0">选填</span></div>
+    </div>
+    <div class="hint">内部人员在下方还会看到「收样信息」一组</div>
+  </div>
+  <div class="foot"><span class="btn">提交</span></div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>送检时填的表，也是拍照识别用的地方。从「历史编辑记录」点一条进来，就是修改这一条。</p>
+      <ul>
+        <li>拍照或从相册选图，系统识别出姓名、性别、年龄、住院号等内容并预先填好。</li>
+        <li>识别出来的项带黄色「请核对」标记，修改后标记消失；没识别出来的项留空，手填即可。识别结果只是预填，核对后才提交。</li>
+        <li>合作单位只填送检信息；内部人员在下方多一组收样信息。合作单位提交后是「待核验」，中心核验通过后变为「有效」。</li>
+        <li><b>提交后可以修改</b>：内部人员随时可以改，包括已核验有效的样本，页面上会显示最后是谁、什么时候改的。</li>
+        <li>合作单位在「待核验」或「无效」时可以改自己送的样本；已核验有效的如果有错，请中心内部人员修改。</li>
+        <li>类器官收样记录、-80 冻存记录的填写页和这一页样式相同，字段按您给的模板来。合作单位填类器官收样记录只有三项：来源单位、类器官类型、备注。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-4">
+    <div class="d-cap"><span class="d-no">图 4</span><h3>合作单位填石蜡包埋送样记录</h3><span class="d-who">合作单位的人用</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav"><i>‹</i>石蜡包埋送样记录</div>
+  <div class="bd">
+    <div class="h">选择样本</div>
+    <div class="c" style="padding:2px 10px">
+      <div class="fld"><label>送检样本</label><span class="v"><span class="mono">SJ00000127</span> · 刘** ›</span></div>
+    </div>
+    <div class="tiny" style="margin:-2px 2px 0">只列出本人送检过、没有被判无效的样本</div>
+    <div class="h">送样信息</div>
+    <div class="c" style="padding:2px 10px">
+      <div class="fld"><label>样本类型</label><span class="v">组织</span></div>
+      <div class="fld"><label>类器官来源</label><span class="v ph0">选填，如 肝类器官</span></div>
+    </div>
+    <div class="note"><b>提交后由实验室核验</b><br>核验有效后给出石蜡块编号，再陆续补上包埋、切片、染色情况，在样本详情里都看得到。</div>
+  </div>
+  <div class="foot"><span class="btn">提交</span></div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>合作单位把自己送检过的样本交给中心做石蜡包埋时填的表。这一页是这一版新加的。</p>
+      <ul>
+        <li>先选样本：只列出本人送检过、没有被判为无效的样本，用送检单号和姓氏标出。</li>
+        <li>只填两项：样本类型、类器官来源类型。</li>
+        <li>提交后由中心核验。核验有效时中心给出石蜡块编号，再陆续补上包埋、切片、染色情况，合作单位在样本详情里都看得到（图 9）。</li>
+        <li>石蜡块编号、包埋人、染色这些由中心填写，合作单位这一页不出现。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-5">
+    <div class="d-cap"><span class="d-no">图 5</span><h3>我的</h3><span class="d-who">内部人员看到的</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav">我的</div>
+  <div class="bd me">
+    <div class="mehead">
+      <span class="meav">李</span>
+      <div class="meid">
+        <div class="row" style="gap:6px"><b class="mename">李工</b><span class="chip t">内部人员</span></div>
+        <span class="tiny">类器官研究中心 · <span class="mono">139****2046</span></span>
+      </div>
+    </div>
+    <div class="mesec">我的记录</div>
+    <div class="melist">
+      <div class="merow"><span class="meico"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.5"/></svg></span><span class="metxt"><b>历史编辑记录</b><small>找回自己填过的记录，点进去修改</small></span><i>›</i></div>
+    </div>
+    <div class="mesec row sb"><span>内部管理</span><span class="mehint">查看 · 筛选 · 导出</span></div>
+    <div class="adm">
+      <div class="admgrid">
+        <div class="admtile"><span class="mi">样</span><span><b>样本记录</b><small>信息表</small></span></div>
+        <div class="admtile"><span class="mi">类</span><span><b>类器官收样</b><small>记录</small></span></div>
+        <div class="admtile"><span class="mi">蜡</span><span><b>石蜡包埋</b><small>送样记录</small></span></div>
+        <div class="admtile"><span class="mi">冻</span><span><b>-80 冻存</b><small>记录</small></span></div>
+      </div>
+      <div class="admnote"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="8" rx="1.2"/><path d="M6 14h4M8 11v3"/></svg><span>修改、核验、冻存取用请到网页工作台</span></div>
+    </div>
+    <div class="melist">
+      <div class="merow"><span class="meico n"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3M6 8.5h4M6 11h3"/></svg></span><span class="metxt"><b>用户协议</b></span><i>›</i></div>
+      <div class="merow"><span class="meico n"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4z"/><path d="M6 8l1.5 1.5 2.8-2.8"/></svg></span><span class="metxt"><b>隐私政策</b></span><i>›</i></div>
+    </div>
+    <div class="melogout">退出登录</div>
+  </div>
+  <div class="tabbar"><span>首页</span><span>文档</span><span class="on">我的</span></div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>底部「我的」页签。内部人员比合作单位多一个「内部管理」板块。这一页是这一版新加的。</p>
+      <ul>
+        <li><b>历史编辑记录</b>：每个人都有，找回自己填过的记录并修改（图 6）。</li>
+        <li><b>内部管理</b>：只有内部人员有。四个入口进入四张表，像 Excel 一样看全部记录、筛选、导出（图 7、图 8）。</li>
+        <li>小程序里不做核验、不做冻存取用登记，这些在网页工作台做，那里的功能最全。</li>
+        <li>合作单位的「我的」里没有内部管理，多一行「单位与组别」，显示核验状态，可以修改。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-6">
+    <div class="d-cap"><span class="d-no">图 6</span><h3>历史编辑记录</h3><span class="d-who">合作单位和内部人员都用</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav"><i>‹</i>历史编辑记录</div>
+  <div class="bd" style="gap:7px">
+    <div class="doctabs"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span></div>
+    <div class="row sb"><span class="tiny">本人与同组同事的记录</span><span class="row" style="gap:5px"><span class="tiny" style="color:#16232B;white-space:nowrap">只看我提交的</span><span class="tog"></span></span></div>
+    <div class="c" style="padding:2px 10px">
+      <div class="li"><span><span class="mono">SJ00000131</span><br><span class="tiny">张** · 肝组织 · 我 · 09-17</span></span><span class="chip a">待核验</span></div>
+      <div class="li"><span><span class="mono">SJ00000127</span><br><span class="tiny">刘** · 肝组织 · 同组 陈医生 · 09-15</span></span><span class="chip g">有效</span></div>
+      <div class="li"><span><span class="mono">SJ00000119</span><br><span class="tiny">周** · 胆管组织 · 我 · 09-10</span><br><span class="tiny" style="color:#B3362B">无效：缺住院号</span></span><span class="row" style="gap:4px;flex-direction:column;align-items:flex-end"><span class="chip r">无效</span><span class="sbtn">修改</span></span></div>
+      <div class="li"><span><span class="mono">SJ00000102</span><br><span class="tiny">吴** · 结直肠组织 · 我 · 09-02</span></span><span class="chip g">有效</span></div>
+    </div>
+    <div class="hint">自己「待核验」「无效」的记录点进去可以修改后重新提交，其余只能查看</div>
+  </div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>从「我的」进入，找回自己填过的记录。图上是合作单位看到的样子。这一页是这一版新加的。</p>
+      <ul>
+        <li>按表分页签：合作单位三张，内部人员四张。最近填的、最近改过的排在前面。</li>
+        <li>合作单位看得到自己和同组同事提交的记录，可以打开「只看我提交的」只看自己的。</li>
+        <li><b>点进去可以修改</b>：合作单位自己的记录在「待核验」或「无效」时可以修改后重新提交，无效的会写明原因；同组同事的只能看。</li>
+        <li>内部人员看到的是自己新增的、或最后一次由自己修改的记录，点进去就能改。</li>
+        <li>这里列的是记录本身，不是每一次修改的明细；每条记录会显示最后是谁、什么时候改的。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-7">
+    <div class="d-cap"><span class="d-no">图 7</span><h3>内部管理 · 四张表</h3><span class="d-who">内部人员用</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav"><i>‹</i>样本记录信息表</div>
+  <div class="bd" style="gap:7px">
+    <div class="sheets"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span>-80 冻存</span></div>
+    <div class="row" style="gap:6px"><span class="c" style="flex:1;padding:5px 8px;color:#93A1A8;font-size:11px">搜索 内部编号 / 来源单位 / 供体</span><span class="chip n">核验 ▾</span></div>
+    <div class="tiny">共 128 条 · 左右滑动看全部 14 列</div>
+    <div class="lgwrap"><table class="lg">
+      <tr><th class="fz">内部编号</th><th>来源单位</th><th>供体姓名</th><th>性别</th><th>年龄</th><th>住院号</th></tr>
+      <tr class="pend"><td class="fz"><span class="mono">SJ00000131</span><small style="color:#B7791F;font-weight:700">待核验 · 外部</small></td><td>A 医院</td><td>张**</td><td>男</td><td>56</td><td class="mono">Z2609170</td></tr>
+      <tr><td class="fz"><span class="mono">hli52</span><small>有效 · 外部</small></td><td>A 医院</td><td>刘**</td><td>女</td><td>61</td><td class="mono">Z2609102</td></tr>
+      <tr><td class="fz"><span class="mono">hli49</span><small>有效 · 外部</small></td><td>B 大学</td><td>赵**</td><td>男</td><td>47</td><td class="mono">Z2608277</td></tr>
+      <tr><td class="fz"><span class="mono">hli48</span><small>有效 · 内部</small></td><td>本中心</td><td>孙**</td><td>女</td><td>52</td><td class="mono">Z2608231</td></tr>
+      <tr><td class="fz"><span class="mono">hli47</span><small>有效 · 外部</small></td><td>A 医院</td><td>周**</td><td>男</td><td>66</td><td class="mono">Z2608190</td></tr>
+      <tr><td class="fz"><span class="mono">hli46</span><small>有效 · 外部</small></td><td>C 医院</td><td>吴**</td><td>女</td><td>39</td><td class="mono">Z2608154</td></tr>
+    </table></div>
+    <div class="hint">点一行查看 · 浅黄色是待核验</div>
+    <div class="note">这里只查看、筛选、导出。修改、核验、冻存取用请到网页工作台；改自己填过的记录，去「我的 → 历史编辑记录」。</div>
+  </div>
+  <div class="foot"><span class="btn gh">导出 Excel</span></div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>内部人员从「我的 → 内部管理」进来，像 Excel 一样看全部记录。这一页是这一版新加的。</p>
+      <ul>
+        <li>四张表在顶上切换，像 Excel 底部的工作表：样本记录、类器官收样、石蜡包埋、-80 冻存。</li>
+        <li>列名和顺序与您给的模板一样。第一列（内部编号、石蜡块编号或冻存样品）固定不动，其余列左右滑动查看。</li>
+        <li>可以搜索、按核验状态筛选。合作单位新送来、还没核验的记录用浅黄色标出。</li>
+        <li>底部「导出 Excel」：按当前筛选导出，格式和网页工作台导出的一样，导出后可以打开或发送到微信。</li>
+        <li><b>这里只看、只筛、只导出</b>：点一行查看这一条的全部内容。新增在首页，改自己填的在历史编辑记录，核验和其余修改在网页工作台。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-8">
+    <div class="d-cap"><span class="d-no">图 8</span><h3>内部管理 · -80 冻存与取用登记</h3><span class="d-who">内部人员用</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav"><i>‹</i>-80 冻存记录</div>
+  <div class="bd" style="gap:7px">
+    <div class="sheets"><span>样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span class="on">-80 冻存</span></div>
+    <div class="row" style="gap:6px"><span class="chip n">全部 14</span><span class="chip r">-80 超期 2</span><span class="chip n">液氮 9</span></div>
+    <div class="lgwrap"><table class="lg">
+      <tr><th class="fz">冻存样品</th><th>冻存时间</th><th>冻存数量/支</th><th>冻存密度</th><th>暂存-80度超低温冰箱</th><th>冻存人</th></tr>
+      <tr class="over"><td class="fz"><span class="mono">hli52-GZ-N-P3-EM2-2e5</span><small>剩 6 / 8 支 · <b style="color:#B3362B">已超 3 天</b></small></td><td>2026-08-31</td><td>8</td><td>2e5</td><td>是</td><td>李工</td></tr>
+      <tr class="over"><td class="fz"><span class="mono">hli49-GZ-N-P2-EM2-2e5</span><small>剩 3 / 4 支 · <b style="color:#B3362B">已超 0 天</b></small></td><td>2026-09-03</td><td>4</td><td>2e5</td><td>是</td><td>王工</td></tr>
+      <tr><td class="fz"><span class="mono">hco17-JC-T-P7-EM1-5e5</span><small>剩 4 / 4 支 · 液氮</small></td><td>2026-08-02</td><td>4</td><td>5e5</td><td>否</td><td>李工</td></tr>
+      <tr><td class="fz"><span class="mono">hli47-GZ-N-P4-EM2-1e5</span><small>剩 5 / 6 支 · -80</small></td><td>2026-09-10</td><td>6</td><td>1e5</td><td>是</td><td>李工</td></tr>
+    </table></div>
+  </div>
+  <div class="foot"><span class="btn gh">导出 Excel</span></div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="row sb"><b class="mono" style="font-size:12px">hli52-GZ-N-P3-EM2-2e5</b><span class="chip r">已超 3 天</span></div>
+    <div class="tiny">剩 <b style="color:#16232B">6</b> / 8 支 · -80℃ · P3 · 冻存 2026-08-31</div>
+    <div class="h">取用登记</div>
+    <div class="li" style="font-size:11.5px;padding:7px 2px"><span>09-14 · 取走 <b>−2</b> · 复苏培养 · 李工</span><span class="tiny">剩 6</span></div>
+    <div class="li" style="font-size:11.5px;padding:7px 2px"><span>09-05 · 补入 <b>+1</b> · 同批补冻 · 王工<span class="mk">已改</span></span><span class="tiny">剩 8</span></div>
+    <div class="li" style="font-size:11.5px;padding:7px 2px"><span>09-02 · 取走 <b>−1</b> · 药敏实验 · 李工</span><span class="tiny">剩 7</span></div>
+    <div class="note">取走、补入、转液氮与修改登记请到网页工作台。每一笔都写明操作后还剩几支，改过的标「已改」。</div>
+  </div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>内部管理里的「-80 冻存」：放了多久、还剩几支、谁取走了。图上是点了一行之后弹出的批次详情。</p>
+      <ul>
+        <li>在 -80℃ 放满两周还没转液氮的批次排在最前面，浅红色标出，并写明超了几天。提醒只在系统里显示，不发微信消息或短信。</li>
+        <li>点一行弹出这一批的详情：还剩几支、放在哪、全部取用登记；每一笔都写明操作后还剩几支，改过的会标出来。</li>
+        <li><b>取走、补入、转液氮和修改登记在网页工作台做</b>：登记填错了可以直接改或删，冻存数量本身也能改。改完系统按时间先后重新算剩余，出现「当时只剩 2 支却取走了 3 支」时不让保存，并指出是哪一笔。</li>
+        <li>新的冻存记录从首页填；自己录的冻存记录（包括冻存数量）可以在历史编辑记录里改，校验规则一样。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-9">
+    <div class="d-cap"><span class="d-no">图 9</span><h3>样本详情</h3><span class="d-who">合作单位的人看到的</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav"><i>‹</i>样本详情</div>
+  <div class="bd">
+    <div class="c"><div class="row sb"><b class="mono">SJ00000127</b><span class="chip g">有效</span></div><span class="tiny">送检人：陈医生（同组）· 2026-09-09 提交</span></div>
+    <div class="h">送检信息</div>
+    <div class="c" style="padding:2px 10px"><div class="fld"><label>来源单位</label><span class="v">A 医院</span></div><div class="fld"><label>供体姓名</label><span class="v">刘某某</span></div><div class="fld"><label>组织类型</label><span class="v">肝组织</span></div></div>
+    <div class="h">石蜡包埋情况</div>
+    <div class="c"><div class="row sb"><b class="mono">E21-1-2026.09.10</b><span class="chip t">已切片</span></div><div class="tiny">石蜡包埋 09-12 · 切片 09-14</div><div class="row" style="margin-top:4px;gap:4px"><span class="chip n">HE染色</span><span class="chip n">IHC染色</span><span class="chip b">Ki67：强表达</span></div></div>
+    <div class="c"><div class="row sb"><b>石蜡包埋送样</b><span class="chip a">待核验</span></div><div class="tiny">09-17 本人提交 · 核验后给出石蜡块编号</div></div>
+    <div class="h">质控文档（三份）</div>
+    <div class="c" style="padding:2px 10px"><div class="li"><span>样本质控表</span><span class="tiny">09-12 ›</span></div><div class="li"><span>类器官质控表</span><span class="tiny">09-15 ›</span></div><div class="li"><span>类器官质量评分表 · 合计 80 分</span><span class="tiny">09-16 ›</span></div></div>
+  </div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>合作单位点开自己或同组同事的样本，能看到这个样本后续的处理情况。</p>
+      <ul>
+        <li><b>看得到</b>：送检信息、核验结果、石蜡包埋进度（包埋和切片时间、染色类型、指标表达情况）。</li>
+        <li>自己交的石蜡包埋送样在核验前也列在这里，标「待核验」；被判无效会写明原因。</li>
+        <li><b>三份质控文档都看得到</b>：样本质控表、类器官质控表、类器官质量评分表（评分表显示合计分）。内部人员在网页工作台「完成并同步」之后才出现，点进去可以预览和下载（图 11）。</li>
+        <li><b>看不到</b>：内部编号、操作人、冻存信息。</li>
+        <li>同组同事送的样本只能看，不能改。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-10">
+    <div class="d-cap"><span class="d-no">图 10</span><h3>文档列表</h3><span class="d-who">合作单位和内部人员都用</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav">文档</div>
+  <div class="bd">
+    <div class="row" style="gap:6px"><span class="chip t">近一月</span><span class="chip n">全部类型</span></div>
+    <div class="c">
+      <div class="row sb"><b><span class="mono">SJ00000127</span> · 刘**</b><span class="tiny">09-16 更新</span></div>
+      <div class="li"><span>样本质控表 <span class="tiny">09-12</span></span><span class="sbtn">下载</span></div>
+      <div class="li"><span>类器官质控表 <span class="tiny">09-15</span></span><span class="sbtn">下载</span></div>
+      <div class="li"><span>类器官质量评分表 <span class="tiny">09-16</span></span><span class="sbtn">下载</span></div>
+      <div class="row" style="margin-top:6px;gap:6px"><span class="btn gh" style="flex:1;padding:6px">合并预览</span><span class="btn gh" style="flex:1;padding:6px">合并下载</span></div>
+    </div>
+    <div class="c">
+      <div class="row sb"><b><span class="mono">SJ00000098</span> · 赵**</b><span class="tiny">09-08 更新</span></div>
+      <div class="li"><span>样本质控表 <span class="tiny">09-08</span></span><span class="sbtn">下载</span></div>
+    </div>
+  </div>
+  <div class="tabbar"><span>首页</span><span class="on">文档</span><span>我的</span></div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="row sb"><b>下载 · 样本质控表</b><span class="tiny mono">SJ00000127</span></div>
+    <div class="row sb"><span class="mut">格式</span><span class="seg"><i class="on">PDF</i><i>Word</i></span></div>
+    <div class="row" style="gap:8px"><span class="btn gh" style="flex:1">打开</span><span class="btn" style="flex:1">发送到微信</span></div>
+    <div class="tiny">小程序不能直接存进手机文件夹：打开后点右上角可以保存或转发</div>
+  </div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>找质控文档的地方，对应小程序底部的「文档」页签。图上是点了「下载」之后弹出的样子。</p>
+      <ul>
+        <li>按样本分组，一个样本一张卡片，三份文档放在一起：样本质控表、类器官质控表、类器官质量评分表。</li>
+        <li><b>每份文档旁边都有「下载」</b>，可以选 PDF 或 Word；一个样本有两份以上时，还有「合并预览」「合并下载」。不用先点进预览。</li>
+        <li>小程序不能把文件直接存进手机文件夹，所以下载是「打开」（打开后点右上角可以保存或转发）或「发送到微信」。网页工作台上是正常的下载。</li>
+        <li>可以按时间范围和文档类型筛选，最近更新的排在前面。</li>
+        <li>合作单位看得到自己和同组同事的样本的这三份文档。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig" id="fig-11">
+    <div class="d-cap"><span class="d-no">图 11</span><h3>文档预览与下载</h3><span class="d-who">合作单位和内部人员都用</span></div>
+    <div class="d-shot">
+      <div class="ph"><div class="scr">
+  <div class="nav"><i>‹</i>样本质控表</div>
+  <div class="bd" style="gap:6px">
+    <div class="doctabs"><span class="on">样本质控表</span><span>类器官质控表</span><span>类器官质量评分表</span><span>合并</span></div>
+    <div class="pg">
+      <h6>样本质控表</h6>
+      <table>
+        <tr><td class="k">患者编号</td><td>P-0231</td><td class="k">来源单位</td><td>A 医院</td></tr>
+        <tr><td class="k">患者姓名</td><td>刘某某</td><td class="k">取样部位</td><td>肝右叶</td></tr>
+        <tr><td class="k">收样描述</td><td colspan="3">样本按质控要求，保持2-8℃低温环境运输至实验室。</td></tr>
+        <tr><td class="k">内部编号</td><td></td><td class="k">细胞活率测定</td><td>活率报告.pdf</td></tr>
+        <tr><td class="k"></td><td colspan="2" style="text-align:center">样本图片</td><td style="text-align:center">情况描述</td></tr>
+        <tr><td class="k">收样原始情况</td><td colspan="2"><div class="im">显微照片</div></td><td>组织块约 0.8cm</td></tr>
+        <tr><td class="k">样本观察情况</td><td colspan="2"><div class="im">显微照片</div></td><td>样本外观呈黄白色。</td></tr>
+      </table>
+      <div style="margin-top:4px">注：合格，活率≥70%；基本合格，50%~70%；不合格，＜50%或活细胞＜1x104。</div>
+    </div>
+    <div class="hint">第 1 / 2 页 · 点页面全屏，双指缩放</div>
+    <div class="h">文档中的图片（点开看原图）</div>
+    <div class="thumbs"><i></i><i></i><i></i></div>
+    <div class="h">附件</div>
+    <div class="c" style="padding:6px 10px"><div class="row sb"><span>活率报告.pdf</span><span class="tiny">312 KB ›</span></div></div>
+  </div>
+  <div class="foot"><span class="seg"><i class="on">PDF</i><i>Word</i></span><span class="btn gh">打开</span><span class="btn">发送到微信</span></div>
+</div></div>
+    </div>
+    <div class="d-say">
+      <p>点开一份文档后看到的页面。</p>
+      <ul>
+        <li>顶上可以在这个样本的几份文档之间切换，两份以上时还能看合并版。</li>
+        <li>预览的版式和 Word 原件一致，可以翻页、全屏、双指放大。</li>
+        <li>文档里的显微照片单独列在下方，点开看原图，细节看得清。附件（比如细胞活率报告）可以直接点开。</li>
+        <li>底部选 PDF 或 Word，再选「打开」或「发送到微信」。</li>
+        <li>合作单位看到的版本里，「内部编号」一格留空。</li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section class="d-part" id="web">
+  <div class="d-part-head">
+    <h2>二、网页工作台</h2>
+    <p>内部人员在电脑浏览器里用账号密码登录。核验、批量筛选、导出 Excel、冻存取用登记、编辑三份质控文档都在这里做，功能最全。</p>
+  </div>
+  <article class="d-fig d-wide" id="fig-12">
+    <div class="d-cap"><span class="d-no">图 12</span><h3>工作台首页</h3><span class="d-who">内部人员用</span></div>
+    <div class="d-shot">
+      <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr" style="height:300px">
+  <div class="side"><b>类器官样本管理</b><span class="on">工作台首页</span><span>样本总表 <em>3</em></span><span>石蜡包埋 <em>1</em></span><span>冻存管理 <em>2</em></span><span>人员与单位 <em>1</em></span><span>系统管理</span></div>
+  <div class="wk">
+    <div class="todo five"><div class="hot"><b>3</b>待核验样本 ›</div><div class="hot"><b>1</b>待核验石蜡包埋送样 ›</div><div class="hot"><b>2</b>-80 超两周未转液氮 ›</div><div><b>1</b>待核验的外部用户组别 ›</div><div class="zero"><b>0</b>文档生成失败</div></div>
+    <b>最近提交</b>
+    <table class="g"><tr><th>提交时间</th><th>送检单号</th><th>来源单位</th><th>来源</th><th>核验</th></tr><tr class="pend"><td>09-17 09:12</td><td class="mono">SJ00000131</td><td>A 医院</td><td><span class="chip b">外部</span></td><td><span class="chip a">待核验</span></td></tr><tr><td>09-16 16:40</td><td class="mono">SJ00000130</td><td>本中心</td><td><span class="chip t">内部</span></td><td><span class="chip g">有效</span></td></tr></table>
+  </div>
+</div></div></div>
+      <p class="d-swipe">这张图比较宽，可以左右滑动着看；在电脑上打开更清楚。</p>
+    </div>
+    <div class="d-say">
+      <p>打开工作台先看到的页面，只放需要处理的事。</p>
+      <ul>
+        <li>五张待办卡片：待核验样本、待核验石蜡包埋送样、-80℃ 超两周未转液氮、待核验的外部用户组别、文档生成失败。点卡片直接进入对应列表。</li>
+        <li>左侧菜单上的红色数字和卡片是同一份数。小程序首页不放数字，需要处理的事都在这里提醒。</li>
+        <li>下方是最近提交的样本，合作单位新送来的会标出「待核验」。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig d-wide" id="fig-13">
+    <div class="d-cap"><span class="d-no">图 13</span><h3>样本总表与核验</h3><span class="d-who">内部人员用</span></div>
+    <div class="d-shot">
+      <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr">
+  <div class="side"><b>类器官样本管理</b><span>工作台首页</span><span class="on">样本总表 <em>3</em></span><span>石蜡包埋</span><span>冻存管理 <em>2</em></span><span>人员与单位</span><span>系统管理</span></div>
+  <div class="wk">
+    <div class="filters"><span>来源单位</span><span>组别</span><span>样本类别</span><span>内部 / 外部</span><span>核验状态</span><span>收样日期 起 — 止</span><span>内部编号</span><span>供体姓名（精确）</span><span class="b1">查询</span><span class="b2">导出样本记录信息表</span><span class="b2">导出类器官收样记录</span></div>
+    <table class="g">
+      <tr><th>内部编号</th><th>送检单号</th><th>来源单位</th><th>类别</th><th>来源</th><th>核验</th><th>供体姓名</th><th>组织类型</th><th>收样日期</th><th>有无固定</th><th>切片染色</th><th>操作</th></tr>
+      <tr class="pend sel"><td class="mono">—</td><td class="mono">SJ00000131</td><td>A 医院</td><td>组织</td><td><span class="chip b">外部</span></td><td><span class="chip a">待核验</span></td><td>张某某</td><td>肝组织</td><td>—</td><td>—</td><td>—</td><td><a>核验</a></td></tr>
+      <tr><td class="mono">hli52</td><td class="mono">SJ00000127</td><td>A 医院</td><td>组织</td><td><span class="chip b">外部</span></td><td><span class="chip g">有效</span></td><td>刘某某</td><td>肝组织</td><td>2026-09-10</td><td>有</td><td><span class="chip n">石蜡块 2</span> <span class="chip t">已切片</span> <span class="chip n">HE</span> <span class="chip n">IHC</span></td><td><a>编辑</a><a>质控文档</a><a>石蜡包埋</a><a>冻存</a></td></tr>
+      <tr><td class="mono">hco17</td><td class="mono">SJ00000120</td><td>本中心</td><td>类器官</td><td><span class="chip t">内部</span></td><td><span class="chip g">有效</span></td><td>—</td><td>结肠类器官</td><td>2026-09-08</td><td>—</td><td>—</td><td><a>编辑</a><a>质控文档</a><a>石蜡包埋</a><a>冻存</a></td></tr>
+      <tr><td class="mono">hli49</td><td class="mono">SJ00000098</td><td>B 大学</td><td>组织</td><td><span class="chip b">外部</span></td><td><span class="chip g">有效</span></td><td>赵某某</td><td>肝组织</td><td>2026-09-02</td><td>无</td><td><span class="chip n">石蜡块 1</span></td><td><a>编辑</a><a>质控文档</a><a>石蜡包埋</a><a>冻存</a></td></tr>
+    </table>
+    <div class="drawer">
+      <h5>核验样本 <span class="mono mut">SJ00000131</span></h5>
+      <div class="tiny">送检信息（外部填写，可改）</div>
+      <div class="two"><div class="in"><small>来源单位</small>A 医院</div><div class="in"><small>供体姓名</small>张某某</div><div class="in"><small>性别 / 年龄</small>男 / 56</div><div class="in"><small>住院号</small><span class="mono">Z2609170</span></div></div>
+      <div class="tiny">收样信息（判有效时必填 *）</div>
+      <div class="two"><div class="in"><small>收样日期 *</small>2026-09-17</div><div class="in"><small>内部编号 *</small><span class="mono">hli53</span></div><div class="in"><small>有无固定</small><span class="seg"><i class="on">有</i><i>无</i></span></div><div class="in"><small>处理时间</small>2026-09-17 10:30</div></div>
+      <div style="flex:1"></div>
+      <div class="row"><span class="btn" style="flex:1">判为有效并保存</span><span class="btn gh" style="flex:none;padding:9px 14px;color:#B3362B;border-color:#B3362B">判为无效</span></div>
+    </div>
+  </div>
+</div></div></div>
+      <p class="d-swipe">这张图比较宽，可以左右滑动着看；在电脑上打开更清楚。</p>
+    </div>
+    <div class="d-say">
+      <p>所有样本都在这一张表里，是内部人员在电脑上的主要工作页面。</p>
+      <ul>
+        <li>组织样本和类器官样本同在一张表，可按来源单位、组别、类别、内部或外部、核验状态、收样日期等条件筛选。</li>
+        <li>四张表都能导出 Excel，格式与您的模板一致：这里导出样本记录信息表和类器官收样记录，石蜡包埋、冻存管理页各自导出；小程序「我的 → 内部管理」也能导出同样的文件。</li>
+        <li>合作单位提交的样本（包括类器官收样记录）用浅黄色标出。点「核验」，右侧滑出核验面板（图上正打开着），补上收样日期、内部编号等信息，判为有效或无效。石蜡包埋页用同样的方式核验合作单位交来的送样，判有效时给出石蜡块编号。</li>
+        <li>核验面板盖住了表格右边的几列：收样日期、有无固定、切片染色和操作。关掉面板就能看到。</li>
+        <li>「切片染色」一列提示这个样本有几个石蜡块、是否已切片、做过哪些染色；「操作」一列可以直接进入该样本的质控文档、石蜡包埋和冻存。</li>
+        <li>所有样本提交后都能修改，包括已核验有效的；面板顶部显示最后是谁、什么时候改的。</li>
+      </ul>
+    </div>
+  </article>
+  <article class="d-fig d-wide" id="fig-14">
+    <div class="d-cap"><span class="d-no">图 14</span><h3>质控文档编辑</h3><span class="d-who">内部人员用</span></div>
+    <div class="d-shot">
+      <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr">
+  <div class="side"><b>类器官样本管理</b><span>工作台首页</span><span class="on">样本总表</span><span>石蜡包埋</span><span>冻存管理</span><span>人员与单位</span><span>系统管理</span></div>
+  <div class="wk">
+    <div class="row sb"><div><b>质控文档</b>　<span class="mono">hli52</span> · A 医院 · 刘某某 · 收样 2026-09-10</div><span class="tiny">‹ 返回样本总表</span></div>
+    <div class="tabs"><span class="on">样本质控表 <span class="chip a">草稿</span></span><span>类器官质控表 <span class="chip g">已完成</span></span><span>类器官质量评分表 <span class="chip a">草稿</span></span></div>
+    <div class="split" style="grid-template-columns:1.1fr 1fr">
+      <div class="pane">
+        <div class="two"><div class="in"><small>患者编号</small>P-0231</div><div class="in"><small>取样部位</small>肝右叶</div><div class="in"><small>取样方式</small>手术切除</div><div class="in"><small>细胞活率测定（附件）</small>活率报告.pdf</div></div>
+        <div class="in"><small>收样描述</small>样本按质控要求，保持2-8℃低温环境运输至实验室。</div>
+        <div class="tiny">收样原始情况 · 图片（1-3 张，点图放大）</div>
+        <div class="up"><i></i><i></i><i class="add">＋</i></div>
+        <div class="in"><small>情况描述</small>组织块约 0.8cm，色泽正常。</div>
+        <div class="tiny">样本观察情况 · 图片</div>
+        <div class="up"><i></i><i class="add">＋</i></div>
+      </div>
+      <div class="pane" style="background:#E9EEEF">
+        <div class="row sb"><h5>预览</h5><span class="seg"><i class="on">内部版</i><i>外部版</i></span></div>
+        <div class="pg" style="font-size:8px">
+          <h6>样本质控表</h6>
+          <table><tr><td class="k">患者编号</td><td>P-0231</td><td class="k">来源单位</td><td>A 医院</td></tr><tr><td class="k">患者姓名</td><td>刘某某</td><td class="k">取样部位</td><td>肝右叶</td></tr><tr><td class="k">内部编号</td><td>hli52</td><td class="k">细胞活率测定</td><td>活率报告.pdf</td></tr><tr><td class="k">收样原始情况</td><td colspan="2"><div class="im">显微照片 ×2</div></td><td>组织块约 0.8cm，色泽正常。</td></tr></table>
+        </div>
+        <div class="tiny">下载：Word · PDF · 合并 Word · 合并 PDF</div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><span class="btn gh" style="padding:6px 14px">保存草稿</span><span class="btn gh" style="padding:6px 14px">预览</span><span class="btn" style="padding:6px 14px">完成并同步给送检方</span></div>
+  </div>
+</div></div></div>
+      <p class="d-swipe">这张图比较宽，可以左右滑动着看；在电脑上打开更清楚。</p>
+    </div>
+    <div class="d-say">
+      <p>在网页上填写三份质控文档，确认无误后同步给送检方。</p>
+      <ul>
+        <li>三份文档用页签切换，每份都有「草稿」和「已完成」两种状态。</li>
+        <li>左边填写内容、上传显微照片和附件；右边是预览，和最终下载的 Word、PDF 是同一份内容。</li>
+        <li>预览可以在「内部版」和「外部版」之间切换，提前看到送检方会看到什么。</li>
+        <li>点「完成并同步给送检方」之后，送检方才能在小程序里看到这份文档。</li>
+        <li>支持单份下载，也支持三份合并下载，Word 和 PDF 都有。</li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section class="d-ask">
+  <h2>看图时请重点留意三件事</h2>
+  <ol>
+    <li>合作单位能填的三张表、各填哪几项是否合适：样本记录信息表填送检信息；类器官收样记录填来源单位、类器官类型、备注；石蜡包埋送样记录选自己送过的样本，填样本类型和类器官来源类型（图 2、图 3、图 4）。</li>
+    <li>历史编辑记录的范围是否合适：合作单位看到自己和同组同事的，可以只看自己的；内部人员看到自己新增或最后修改的。它列的是记录，不是每一次修改的明细（图 6）。</li>
+    <li>内部管理里四张表的列名和顺序，和您平时用的 Excel 是否一致（图 7、图 8）。</li>
+  </ol>
+  <p>有想法直接在微信里说图号就行，比如「图 9 少了一列」。之后想调整，也随时可以提。</p>
+</section>
+
+<p class="d-foot">武汉市添达信息技术服务有限公司 · 界面设计稿 第 2 版 · 2026-09-17 · 图中数据均为示意</p>
+</div>
+</body>
+</html>

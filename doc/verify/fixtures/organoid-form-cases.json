@@ -1,0 +1,166 @@
+{
+  "_doc": "SAMPLE-MP-002 的验收用例。被测函数：organoidLayout(identity, verifyStatus, mine, mode) → { fields, editable }。类器官收样记录：内部七项（模板 B 的 7 列）；外部三项（来源单位、类器官类型、备注，Kevin 2026-09-17 晚定外部可填，CR-20260917-05），外部永远不渲染收样段。mode：new = 首页点表进来；edit = 历史编辑记录点一条进来；view = 内部管理表格页点一行进来（只读；只读页右上角「修改」会切到 mode=edit 重算，CR-20260918-07）。身份缺失、不认识：什么都不渲染。",
+  "externalFields": [
+    "sourceUnitName",
+    "organoidType",
+    "remark"
+  ],
+  "internalFields": [
+    "sourceUnitName",
+    "organoidType",
+    "receiveDate",
+    "internalNo",
+    "processTime",
+    "hasViabilityReport",
+    "operatorName"
+  ],
+  "cases": [
+    {
+      "case": "外部新增",
+      "identity": "external",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "remark"
+        ],
+        "editable": true
+      }
+    },
+    {
+      "case": "外部改自己的无效",
+      "identity": "external",
+      "verifyStatus": "invalid",
+      "mine": true,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "remark"
+        ],
+        "editable": true
+      }
+    },
+    {
+      "case": "外部看自己的有效（病灶：必须只读）",
+      "identity": "external",
+      "verifyStatus": "valid",
+      "mine": true,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "remark"
+        ],
+        "editable": false
+      }
+    },
+    {
+      "case": "外部看同组别人的待核验（病灶：可看不可改）",
+      "identity": "external",
+      "verifyStatus": "pending",
+      "mine": false,
+      "mode": "view",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "remark"
+        ],
+        "editable": false
+      }
+    },
+    {
+      "case": "内部新增",
+      "identity": "internal",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "receiveDate",
+          "internalNo",
+          "processTime",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": true
+      }
+    },
+    {
+      "case": "内部改有效样本",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "receiveDate",
+          "internalNo",
+          "processTime",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": true
+      }
+    },
+    {
+      "case": "内部看外部送来的待核验（病灶：小程序里只读，核验在工作台）",
+      "identity": "internal",
+      "verifyStatus": "pending",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "receiveDate",
+          "internalNo",
+          "processTime",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": false
+      }
+    },
+    {
+      "case": "内部从内部管理查看（病灶：只读模式不能改）",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": true,
+      "mode": "view",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "organoidType",
+          "receiveDate",
+          "internalNo",
+          "processTime",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": false
+      }
+    },
+    {
+      "case": "身份缺失（病灶：什么都不渲染）",
+      "identity": "",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [],
+        "editable": false
+      }
+    }
+  ]
+}

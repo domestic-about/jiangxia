@@ -1,0 +1,23 @@
+# dag_lint / DDL 生成器的项目侧配置（栈包：~/claude-config/stacks/ruoyi-vue-plus/）
+stack: ruoyi-vue-plus
+
+# 本项目：PostgreSQL + 多租户关闭（ADR-0001 / ADR-0009）→ 只用框架基础 6 公共字段，
+# **不带 tenant_id、不带 del_unique**（PostgreSQL 用部分唯一索引解决软删后同键重建，见 ADR-0009）
+public_fields: [create_dept, create_by, create_time, update_by, update_time, del_flag]
+
+# ── 项目侧段位约定（范式是栈的，具体值是项目的；权威在此）────────────────────────
+# 命名前缀：表 t_lqg_<实体> ｜ 字典 lqg_<名> ｜ 权限串 lqg:<域>:<资源>:<动作> ｜ 包 org.dromara.lqg.<域>
+#
+# 菜单 menu_id（每域 100，5000 起，避开若依自带 1-2000 与预留 3000-4999）：
+#   SYS  工作台首页/待办   5000-5099 ｜ AUTH 人员·单位·组别 5100-5199 ｜ SAMPLE 样本总表 5200-5299
+#   EMBED 石蜡包埋        5300-5399 ｜ CRYO 冻存管理       5400-5499 ｜ QC/DOC 质控文档 5500-5599
+#   OCR  无菜单（只有小程序入口）
+#
+# 角色 role_id：101 = lqg_admin（实验室管理员）｜102 = lqg_internal（内部人员）｜103 = lqg_external（外部人员）
+#
+# Flyway：V<yyyyMMddHHmm>__<TICKET-ID>-<desc>.sql
+#   日期段按任务取，保证后做的任务版本号一定更大（out-of-order=false）：
+#     D1=20260921  D2=20260922  D3=20260923  D4=20260924  D5=20260925  D6=20260926  D7=20260927  D8=20260928
+#   HHmm 按域分段，并行 ticket 各占各的段、合流不改名：
+#     SYS 08xx ｜ AUTH 09xx ｜ SAMPLE 10xx ｜ EMBED 11xx ｜ CRYO 12xx ｜ QC 13xx ｜ DOC 14xx ｜ OCR 15xx
+#   返工迁移：沿用所属任务的日期段，HHmm 取该域段内下一个未用的分钟；已应用的迁移终身不改名不改内容

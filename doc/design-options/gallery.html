@@ -1,0 +1,900 @@
+<meta charset="utf-8">
+<title>类器官送检系统 设计方案</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* ── 画廊外壳的主题 token（跟随查看者主题）────────────────────────────── */
+:root{
+  --ground:#EDF2F2; --surface:#FFFFFF; --ink:#15232A; --ink-2:#4A5C66; --ink-3:#7C8B93;
+  --line:#D3DEDF; --accent:#0E7C7B; --accent-soft:#D6ECEA; --pick:#B7791F; --pick-soft:#FBEFD5; --ok:#2F7D4F; --ok-soft:#DFF1E6;
+  --shadow:0 1px 2px rgba(21,35,42,.06),0 8px 24px rgba(21,35,42,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F181C; --surface:#172329; --ink:#E6EEEF; --ink-2:#A9B9BF; --ink-3:#7B8C93;
+    --line:#2A3A41; --accent:#4FC2BE; --accent-soft:#153735; --pick:#E0B45C; --pick-soft:#3A2F16; --ok:#6FCF97; --ok-soft:#17382A;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F181C; --surface:#172329; --ink:#E6EEEF; --ink-2:#A9B9BF; --ink-3:#7B8C93;
+  --line:#2A3A41; --accent:#4FC2BE; --accent-soft:#153735; --pick:#E0B45C; --pick-soft:#3A2F16; --ok:#6FCF97; --ok-soft:#17382A;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+/* ── 设备屏幕里的产品界面：固定浅色（它画的是真实产品的样子，不随画廊主题变）── */
+.scr{
+  --s-bg:#F3F6F6; --s-card:#FFFFFF; --s-ink:#16232B; --s-ink2:#5A6B74; --s-ink3:#93A1A8; --s-line:#E2E9EA;
+  --s-teal:#0E7C7B; --s-teal-soft:#DDF0EE; --s-amber:#B7791F; --s-amber-soft:#FCF1DA;
+  --s-red:#B3362B; --s-red-soft:#FBE4E1; --s-green:#2F7D4F; --s-green-soft:#DFF1E6; --s-blue:#2B5F9E; --s-blue-soft:#E1ECF8;
+  background:var(--s-bg); color:var(--s-ink);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-size:15px;line-height:1.65}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:28px 72px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:32px}
+nav.toc{position:sticky;top:20px;align-self:start;display:flex;flex-direction:column;gap:2px;font-size:13px}
+nav.toc b{font-family:"Noto Serif SC","Songti SC",serif;font-size:15px;margin-bottom:8px;color:var(--ink)}
+nav.toc a{color:var(--ink-2);text-decoration:none;padding:4px 8px;border-radius:6px}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--accent-soft);color:var(--ink);outline:none}
+nav.toc .grp{margin-top:10px;font-size:11px;letter-spacing:.08em;color:var(--ink-3)}
+main{display:flex;flex-direction:column;gap:56px;min-width:0}
+header.top h1{font-family:"Noto Serif SC","Songti SC",serif;font-size:30px;line-height:1.25;margin:0 0 10px;text-wrap:balance}
+header.top p{margin:0 0 8px;max-width:66ch;color:var(--ink-2)}
+.how{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:14px;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--ink-2)}
+.how span b{color:var(--ink)}
+section.page{display:flex;flex-direction:column;gap:18px;scroll-margin-top:16px}
+section.page>h2{font-family:"Noto Serif SC","Songti SC",serif;font-size:22px;margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+section.page>h2 small{font-family:"Noto Sans SC",sans-serif;font-size:12px;font-weight:500;color:var(--ink-3);letter-spacing:.04em}
+section.page>p.lead{margin:0;max-width:70ch;color:var(--ink-2)}
+.opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.opt{display:flex;flex-direction:column;gap:10px;min-width:0;scroll-margin-top:16px}
+.opt.wide{flex:1 1 100%}
+.opt>h3{margin:0;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.tag.pick{background:var(--pick-soft);color:var(--pick)}
+.tag.chosen{background:var(--ok-soft);color:var(--ok)}
+.tag.off{background:var(--line);color:var(--ink-3)}
+.opt.off .ph,.opt.off .br{opacity:.5}
+.opt.chosen>h3{color:var(--ok)}
+.verdict .kv.done{border-style:solid;border-color:var(--ok);background:var(--ok-soft)}
+.opt>p{margin:0;font-size:13px;color:var(--ink-2);max-width:42ch}
+.opt.wide>p{max-width:80ch}
+table.cmp{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table.cmp th,table.cmp td{padding:9px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+table.cmp th{font-size:12px;color:var(--ink-3);font-weight:500;white-space:nowrap}
+table.cmp tr:last-child td{border-bottom:0}
+.tblwrap{overflow-x:auto}
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.verdict div{padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:13px}
+.verdict div b{display:block;font-size:12px;color:var(--ink-3);font-weight:500;margin-bottom:2px}
+.verdict .ai{border-color:var(--pick);background:var(--pick-soft)}
+.verdict .kv{border-style:dashed}
+
+/* ── 手机框 ─────────────────────────────────────────────────────────── */
+.ph{width:296px;max-width:100%;border-radius:30px;padding:9px;background:#1B262C;box-shadow:var(--shadow)}
+.ph .scr{border-radius:22px;overflow:hidden;height:600px;display:flex;flex-direction:column;font-size:12.5px;line-height:1.5;position:relative}
+.nav{display:flex;align-items:center;justify-content:center;height:40px;font-weight:700;font-size:13.5px;background:var(--s-card);border-bottom:1px solid var(--s-line);flex:none;position:relative}
+.nav i{position:absolute;left:12px;font-style:normal;color:var(--s-ink2);font-weight:400}
+.bd{flex:1;overflow:hidden;padding:10px;display:flex;flex-direction:column;gap:8px}
+.tabbar{display:flex;flex:none;background:var(--s-card);border-top:1px solid var(--s-line);height:46px}
+.tabbar span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10.5px;color:var(--s-ink3);gap:1px}
+.tabbar span::before{content:"";width:16px;height:16px;border-radius:5px;background:currentColor;opacity:.35}
+.tabbar span.on{color:var(--s-teal);font-weight:700}
+.tabbar span.on::before{opacity:1}
+.c{background:var(--s-card);border-radius:10px;padding:10px;border:1px solid var(--s-line)}
+.row{display:flex;align-items:center;gap:8px}
+.row.sb{justify-content:space-between}
+.mut{color:var(--s-ink2)} .tiny{font-size:10.5px;color:var(--s-ink3)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:11.5px;letter-spacing:-.01em}
+.chip{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:0 6px;height:18px;border-radius:5px;white-space:nowrap}
+.chip.t{background:var(--s-teal-soft);color:var(--s-teal)} .chip.a{background:var(--s-amber-soft);color:var(--s-amber)}
+.chip.r{background:var(--s-red-soft);color:var(--s-red)} .chip.g{background:var(--s-green-soft);color:var(--s-green)}
+.chip.b{background:var(--s-blue-soft);color:var(--s-blue)} .chip.n{background:#EDF1F2;color:var(--s-ink2)}
+.ident{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:linear-gradient(135deg,#0E7C7B,#0B5F6B);color:#fff}
+.ident .av{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.25);flex:none}
+.ident small{display:block;font-size:10.5px;opacity:.85}
+.entry{display:flex;align-items:center;gap:10px;padding:11px 10px;background:var(--s-card);border:1px solid var(--s-line);border-radius:10px;position:relative}
+.entry .ico{width:34px;height:34px;border-radius:9px;flex:none;background:var(--s-teal-soft);display:grid;place-items:center;color:var(--s-teal);font-weight:700;font-size:13px}
+.entry b{display:block;font-size:13px} .entry small{font-size:10.5px;color:var(--s-ink3)}
+.badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);min-width:18px;height:18px;border-radius:9px;background:var(--s-red);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{background:var(--s-card);border:1px solid var(--s-line);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;gap:4px;position:relative}
+.tile .ico{width:30px;height:30px;border-radius:8px;background:var(--s-teal-soft);color:var(--s-teal);display:grid;place-items:center;font-weight:700;font-size:12px}
+.tile b{font-size:12.5px}
+.stat{display:flex;gap:8px}
+.stat div{flex:1;background:var(--s-card);border:1px solid var(--s-line);border-radius:10px;padding:8px 10px}
+.stat div b{display:block;font-size:18px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat div.hot b{color:var(--s-red)}
+.h{font-size:11px;font-weight:700;color:var(--s-ink2);letter-spacing:.04em;margin:4px 2px 0}
+.li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--s-line)}
+.li:last-child{border-bottom:0}
+.fld{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px;border-bottom:1px solid var(--s-line);padding:4px 0}
+.fld:last-child{border-bottom:0}
+.fld label{color:var(--s-ink2);flex:none;width:72px}
+.fld .v{flex:1;text-align:right;min-width:0}
+.fld .v.ph0{color:var(--s-ink3)}
+.seg{display:inline-flex;gap:4px}
+.seg i{font-style:normal;font-size:11px;padding:2px 9px;border-radius:6px;border:1px solid var(--s-line);color:var(--s-ink2);background:var(--s-card)}
+.seg i.on{background:var(--s-teal);border-color:var(--s-teal);color:#fff;font-weight:700}
+.ocr{display:flex;gap:6px;align-items:stretch}
+.ocr span{flex:1;text-align:center;padding:8px 4px;border-radius:9px;border:1px dashed var(--s-teal);color:var(--s-teal);font-weight:700;background:var(--s-teal-soft);font-size:12px}
+.hint{font-size:10.5px;color:var(--s-ink3);text-align:center}
+.mk{font-size:9.5px;font-weight:700;color:var(--s-amber);background:var(--s-amber-soft);border-radius:4px;padding:0 4px;margin-left:4px;white-space:nowrap}
+.btn{display:block;text-align:center;padding:9px;border-radius:9px;background:var(--s-teal);color:#fff;font-weight:700;font-size:13px}
+.btn.gh{background:var(--s-card);color:var(--s-teal);border:1px solid var(--s-teal)}
+.foot{flex:none;padding:8px 10px;background:var(--s-card);border-top:1px solid var(--s-line);display:flex;gap:8px;align-items:center}
+.foot .btn{flex:1;white-space:nowrap}
+.steps{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--s-ink3)}
+.steps b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#DCE4E6;color:var(--s-ink2);font-size:10px}
+.steps .on{color:var(--s-teal);font-weight:700}.steps .on b{background:var(--s-teal);color:#fff}
+.steps u{flex:1;height:1px;background:var(--s-line);text-decoration:none}
+.fab{position:absolute;right:14px;bottom:60px;width:44px;height:44px;border-radius:50%;background:var(--s-teal);color:#fff;display:grid;place-items:center;font-size:24px;line-height:1;box-shadow:0 4px 12px rgba(14,124,123,.4)}
+.pg{background:#fff;border:1px solid var(--s-line);border-radius:4px;padding:10px 9px;font-size:7.5px;line-height:1.35;color:#222;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pg h6{margin:0 0 5px;text-align:center;font-size:10px;font-family:"Noto Serif SC","Songti SC",serif}
+.pg table{width:100%;border-collapse:collapse;font-size:inherit;line-height:inherit}
+/* 本地直接打开时没有 doctype（发布为 artifact 时由外壳补），怪异模式下表格不继承字号——显式写死 */
+table{font-size:inherit}
+.pg td{border:.6px solid #555;padding:2px 3px;vertical-align:middle}
+.pg td.k{background:#F2F2F2;white-space:nowrap;width:22%}
+.pg .im{height:34px;background:repeating-linear-gradient(135deg,#E9D9E4 0 5px,#F4EAF1 5px 10px);display:grid;place-items:center;color:#8A5C7A;font-size:7px}
+.thumbs{display:flex;gap:6px}
+.thumbs i{flex:none;width:52px;height:40px;border-radius:6px;background:repeating-linear-gradient(135deg,#E9D9E4 0 6px,#F4EAF1 6px 12px);border:1px solid var(--s-line)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s-card);border-radius:16px 16px 0 0;padding:12px;box-shadow:0 -8px 30px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:8px}
+.dim{position:absolute;inset:0;background:rgba(15,24,28,.45)}
+.sheet .li{padding:10px 2px;font-size:13px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--s-line);border-radius:7px;overflow:hidden}
+.stepper i{font-style:normal;width:26px;text-align:center;color:var(--s-ink2);background:#F3F6F6}
+.stepper b{width:34px;text-align:center}
+
+/* ── 浏览器框（工作台）──────────────────────────────────────────────── */
+.brwrap{overflow-x:auto;padding-bottom:6px}
+.br{width:100%;min-width:900px;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid #1B262C}
+.br .bar{height:26px;background:#1B262C;display:flex;align-items:center;gap:5px;padding:0 10px}
+.br .bar i{width:8px;height:8px;border-radius:50%;background:#52626A}
+.br .scr{display:grid;grid-template-columns:150px 1fr;height:500px;font-size:12px;line-height:1.5}
+.side{background:#12303A;color:#B9CCD2;padding:12px 0;display:flex;flex-direction:column;gap:1px;font-size:12px}
+.side b{color:#fff;padding:0 14px 10px;font-size:13px}
+.side span{padding:7px 14px}.side span.on{background:#0E7C7B;color:#fff;font-weight:700}
+.side em{font-style:normal;float:right;background:#B3362B;color:#fff;border-radius:8px;font-size:10px;padding:0 5px;font-weight:700}
+.wk{padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0;position:relative;overflow:hidden}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.filters span{border:1px solid var(--s-line);background:var(--s-card);border-radius:6px;padding:3px 8px;color:var(--s-ink3);font-size:11px;min-width:88px}
+.filters span.b1{background:var(--s-teal);color:#fff;border-color:var(--s-teal);min-width:0;font-weight:700}
+.filters span.b2{min-width:0;color:var(--s-teal);border-color:var(--s-teal);font-weight:700}
+table.g{width:100%;border-collapse:collapse;background:var(--s-card);font-size:11px}
+table.g th{background:#F0F4F5;color:var(--s-ink2);font-weight:500;text-align:left;padding:6px 7px;white-space:nowrap;border-bottom:1px solid var(--s-line)}
+table.g td{padding:6px 7px;border-bottom:1px solid var(--s-line);white-space:nowrap}
+table.g tr.pend td{background:#FFF9E8}
+table.g tr.sel td{background:var(--s-teal-soft)}
+table.g tr.over td{background:#FDECEA}
+table.g a{color:var(--s-teal);font-weight:700;text-decoration:none;margin-right:6px}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:340px;background:var(--s-card);border-left:1px solid var(--s-line);box-shadow:-10px 0 30px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;gap:8px}
+.drawer h5,.pane h5{margin:0;font-size:13px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.in{border:1px solid var(--s-line);border-radius:6px;padding:3px 7px;min-height:24px;background:#fff;font-size:11px}
+.in small{display:block;color:var(--s-ink3);font-size:9.5px;line-height:1.2}
+.split{display:grid;grid-template-columns:1.25fr 1fr;gap:10px;flex:1;min-height:0}
+.pane{background:var(--s-card);border:1px solid var(--s-line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--s-line)}
+.tabs span{padding:5px 10px;border-radius:6px 6px 0 0;color:var(--s-ink2)}
+.tabs span.on{background:var(--s-teal-soft);color:var(--s-teal);font-weight:700}
+.up{display:flex;gap:6px}
+.up i{width:60px;height:44px;border-radius:6px;background:repeating-linear-gradient(135deg,#E9D9E4 0 6px,#F4EAF1 6px 12px);border:1px solid var(--s-line)}
+.up i.add{background:#F3F6F6;border-style:dashed;display:grid;place-items:center;color:var(--s-ink3);font-style:normal;font-size:16px}
+.todo{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.todo div{background:var(--s-card);border:1px solid var(--s-line);border-radius:8px;padding:10px 12px}
+.todo div b{display:block;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums}
+.todo div.hot b{color:var(--s-red)}.todo div.zero{opacity:.5}
+.modal{position:absolute;inset:26px 90px;background:var(--s-card);border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:12px;display:flex;flex-direction:column;gap:8px}
+
+/* ── 表格页（内部人员）────────────────────────────────────── */
+.sheets{display:flex;gap:4px;overflow:hidden;flex:none}
+.sheets span{flex:none;font-size:11px;padding:3px 9px;border-radius:7px;background:var(--s-card);border:1px solid var(--s-line);color:var(--s-ink2);white-space:nowrap}
+.sheets span.on{background:var(--s-teal);border-color:var(--s-teal);color:#fff;font-weight:700}
+.lgwrap{position:relative;overflow:hidden;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);flex:none}
+.lgwrap::after{content:"";position:absolute;top:0;right:0;bottom:0;width:22px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);pointer-events:none}
+table.lg{border-collapse:separate;border-spacing:0;font-size:11px;white-space:nowrap}
+table.lg th{background:#F0F4F5;color:var(--s-ink2);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--s-line)}
+table.lg td{padding:6px 8px;border-bottom:1px solid var(--s-line);vertical-align:middle;background:var(--s-card)}
+table.lg tr:last-child td{border-bottom:0}
+table.lg .fz{position:sticky;left:0;z-index:1;border-right:1px solid var(--s-line);box-shadow:3px 0 5px -3px rgba(0,0,0,.16)}
+table.lg th.fz{background:#E8EEEF}
+table.lg td.fz small{display:block;font-size:9.5px;color:var(--s-ink3);line-height:1.3;margin-top:1px}
+table.lg .mono{font-size:10.5px}
+table.lg tr.pend td{background:#FFF9E8}
+table.lg tr.over td{background:#FDECEA}
+.sbtn{font-size:10.5px;font-weight:700;color:var(--s-teal);border:1px solid var(--s-teal);border-radius:6px;padding:0 7px;line-height:18px;white-space:nowrap;background:var(--s-card)}
+.doctabs{display:flex;gap:4px;flex:none;overflow:hidden}
+.doctabs span{flex:none;font-size:10.5px;padding:3px 8px;border-radius:6px;border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink2);white-space:nowrap}
+.doctabs span.on{background:var(--s-teal-soft);border-color:var(--s-teal);color:var(--s-teal);font-weight:700}
+
+/* ── 首页三格、「我的」、历史编辑记录、外部送样 ──────────────────── */
+.tile.full{grid-column:1/-1;flex-direction:row;align-items:center;gap:10px}
+.mi{width:22px;height:22px;border-radius:6px;background:var(--s-teal-soft);color:var(--s-teal);display:inline-grid;place-items:center;font-weight:700;font-size:11px;flex:none}
+.tog{display:inline-block;width:30px;height:17px;border-radius:9px;background:#CDD8DA;position:relative;flex:none}
+.tog::after{content:"";position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tog.on{background:var(--s-teal)}
+.tog.on::after{left:15px}
+.note{background:var(--s-teal-soft);border-radius:10px;padding:8px 10px;font-size:11.5px;line-height:1.55;color:var(--s-ink)}
+.todo.five{grid-template-columns:repeat(5,1fr)}
+
+/* ── 「我的」页 ───────────────────────────────────────────────────── */
+.bd.me{gap:9px;padding-top:12px}
+.mehead{display:flex;align-items:center;gap:12px;padding:2px 4px 4px}
+.meav{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:17px;font-weight:700;background:var(--s-teal-soft);color:var(--s-teal);box-shadow:inset 0 0 0 1px rgba(14,124,123,.2)}
+.mehead.ext .meav{background:var(--s-blue-soft);color:var(--s-blue);box-shadow:inset 0 0 0 1px rgba(43,95,158,.2)}
+.meid{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mename{font-size:15.5px;line-height:1.3}
+.mesec{font-size:10.5px;font-weight:700;color:var(--s-ink2);letter-spacing:.08em;margin:3px 4px -5px}
+.mehint{font-weight:400;letter-spacing:0;color:var(--s-ink3)}
+.melist{background:var(--s-card);border:1px solid var(--s-line);border-radius:12px;overflow:hidden;flex:none}
+.merow{display:flex;align-items:center;gap:10px;padding:9px 12px;min-height:40px}
+.merow+.merow{border-top:1px solid var(--s-line)}
+.merow>i,.meend i{font-style:normal;color:var(--s-ink3)}
+.merow>i{margin-left:auto}
+.meend{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none}
+.meico{width:28px;height:28px;border-radius:8px;flex:none;display:grid;place-items:center;background:var(--s-teal-soft);color:var(--s-teal)}
+.meico.b{background:var(--s-blue-soft);color:var(--s-blue)}
+.meico.n{background:#EEF2F3;color:var(--s-ink2)}
+.metxt{display:flex;flex-direction:column;min-width:0}
+.metxt b{font-size:13px;font-weight:600;line-height:1.35}
+.metxt small{font-size:10.5px;color:var(--s-ink3);line-height:1.4}
+.adm{background:var(--s-card);border:1px solid var(--s-line);border-radius:12px;padding:9px;display:flex;flex-direction:column;gap:8px;flex:none}
+.admgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.admtile{display:flex;align-items:center;gap:8px;padding:8px;border-radius:9px;background:var(--s-bg);border:1px solid #E8EEEF}
+.admtile b{display:block;font-size:12px;line-height:1.3}
+.admtile small{display:block;font-size:10px;color:var(--s-ink3);line-height:1.3}
+.admnote{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--s-ink2);padding:6px 8px;border-radius:8px;background:#EEF2F3}
+.melogout{text-align:center;color:var(--s-red);font-weight:600;font-size:13px;padding:9px;background:var(--s-card);border:1px solid var(--s-line);border-radius:12px;flex:none}
+
+@media (max-width:860px){
+  .wrap{grid-template-columns:1fr;gap:18px}
+  nav.toc{position:static;flex-direction:row;flex-wrap:wrap;gap:4px 6px}
+  nav.toc b,nav.toc .grp{flex-basis:100%;margin:6px 0 0}
+  header.top h1{font-size:24px}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="页面目录">
+  <b>设计方案</b>
+  <span class="grp">小程序 · 关键页面</span>
+  <a href="#p-home">① 首页</a><a href="#p-form">② 样本记录信息表</a><a href="#p-doc">③ 文档列表</a><a href="#p-preview">④ 文档预览与下载</a><a href="#p-ledger">⑩ 内部管理 · 表格页</a><a href="#p-me">⑪ 我的与历史编辑记录</a>
+  <span class="grp">网页工作台 · 关键页面</span>
+  <a href="#p-sample">⑤ 样本总表</a><a href="#p-qc">⑥ 质控文档编辑</a>
+  <span class="grp">单方案页面（供对齐口径）</span>
+  <a href="#p-ext">⑦ 外部看到的样本详情</a><a href="#p-cryo">⑧ 冻存工作表（只读）</a><a href="#p-adminhome">⑨ 工作台首页待办</a><a href="#p-config">⑫ 系统管理 · 参数设置</a>
+</nav>
+
+<main>
+<header class="top">
+  <h1>类器官送检与样本管理系统<br>关键页面设计方案</h1>
+  <p><b>这一页只留定稿。</b>六个关键页面当初各出过两个方案，2026-09-17 选定之后，未采用的方案已从本页删掉。界面里的数据全部是示意的假数据。</p>
+  <p><b>9 月 17 日贵方看过设计稿后提的 5 条，已经落在本页</b>：内部人员要 Excel 那样的表，能看、能导出（⑩）；四张表提交后都能改，冻存登记可改可删；文档列表上直接单份、合并下载（③）；预览页顶部三份切换（④）；合作单位看得到三份质控文档（⑦）。</p>
+  <p><b>9 月 17 日晚定的小程序结构</b>：首页内外部同一个样子、没有数字，点表就是填写，内部四张、外部三张（①）；外部可填类器官收样与石蜡包埋送样（②）；「我的」里所有人有历史编辑记录，内部人员多一个「内部管理」板块（⑪）；表格页挪进内部管理（⑩）；取走、补入、转液氮、改删登记只在网页工作台（⑧）；工作台首页五张待办（⑨）。</p>
+  <p><b>9 月 18 日贵方在测试问题记录表里提的 9 条，改动 5 处</b>：内部管理表格页加「修改」入口（⑩）；历史编辑记录内部人员看得到中心全部人的记录（⑪）；外部看得到操作人与包埋人（⑦）；内部编号加一个对外显示开关（⑦）；冻存超期与转液氮的口径写清楚（⑧）。另外 4 条是提问不是改动，答复写在测试问题记录表的「解决方式」一栏里。</p>
+  <p>视觉语言统一：实验室的冷静青绿色，编号类内容一律等宽字体（内部编号、送检单号、石蜡块编号、冻存命名都是要逐字符核对的东西）。</p>
+  <div class="how">
+    <span><span class="tag chosen">定稿</span> 的帧就是开发照着做的界面基准</span>
+    <span><span class="tag chosen">定稿 · 9-17 晚</span> 首页、外部送样、内部管理表格页、我的与历史编辑记录</span>
+    <span><span class="tag chosen">定稿 · 9-18</span> 按贵方 9 月 18 日意见改过的帧</span>
+  </div>
+</header>
+
+<!-- ═════════════ ① 首页 ═════════════ -->
+<section class="page" id="p-home">
+  <h2>① 小程序首页 <small>UI:mp.home · 一级导航主页 · 9 月 17 日晚定稿</small></h2>
+  <p class="lead">会上定的是三个页签：首页放表的填写入口，中间是文档，最后是我的。9 月 17 日晚定稿：内部外部同一个样子，没有数字，点哪张表都是新增一条；内部四张，外部三张（没有 -80 冻存记录）。填过的记录到「我的 → 历史编辑记录」里找（⑪）。</p>
+  <div class="opts">
+    <div class="opt chosen" id="mp-home-final">
+      <h3>定稿 · 内部人员 <span class="tag chosen">定稿 · 9-17 晚</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav">类器官送检</div>
+        <div class="bd">
+          <div class="row sb"><b>李工，上午好</b><span class="chip t">内部人员</span></div>
+          <div class="tiny" style="margin-top:-4px">类器官研究中心</div>
+          <div class="h row sb"><span>填写</span><span class="tiny" style="font-weight:400;letter-spacing:0">点表新增一条</span></div>
+          <div class="grid2">
+            <div class="tile"><span class="ico">样</span><b>样本记录信息表</b><span class="tiny">组织样本送检与收样</span></div>
+            <div class="tile"><span class="ico">类</span><b>类器官收样记录</b><span class="tiny">收到的类器官</span></div>
+            <div class="tile"><span class="ico">蜡</span><b>石蜡包埋送样记录</b><span class="tiny">包埋、切片、染色</span></div>
+            <div class="tile"><span class="ico">冻</span><b>-80 冻存记录</b><span class="tiny">冻存批次</span></div>
+          </div>
+          <div class="hint">填过的记录在「我的 → 历史编辑记录」里找回和修改</div>
+        </div>
+        <div class="tabbar"><span class="on">首页</span><span>文档</span><span>我的</span></div>
+      </div></div>
+      <p>问候行 + 2×2 宫格。入口上不放角标，没有数字摘要，也没有最近记录。（早先的首页顶部有「今日新增 / 待核验 / 冻存超期」三个数字和一段最近记录，9 月 17 日晚去掉了——贵方 9 月 18 日问的「首页顶部数字」指的就是它。待办计数现在只在网页工作台首页⑨。）四张表的全表查看、筛选、导出在「我的 → 内部管理」（⑩）。</p>
+    </div>
+    <div class="opt chosen" id="mp-home-final-ext">
+      <h3>定稿 · 外部人员 <span class="tag chosen">定稿 · 9-17 晚</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav">类器官送检</div>
+        <div class="bd">
+          <div class="row sb"><b>王医生，上午好</b><span class="chip b">合作单位</span></div>
+          <div class="tiny" style="margin-top:-4px">A 医院 · 肝胆外科组 · 已核验</div>
+          <div class="h">填写</div>
+          <div class="grid2">
+            <div class="tile"><span class="ico">样</span><b>样本记录信息表</b><span class="tiny">可拍照识别</span></div>
+            <div class="tile"><span class="ico">类</span><b>类器官收样记录</b><span class="tiny">送类器官</span></div>
+            <div class="tile full"><span class="ico">蜡</span><div><b>石蜡包埋送样记录</b><br><span class="tiny">挂在自己送检过的样本上</span></div></div>
+          </div>
+          <div class="hint">提交后由实验室核验；填过的记录在「我的 → 历史编辑记录」</div>
+        </div>
+        <div class="tabbar"><span class="on">首页</span><span>文档</span><span>我的</span></div>
+      </div></div>
+      <p>和内部同一个样子，少一张 -80 冻存记录。三格时第三格横向占满整行，不留半宽的孤格。全程不出现内部编号。</p>
+    </div>
+  </div>
+  <div class="verdict"><div class="kv done"><b>定稿 · 2026-09-17 晚</b>「我觉得首页进去都是一样的，无论外部还是内部」「首页顶部数字去掉，不合理」。内部四张、外部三张（没有 -80 冻存记录），点进去都是填写；数字与最近记录去掉；找回记录在「我的 → 历史编辑记录」。</div></div>
+</section>
+
+<!-- ═════════════ ② 填写页 ═════════════ -->
+<section class="page" id="p-form">
+  <h2>② 样本记录信息表填写页 <small>UI:mp.sample.form · 高频录入 + 拍照识别</small></h2>
+  <p class="lead">外部人员填得最多的表，也是拍照识别落地的地方。识别只做预填，填写人核对后才提交。9 月 17 日晚起外部首页有三张表，另两张的外部填法见本节右侧的石蜡包埋送样帧。</p>
+  <div class="opts">
+    <div class="opt chosen" id="mp-form-a">
+      <h3>单页分组长表单，顶部识别条 <span class="tag chosen">定稿</span></h3>
+      <div class="ph"><div class="scr" style="height:820px">
+        <div class="nav"><i>‹</i>样本记录信息表</div>
+        <div class="bd">
+          <div class="ocr"><span>拍照识别</span><span>从相册选</span></div>
+          <div class="hint">识别结果仅作预填，请核对后提交 · <u>查看识别到的原文</u></div>
+          <div class="h">送检信息</div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>来源单位</label><span class="v">A 医院</span></div>
+            <div class="fld"><label>供体姓名</label><span class="v">张某某<span class="mk">识别 · 请核对</span></span></div>
+            <div class="fld"><label>性别</label><span class="seg"><i class="on">男</i><i>女</i><i>未知</i></span></div>
+            <div class="fld"><label>年龄</label><span class="v">56<span class="mk">识别 · 请核对</span></span></div>
+            <div class="fld"><label>住院号</label><span class="v mono">Z2609170<span class="mk">识别 · 请核对</span></span></div>
+            <div class="fld"><label>组织类型</label><span class="v ph0">请输入，如 肝组织</span></div>
+            <div class="fld"><label>有无病理</label><span class="seg"><i>有</i><i>无</i></span></div>
+            <div class="fld"><label>备注</label><span class="v ph0">选填</span></div>
+          </div>
+          <div class="h row sb"><span>收样信息</span><span class="tiny" style="font-weight:400;letter-spacing:0">仅内部人员</span></div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>收样日期</label><span class="v">2026-09-12</span></div>
+            <div class="fld"><label>内部编号</label><span class="v mono">hli52</span></div>
+            <div class="fld"><label>有无固定</label><span class="v"><span class="chip t">有</span> <span class="chip n">无</span></span></div>
+            <div class="fld"><label>处理时间</label><span class="v">2026-09-12 14:30</span></div>
+            <div class="fld"><label>质控表</label><span class="v"><span class="chip t">有</span> <span class="chip n">无</span></span></div>
+            <div class="fld"><label>细胞活率报告</label><span class="v"><span class="chip t">有</span> <span class="chip n">无</span></span></div>
+            <div class="fld"><label>操作人</label><span class="v">李工</span></div>
+          </div>
+          <div class="hint">送检 8 项 + 收样 7 项 = 模板的 14 列全在这一页（「有无病理」是额外加的一项）</div>
+        </div>
+        <div class="foot"><span class="btn">提交</span></div>
+      </div></div>
+      <p>一页填完。识别成功后，被预填的项带黄色小标，改过就消失；没识别出来的项保持空着，不挡着手填。从「我的 → 历史编辑记录」点一条进来是修改模式：内部改有效样本全部可改，待核验、无效的外部样本只读（核验在工作台）；外部本人待核验、无效的改后重提。从「内部管理」表格页点一行进来是只读，页面右上角有「修改」，点了就切到修改模式（9 月 18 日按贵方意见加）。</p>
+    </div>
+    <div class="opt chosen" id="mp-embed-ext">
+      <h3>外部填石蜡包埋送样 <span class="tag chosen">9-17 晚新增</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>石蜡包埋送样记录</div>
+        <div class="bd">
+          <div class="h">选择样本</div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>送检样本</label><span class="v"><span class="mono">SJ00000127</span> · 刘** ›</span></div>
+          </div>
+          <div class="tiny" style="margin:-2px 2px 0">只列出本人送检过、没有被判无效的样本</div>
+          <div class="h">送样信息</div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>样本类型</label><span class="v">组织</span></div>
+            <div class="fld"><label>类器官来源</label><span class="v ph0">选填，如 肝类器官</span></div>
+          </div>
+          <div class="note"><b>提交后由实验室核验</b><br>核验有效后给出石蜡块编号，再陆续补上包埋、切片、染色情况，在样本详情里都看得到。</div>
+        </div>
+        <div class="foot"><span class="btn">提交</span></div>
+      </div></div>
+      <p>外部只填三项：选自己的样本（送检单号 + 掩码姓名，不出现内部编号）、样本类型、类器官来源类型。石蜡块编号、工序、染色、marker、包埋人这几项不出现在这个填写页上——它们是中心做完之后才有的，由中心在网页工作台补，补好之后外部在样本详情（⑦）里就能看到。外部类器官收样记录同理，只有来源单位、类器官类型、备注三项。字段划分是默认口径，写进确认单请贵方确认。</p>
+    </div>
+  </div>
+  <div class="verdict"><div class="kv done"><b>定稿 · 2026-09-17</b>识别只做预填，主路径不押在识别上：识别不准或暂时不可用时照样手填；内部补填收样信息也是同一页。</div></div>
+</section>
+
+<!-- ═════════════ ③ 文档列表 ═════════════ -->
+<section class="page" id="p-doc">
+  <h2>③ 文档页签 <small>UI:mp.doc.list · 一级导航主页</small></h2>
+  <p class="lead">会上的说法是「一个文件的列表，找到对应时间的那个 Word，点击之后可以预览」。三份 Word 既要能单独下，也要能合并下。</p>
+  <div class="opts">
+    <div class="opt chosen" id="mp-doc-a">
+      <h3>按样本分组 <span class="tag chosen">定稿</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav">文档</div>
+        <div class="bd">
+          <div class="row" style="gap:6px"><span class="chip t">近一月</span><span class="chip n">全部类型</span></div>
+          <div class="c">
+            <div class="row sb"><b><span class="mono">SJ00000127</span> · 刘**</b><span class="tiny">09-16 更新</span></div>
+            <div class="li"><span>样本质控表 <span class="tiny">09-12</span></span><span class="sbtn">下载</span></div>
+            <div class="li"><span>类器官质控表 <span class="tiny">09-15</span></span><span class="sbtn">下载</span></div>
+            <div class="li"><span>类器官质量评分表 <span class="tiny">09-16</span></span><span class="sbtn">下载</span></div>
+            <div class="row" style="margin-top:6px;gap:6px"><span class="btn gh" style="flex:1;padding:6px">合并预览</span><span class="btn gh" style="flex:1;padding:6px">合并下载</span></div>
+          </div>
+          <div class="c">
+            <div class="row sb"><b><span class="mono">SJ00000098</span> · 赵**</b><span class="tiny">09-08 更新</span></div>
+            <div class="li"><span>样本质控表 <span class="tiny">09-08</span></span><span class="sbtn">下载</span></div>
+          </div>
+        </div>
+        <div class="tabbar"><span>首页</span><span class="on">文档</span><span>我的</span></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="row sb"><b>下载 · 样本质控表</b><span class="tiny mono">SJ00000127</span></div>
+          <div class="row sb"><span class="mut">格式</span><span class="seg"><i class="on">PDF</i><i>Word</i></span></div>
+          <div class="row" style="gap:8px"><span class="btn gh" style="flex:1">打开</span><span class="btn" style="flex:1">发送到微信</span></div>
+          <div class="tiny">小程序不能直接存进手机文件夹：打开后点右上角可以保存或转发</div>
+        </div>
+      </div></div>
+      <p>一个样本一张卡，三份文档和「合并」天然放在一起。9 月 17 日按贵方意见改：每份旁加「下载」，组底拆成「合并预览」「合并下载」；点下载弹出格式与打开 / 发送到微信（图上正弹着）。</p>
+    </div>
+  </div>
+  <div class="verdict"><div class="kv done"><b>定稿 · 2026-09-17</b>先找样本，再看它的三份文档；组内、组间都按时间倒序，保留时间范围筛选。</div></div>
+</section>
+
+<!-- ═════════════ ④ 预览 ═════════════ -->
+<section class="page" id="p-preview">
+  <h2>④ 文档预览与下载 <small>UI:mp.doc.preview · 复杂交互</small></h2>
+  <p class="lead">贵方要三件事：预览和 Word 一模一样，图片能放大缩小，Word 和 PDF 都能下。小程序自己打不开 Word，也没有「存到手机文件夹」的接口。</p>
+  <div class="opts">
+    <div class="opt chosen" id="mp-preview-a">
+      <h3>应用内预览页 <span class="tag chosen">定稿</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>样本质控表</div>
+        <div class="bd" style="gap:6px">
+          <div class="doctabs"><span class="on">样本质控表</span><span>类器官质控表</span><span>类器官质量评分表</span><span>合并</span></div>
+          <div class="pg">
+            <h6>样本质控表</h6>
+            <table>
+              <tr><td class="k">患者编号</td><td>P-0231</td><td class="k">来源单位</td><td>A 医院</td></tr>
+              <tr><td class="k">患者姓名</td><td>刘某某</td><td class="k">取样部位</td><td>肝右叶</td></tr>
+              <tr><td class="k">收样描述</td><td colspan="3">样本按质控要求，保持2-8℃低温环境运输至实验室。</td></tr>
+              <tr><td class="k">内部编号</td><td></td><td class="k">细胞活率测定</td><td>活率报告.pdf</td></tr>
+              <tr><td class="k"></td><td colspan="2" style="text-align:center">样本图片</td><td style="text-align:center">情况描述</td></tr>
+              <tr><td class="k">收样原始情况</td><td colspan="2"><div class="im">显微照片</div></td><td>组织块约 0.8cm</td></tr>
+              <tr><td class="k">样本观察情况</td><td colspan="2"><div class="im">显微照片</div></td><td>样本外观呈黄白色。</td></tr>
+            </table>
+            <div style="margin-top:4px">注：合格，活率≥70%；基本合格，50%~70%；不合格，＜50%或活细胞＜1x104。</div>
+          </div>
+          <div class="hint">第 1 / 2 页 · 点页面全屏，双指缩放</div>
+          <div class="h">文档中的图片（点开看原图）</div>
+          <div class="thumbs"><i></i><i></i><i></i></div>
+          <div class="h">附件</div>
+          <div class="c" style="padding:6px 10px"><div class="row sb"><span>活率报告.pdf</span><span class="tiny">312 KB ›</span></div></div>
+        </div>
+        <div class="foot"><span class="seg"><i class="on">PDF</i><i>Word</i></span><span class="btn gh">打开</span><span class="btn">发送到微信</span></div>
+      </div></div>
+      <p>服务端把 Word 转成 PDF 再出页面图，预览、Word、PDF 同源，所以下载下来的排版和这里看到的一致。<b>这里的样张是照贵方给的模板排的示意图，最终版式以贵方确认的模板样张为准</b>（合同第五条）。外部版里「内部编号」一格默认留空。显微照片另给原图入口，放大才看得清细节。9 月 17 日加了顶部三份切换（+ 合并）。</p>
+    </div>
+  </div>
+  <div class="verdict"><div class="kv done"><b>定稿 · 2026-09-17</b>预览是自己的页面，页面图片与 Word、PDF 同源；显微照片能点开看原图，附件有处放。</div></div>
+</section>
+
+<!-- ═════════════ ⑩ 内部管理 · 表格页（9-17 新增，9-18 加修改入口） ═════════════ -->
+<section class="page" id="p-ledger">
+  <h2>⑩ 内部管理 · 表格页 <small>UI:mp.ledger · 挂在「我的 → 内部管理」 · 9 月 18 日按贵方意见加了「修改」入口</small></h2>
+  <p class="lead">贵方原话：「内部人员的话，能不能点击进去填写是 excel 表啊」「这4个表都要求内部人员可下载，导出为 excel」，9 月 18 日又提「还要加一条可以编辑」。所以这一页是四张表的全表视图：查看、筛选、导出，点一行看详情，详情右上角「修改」进该表的填写页改。新增走首页；核验、冻存取用在网页工作台。</p>
+  <div class="opts">
+    <div class="opt chosen" id="mp-ledger">
+      <h3>定稿 · 表格页 <span class="tag chosen">定稿 · 9-18</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>样本记录信息表</div>
+        <div class="bd" style="gap:7px">
+          <div class="sheets"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span>-80 冻存</span></div>
+          <div class="row" style="gap:6px"><span class="c" style="flex:1;padding:5px 8px;color:#93A1A8;font-size:11px">搜索 内部编号 / 来源单位 / 供体</span><span class="chip n">核验 ▾</span></div>
+          <div class="tiny">共 128 条 · 左右滑动看全部 14 列</div>
+          <div class="lgwrap"><table class="lg">
+            <tr><th class="fz">内部编号</th><th>来源单位</th><th>供体姓名</th><th>性别</th><th>年龄</th><th>住院号</th></tr>
+            <tr class="pend"><td class="fz"><span class="mono">SJ00000131</span><small style="color:#B7791F;font-weight:700">待核验 · 外部</small></td><td>A 医院</td><td>张**</td><td>男</td><td>56</td><td class="mono">Z2609170</td></tr>
+            <tr><td class="fz"><span class="mono">hli52</span><small>有效 · 外部</small></td><td>A 医院</td><td>刘**</td><td>女</td><td>61</td><td class="mono">Z2609102</td></tr>
+            <tr><td class="fz"><span class="mono">hli49</span><small>有效 · 外部</small></td><td>B 大学</td><td>赵**</td><td>男</td><td>47</td><td class="mono">Z2608277</td></tr>
+            <tr><td class="fz"><span class="mono">hli48</span><small>有效 · 内部</small></td><td>本中心</td><td>孙**</td><td>女</td><td>52</td><td class="mono">Z2608231</td></tr>
+            <tr><td class="fz"><span class="mono">hli47</span><small>有效 · 外部</small></td><td>A 医院</td><td>周**</td><td>男</td><td>66</td><td class="mono">Z2608190</td></tr>
+            <tr><td class="fz"><span class="mono">hli46</span><small>有效 · 外部</small></td><td>C 医院</td><td>吴**</td><td>女</td><td>39</td><td class="mono">Z2608154</td></tr>
+          </table></div>
+          <div class="hint">点一行看详情，详情里可「修改」 · 浅黄色是待核验</div>
+          <div class="note">查看、筛选、导出；点一行进详情，详情右上角「修改」进填写页。核验与冻存取用在网页工作台。</div>
+        </div>
+        <div class="foot"><span class="btn gh">导出 Excel</span></div>
+      </div></div>
+      <p>四张表在顶上切换，列名列序照模板，第一列冻结、其余左右滑。底部只有「导出 Excel」，按当前筛选导出，与工作台导出同一个格式。点一行打开只读详情，详情右上角有「修改」，进的是该表填写页的修改模式（9 月 18 日按贵方意见加的；改谁填的都行，改完记在那条记录上）；-80 冻存点一行是批次详情（⑧）。</p>
+    </div>
+    <div class="opt chosen" id="mp-ledger-view">
+      <h3>点一行 · 只读详情 <span class="tag chosen">定稿 · 9-18</span></h3>
+      <div class="ph"><div class="scr" style="height:820px">
+        <div class="nav"><i>‹</i>样本记录信息表<span class="sbtn" style="position:absolute;right:10px">修改</span></div>
+        <div class="bd">
+          <div class="c"><div class="row sb"><b class="mono">hli52</b><span class="chip g">有效 · 外部</span></div><span class="tiny">A 医院 · 陈医生 09-09 送检 · 李工 09-12 收样</span></div>
+          <div class="h">送检信息</div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>来源单位</label><span class="v">A 医院</span></div>
+            <div class="fld"><label>供体姓名</label><span class="v">刘某某</span></div>
+            <div class="fld"><label>性别 / 年龄</label><span class="v">女 · 61</span></div>
+            <div class="fld"><label>住院号</label><span class="v mono">Z2609102</span></div>
+            <div class="fld"><label>组织类型</label><span class="v">肝组织</span></div>
+          </div>
+          <div class="h">收样信息</div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>收样日期</label><span class="v">2026-09-12</span></div>
+            <div class="fld"><label>内部编号</label><span class="v mono">hli52</span></div>
+            <div class="fld"><label>有无固定</label><span class="v">有</span></div>
+            <div class="fld"><label>处理时间</label><span class="v">2026-09-12 14:30</span></div>
+            <div class="fld"><label>质控表</label><span class="v">有</span></div>
+            <div class="fld"><label>细胞活率报告</label><span class="v">有</span></div>
+            <div class="fld"><label>操作人</label><span class="v">李工</span></div>
+            <div class="fld"><label>备注</label><span class="v">—</span></div>
+          </div>
+          <div class="note">最后修改：李工 · 09-17 10:42</div>
+        </div>
+      </div></div>
+      <p>全部字段只读，没有输入框、没有保存。要改就点右上角的<b>「修改」</b>——这是 9 月 18 日按贵方「还要加一条可以编辑」加的入口。中心内部人员填的、别人填的都能改；合作单位送来还没核验的样本这里不给「修改」（核验在网页工作台）。</p>
+    </div>
+    <div class="opt chosen" id="mp-ledger-edit">
+      <h3>点「修改」之后 <span class="tag chosen">定稿 · 9-18</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>修改样本记录<span class="tiny" style="position:absolute;right:10px;color:#93A1A8">hli52</span></div>
+        <div class="bd">
+          <div class="note" style="background:#FCF1DA;color:#B7791F;border:0">正在修改这一条 · 改完点底部「保存」</div>
+          <div class="h">送检信息</div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>来源单位</label><span class="v">A 医院</span></div>
+            <div class="fld"><label>供体姓名</label><span class="v">刘某某</span></div>
+            <div class="fld"><label>性别 / 年龄</label><span class="v">女 · 61</span></div>
+            <div class="fld"><label>住院号</label><span class="v mono">Z2609102</span></div>
+          </div>
+          <div class="h">收样信息</div>
+          <div class="c" style="padding:2px 10px">
+            <div class="fld"><label>收样日期</label><span class="v">2026-09-12</span></div>
+            <div class="fld"><label>内部编号</label><span class="v mono">hli52</span></div>
+            <div class="fld"><label>操作人</label><span class="v">李工</span></div>
+          </div>
+          <div class="hint">和首页点表进来的是同一张填写页，只是带着这一条的内容</div>
+        </div>
+        <div class="foot"><span class="btn">保存</span></div>
+      </div></div>
+      <p>进来的就是这张表的填写页（和首页新增用的是同一页），带着这一条的内容。改完点「保存」，系统记下是谁、什么时候改的，这条记录也会出现在改动人的「历史编辑记录」（⑪）里。</p>
+    </div>
+  </div>
+  <div class="verdict"><div class="kv done"><b>定稿 · 2026-09-18</b>表格页挂在「我的 → 内部管理」：查看、筛选、导出，点一行看详情、详情里可「修改」；首页宫格点进去是新增。</div></div>
+</section>
+
+<!-- ═════════════ ⑪ 我的与历史编辑记录（9-17 晚定稿新增） ═════════════ -->
+<section class="page" id="p-me">
+  <h2>⑪ 我的与历史编辑记录 <small>UI:mp.me / UI:mp.history · 9 月 17 日晚定稿新增</small></h2>
+  <p class="lead">所有人都能在「我的」里看历史编辑记录；内部人员多一个「内部管理」板块，四张表的全部数据在那里查看、筛选、导出。首页只管填，找回和修改在这里。</p>
+  <div class="opts">
+    <div class="opt chosen" id="mp-me-int">
+      <h3>我的 · 内部人员 <span class="tag chosen">定稿 · 9-17 晚</span><span class="tag">9-17 夜重绘</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav">我的</div>
+        <div class="bd me">
+          <div class="mehead">
+            <span class="meav">李</span>
+            <div class="meid">
+              <div class="row" style="gap:6px"><b class="mename">李工</b><span class="chip t">内部人员</span></div>
+              <span class="tiny">类器官研究中心 · <span class="mono">139****2046</span></span>
+            </div>
+          </div>
+          <div class="mesec">我的记录</div>
+          <div class="melist">
+            <div class="merow"><span class="meico"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.5"/></svg></span><span class="metxt"><b>历史编辑记录</b><small>找回自己填过的记录，点进去修改</small></span><i>›</i></div>
+          </div>
+          <div class="mesec row sb"><span>内部管理</span><span class="mehint">查看 · 筛选 · 导出</span></div>
+          <div class="adm">
+            <div class="admgrid">
+              <div class="admtile"><span class="mi">样</span><span><b>样本记录</b><small>信息表</small></span></div>
+              <div class="admtile"><span class="mi">类</span><span><b>类器官收样</b><small>记录</small></span></div>
+              <div class="admtile"><span class="mi">蜡</span><span><b>石蜡包埋</b><small>送样记录</small></span></div>
+              <div class="admtile"><span class="mi">冻</span><span><b>-80 冻存</b><small>记录</small></span></div>
+            </div>
+            <div class="admnote"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="8" rx="1.2"/><path d="M6 14h4M8 11v3"/></svg><span>核验、冻存取用请到网页工作台</span></div>
+          </div>
+          <div class="melist">
+            <div class="merow"><span class="meico n"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3M6 8.5h4M6 11h3"/></svg></span><span class="metxt"><b>用户协议</b></span><i>›</i></div>
+            <div class="merow"><span class="meico n"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4z"/><path d="M6 8l1.5 1.5 2.8-2.8"/></svg></span><span class="metxt"><b>隐私政策</b></span><i>›</i></div>
+          </div>
+          <div class="melogout">退出登录</div>
+        </div>
+        <div class="tabbar"><span>首页</span><span>文档</span><span class="on">我的</span></div>
+      </div></div>
+      <p>身份区不再用色块卡片：头像缺省显示姓的首字，旁边是姓名、身份徽标、单位与打码手机号。下面按「我的记录 / 内部管理 / 协议」分组成白底圆角卡片；内部管理四个入口 2×2，表名分两行排；退出登录单独一张。「内部管理」只给内部人员（外部那边整块不显示，不是置灰），四个入口进⑩的表格页。</p>
+    </div>
+    <div class="opt chosen" id="mp-me-ext">
+      <h3>我的 · 外部人员 <span class="tag chosen">定稿 · 9-17 晚</span><span class="tag">9-17 夜重绘</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav">我的</div>
+        <div class="bd me">
+          <div class="mehead ext">
+            <span class="meav">王</span>
+            <div class="meid">
+              <div class="row" style="gap:6px"><b class="mename">王医生</b><span class="chip b">合作单位</span></div>
+              <span class="tiny">手机 <span class="mono">137****8815</span></span>
+            </div>
+          </div>
+          <div class="mesec">我的记录</div>
+          <div class="melist">
+            <div class="merow"><span class="meico b"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.5"/></svg></span><span class="metxt"><b>历史编辑记录</b><small>本人与同组同事提交的记录</small></span><i>›</i></div>
+          </div>
+          <div class="mesec">单位与组别</div>
+          <div class="melist">
+            <div class="merow"><span class="meico b"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13.5h11M4 13.5V3h5.5v10.5M9.5 7H12v6.5"/><path d="M6 5.5h1.5M6 8h1.5M6 10.5h1.5"/></svg></span><span class="metxt"><b>A 医院 · 肝胆外科组</b><small>改了需要中心重新核验</small></span><span class="meend"><span class="chip g">已核验</span><i>›</i></span></div>
+          </div>
+          <div class="melist">
+            <div class="merow"><span class="meico n"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3M6 8.5h4M6 11h3"/></svg></span><span class="metxt"><b>用户协议</b></span><i>›</i></div>
+            <div class="merow"><span class="meico n"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4z"/><path d="M6 8l1.5 1.5 2.8-2.8"/></svg></span><span class="metxt"><b>隐私政策</b></span><i>›</i></div>
+          </div>
+          <div class="melogout">退出登录</div>
+        </div>
+        <div class="tabbar"><span>首页</span><span>文档</span><span class="on">我的</span></div>
+      </div></div>
+      <p>同一套版式，身份色换成外部蓝。没有内部管理板块，多一张「单位与组别」卡片：当前单位与组别、核验状态，改了会回到待核验。</p>
+    </div>
+    <div class="opt chosen" id="mp-history">
+      <h3>历史编辑记录 · 外部人员 <span class="tag chosen">定稿 · 9-17 晚</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>历史编辑记录</div>
+        <div class="bd" style="gap:7px">
+          <div class="doctabs"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span></div>
+          <div class="row sb"><span class="tiny">本人与同组同事的记录</span><span class="row" style="gap:5px"><span class="tiny" style="color:#16232B;white-space:nowrap">只看我提交的</span><span class="tog"></span></span></div>
+          <div class="c" style="padding:2px 10px">
+            <div class="li"><span><span class="mono">SJ00000131</span><br><span class="tiny">张** · 肝组织 · 我 · 09-17</span></span><span class="chip a">待核验</span></div>
+            <div class="li"><span><span class="mono">SJ00000127</span><br><span class="tiny">刘** · 肝组织 · 同组 陈医生 · 09-15</span></span><span class="chip g">有效</span></div>
+            <div class="li"><span><span class="mono">SJ00000119</span><br><span class="tiny">周** · 胆管组织 · 我 · 09-10</span><br><span class="tiny" style="color:#B3362B">无效：缺住院号</span></span><span class="row" style="gap:4px;flex-direction:column;align-items:flex-end"><span class="chip r">无效</span><span class="sbtn">修改</span></span></div>
+            <div class="li"><span><span class="mono">SJ00000102</span><br><span class="tiny">吴** · 结直肠组织 · 我 · 09-02</span></span><span class="chip g">有效</span></div>
+          </div>
+          <div class="hint">自己「待核验」「无效」的记录点进去可以修改后重新提交，其余只能查看</div>
+        </div>
+      </div></div>
+      <p>按表分页签（外部三张）。列的是记录，不是逐次修改的明细。同组同事的可看不可改；打开「只看我提交的」只剩本人的。</p>
+    </div>
+    <div class="opt chosen" id="mp-history-int">
+      <h3>历史编辑记录 · 内部人员 <span class="tag chosen">定稿 · 9-18</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>历史编辑记录</div>
+        <div class="bd" style="gap:7px">
+          <div class="doctabs"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span>-80 冻存</span></div>
+          <div class="row sb"><span class="tiny">中心全部内部人员的记录</span><span class="row" style="gap:5px"><span class="tiny" style="color:#16232B;white-space:nowrap">只看我提交的</span><span class="tog"></span></span></div>
+          <div class="c" style="padding:2px 10px">
+            <div class="li"><span><span class="mono">hli52</span><br><span class="tiny">刘** · 肝组织 · A 医院 · 李工</span></span><span class="tiny" style="text-align:right">修改<br>09-17 10:42</span></div>
+            <div class="li"><span><span class="mono">hli53</span><br><span class="tiny">钱** · 肝组织 · 本中心 · 我</span></span><span class="tiny" style="text-align:right">新增<br>09-17 09:30</span></div>
+            <div class="li"><span><span class="mono">hli48</span><br><span class="tiny">孙** · 肝组织 · 本中心 · 周工</span></span><span class="tiny" style="text-align:right">新增<br>09-12 15:08</span></div>
+          </div>
+          <div class="hint">点一条进入修改；合作单位送来还没核验的样本在网页工作台核验</div>
+        </div>
+      </div></div>
+      <p>内部四个页签。默认列出中心所有内部人员的记录，谁录的、谁最后改的写在每条后面，可以切「只看我提交的」（9 月 18 日按贵方「我们内部人员也有多个」改的）。-80 冻存页签里改冻存数量同样逐笔校验（改到剩余为负不让保存）。</p>
+    </div>
+    <div class="opt" style="flex:1 1 320px">
+      <h3>口径</h3>
+      <p><b>历史编辑记录是记录清单，不是修改日志</b>：内部 = 中心所有内部人员新增或修改过的记录，默认全部、可切「只看我提交的」；外部 = 本人与同组同事（组别已核验）提交的，同样可切。每条记着是谁录的、谁最后改的。要看每一次具体改了哪个字段，是另一件事，目前不做。</p>
+      <p><b>点一条去哪</b>：内部进该表填写页修改，别人录的也能改（外部送来还没核验的样本只读，核验在工作台）；外部本人「待核验」「无效」的改后重提，其余只读（样本记录打开外部样本详情⑦）。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ ⑤ 样本总表 ═════════════ -->
+<section class="page" id="p-sample">
+  <h2>⑤ 工作台 · 样本总表 <small>UI:admin.sample.list · 内部人员的主工作面</small></h2>
+  <p class="lead">贵方要的是「所有样本一张表，不要一个样本一个表」，能按来源单位批量筛选，能导出 Excel。外部提交的样本在这里核验。</p>
+  <div class="opts">
+    <div class="opt wide chosen" id="admin-sample-a">
+      <h3>一张大表 + 右侧抽屉 <span class="tag chosen">定稿</span></h3>
+      <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr">
+        <div class="side"><b>类器官样本管理</b><span>工作台首页</span><span class="on">样本总表 <em>3</em></span><span>石蜡包埋</span><span>冻存管理 <em>2</em></span><span>人员与单位</span><span>系统管理</span></div>
+        <div class="wk">
+          <div class="filters"><span>来源单位</span><span>组别</span><span>样本类别</span><span>内部 / 外部</span><span>核验状态</span><span>收样日期 起 — 止</span><span>内部编号</span><span>供体姓名（精确）</span><span class="b1">查询</span><span class="b2">导出样本记录信息表</span><span class="b2">导出类器官收样记录</span></div>
+          <table class="g">
+            <tr><th>内部编号</th><th>送检单号</th><th>来源单位</th><th>类别</th><th>来源</th><th>核验</th><th>供体姓名</th><th>组织类型</th><th>收样日期</th><th>有无固定</th><th>切片染色</th><th>操作</th></tr>
+            <tr class="pend sel"><td class="mono">—</td><td class="mono">SJ00000131</td><td>A 医院</td><td>组织</td><td><span class="chip b">外部</span></td><td><span class="chip a">待核验</span></td><td>张某某</td><td>肝组织</td><td>—</td><td>—</td><td>—</td><td><a>核验</a></td></tr>
+            <tr><td class="mono">hli52</td><td class="mono">SJ00000127</td><td>A 医院</td><td>组织</td><td><span class="chip b">外部</span></td><td><span class="chip g">有效</span></td><td>刘某某</td><td>肝组织</td><td>2026-09-10</td><td>有</td><td><span class="chip n">石蜡块 2</span> <span class="chip t">已切片</span> <span class="chip n">HE</span> <span class="chip n">IHC</span></td><td><a>编辑</a><a>质控文档</a><a>石蜡包埋</a><a>冻存</a></td></tr>
+            <tr><td class="mono">hco17</td><td class="mono">SJ00000120</td><td>本中心</td><td>类器官</td><td><span class="chip t">内部</span></td><td><span class="chip g">有效</span></td><td>—</td><td>结肠类器官</td><td>2026-09-08</td><td>—</td><td>—</td><td><a>编辑</a><a>质控文档</a><a>石蜡包埋</a><a>冻存</a></td></tr>
+            <tr><td class="mono">hli49</td><td class="mono">SJ00000098</td><td>B 大学</td><td>组织</td><td><span class="chip b">外部</span></td><td><span class="chip g">有效</span></td><td>赵某某</td><td>肝组织</td><td>2026-09-02</td><td>无</td><td><span class="chip n">石蜡块 1</span></td><td><a>编辑</a><a>质控文档</a><a>石蜡包埋</a><a>冻存</a></td></tr>
+          </table>
+          <div class="drawer">
+            <h5>核验样本 <span class="mono mut">SJ00000131</span></h5>
+            <div class="tiny">送检信息（外部填写，可改）</div>
+            <div class="two"><div class="in"><small>来源单位</small>A 医院</div><div class="in"><small>供体姓名</small>张某某</div><div class="in"><small>性别 / 年龄</small>男 / 56</div><div class="in"><small>住院号</small><span class="mono">Z2609170</span></div></div>
+            <div class="tiny">收样信息（判有效时必填 *）</div>
+            <div class="two"><div class="in"><small>收样日期 *</small>2026-09-17</div><div class="in"><small>内部编号 *</small><span class="mono">hli53</span></div><div class="in"><small>有无固定</small><span class="seg"><i class="on">有</i><i>无</i></span></div><div class="in"><small>处理时间</small>2026-09-17 10:30</div></div>
+            <div style="flex:1"></div>
+            <div class="row"><span class="btn" style="flex:1">判为有效并保存</span><span class="btn gh" style="flex:none;padding:9px 14px;color:#B3362B;border-color:#B3362B">判为无效</span></div>
+          </div>
+        </div>
+      </div></div></div>
+      <p>列照模板来，外加内外部、核验状态、切片染色提示。待核验的行浅黄底；核验、编辑都在抽屉里做，不离开表格。</p>
+    </div>
+  </div>
+  <div class="verdict"><div class="kv done"><b>定稿 · 2026-09-17</b>它首先是一张表：像贵方现在的 Excel，批量筛选、导出所见即所得；核验和编辑都在右侧抽屉里做。</div></div>
+</section>
+
+<!-- ═════════════ ⑥ 质控文档编辑 ═════════════ -->
+<section class="page" id="p-qc">
+  <h2>⑥ 工作台 · 质控文档编辑 <small>UI:admin.qc.editor · 复杂交互</small></h2>
+  <p class="lead">三份 Word 由内部人员在网页上编辑，可传图片和附件；预览无误后「完成并同步」，送检方才在小程序里看得到。</p>
+  <div class="opts">
+    <div class="opt wide chosen" id="admin-qc-a">
+      <h3>独立整页，左编辑右预览 <span class="tag chosen">定稿</span></h3>
+      <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr" style="height:680px">
+        <div class="side"><b>类器官样本管理</b><span>工作台首页</span><span class="on">样本总表</span><span>石蜡包埋</span><span>冻存管理</span><span>人员与单位</span><span>系统管理</span></div>
+        <div class="wk">
+          <div class="row sb"><div><b>质控文档</b>　<span class="mono">hli52</span> · A 医院 · 刘某某 · 收样 2026-09-10</div><span class="tiny">‹ 返回样本总表</span></div>
+          <div class="tabs"><span class="on">样本质控表 <span class="chip a">草稿</span></span><span>类器官质控表 <span class="chip g">已完成</span></span><span>类器官质量评分表 <span class="chip a">草稿</span></span></div>
+          <div class="split" style="grid-template-columns:1.1fr 1fr">
+            <div class="pane">
+              <div class="tiny">从样本带出、不用再填：来源单位 A 医院 · 患者姓名 刘某某 · 性别 女 · 收样时间 09-10 · 处理时间 09-12 14:30 · 操作人 李工 · 内部编号 hli52</div>
+              <div class="two"><div class="in"><small>患者编号</small>P-0231</div><div class="in"><small>取样部位</small>肝右叶</div><div class="in"><small>取样方式</small>手术切除</div><div class="in"><small>细胞活率测定（附件）</small>活率报告.pdf</div></div>
+              <div class="in"><small>临床诊断 / 既往治疗</small>肝细胞癌，术前未行放化疗。</div>
+              <div class="in"><small>收样描述</small>样本按质控要求，保持2-8℃低温环境运输至实验室。</div>
+              <div class="tiny">收样原始情况 · 图片（1-3 张，点图放大）</div>
+              <div class="up"><i></i><i></i><i class="add">＋</i></div>
+              <div class="in"><small>情况描述</small>组织块约 0.8cm，色泽正常。</div>
+              <div class="tiny">样本观察情况 · 图片</div>
+              <div class="up"><i></i><i class="add">＋</i></div>
+              <div class="in"><small>情况描述</small>样本外观呈黄白色。</div>
+              <div class="tiny">样本预处理情况 · 图片</div>
+              <div class="up"><i></i><i class="add">＋</i></div>
+              <div class="in"><small>情况描述</small>样本经剪切等预处理，显微镜下观察组织漏出细胞。</div>
+              <div class="tiny">附件（细胞活率报告等，可多个）</div>
+            </div>
+            <div class="pane" style="background:#E9EEEF">
+              <div class="row sb"><h5>预览</h5><span class="seg"><i class="on">内部版</i><i>外部版</i></span></div>
+              <div class="pg" style="font-size:8px">
+                <h6>样本质控表</h6>
+                <table><tr><td class="k">患者编号</td><td>P-0231</td><td class="k">来源单位</td><td>A 医院</td></tr><tr><td class="k">患者姓名</td><td>刘某某</td><td class="k">取样部位</td><td>肝右叶</td></tr><tr><td class="k">内部编号</td><td>hli52</td><td class="k">细胞活率测定</td><td>活率报告.pdf</td></tr><tr><td class="k">收样原始情况</td><td colspan="2"><div class="im">显微照片 ×2</div></td><td>组织块约 0.8cm，色泽正常。</td></tr></table>
+              </div>
+              <div class="tiny">下载：Word · PDF · 合并 Word · 合并 PDF</div>
+            </div>
+          </div>
+          <div class="row" style="justify-content:flex-end"><span class="btn gh" style="padding:6px 14px">保存草稿</span><span class="btn gh" style="padding:6px 14px">预览</span><span class="btn" style="padding:6px 14px">完成并同步给送检方</span></div>
+        </div>
+      </div></div></div>
+      <p>工作台里唯一不用抽屉的录入页：内容多、带多张图，抽屉装不下。右栏预览和将来下载的 Word 同源，还能切到外部版看送检方会看到什么。</p>
+    </div>
+  </div>
+  <div class="verdict"><div class="kv done"><b>定稿 · 2026-09-17</b>写文档就该像写文档：多图、长文本有地方放，改完立刻对着预览核版式，还能切外部版看送检方看到什么。</div></div>
+</section>
+
+<!-- ═════════════ ⑦⑧⑨ 单方案页面 ═════════════ -->
+<section class="page" id="p-ext">
+  <h2>⑦ 外部人员看到的样本详情 <small>UI:mp.sample.detail.ext · 单方案，用来对齐「外部到底能看到什么」</small></h2>
+  <p class="lead">贵方的原话是外部能看到「与自己样本相关的所有东西，如质控结论、评分、石蜡包埋情况」，同时「不想让外部人员知道我们的真实内部编号」。</p>
+  <div class="opts">
+    <div class="opt" id="mp-detail-ext">
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>样本详情</div>
+        <div class="bd">
+          <div class="c"><div class="row sb"><b class="mono">SJ00000127</b><span class="chip g">有效</span></div><span class="tiny">送检人：陈医生（同组）· 2026-09-09 提交</span></div>
+          <div class="h">送检信息</div>
+          <div class="c" style="padding:2px 10px"><div class="fld"><label>来源单位</label><span class="v">A 医院</span></div><div class="fld"><label>供体姓名</label><span class="v">刘某某</span></div><div class="fld"><label>组织类型</label><span class="v">肝组织</span></div></div>
+          <div class="h">石蜡包埋情况</div>
+          <div class="c"><div class="row sb"><b class="mono">E21-1-2026.09.10</b><span class="chip t">已切片</span></div><div class="tiny">石蜡包埋 09-12 · 切片 09-14</div><div class="tiny">操作人：李工 · 包埋人：周工</div><div class="row" style="margin-top:4px;gap:4px"><span class="chip n">HE染色</span><span class="chip n">IHC染色</span><span class="chip b">Ki67：强表达</span></div></div>
+          <div class="c"><div class="row sb"><b>石蜡包埋送样</b><span class="chip a">待核验</span></div><div class="tiny">09-17 本人提交 · 核验后给出石蜡块编号</div></div>
+          <div class="h">质控文档（三份）</div>
+          <div class="c" style="padding:2px 10px"><div class="li"><span>样本质控表</span><span class="tiny">09-12 ›</span></div><div class="li"><span>类器官质控表</span><span class="tiny">09-15 ›</span></div><div class="li"><span>类器官质量评分表 · 合计 80 分</span><span class="tiny">09-16 ›</span></div></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="opt chosen" id="mp-detail-ext-on">
+      <h3>开关打开后 · 外部也看得到内部编号 <span class="tag chosen">定稿 · 9-18</span></h3>
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>样本详情</div>
+        <div class="bd">
+          <div class="c"><div class="row sb"><b class="mono">SJ00000127</b><span class="chip g">有效</span></div><span class="tiny">送检人：陈医生（同组）· 2026-09-09 提交</span>
+            <div class="fld" style="border-top:1px solid var(--s-line);margin-top:6px"><label>内部编号</label><span class="v mono">hli52</span></div>
+          </div>
+          <div class="h">送检信息</div>
+          <div class="c" style="padding:2px 10px"><div class="fld"><label>来源单位</label><span class="v">A 医院</span></div><div class="fld"><label>供体姓名</label><span class="v">刘某某</span></div><div class="fld"><label>组织类型</label><span class="v">肝组织</span></div></div>
+          <div class="h">石蜡包埋情况</div>
+          <div class="c"><div class="row sb"><b class="mono">E21-1-2026.09.10</b><span class="chip t">已切片</span></div><div class="tiny">石蜡包埋 09-12 · 切片 09-14</div><div class="tiny">操作人：李工 · 包埋人：周工</div><div class="row" style="margin-top:4px;gap:4px"><span class="chip n">HE染色</span><span class="chip n">IHC染色</span><span class="chip b">Ki67：强表达</span></div></div>
+          <div class="h">质控文档（三份）</div>
+          <div class="c" style="padding:2px 10px"><div class="li"><span>样本质控表</span><span class="tiny">09-12 ›</span></div><div class="li"><span>类器官质控表</span><span class="tiny">09-15 ›</span></div><div class="li"><span>类器官质量评分表 · 合计 80 分</span><span class="tiny">09-16 ›</span></div></div>
+          <div class="note">和左边唯一的差别就是顶上那一行内部编号：开关关着时，合作单位连这个字段都拿不到</div>
+        </div>
+      </div></div>
+      <p>和左边那张是同一个页面，区别只在开关。开关在网页工作台的「系统管理 → 参数设置」里（⑫），默认关着，中心内部人员随时可以开或关，不用我们改程序。</p>
+    </div>
+    <div class="opt" style="flex:1 1 320px">
+      <h3>这一页守的三条规矩</h3>
+      <p>一，标识默认用送检单号和石蜡块编号，<b>不出现内部编号</b>；系统管理里给一个开关，打开后外部也看得到内部编号，默认关（9 月 18 日按贵方「加个开关就能决定让不让外部人员看到我们的内部编号」加的）。</p>
+      <p>二，看得到石蜡包埋的工序时间、染色、marker、<b>操作人与包埋人</b>，以及三份质控文档（样本质控表、类器官质控表、类器官质量评分表）里已完成的；<b>看不到冻存信息</b>（9 月 18 日按贵方「应该是可以看得到操作人、包埋人，看不到冻存信息」改的）。</p>
+      <p>三，同组同事送的样本能进这一页，但没有任何编辑入口；只有本人的、且还是「待核验」或「无效」的样本才有「修改后重新提交」。</p>
+      <p>四，外部自己交的石蜡包埋送样在核验前也列在包埋情况里，标「待核验」或「无效 · 原因」（9 月 17 日晚起外部可交送样）。入口在「我的 → 历史编辑记录」。</p>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="p-cryo">
+  <h2>⑧ 冻存工作表与取用登记 <small>UI:mp.cryo.list / UI:mp.cryo.flow · 单方案（9 月 17 日按贵方意见改过，同日晚定稿为只读）</small></h2>
+  <p class="lead">-80℃ 放超过两周要提示转液氮；取走要追溯，支数自动减少，也可以登记增加。9 月 17 日贵方要求「提交后可以修改」：登记填错了能直接改、能删，冻存数量也能改——这些在网页工作台做。同日晚定：小程序里它是「我的 → 内部管理」表格页（⑩）的「-80 冻存」工作表，点一行弹出批次详情。</p>
+  <div class="opts">
+    <div class="opt" id="mp-cryo">
+      <div class="ph"><div class="scr">
+        <div class="nav"><i>‹</i>-80 冻存记录</div>
+        <div class="bd" style="gap:7px">
+          <div class="sheets"><span>样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span class="on">-80 冻存</span></div>
+          <div class="row" style="gap:6px"><span class="chip n">全部 14</span><span class="chip r">-80 超期 2</span><span class="chip n">液氮 9</span></div>
+          <div class="lgwrap"><table class="lg">
+            <tr><th class="fz">冻存样品</th><th>冻存时间</th><th>冻存数量/支</th><th>冻存密度</th><th>暂存-80度超低温冰箱</th><th>冻存人</th></tr>
+            <tr class="over"><td class="fz"><span class="mono">hli52-GZ-N-P3-EM2-2e5</span><small>剩 6 / 8 支 · <b style="color:#B3362B">已超 3 天</b></small></td><td>2026-08-31</td><td>8</td><td>2e5</td><td>是</td><td>李工</td></tr>
+            <tr class="over"><td class="fz"><span class="mono">hli49-GZ-N-P2-EM2-2e5</span><small>剩 3 / 4 支 · <b style="color:#B3362B">已超 0 天</b></small></td><td>2026-09-03</td><td>4</td><td>2e5</td><td>是</td><td>王工</td></tr>
+            <tr><td class="fz"><span class="mono">hco17-JC-T-P7-EM1-5e5</span><small>剩 4 / 4 支 · 液氮</small></td><td>2026-08-02</td><td>4</td><td>5e5</td><td>否</td><td>李工</td></tr>
+            <tr><td class="fz"><span class="mono">hli47-GZ-N-P4-EM2-1e5</span><small>剩 5 / 6 支 · -80</small></td><td>2026-09-10</td><td>6</td><td>1e5</td><td>是</td><td>李工</td></tr>
+          </table></div>
+        </div>
+        <div class="foot"><span class="btn gh">导出 Excel</span></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="row sb"><b class="mono" style="font-size:12px">hli52-GZ-N-P3-EM2-2e5</b><span class="chip r">已超 3 天</span></div>
+          <div class="tiny">剩 <b style="color:#16232B">6</b> / 8 支 · -80℃ · P3 · 冻存 2026-08-31</div>
+          <div class="h">取用登记</div>
+          <div class="li" style="font-size:11.5px;padding:7px 2px"><span>09-14 · 取走 <b>−2</b> · 复苏培养 · 李工</span><span class="tiny">剩 6</span></div>
+          <div class="li" style="font-size:11.5px;padding:7px 2px"><span>09-05 · 补入 <b>+1</b> · 同批补冻 · 王工<span class="mk">已改</span></span><span class="tiny">剩 8</span></div>
+          <div class="li" style="font-size:11.5px;padding:7px 2px"><span>09-02 · 取走 <b>−1</b> · 药敏实验 · 李工</span><span class="tiny">剩 7</span></div>
+          <div class="note">取走、补入、转液氮与修改登记请到网页工作台。每一笔都写明操作后还剩几支，改过的标「已改」。</div>
+        </div>
+      </div></div>
+    </div>
+    <div class="opt wide" id="admin-cryo">
+      <h3>网页工作台 · 取用登记与转液氮 <span class="tag chosen">定稿 · 9-18</span></h3>
+      <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr" style="height:330px">
+        <div class="side"><b>类器官样本管理</b><span>工作台首页</span><span>样本总表 <em>3</em></span><span>石蜡包埋 <em>1</em></span><span class="on">冻存管理 <em>1</em></span><span>人员与单位 <em>1</em></span><span>系统管理</span></div>
+        <div class="wk">
+          <div class="tabs"><span>全部 14</span><span class="on">-80 超期 <b style="color:#B3362B">1</b></span><span>液氮 10</span></div>
+          <table class="g">
+            <tr><th>冻存样品</th><th>冻存时间</th><th>剩余 / 初始</th><th>暂存 -80</th><th>超期</th><th>操作</th></tr>
+            <tr class="over"><td class="mono">hli49-GZ-N-P2-EM1-2e5</td><td>2026-08-29</td><td>4 / 4 支</td><td>是</td><td><b style="color:#B3362B">已超 5 天</b></td><td><a>取走</a><a>补入</a><a>转液氮</a><a>登记记录</a></td></tr>
+            <tr><td class="mono">hli52-GZ-N-P3-EM2-2e5</td><td>2026-08-31</td><td>6 / 8 支</td><td>否 · 已转液氮</td><td>—</td><td><a>取走</a><a>补入</a><a>登记记录</a></td></tr>
+            <tr><td class="mono">hli48-GZ-N-P7-EM1-1e5</td><td>2026-09-14</td><td>10 / 10 支</td><td>是</td><td>—</td><td><a>取走</a><a>补入</a><a>转液氮</a><a>登记记录</a></td></tr>
+          </table>
+          <div class="admnote"><span>上面第二行 hli52 原来也在这个页签里、标着「已超 3 天」。09-17 点「转液氮」登记了转移时间和液氮位置之后，它当场从「-80 超期」里消失，页签数字从 2 变成 1，工作台首页那张待办卡片也跟着变 1 —— 这就是贵方问的「转移后还会有提示吗」：不会再提示了。</span></div>
+        </div>
+      </div></div></div>
+      <p>取走、补入、转液氮、改删登记都在这一页做（小程序上只看不改）。「转液氮」要填转移时间和液氮储存位置，填完这一批就不再算 -80 超期。支数被取空的也不再提示。</p>
+    </div>
+    <div class="opt" style="flex:1 1 320px">
+      <h3>口径</h3>
+      <p><b>超期</b> = 暂存 -80、还没登记转液氮、还有剩余、冻存满 14 天。超期的排最前、浅红底、写明超了几天。<b>在网页工作台登记「转液氮」之后，这一条就不再算超期，提示随之消失</b>；支数被取空的也不再提示。14 天是默认阈值，放在系统参数里，要改成别的天数随时能改（9 月 18 日贵方问的两点）。</p>
+      <p><b>剩余支数不直接填</b>，永远等于冻存数量加全部未删的取用登记。<b>登记填错了可以改、可以删</b>（9 月 17 日贵方要求，在网页工作台做），冻存数量本身也能改；改完按时间逐笔重算，哪一步变成负数就不让保存，并指出是哪一笔。删是软删，改过的登记记着最后修改人。</p>
+      <p><b>取用登记在网页工作台</b>：取走、补入、盘点调整、转液氮、改删登记都在网页工作台做。小程序里能做的是首页新增冻存记录、在「我的 → 历史编辑记录」改自己录的冻存记录（含冻存数量，校验相同），以及在内部管理里查看、筛选、导出。</p>
+      <p><b>冻存命名</b>手填，系统不拆解；选了样本后先替你填好「内部编号-」。代数单独一栏。</p>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="p-adminhome">
+  <h2>⑨ 工作台首页待办 <small>UI:admin.home · 单方案</small></h2>
+  <p class="lead">冻存超期的「提示」落在这里。不做统计图表，贵方没有要。9 月 17 日晚外部可以提交石蜡包埋送样，多一张「待核验石蜡包埋送样」卡片；小程序首页不再有数字，这里是唯一的待办计数。</p>
+  <div class="opts"><div class="opt wide" id="admin-home">
+    <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr" style="height:300px">
+      <div class="side"><b>类器官样本管理</b><span class="on">工作台首页</span><span>样本总表 <em>3</em></span><span>石蜡包埋 <em>1</em></span><span>冻存管理 <em>2</em></span><span>人员与单位 <em>1</em></span><span>系统管理</span></div>
+      <div class="wk">
+        <div class="todo five"><div class="hot"><b>3</b>待核验样本 ›</div><div class="hot"><b>1</b>待核验石蜡包埋送样 ›</div><div class="hot"><b>2</b>-80 超两周未转液氮 ›</div><div><b>1</b>待核验的外部用户组别 ›</div><div class="zero"><b>0</b>文档生成失败</div></div>
+        <b>最近提交</b>
+        <table class="g"><tr><th>提交时间</th><th>送检单号</th><th>来源单位</th><th>来源</th><th>核验</th></tr><tr class="pend"><td>09-17 09:12</td><td class="mono">SJ00000131</td><td>A 医院</td><td><span class="chip b">外部</span></td><td><span class="chip a">待核验</span></td></tr><tr><td>09-16 16:40</td><td class="mono">SJ00000130</td><td>本中心</td><td><span class="chip t">内部</span></td><td><span class="chip g">有效</span></td></tr></table>
+      </div>
+    </div></div></div>
+  </div></div>
+</section>
+
+<!-- ═════════════ ⑫ 工作台 · 系统管理 · 参数设置（9-18 新增） ═════════════ -->
+<section class="page" id="p-config">
+  <h2>⑫ 工作台 · 系统管理 · 参数设置 <small>UI:admin.config · 9 月 18 日按贵方意见新增</small></h2>
+  <p class="lead">贵方 9 月 18 日提到两件事：内部编号要有个开关决定让不让合作单位看到；-80 冻存「满两周提醒」这个天数是不是有地方能设。这两个都放在这一页，中心内部人员自己改，改完立刻生效，不用我们改程序、不用重新发版。</p>
+  <div class="opts"><div class="opt wide chosen" id="admin-config">
+    <h3>参数设置 <span class="tag chosen">定稿 · 9-18</span></h3>
+    <div class="brwrap"><div class="br"><div class="bar"><i></i><i></i><i></i></div><div class="scr" style="height:300px">
+      <div class="side"><b>类器官样本管理</b><span>工作台首页</span><span>样本总表 <em>3</em></span><span>石蜡包埋 <em>1</em></span><span>冻存管理 <em>2</em></span><span>人员与单位 <em>1</em></span><span class="on">系统管理</span></div>
+      <div class="wk">
+        <div class="tabs"><span class="on">参数设置</span><span>用户</span><span>角色</span><span>字典</span></div>
+        <table class="g">
+          <tr><th style="width:38%">参数</th><th style="width:22%">当前值</th><th>说明</th></tr>
+          <tr><td>合作单位可见内部编号</td><td><span class="tog"></span> <span class="chip n">关</span></td><td>关：合作单位看到的是送检单号与石蜡块编号。开：合作单位的样本详情里多显示一行内部编号</td></tr>
+          <tr><td>-80 冻存超期提醒天数</td><td><b style="font-size:13px">14</b> 天</td><td>暂存 -80 满这个天数、还没登记转液氮、还有剩余的批次，进超期提醒。改成 10 或 21 都行，下次打开页面即按新值算</td></tr>
+          <tr><td>小程序名称</td><td>类器官送检</td><td>小程序导航栏上显示的名字</td></tr>
+        </table>
+        <div class="admnote"><span>这一页是若依自带的「参数设置」，本项目只是往里加了自己的两三行。改动有记录，谁改的、什么时候改的都查得到。</span></div>
+      </div>
+    </div></div></div>
+    <p>两个开关都在这里：<b>合作单位可见内部编号</b>（默认关，对应 ⑦ 的两张对比图）、<b>-80 冻存超期提醒天数</b>（默认 14，对应 ⑧）。合作单位登不上工作台，也看不到这一页。</p>
+  </div></div>
+</section>
+</main>
+</div>

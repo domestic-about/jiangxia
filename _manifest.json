@@ -1,0 +1,94 @@
+{
+ "skill": "xuqiu",
+ "status": "needs_human",
+ "artifacts": {
+  "final_idea": "doc/00-最终想法.md",
+  "requirements": "doc/requirements.yaml",
+  "blueprint": [
+   "doc/authority/flows.yaml",
+   "doc/authority/field-ssot.yaml",
+   "doc/authority/ui-index.yaml"
+  ],
+  "domain_ownership": "（单系统项目，无）",
+  "adr_dir": "doc/_adr/（ADR-0001~0010；0001、0002 已由 Kevin 拍板，0003~0010 为 proposed）",
+  "oq": "doc/_oq.md",
+  "api_contract": "doc/api-contract.md",
+  "design_options": "doc/design-options/README.md（2026-09-18 CR-20260918-07：⑩ 表格页只读 + 修改入口；⑪ 历史编辑记录内部看中心全员；⑦ 外部可见操作人与包埋人、内部编号受 ext_show_inner_no 开关控制；⑧ 冻存超期阈值 cryo_overdue_days。图廊已清掉内部话术，可直接给甲方看）",
+  "design_gallery": "doc/design-options/gallery.html",
+  "design_gallery_url": "https://claude.ai/artifact/5SuWBDj6KdaEkDR83GskcA",
+  "design_client_preview": "doc/confirmation/类器官送检与样本管理系统-界面设计稿-v3.html（给甲方看的单文件，**19 张图**；9-18 按 CR-20260918-07 重出并补画 5 张——内部管理只读详情/修改模式、开关打开后的外部详情、工作台取用登记与转液氮、系统管理参数设置。由 build_client_preview.py 从 gallery.html 生成，别手改；文案里的图号用 {fig:<帧 id>} 占位符自动编号，插图不会再错位。v1 是 9-17 已发出的版本，v2 未发出，都留档不动）",
+  "design_authority": "doc/design-options/design-authority.md",
+  "tickets_dir": "doc/tickets/（43 张，每张 <ID>/prompt.md；CR-20260917-05 删除了 CRYO-MP-002）",
+  "phase_plan": "doc/phase-plan.yaml（D1-D8；D5 结束 = 合同 3 周节点的可试用版）",
+  "verify_runners": "doc/verify/（db.py / ddl_vs_ssot.py / api.sh / xlsx_header.py / docx_check.py / ocr_spike_check.py + seed/ + fixtures/；见 doc/verify/README.md）",
+  "confirmation_sheets": {
+   "AUTH": {
+    "path": "doc/confirmation/01-登录与可见范围.md",
+    "status": "pending"
+   },
+   "SAMPLE": {
+    "path": "doc/confirmation/02-样本与总表.md",
+    "status": "pending"
+   },
+   "EMBED": {
+    "path": "doc/confirmation/03-石蜡包埋.md",
+    "status": "pending"
+   },
+   "CRYO": {
+    "path": "doc/confirmation/04-冻存.md",
+    "status": "pending"
+   },
+   "QC_DOC": {
+    "path": "doc/confirmation/05-质控文档.md",
+    "status": "pending"
+   },
+   "OCR": {
+    "path": "doc/confirmation/06-拍照识别.md",
+    "status": "pending"
+   },
+   "SYS": {
+    "path": "doc/confirmation/07-部署与交付.md",
+    "status": "pending"
+   },
+   "TEMPLATE": {
+    "path": "doc/confirmation/08-模板逐列对照.md",
+    "status": "pending"
+   }
+  },
+  "confirmation_index": "doc/confirmation/README.md（5 件要甲方拍板 + 8 份板块确认单，含 08 模板逐列对照）",
+  "round": 4,
+  "change_log": "doc/change-log.md",
+  "client_feedback": "_input/feedback/2026-09-17-甲方看界面设计稿v1的意见.md（CR-20260917-04）；_input/feedback/2026-09-17-Kevin-小程序结构四条决定.md（CR-20260917-05，Kevin 原话）；_input/feedback/2026-09-18-甲方看设计图的9条意见.md（CR-20260918-07，含 9 张截图存档 2026-09-18-shots/）",
+  "client_issue_sheet": "飞书《类器官送检与样本管理系统-测试问题记录表》https://ncn59pmtdck5.feishu.cn/sheets/MTY3sEbKDhgqnxthuYHcwm08nMg（三张子表：小程序 / 网页工作台 / 流程性问题；甲方填问题，乙方回填「解决方式」列）"
+ },
+ "coverage": {
+  "total": 94,
+  "covered": 87,
+  "rate": 1.0,
+  "missing": [],
+  "clarify": [
+   "REQ-SYS-008",
+   "REQ-AUTH-011",
+   "REQ-AUTH-012",
+   "REQ-SAMPLE-006",
+   "REQ-QC-002",
+   "REQ-DOC-010",
+   "REQ-DOC-011",
+   "REQ-OCR-004"
+  ],
+  "note": "分母 = 87 条在范围内（5 条 deferred、2 条 dropped 不计）；8 条 clarify 都带默认口径并已被 ticket 认领，不卡开发"
+ },
+ "summary": "94 条需求（87 在范围内 / 5 deferred / 2 dropped）→ 43 张 ticket → D1-D8，闸门全绿。设计已定稿：CR-20260917-04/05/06 之后，CR-20260918-07 落地甲方 2026-09-18 在测试问题记录表里提的 9 条——5 条改动（⑩ 表格页加「修改」入口、⑪ 历史编辑记录内部看中心全员、⑦ 外部可见操作人与包埋人、内部编号开关 lqg.ext.show-internal-no、⑧ 冻存超期阈值 lqg.cryo.overdue-days 并写明转液氮后提醒消失），4 条是提问、答复已回填飞书记录表；11 张 ticket 已按新口径更新，估约 1.3 人日，排进 D2/D3/D4/D7，不动交付日期。同日把内部图廊的内部话术清干净（甲方这轮看的是图廊，不是给甲方的设计稿），给甲方的设计稿重出为 v3（19 张图，5 张是 9-18 晚按 Kevin 要求补画的：表格页只读详情与修改模式、开关打开后的外部详情、工作台取用登记与转液氮、系统管理参数设置）",
+ "needs_human": {
+  "route": "kevin",
+  "why": "发甲方前待 Kevin 过目",
+  "what": "① 设计稿 v3（14 张图）与确认单是否发甲方：这一版含 9-18 的 5 条改动；② 图廊链接要不要继续给甲方（已清内部话术，但它仍是内部视觉基准，每次改都会即时对外可见）；③ 计费：CR-20260918-07 估约 1.3 人日，加上 CR-04 的 2.5-3、CR-05 的 1.5，累计约 5.3-5.8 人日，算不算二次开发（合同第六条第 5 款）；④ 新开的 OQ-17：中心内部人员之间能否互改对方录的记录，现按不分级做，已写进确认单第 5 条请甲方答；⑤ 外部版质控文档里的内部编号仍留空（开关只作用于页面），已写进确认单 05，甲方若要一并放开需另记变更；⑥ 过目 8 份 proposed ADR（0004 本次更新了 decision）"
+ },
+ "known_gaps": [
+  "全部 accept 是在实现之前写的：125 条 SQL 已在真实表结构（上游若依 PG 脚本 + SSOT 生成的 DDL）上逐条 EXPLAIN 通过，seed 期望值已在 PostgreSQL 16 上实跑核对；但 API 类断言无法空转，接口形状以 doc/api-contract.md 为准，实现时若要改先改契约再改断言",
+  "skill 建议的「冻结后抽 20% accept 做变异测试」未做（没有被测对象）；建议 D1 过 QA 门后补一轮",
+  "设计方案出的是 HTML 草案，不是 Claude Design 稿（本会话没有该通道）",
+  "OCR-SPIKE-001 依赖甲方提供 10-20 张真实照片；SYS-PROD-001 / SYS-RELEASE-001 依赖云资源购买、域名备案与甲方小程序主体认证——都是非开发前置，写在 phase-plan.yaml 顶部"
+ ],
+ "next": "Kevin 过目（needs_human 六件）→ 发甲方设计稿 v3 与确认单 → zhixing D1"
+}

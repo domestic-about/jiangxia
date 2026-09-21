@@ -1,0 +1,12 @@
+.DS_Store
+doc/verify/verify.env
+doc/verify/verify.*.env
+!doc/verify/verify*.env.example
+_input/ocr-photos/
+code/**/node_modules/
+code/**/dist/
+code/**/target/
+code/deploy/**/.env
+*.dump
+*.dump.gz
+__pycache__/

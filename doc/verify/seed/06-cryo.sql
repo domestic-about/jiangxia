@@ -1,0 +1,23 @@
+-- doc/verify/seed/06-cryo.sql —— 由 gen_seed.py 生成，别手改（改 gen_seed.py 重新生成）
+-- requires: t_lqg_sample t_lqg_cryo_batch t_lqg_cryo_flow
+-- 只许灌进 dev / test 库（reseed.sh 拒绝对名字不含 dev / test 的库动手）。
+-- 加密列用测试口令 LqgTestAesKey#01 预先算好密文（后端 dev / test 的 mybatis-encryptor.password 必须是它）。
+BEGIN;
+
+-- ── 冻存批次。期望：超期 = {3001, 3005}；剩余 3001→6 3002→4 3003→4 3004→0 3005→2 3006→5 3007→5；李工（staff）建的 = 3001、3003 + 软删的 3008 → 内部历史编辑记录期望 {3001, 3003}
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, density, in_minus80, frozen_by, create_by, create_time) VALUES (9000003001, 9000001001, 'T-hli01-GZ-N-P2-EM2-2e5', 'P2', CURRENT_DATE - 20, 8, '2e5', 'Y', '李工', 9000000101, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, density, in_minus80, frozen_by, create_by, create_time) VALUES (9000003002, 9000001009, 'T-oco01-JC-T-P3-EM1-5e5', 'P3', CURRENT_DATE - 5, 4, '5e5', 'Y', '李工', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, density, in_minus80, frozen_by, to_ln2_time, ln2_location, create_by, create_time) VALUES (9000003003, 9000001008, 'T-hli05-GZ-N-P7-EM2-2e5', 'P7', CURRENT_DATE - 40, 6, '2e5', 'Y', '李工', CURRENT_DATE - 30, '2号罐-3架-B5', 9000000101, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, density, in_minus80, frozen_by, remark, create_by, create_time) VALUES (9000003004, 9000001001, 'T-hli01-GZ-N-P5-EM2-1e5', 'P5', CURRENT_DATE - 14, 3, '1e5', 'Y', '李工', '病灶：满 14 天但已取空 → 不算超期', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, density, in_minus80, frozen_by, remark, create_by, create_time) VALUES (9000003005, 9000001004, 'T-hli02-GZ-N-P2-EM2-2e5', 'P2', CURRENT_DATE - 14, 2, '2e5', 'Y', '李工', '病灶：恰好第 14 天 → 算超期（已超 0 天）', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, density, in_minus80, frozen_by, remark, create_by, create_time) VALUES (9000003006, 9000001008, 'T-hli05-GZ-N-P8-EM2-2e5', 'P8', CURRENT_DATE - 13, 5, '2e5', 'Y', '李工', '病灶：第 13 天 → 不算超期', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, density, in_minus80, frozen_by, ln2_location, remark, create_by, create_time) VALUES (9000003007, 9000001009, 'T-oco01-JC-T-P4-EM1-5e5', 'P4', CURRENT_DATE - 60, 5, '5e5', 'N', '李工', '1号罐-1架-A2', '病灶：直接进液氮 → 永不超期', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_batch (id, sample_id, cryo_name, passage, freeze_time, init_qty, in_minus80, del_flag, create_by, create_time) VALUES (9000003008, 9000001008, 'T-hli05-DEL', 'P1', CURRENT_DATE - 50, 9, 'Y', '1', 9000000101, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_flow (id, batch_id, flow_type, delta, from_location, operator_name, flow_time, purpose, create_by, create_time) VALUES (9000003101, 9000003001, 'take', -2, 'minus80', '李工', (CURRENT_DATE - 6 + TIME '10:00'), '复苏培养', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_flow (id, batch_id, flow_type, delta, from_location, operator_name, flow_time, purpose, create_by, create_time) VALUES (9000003102, 9000003003, 'take', -1, 'minus80', '李工', (CURRENT_DATE - 35 + TIME '10:00'), '复苏培养', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_flow (id, batch_id, flow_type, delta, from_location, operator_name, flow_time, purpose, create_by, create_time) VALUES (9000003103, 9000003003, 'add', 2, 'ln2', '李工', (CURRENT_DATE - 20 + TIME '10:00'), '同批补冻', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_flow (id, batch_id, flow_type, delta, from_location, operator_name, flow_time, purpose, create_by, create_time) VALUES (9000003104, 9000003003, 'take', -3, 'ln2', '李工', (CURRENT_DATE - 10 + TIME '10:00'), '药敏实验', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_flow (id, batch_id, flow_type, delta, from_location, operator_name, flow_time, purpose, create_by, create_time) VALUES (9000003105, 9000003004, 'take', -3, 'minus80', '李工', (CURRENT_DATE - 3 + TIME '10:00'), '全部取用', 9000000100, (now() - interval '30 days'));
+INSERT INTO t_lqg_cryo_flow (id, batch_id, flow_type, delta, from_location, operator_name, flow_time, purpose, del_flag, create_by, create_time) VALUES (9000003106, 9000003002, 'take', -1, 'minus80', '李工', (CURRENT_DATE - 2 + TIME '10:00'), '病灶：软删流水，不得计入', '1', 9000000100, (now() - interval '30 days'));
+
+COMMIT;

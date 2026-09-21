@@ -1,0 +1,337 @@
+{
+  "_doc": "SAMPLE-MP-001 的验收用例。被测函数：formLayout(identity, verifyStatus, mine, mode) → { fields: 渲染的字段 key 数组（顺序即显示顺序）, editable: 是否可编辑, showOcr: 是否显示识别条 }。verifyStatus 为 null 表示新增。mode 是入口：new = 首页点表进来；edit = 「我的 → 历史编辑记录」点一条进来；view = 「我的 → 内部管理」表格页点一行进来（只读；只读页右上角「修改」切到 mode=edit，CR-20260918-07）；mode 缺失或不认识按只读。外部永远不渲染收样段字段（不是置灰，是不渲染）。CR-20260917-04 起内部修改模式：有效样本可改；待核验、无效的外部样本在小程序里只读（核验与改判在工作台）。CR-20260917-05 起修改入口在历史编辑记录；CR-20260918-07 起内部管理的只读页也能切修改模式（内部人员可改任何人录的，外部送来未核验的仍只读）。",
+  "sendFields": [
+    "sourceUnitName",
+    "donorName",
+    "gender",
+    "age",
+    "hospitalNo",
+    "tissueType",
+    "hasPathology",
+    "remark"
+  ],
+  "receiveFields": [
+    "receiveDate",
+    "internalNo",
+    "isFixed",
+    "processTime",
+    "hasQcSheet",
+    "hasViabilityReport",
+    "operatorName"
+  ],
+  "cases": [
+    {
+      "case": "外部新增",
+      "identity": "external",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark"
+        ],
+        "editable": true,
+        "showOcr": true
+      }
+    },
+    {
+      "case": "外部改自己的待核验",
+      "identity": "external",
+      "verifyStatus": "pending",
+      "mine": true,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark"
+        ],
+        "editable": true,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "外部改自己的无效",
+      "identity": "external",
+      "verifyStatus": "invalid",
+      "mine": true,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark"
+        ],
+        "editable": true,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "外部看自己的有效（病灶：必须只读）",
+      "identity": "external",
+      "verifyStatus": "valid",
+      "mine": true,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark"
+        ],
+        "editable": false,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "外部看同组别人的待核验（病灶：可看不可改）",
+      "identity": "external",
+      "verifyStatus": "pending",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark"
+        ],
+        "editable": false,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "内部新增",
+      "identity": "internal",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark",
+          "receiveDate",
+          "internalNo",
+          "isFixed",
+          "processTime",
+          "hasQcSheet",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": true,
+        "showOcr": true
+      }
+    },
+    {
+      "case": "内部改有效样本",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark",
+          "receiveDate",
+          "internalNo",
+          "isFixed",
+          "processTime",
+          "hasQcSheet",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": true,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "内部看外部的待核验（病灶：小程序里只读，核验在工作台）",
+      "identity": "internal",
+      "verifyStatus": "pending",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark",
+          "receiveDate",
+          "internalNo",
+          "isFixed",
+          "processTime",
+          "hasQcSheet",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": false,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "内部看无效（病灶：小程序里只读，改判在工作台）",
+      "identity": "internal",
+      "verifyStatus": "invalid",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark",
+          "receiveDate",
+          "internalNo",
+          "isFixed",
+          "processTime",
+          "hasQcSheet",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": false,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "内部从内部管理查看有效样本（病灶：只读模式不能改）",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": false,
+      "mode": "view",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark",
+          "receiveDate",
+          "internalNo",
+          "isFixed",
+          "processTime",
+          "hasQcSheet",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": false,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "内部从内部管理查看自己录的有效样本（病灶：本人的也只读）",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": true,
+      "mode": "view",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark",
+          "receiveDate",
+          "internalNo",
+          "isFixed",
+          "processTime",
+          "hasQcSheet",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": false,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "入口模式缺失（病灶：按只读，不按可改）",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": true,
+      "mode": "",
+      "expect": {
+        "fields": [
+          "sourceUnitName",
+          "donorName",
+          "gender",
+          "age",
+          "hospitalNo",
+          "tissueType",
+          "hasPathology",
+          "remark",
+          "receiveDate",
+          "internalNo",
+          "isFixed",
+          "processTime",
+          "hasQcSheet",
+          "hasViabilityReport",
+          "operatorName"
+        ],
+        "editable": false,
+        "showOcr": false
+      }
+    },
+    {
+      "case": "身份缺失（病灶：什么都不渲染）",
+      "identity": "",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [],
+        "editable": false,
+        "showOcr": false
+      }
+    }
+  ]
+}

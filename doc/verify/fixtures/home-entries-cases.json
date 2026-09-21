@@ -1,0 +1,122 @@
+{
+  "_doc": "SYS-MP-001 的验收用例（2026-09-17 晚 Kevin 定的结构，CR-20260917-05）。三个被测纯函数：entriesFor(identity) → 首页入口 key 数组（顺序即宫格顺序 = 甲方模板顺序；内部四张，外部三张、没有 cryo）；entryTarget(identity, key) → 点这个入口去哪（内部外部一样都是该表的填写页；外部点 cryo、不认识的身份 → null）；meSections(identity) →「我的」页里按身份出现的区块（所有人有 history；外部多 unitGroup；内部多 internalAdmin）。identity 只认后端 /mp/me 返回的值；缺失、空、未知值：入口为空、没有跳转目标、「我的」里一个区块都不出——绝不默认当成内部。首页没有任何数字摘要。",
+  "cases": [
+    {
+      "identity": "internal",
+      "expect": [
+        "sample",
+        "organoid",
+        "embed",
+        "cryo"
+      ]
+    },
+    {
+      "identity": "external",
+      "expect": [
+        "sample",
+        "organoid",
+        "embed"
+      ]
+    },
+    {
+      "identity": "",
+      "expect": []
+    },
+    {
+      "identity": null,
+      "expect": []
+    },
+    {
+      "identity": "admin",
+      "expect": []
+    },
+    {
+      "identity": "INTERNAL",
+      "expect": []
+    }
+  ],
+  "targetCases": [
+    {
+      "identity": "internal",
+      "key": "sample",
+      "expect": "/pages/sample/form"
+    },
+    {
+      "identity": "internal",
+      "key": "organoid",
+      "expect": "/pages/organoid/form"
+    },
+    {
+      "identity": "internal",
+      "key": "embed",
+      "expect": "/pages/embed/form"
+    },
+    {
+      "identity": "internal",
+      "key": "cryo",
+      "expect": "/pages/cryo/form"
+    },
+    {
+      "identity": "external",
+      "key": "sample",
+      "expect": "/pages/sample/form"
+    },
+    {
+      "identity": "external",
+      "key": "organoid",
+      "expect": "/pages/organoid/form"
+    },
+    {
+      "identity": "external",
+      "key": "embed",
+      "expect": "/pages/embed/form"
+    },
+    {
+      "identity": "external",
+      "key": "cryo",
+      "expect": null
+    },
+    {
+      "identity": "",
+      "key": "sample",
+      "expect": null
+    },
+    {
+      "identity": "INTERNAL",
+      "key": "sample",
+      "expect": null
+    }
+  ],
+  "meCases": [
+    {
+      "identity": "internal",
+      "expect": [
+        "history",
+        "internalAdmin"
+      ]
+    },
+    {
+      "identity": "external",
+      "expect": [
+        "history",
+        "unitGroup"
+      ]
+    },
+    {
+      "identity": "",
+      "expect": []
+    },
+    {
+      "identity": null,
+      "expect": []
+    },
+    {
+      "identity": "admin",
+      "expect": []
+    },
+    {
+      "identity": "INTERNAL",
+      "expect": []
+    }
+  ]
+}

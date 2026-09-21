@@ -1,0 +1,372 @@
+# 类器官送检与样本管理系统 · 字段表 SSOT（FIELD:）
+# ============================================================================
+# 铁律：改字段只改这里 → `python3 doc/tools/gen_ddl_pg.py` 重生成 DDL → entity / TS 照这里写。
+# 方言：PostgreSQL 16（ADR-0002 / ADR-0009）——业务表固定带 6 个公共字段、**不带 tenant_id、不带 del_unique**；
+#       `unique:` 一律生成部分唯一索引（… WHERE del_flag = '0'），同组名 = 联合唯一。
+# 命名：表 t_lqg_<实体>；字典 lqg_<名>；列 snake_case（entity / TS 转 camelCase）。
+# 模型主干：一个样本主档，石蜡包埋 / 冻存 / 三份质控文档都用 sample_id 挂在它下面（ADR-0010）。
+# 带 ★ 的注释 = 这一列最容易做错的地方。
+# ============================================================================
+
+type_map:
+  id:       { ddl: "BIGINT",       entity: "Long",          ts: "string" }   # 雪花 id，前端一律 string 防精度丢失
+  str:      { ddl: "VARCHAR",      entity: "String",        ts: "string" }
+  text:     { ddl: "TEXT",         entity: "String",        ts: "string" }
+  int:      { ddl: "INTEGER",      entity: "Integer",       ts: "number" }
+  date:     { ddl: "DATE",         entity: "LocalDate",     ts: "string" }   # yyyy-MM-dd
+  datetime: { ddl: "TIMESTAMP(0)", entity: "LocalDateTime", ts: "string" }   # yyyy-MM-dd HH:mm:ss（JacksonConfig 的格式，不是 ISO 的 T）
+  dict:     { ddl: "VARCHAR",      entity: "String",        ts: "string" }   # 值是字典 value，必须配 dict:
+  flag:     { ddl: "CHAR(1)",      entity: "String",        ts: "string" }   # 两态按钮：Y / N；NULL = 还没选
+
+common_field_blocks:
+  audit:
+    - { name: create_dept, type: id,       nullable: true,  comment: "创建部门" }
+    - { name: create_by,   type: id,       nullable: true,  comment: "创建者" }
+    - { name: create_time, type: datetime, nullable: true,  comment: "创建时间" }
+    - { name: update_by,   type: id,       nullable: true,  comment: "更新者" }
+    - { name: update_time, type: datetime, nullable: true,  comment: "更新时间" }
+    - { name: del_flag,    type: flag,     nullable: false, default: "0", comment: "删除标志（0 存在 / 1 删除）" }
+
+# ── 字典权威清单（sys_dict_type / sys_dict_data 的 seed 以此为准；值一律小写英文，标签给人看）──────────
+# 改字典值 = 改这里 + 改引用它的字段 comment（comment 进 hash，才能让 authority_lint impact 反查到 ticket）
+dicts:
+  lqg_sample_kind:      { label: 样本类别,       values: { tissue: 组织样本, organoid: 类器官 } }
+  lqg_submit_source:    { label: 提交来源,       values: { internal: 内部, external: 外部 } }
+  lqg_verify_status:    { label: 核验状态,       values: { pending: 待核验, valid: 有效, invalid: 无效 } }
+  lqg_gender:           { label: 性别,           values: { male: 男, female: 女, unknown: 未知 } }
+  lqg_has_none:         { label: 有无（按钮）,   values: { Y: 有, N: 无 } }
+  lqg_yes_no:           { label: 是否（按钮）,   values: { Y: 是, N: 否 } }
+  lqg_stain_type:       { label: 染色,           values: { HE: HE染色, IF: IF染色, IHC: IHC染色, OTHER: 其他, NONE: 无染色 } }
+  lqg_marker_expr:      { label: marker 表达,    values: { negative: 阴性, weak: 弱表达, strong: 强表达 } }
+  lqg_cryo_flow_type:   { label: 冻存出入库类型, values: { take: 取走, add: 补入, adjust: 盘点调整 } }
+  lqg_cryo_location:    { label: 冻存位置,       values: { minus80: "-80℃", ln2: 液氮 } }
+  lqg_doc_status:       { label: 文档状态,       values: { draft: 草稿, published: 已完成 } }
+  lqg_doc_type:         { label: 质控文档类型,   values: { sample_qc: 样本质控表, organoid_qc: 类器官质控表, organoid_score: 类器官质量评分表 } }
+  lqg_doc_kind:         { label: 渲染文件种类,   values: { sample_qc: 样本质控表, organoid_qc: 类器官质控表, organoid_score: 类器官质量评分表, merged: 合并文档 } }
+  lqg_doc_audience:     { label: 文档版本,       values: { internal: 内部版, external: 外部版 } }
+  lqg_file_format:      { label: 文件格式,       values: { docx: Word, pdf: PDF, png: 页面图片 } }
+  lqg_render_status:    { label: 渲染状态,       values: { pending: 排队中, done: 已生成, failed: 失败 } }
+  lqg_image_slot:       { label: 文档图片位,     values: { orig: 收样原始情况, observe: 样本观察情况, pretreat: 样本预处理情况, organoid_observe: 类器官样本观察情况 } }
+  lqg_unit_status:      { label: 单位/组别状态,  values: { active: 启用, pending: 待核验, disabled: 停用 } }
+  lqg_bind_status:      { label: 外部用户组别核验, values: { unbound: 未填写, pending: 待核验, verified: 已核验, rejected: 已驳回 } }
+  # 联想词字典（设计回流 D-4 / REQ-SAMPLE-901）：实验室在若依「字典管理」里自己维护；输入框仍可自由填写，字典只提供联想
+  lqg_hint_tissue_type:   { label: 组织类型联想词,   values: { 肝组织: 肝组织, 胆管组织: 胆管组织, 结直肠组织: 结直肠组织, 胃组织: 胃组织, 胰腺组织: 胰腺组织, 肺组织: 肺组织, 乳腺组织: 乳腺组织 } }
+  lqg_hint_organoid_type: { label: 类器官类型联想词, values: { 肝类器官: 肝类器官, 胆管类器官: 胆管类器官, 结直肠类器官: 结直肠类器官, 胃类器官: 胃类器官, 胰腺类器官: 胰腺类器官 } }
+  lqg_hint_sample_type:   { label: 样本类型联想词,   values: { 组织: 组织, 类器官: 类器官 } }
+  # 评分表四个变量：value = 档位代码，label = 模板上的「分类」原文，**remark 列存该档分值**（改分值改字典 remark，不改代码）
+  lqg_score_pre_culture:  { label: 培养前样本评分, values: { lt40: "<40", 40to80: "40~80", gt80: ">80" },                          scores: { lt40: 8, 40to80: 16, gt80: 20 } }
+  lqg_score_culture_days: { label: 培养天数,       values: { gt14: ">14d", le14: "≤14d" },                                         scores: { gt14: 0, le14: 10 } }
+  lqg_score_count:        { label: 类器官数量（药敏实验实际测得）, values: { lt100: "<100", 100to1500: "100~1500", 1500to4000: "1500~4000", gt4000: ">4000" }, scores: { lt100: 0, 100to1500: 10, 1500to4000: 25, gt4000: 40 } }
+  lqg_score_diameter:     { label: 类器官直径,     values: { lt30: "<30μm", 30to100: "30~100μm", gt100: ">100μm" },                scores: { lt30: 10, 30to100: 20, gt100: 30 } }
+
+tables:
+
+  # ═══════════ AUTH 单位、组别、微信绑定、外部用户档案（用户本体沿用若依 sys_user，不改它的表结构）═══════════
+
+  - table: t_lqg_source_unit
+    comment: "来源单位（实验室在工作台维护；外部自填的新单位先落 pending）"
+    module: ruoyi-lqg/auth
+    migration: V202609210930__AUTH-GROUP-001-unit-group.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键（雪花）" }
+      - { name: unit_name, type: str, length: 100, nullable: false, unique: uk_unit_name, comment: "单位名称" }
+      - { name: unit_status, type: dict, length: 16, dict: lqg_unit_status, nullable: false, default: "active", comment: "active 启用 / pending 待核验（外部自填）/ disabled 停用" }
+      - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
+
+  - table: t_lqg_unit_group
+    comment: "组别（挂在来源单位下；同单位同组的外部用户互看样本）"
+    module: ruoyi-lqg/auth
+    migration: V202609210930__AUTH-GROUP-001-unit-group.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: unit_id, type: id, nullable: false, unique: uk_unit_group, comment: "FK→t_lqg_source_unit.id" }
+      - { name: group_name, type: str, length: 100, nullable: false, unique: uk_unit_group, comment: "组别名称（同一单位内唯一）" }
+      - { name: group_status, type: dict, length: 16, dict: lqg_unit_status, nullable: false, default: "active", comment: "active 启用 / pending 待核验 / disabled 停用" }
+      - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
+    indexes:
+      - { name: idx_group_unit, cols: [unit_id] }
+
+  - table: t_lqg_wx_bind
+    comment: "微信身份绑定（openid ↔ sys_user；同一手机号换微信登录会多一行）"
+    module: ruoyi-lqg/auth
+    migration: V202609210910__AUTH-LOGIN-001-wx-bind-ext-profile.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: user_id, type: id, nullable: false, comment: "FK→sys_user.user_id" }
+      - { name: openid, type: str, length: 64, nullable: false, unique: uk_wx_openid, comment: "小程序 openid" }
+      - { name: unionid, type: str, length: 64, nullable: true, comment: "unionid（有就存，没有不强求）" }
+      - { name: phone, type: str, length: 20, nullable: false, comment: "★ 登录当时微信返回的手机号；内外部判定只认它，不认前端传的任何身份字段" }
+      - { name: last_login_time, type: datetime, nullable: true, comment: "最近登录时间" }
+    indexes:
+      - { name: idx_wx_bind_user, cols: [user_id] }
+      - { name: idx_wx_bind_phone, cols: [phone] }
+
+  - table: t_lqg_ext_profile
+    comment: "外部用户档案（单位、组别与核验状态；内部人员没有这张表的行）"
+    module: ruoyi-lqg/auth
+    migration: V202609210910__AUTH-LOGIN-001-wx-bind-ext-profile.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: user_id, type: id, nullable: false, unique: uk_ext_profile_user, comment: "FK→sys_user.user_id，一人一行" }
+      - { name: real_name, type: str, length: 50, nullable: true, comment: "姓名（外部自填）" }
+      - { name: unit_id, type: id, nullable: true, comment: "FK→t_lqg_source_unit.id（自选或核验时归入）" }
+      - { name: group_id, type: id, nullable: true, comment: "FK→t_lqg_unit_group.id" }
+      - { name: unit_name_input, type: str, length: 100, nullable: true, comment: "单位不在列表时外部自填的单位名" }
+      - { name: group_name_input, type: str, length: 100, nullable: true, comment: "组别不在列表时外部自填的组别名" }
+      - { name: bind_status, type: dict, length: 16, dict: lqg_bind_status, nullable: false, default: "unbound", comment: "★ unbound / pending / verified / rejected；只有 verified 才参与「同组互看」，改单位或组别后回到 pending" }
+      - { name: verified_by, type: id, nullable: true, comment: "核验人 user_id" }
+      - { name: verified_time, type: datetime, nullable: true, comment: "核验时间" }
+      - { name: reject_reason, type: str, length: 200, nullable: true, comment: "驳回原因" }
+    indexes:
+      - { name: idx_ext_profile_group, cols: [group_id, bind_status] }
+
+  # ═══════════ SAMPLE 样本主档（样本记录信息表 + 类器官收样记录，一张表）═══════════
+
+  - table: t_lqg_sample
+    comment: "样本主档：承载「样本记录信息表」(tissue) 与「类器官收样记录」(organoid)；外部提交直接写本表"
+    module: ruoyi-lqg/sample
+    migration: V202609221000__SAMPLE-MODEL-001-sample.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: submit_no, type: str, length: 32, nullable: false, unique: uk_sample_submit_no, comment: "送检单号 SJ+8 位序号（序列 seq_lqg_submit_no）；外部用它指代样本，因为内部编号默认不对外" }
+      - { name: sample_kind, type: dict, length: 16, dict: lqg_sample_kind, nullable: false, comment: "tissue 组织样本（样本记录信息表）/ organoid 类器官（类器官收样记录）" }
+      - { name: submit_source, type: dict, length: 16, dict: lqg_submit_source, nullable: false, comment: "★ internal / external：提交当时按提交人身份落库，之后不随账号升降级而变" }
+      - { name: submitter_id, type: id, nullable: false, comment: "提交人 user_id（外部可见范围按它算）" }
+      - { name: verify_status, type: dict, length: 16, dict: lqg_verify_status, nullable: false, default: "pending", comment: "★ pending 待核验 / valid 有效 / invalid 无效；内部录入直接 valid；外部只在 pending、invalid 时能改" }
+      - { name: verify_by, type: id, nullable: true, comment: "核验人 user_id" }
+      - { name: verify_time, type: datetime, nullable: true, comment: "核验时间" }
+      - { name: invalid_reason, type: str, length: 200, nullable: true, comment: "判无效的原因（外部可见）" }
+      - { name: source_unit_id, type: id, nullable: true, comment: "FK→t_lqg_source_unit.id；自填单位名时为空" }
+      - { name: source_unit_name, type: str, length: 100, nullable: false, comment: "来源单位名称（导出用；选了单位就存单位名快照）" }
+      - { name: donor_name, type: str, length: 255, nullable: true, comment: "★ 供体姓名，@EncryptField 加密落库（ADR-0006），只支持精确查询；organoid 类可空" }
+      - { name: gender, type: dict, length: 16, dict: lqg_gender, nullable: true, comment: "性别 male / female / unknown" }
+      - { name: age, type: str, length: 20, nullable: true, comment: "年龄（文本：56 / 3月龄，模板没限定单位）" }
+      - { name: hospital_no, type: str, length: 255, nullable: true, comment: "★ 住院号，@EncryptField 加密落库（ADR-0006），只支持精确查询" }
+      - { name: tissue_type, type: str, length: 100, nullable: true, comment: "组织类型（tissue 类必填；自由文本，联想词来自字典 lqg_hint_tissue_type——不用历史值联想，防止外部看到别的单位填过的内容）" }
+      - { name: organoid_type, type: str, length: 100, nullable: true, comment: "类器官类型（organoid 类必填；自由文本，联想词来自字典 lqg_hint_organoid_type）" }
+      - { name: has_pathology, type: flag, nullable: true, comment: "有无病理 Y / N（模板批注 N5 前半句；不进 14 列导出）" }
+      - { name: receive_date, type: date, nullable: true, comment: "收样日期（内部填；核验为 valid 时必填）" }
+      - { name: internal_no, type: str, length: 64, nullable: true, unique: uk_sample_internal_no, comment: "★ 内部编号：内部手填、全库唯一、贯穿到冻存；pending 的外部样本为空；默认不出现在任何 Ext*Vo 里（ADR-0004）" }
+      - { name: is_fixed, type: flag, nullable: true, comment: "有无固定 Y 有 / N 无（按钮）" }
+      - { name: process_time, type: datetime, nullable: true, comment: "处理时间" }
+      - { name: has_qc_sheet, type: flag, nullable: true, comment: "质控表 Y 有 / N 无（按钮，手点，不自动推导）" }
+      - { name: has_viability_report, type: flag, nullable: true, comment: "细胞活率报告 Y 有 / N 无（按钮，手点）" }
+      - { name: operator_name, type: str, length: 50, nullable: true, comment: "操作人（姓名文本，默认带当前登录人，可改）" }
+      - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
+    indexes:
+      - { name: idx_sample_submitter, cols: [submitter_id] }
+      - { name: idx_sample_unit, cols: [source_unit_id] }
+      - { name: idx_sample_status_date, cols: [verify_status, receive_date] }
+
+  # ═══════════ EMBED 石蜡包埋送样记录 ═══════════
+
+  - table: t_lqg_embed
+    comment: "石蜡包埋送样记录（一个样本可有多个石蜡块；工序时间陆续补填，全部可空；外部也可提交送样，实验室核验有效后给石蜡块编号——CR-20260917-05）"
+    module: ruoyi-lqg/embed
+    migration: V202609231100__EMBED-MODEL-001-embed.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: sample_id, type: id, nullable: false, comment: "FK→t_lqg_sample.id；模板的「样本编号」= 该样本的内部编号，读时带出不落库" }
+      - { name: submit_source, type: dict, length: 16, dict: lqg_submit_source, nullable: false, comment: "★ internal / external：提交当时按提交人身份落库（同样本主档）" }
+      - { name: submitter_id, type: id, nullable: false, comment: "提交人 user_id（外部只能挂自己送检过的样本、只能改自己提交的）" }
+      - { name: verify_status, type: dict, length: 16, dict: lqg_verify_status, nullable: false, default: "pending", comment: "★ pending / valid / invalid；内部录入直接 valid；外部提交先 pending，判有效时必须给石蜡块编号且所挂样本已有效" }
+      - { name: verify_by, type: id, nullable: true, comment: "核验人 user_id（不对外）" }
+      - { name: verify_time, type: datetime, nullable: true, comment: "核验时间" }
+      - { name: invalid_reason, type: str, length: 200, nullable: true, comment: "判无效的原因（外部可见）" }
+      - { name: paraffin_block_no, type: str, length: 64, nullable: true, unique: uk_embed_block_no, comment: "★ 石蜡块编号（如 E15-1-2026.07.29）：实验室手填、全库唯一（部分唯一索引不约束空值）；外部提交的送样在判有效前为空；对外展示包埋情况时用它，不用内部编号" }
+      - { name: sample_type, type: str, length: 50, nullable: true, comment: "样本类型（自由文本，联想词来自字典 lqg_hint_sample_type）" }
+      - { name: organoid_source_type, type: str, length: 100, nullable: true, comment: "类器官来源类型" }
+      - { name: tissue_receive_time, type: date, nullable: true, comment: "组织收样时间（默认带样本的收样日期，可改）" }
+      - { name: tissue_process_time, type: date, nullable: true, comment: "组织处理时间（默认带样本处理时间的日期部分，可改）" }
+      - { name: agarose_embed_time, type: date, nullable: true, comment: "琼脂糖包埋样本时间" }
+      - { name: embed_by, type: str, length: 50, nullable: true, comment: "包埋人" }
+      - { name: dehydrate_time, type: date, nullable: true, comment: "脱水时间" }
+      - { name: agarose_send_time, type: date, nullable: true, comment: "琼脂糖包埋样本送样时间" }
+      - { name: paraffin_embed_time, type: date, nullable: true, comment: "石蜡包埋时间" }
+      - { name: section_time, type: date, nullable: true, comment: "切片时间（非空 = 已切片，总表的切片染色提示读它）" }
+      - { name: stain_types, type: str, length: 64, nullable: true, comment: "★ 染色，多选，逗号分隔的 lqg_stain_type 值（HE,IF,IHC,OTHER / NONE）；NONE 与其余互斥；空 = 还没选" }
+      - { name: stain_other, type: str, length: 100, nullable: true, comment: "选了 OTHER 时写具体染色名" }
+      - { name: operator_name, type: str, length: 50, nullable: true, comment: "操作人" }
+      - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
+    indexes:
+      - { name: idx_embed_sample, cols: [sample_id] }
+      - { name: idx_embed_submitter, cols: [submitter_id] }
+      - { name: idx_embed_status, cols: [verify_status] }
+
+  - table: t_lqg_embed_marker
+    comment: "石蜡块的 marker 表达（一个蜡块可测多个 marker；导出时拼成「Ki67：强表达；CK19：阴性」一格）"
+    module: ruoyi-lqg/embed
+    migration: V202609231100__EMBED-MODEL-001-embed.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: embed_id, type: id, nullable: false, comment: "FK→t_lqg_embed.id" }
+      - { name: marker_name, type: str, length: 50, nullable: true, comment: "marker 名称（可空：只记表达情况不写名称也允许）" }
+      - { name: expression, type: dict, length: 16, dict: lqg_marker_expr, nullable: false, comment: "negative 阴性 / weak 弱表达 / strong 强表达（按钮单选）" }
+      - { name: sort, type: int, nullable: false, default: "0", comment: "显示顺序" }
+    indexes:
+      - { name: idx_embed_marker_embed, cols: [embed_id] }
+
+  # ═══════════ CRYO 冻存批次 + 出入库流水 ═══════════
+
+  - table: t_lqg_cryo_batch
+    comment: "冻存批次（-80 冻存模板的一行）；★ 剩余支数不落库 = init_qty + 本批次流水 delta 之和（ADR-0010）"
+    module: ruoyi-lqg/cryo
+    migration: V202609241200__CRYO-MODEL-001-cryo.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: sample_id, type: id, nullable: false, comment: "FK→t_lqg_sample.id（内部编号贯穿：冻存必须挂到一个样本上）" }
+      - { name: cryo_name, type: str, length: 100, nullable: false, comment: "冻存样品名称（如 hli39-GZ-N-P3-EM2-2e5），手填，系统不解析；选样本后用「内部编号-」预填" }
+      - { name: passage, type: str, length: 10, nullable: false, comment: "★ 代数，形如 P3（正则 ^P\\d{1,3}$）；同一样本多条批次的代数不要求连续" }
+      - { name: freeze_time, type: date, nullable: false, comment: "冻存时间（超期提醒从它起算）" }
+      - { name: init_qty, type: int, nullable: false, comment: "冻存数量/支（初始支数，>0；可改，改后按时间逐笔算剩余不得为负，见 FLOW:F-CRYO-02.step5）" }
+      - { name: density, type: str, length: 50, nullable: true, comment: "冻存密度（文本，如 2e5）" }
+      - { name: in_minus80, type: flag, nullable: false, comment: "暂存 -80 度超低温冰箱 Y 是 / N 否（按钮）；N = 直接进液氮，ln2_location 必填" }
+      - { name: frozen_by, type: str, length: 50, nullable: true, comment: "冻存人" }
+      - { name: to_ln2_time, type: date, nullable: true, comment: "★ -80 转移至液氮时间；非空 = 已转液氮，不再参与超期提醒，此后取走的 from_location = ln2" }
+      - { name: ln2_location, type: str, length: 100, nullable: true, comment: "液氮储存位置（文本；登记转液氮时必填）" }
+      - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
+    indexes:
+      - { name: idx_cryo_batch_sample, cols: [sample_id] }
+      - { name: idx_cryo_batch_remind, cols: [in_minus80, to_ln2_time, freeze_time] }
+
+  - table: t_lqg_cryo_flow
+    comment: "冻存出入库流水（追溯靠它；取走 / 补入登记可改可删，删为软删；改删后逐笔剩余不得为负）"
+    module: ruoyi-lqg/cryo
+    migration: V202609241200__CRYO-MODEL-001-cryo.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: batch_id, type: id, nullable: false, comment: "FK→t_lqg_cryo_batch.id" }
+      - { name: flow_type, type: dict, length: 16, dict: lqg_cryo_flow_type, nullable: false, comment: "take 取走 / add 补入 / adjust 盘点调整" }
+      - { name: delta, type: int, nullable: false, comment: "★ 带符号变化量：take 恒为负、add 恒为正、adjust 可正可负且不为 0；落库前校验「剩余 + delta ≥ 0」" }
+      - { name: from_location, type: dict, length: 16, dict: lqg_cryo_location, nullable: false, comment: "minus80 / ln2：由批次当时所在位置自动带出，不让人选" }
+      - { name: operator_name, type: str, length: 50, nullable: false, comment: "经手人（默认当前登录人）" }
+      - { name: flow_time, type: datetime, nullable: false, comment: "发生时间（默认当前）" }
+      - { name: purpose, type: str, length: 200, nullable: true, comment: "用途 / 原因（adjust 必填）" }
+    indexes:
+      - { name: idx_cryo_flow_batch, cols: [batch_id, flow_time] }
+
+  # ═══════════ QC 三份质控文档（每个样本各一份）═══════════
+
+  - table: t_lqg_qc_sample
+    comment: "样本质控表；来源单位 / 患者姓名 / 性别 / 收样时间 / 处理时间 / 操作人 / 内部编号 从样本主档带出，不在本表重复存"
+    module: ruoyi-lqg/qc
+    migration: V202609261300__QC-MODEL-001-qc-docs.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: sample_id, type: id, nullable: false, unique: uk_qc_sample_sample, comment: "FK→t_lqg_sample.id，一个样本一份" }
+      - { name: patient_no, type: str, length: 255, nullable: true, comment: "患者编号，@EncryptField 加密落库（ADR-0006）" }
+      - { name: sampling_site, type: str, length: 100, nullable: true, comment: "取样部位" }
+      - { name: sampling_method, type: str, length: 100, nullable: true, comment: "取样方式" }
+      - { name: clinical_diagnosis, type: text, nullable: true, comment: "临床诊断/既往治疗" }
+      - { name: receive_desc, type: str, length: 500, nullable: true, comment: "收样描述（新建时默认填模板原文：样本按质控要求，保持2-8℃低温环境运输至实验室。）" }
+      - { name: viability_oss_id, type: id, nullable: true, comment: "细胞活率测定附件 FK→sys_oss.oss_id（文档里这一格印文件名，不做 OLE 嵌入）" }
+      - { name: viability_file_name, type: str, length: 200, nullable: true, comment: "细胞活率测定附件的原始文件名" }
+      - { name: orig_desc, type: text, nullable: true, comment: "收样原始情况 · 情况描述" }
+      - { name: observe_desc, type: text, nullable: true, comment: "样本观察情况 · 情况描述（默认模板原文：样本外观呈黄白色。）" }
+      - { name: pretreat_desc, type: text, nullable: true, comment: "样本预处理情况 · 情况描述（默认模板原文）" }
+      - { name: doc_status, type: dict, length: 16, dict: lqg_doc_status, nullable: false, default: "draft", comment: "★ draft 草稿 / published 已完成；只有 published 对外可见；published 后再保存内容 → 回到 draft" }
+      - { name: published_time, type: datetime, nullable: true, comment: "完成时间（文档列表按它倒序）" }
+      - { name: published_by, type: id, nullable: true, comment: "完成人 user_id" }
+
+  - table: t_lqg_qc_organoid
+    comment: "类器官质控表（六栏；除图片位外都是自由文本，模板没给选项就不擅自做成下拉）"
+    module: ruoyi-lqg/qc
+    migration: V202609261300__QC-MODEL-001-qc-docs.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: sample_id, type: id, nullable: false, unique: uk_qc_organoid_sample, comment: "FK→t_lqg_sample.id，一个样本一份" }
+      - { name: formed_time, type: str, length: 100, nullable: true, comment: "形成类器官时间（文本：日期选择器选了就是 yyyy-MM-dd，也允许手改成「约第 5 天」）" }
+      - { name: growth_state, type: str, length: 200, nullable: true, comment: "生长状态" }
+      - { name: growth_desc, type: text, nullable: true, comment: "类器官生长情况" }
+      - { name: planned_drug_screen, type: text, nullable: true, comment: "预计筛药（纯文本；不延伸成药敏模块，REQ-SYS-013 deferred）" }
+      - { name: feedback_time, type: str, length: 100, nullable: true, comment: "反馈时间（文本，同 formed_time）" }
+      - { name: doc_status, type: dict, length: 16, dict: lqg_doc_status, nullable: false, default: "draft", comment: "draft / published，规则同 t_lqg_qc_sample.doc_status" }
+      - { name: published_time, type: datetime, nullable: true, comment: "完成时间" }
+      - { name: published_by, type: id, nullable: true, comment: "完成人 user_id" }
+
+  - table: t_lqg_qc_score
+    comment: "类器官质量评分表：四个变量各选一档 → 分值取字典 remark 并快照落库 → 合计"
+    module: ruoyi-lqg/qc
+    migration: V202609261300__QC-MODEL-001-qc-docs.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: sample_id, type: id, nullable: false, unique: uk_qc_score_sample, comment: "FK→t_lqg_sample.id，一个样本一份" }
+      - { name: pre_culture_level, type: dict, length: 16, dict: lqg_score_pre_culture, nullable: true, comment: "培养前样本评分档位 lt40(8) / 40to80(16) / gt80(20)" }
+      - { name: culture_days_level, type: dict, length: 16, dict: lqg_score_culture_days, nullable: true, comment: "培养天数档位 gt14(0) / le14(10)" }
+      - { name: organoid_count_level, type: dict, length: 16, dict: lqg_score_count, nullable: true, comment: "类器官数量档位 lt100(0) / 100to1500(10) / 1500to4000(25) / gt4000(40)" }
+      - { name: diameter_level, type: dict, length: 16, dict: lqg_score_diameter, nullable: true, comment: "类器官直径档位 lt30(10) / 30to100(20) / gt100(30)" }
+      - { name: pre_culture_score, type: int, nullable: true, comment: "该档分值快照（后端按字典 remark 回填，前端传来的分值一律忽略）" }
+      - { name: culture_days_score, type: int, nullable: true, comment: "该档分值快照" }
+      - { name: organoid_count_score, type: int, nullable: true, comment: "该档分值快照" }
+      - { name: diameter_score, type: int, nullable: true, comment: "该档分值快照" }
+      - { name: total_score, type: int, nullable: true, comment: "★ 合计 = 四项分值之和（任一项未选则为空）；不出「偏差 / 中等 / 良好」结论，那是文档页脚的固定注释" }
+      - { name: doc_status, type: dict, length: 16, dict: lqg_doc_status, nullable: false, default: "draft", comment: "draft / published，规则同 t_lqg_qc_sample.doc_status" }
+      - { name: published_time, type: datetime, nullable: true, comment: "完成时间" }
+      - { name: published_by, type: id, nullable: true, comment: "完成人 user_id" }
+
+  # ═══════════ DOC 文档的图片、附件、渲染产物 ═══════════
+
+  - table: t_lqg_doc_image
+    comment: "质控文档的图片位（每位 1-3 张）；原图与预览图分开存"
+    module: ruoyi-lqg/doc
+    migration: V202609261310__QC-MODEL-001-doc-assets.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: doc_type, type: dict, length: 16, dict: lqg_doc_type, nullable: false, comment: "sample_qc / organoid_qc（评分表没有图片位）" }
+      - { name: doc_id, type: id, nullable: false, comment: "对应质控文档表的主键" }
+      - { name: slot, type: dict, length: 24, dict: lqg_image_slot, nullable: false, comment: "orig / observe / pretreat（样本质控表）｜organoid_observe（类器官质控表）" }
+      - { name: oss_id, type: id, nullable: false, comment: "原图 FK→sys_oss.oss_id（预览页点开看的就是它）" }
+      - { name: preview_oss_id, type: id, nullable: true, comment: "预览图 FK→sys_oss.oss_id（长边 ≤ 2000px 的 JPEG；TIFF 等浏览器打不开的格式靠它显示；进 Word 的也是它）" }
+      - { name: sort, type: int, nullable: false, default: "0", comment: "同一图片位内的顺序" }
+    indexes:
+      - { name: idx_doc_image_doc, cols: [doc_type, doc_id, slot] }
+
+  - table: t_lqg_doc_attachment
+    comment: "质控文档的通用附件（不进 Word 正文，在预览页下方列出）"
+    module: ruoyi-lqg/doc
+    migration: V202609261310__QC-MODEL-001-doc-assets.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: doc_type, type: dict, length: 16, dict: lqg_doc_type, nullable: false, comment: "sample_qc / organoid_qc / organoid_score" }
+      - { name: doc_id, type: id, nullable: false, comment: "对应质控文档表的主键" }
+      - { name: oss_id, type: id, nullable: false, comment: "FK→sys_oss.oss_id" }
+      - { name: file_name, type: str, length: 200, nullable: false, comment: "原始文件名" }
+      - { name: file_size, type: int, nullable: false, comment: "字节数（单个 ≤ 50MB）" }
+      - { name: sort, type: int, nullable: false, default: "0", comment: "显示顺序" }
+    indexes:
+      - { name: idx_doc_attachment_doc, cols: [doc_type, doc_id] }
+
+  - table: t_lqg_doc_file
+    comment: "渲染产物缓存（Word / PDF / 每页 PNG；内部版与外部版各一套；内容或模板变了按指纹失效重出，ADR-0005）"
+    module: ruoyi-lqg/doc
+    migration: V202609261400__DOC-RENDER-001-doc-file.sql
+    common_fields: [audit]
+    fields:
+      - { name: id, type: id, nullable: false, comment: "主键" }
+      - { name: sample_id, type: id, nullable: false, unique: uk_doc_file, comment: "FK→t_lqg_sample.id" }
+      - { name: doc_kind, type: dict, length: 16, dict: lqg_doc_kind, nullable: false, unique: uk_doc_file, comment: "sample_qc / organoid_qc / organoid_score / merged" }
+      - { name: audience, type: dict, length: 16, dict: lqg_doc_audience, nullable: false, unique: uk_doc_file, comment: "★ internal 内部版（含内部编号）/ external 外部版（内部编号按开关留空）；外部接口只许取 external" }
+      - { name: file_format, type: dict, length: 8, dict: lqg_file_format, nullable: false, unique: uk_doc_file, comment: "docx / pdf / png" }
+      - { name: page_no, type: int, nullable: false, default: "0", unique: uk_doc_file, comment: "png 的页码（从 1 起）；docx / pdf 恒为 0" }
+      - { name: oss_id, type: id, nullable: true, comment: "产物 FK→sys_oss.oss_id（私有桶；对外只发短时签名链接）" }
+      - { name: content_hash, type: str, length: 64, nullable: false, comment: "★ 内容指纹 = sha256(文档各字段 + 图片 oss_id 列表 + 模板版本 + audience)；与当前算出的不一致 = 缓存过期，必须重出" }
+      - { name: template_version, type: str, length: 20, nullable: false, comment: "渲染所用模板版本号" }
+      - { name: render_status, type: dict, length: 16, dict: lqg_render_status, nullable: false, default: "pending", comment: "pending / done / failed" }
+      - { name: error_msg, type: str, length: 500, nullable: true, comment: "失败原因（工作台可见、可重试）" }
+      - { name: rendered_time, type: datetime, nullable: true, comment: "生成完成时间" }
+    indexes:
+      - { name: idx_doc_file_sample, cols: [sample_id, doc_kind, audience] }

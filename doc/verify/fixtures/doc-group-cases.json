@@ -1,0 +1,114 @@
+{
+  "_doc": "DOC-MP-001 的验收用例。被测函数：groupDocs(rows) → 分组数组。规则：按样本分组；组内固定顺序 sample_qc → organoid_qc → organoid_score；组间按组内最新完成时间倒序；该样本已完成 ≥ 2 份才显示合并入口（showMerge）。rows 是接口返回的扁平行。",
+  "cases": [
+    {
+      "case": "两个样本，组内顺序与组间顺序",
+      "rows": [
+        {
+          "sampleId": "1",
+          "title": "SJ01",
+          "docKind": "organoid_score",
+          "publishedTime": "2026-09-16 10:00:00"
+        },
+        {
+          "sampleId": "2",
+          "title": "SJ02",
+          "docKind": "sample_qc",
+          "publishedTime": "2026-09-17 09:00:00"
+        },
+        {
+          "sampleId": "1",
+          "title": "SJ01",
+          "docKind": "sample_qc",
+          "publishedTime": "2026-09-12 10:00:00"
+        },
+        {
+          "sampleId": "1",
+          "title": "SJ01",
+          "docKind": "organoid_qc",
+          "publishedTime": "2026-09-15 10:00:00"
+        }
+      ],
+      "expect": [
+        {
+          "sampleId": "2",
+          "docKinds": [
+            "sample_qc"
+          ],
+          "showMerge": false,
+          "latest": "2026-09-17 09:00:00"
+        },
+        {
+          "sampleId": "1",
+          "docKinds": [
+            "sample_qc",
+            "organoid_qc",
+            "organoid_score"
+          ],
+          "showMerge": true,
+          "latest": "2026-09-16 10:00:00"
+        }
+      ]
+    },
+    {
+      "case": "恰好两份也显示合并入口",
+      "rows": [
+        {
+          "sampleId": "3",
+          "title": "SJ03",
+          "docKind": "organoid_score",
+          "publishedTime": "2026-09-10 10:00:00"
+        },
+        {
+          "sampleId": "3",
+          "title": "SJ03",
+          "docKind": "sample_qc",
+          "publishedTime": "2026-09-11 10:00:00"
+        }
+      ],
+      "expect": [
+        {
+          "sampleId": "3",
+          "docKinds": [
+            "sample_qc",
+            "organoid_score"
+          ],
+          "showMerge": true,
+          "latest": "2026-09-11 10:00:00"
+        }
+      ]
+    },
+    {
+      "case": "空列表",
+      "rows": [],
+      "expect": []
+    },
+    {
+      "case": "病灶：接口若混进了 merged 行，不当成一份文档也不计入合并判断",
+      "rows": [
+        {
+          "sampleId": "4",
+          "title": "SJ04",
+          "docKind": "sample_qc",
+          "publishedTime": "2026-09-10 10:00:00"
+        },
+        {
+          "sampleId": "4",
+          "title": "SJ04",
+          "docKind": "merged",
+          "publishedTime": "2026-09-10 10:00:01"
+        }
+      ],
+      "expect": [
+        {
+          "sampleId": "4",
+          "docKinds": [
+            "sample_qc"
+          ],
+          "showMerge": false,
+          "latest": "2026-09-10 10:00:00"
+        }
+      ]
+    }
+  ]
+}

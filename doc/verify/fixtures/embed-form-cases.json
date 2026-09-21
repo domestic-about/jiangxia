@@ -1,0 +1,220 @@
+{
+  "_doc": "EMBED-MP-001 的验收用例。被测函数：embedLayout(identity, verifyStatus, mine, mode) → { fields, editable, showCard }。内部：模板 C 的 16 列全部可填（样本编号 = 选择样本）。外部（Kevin 2026-09-17 晚定外部可填，CR-20260917-05）：只有选择样本、样本类型、类器官来源类型三项，石蜡块编号、工序、染色、marker、包埋人、操作人、备注都不渲染；外部有效后只读，并显示包埋卡片（showCard）。mode：new = 首页点表进来；edit = 历史编辑记录点一条进来；view = 内部管理表格页点一行进来（只读；只读页右上角「修改」会切到 mode=edit 重算，CR-20260918-07）。身份缺失、不认识：什么都不渲染。",
+  "externalFields": [
+    "sampleId",
+    "sampleType",
+    "organoidSourceType"
+  ],
+  "internalFields": [
+    "sampleId",
+    "paraffinBlockNo",
+    "sampleType",
+    "organoidSourceType",
+    "tissueReceiveTime",
+    "tissueProcessTime",
+    "agaroseEmbedTime",
+    "embedBy",
+    "dehydrateTime",
+    "agaroseSendTime",
+    "paraffinEmbedTime",
+    "sectionTime",
+    "stainTypes",
+    "markers",
+    "operatorName",
+    "remark"
+  ],
+  "cases": [
+    {
+      "case": "外部新增",
+      "identity": "external",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "sampleType",
+          "organoidSourceType"
+        ],
+        "editable": true,
+        "showCard": false
+      }
+    },
+    {
+      "case": "外部改自己的无效",
+      "identity": "external",
+      "verifyStatus": "invalid",
+      "mine": true,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "sampleType",
+          "organoidSourceType"
+        ],
+        "editable": true,
+        "showCard": false
+      }
+    },
+    {
+      "case": "外部看自己的有效（病灶：只读，显示包埋卡片）",
+      "identity": "external",
+      "verifyStatus": "valid",
+      "mine": true,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "sampleType",
+          "organoidSourceType"
+        ],
+        "editable": false,
+        "showCard": true
+      }
+    },
+    {
+      "case": "外部看同组别人的待核验（病灶：可看不可改）",
+      "identity": "external",
+      "verifyStatus": "pending",
+      "mine": false,
+      "mode": "view",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "sampleType",
+          "organoidSourceType"
+        ],
+        "editable": false,
+        "showCard": false
+      }
+    },
+    {
+      "case": "内部新增",
+      "identity": "internal",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "paraffinBlockNo",
+          "sampleType",
+          "organoidSourceType",
+          "tissueReceiveTime",
+          "tissueProcessTime",
+          "agaroseEmbedTime",
+          "embedBy",
+          "dehydrateTime",
+          "agaroseSendTime",
+          "paraffinEmbedTime",
+          "sectionTime",
+          "stainTypes",
+          "markers",
+          "operatorName",
+          "remark"
+        ],
+        "editable": true,
+        "showCard": false
+      }
+    },
+    {
+      "case": "内部补填有效的石蜡块",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "paraffinBlockNo",
+          "sampleType",
+          "organoidSourceType",
+          "tissueReceiveTime",
+          "tissueProcessTime",
+          "agaroseEmbedTime",
+          "embedBy",
+          "dehydrateTime",
+          "agaroseSendTime",
+          "paraffinEmbedTime",
+          "sectionTime",
+          "stainTypes",
+          "markers",
+          "operatorName",
+          "remark"
+        ],
+        "editable": true,
+        "showCard": false
+      }
+    },
+    {
+      "case": "内部看外部送来的待核验（病灶：小程序里只读，核验在工作台）",
+      "identity": "internal",
+      "verifyStatus": "pending",
+      "mine": false,
+      "mode": "edit",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "paraffinBlockNo",
+          "sampleType",
+          "organoidSourceType",
+          "tissueReceiveTime",
+          "tissueProcessTime",
+          "agaroseEmbedTime",
+          "embedBy",
+          "dehydrateTime",
+          "agaroseSendTime",
+          "paraffinEmbedTime",
+          "sectionTime",
+          "stainTypes",
+          "markers",
+          "operatorName",
+          "remark"
+        ],
+        "editable": false,
+        "showCard": false
+      }
+    },
+    {
+      "case": "内部从内部管理查看（病灶：只读模式不能改）",
+      "identity": "internal",
+      "verifyStatus": "valid",
+      "mine": true,
+      "mode": "view",
+      "expect": {
+        "fields": [
+          "sampleId",
+          "paraffinBlockNo",
+          "sampleType",
+          "organoidSourceType",
+          "tissueReceiveTime",
+          "tissueProcessTime",
+          "agaroseEmbedTime",
+          "embedBy",
+          "dehydrateTime",
+          "agaroseSendTime",
+          "paraffinEmbedTime",
+          "sectionTime",
+          "stainTypes",
+          "markers",
+          "operatorName",
+          "remark"
+        ],
+        "editable": false,
+        "showCard": false
+      }
+    },
+    {
+      "case": "身份缺失（病灶：什么都不渲染）",
+      "identity": "",
+      "verifyStatus": null,
+      "mine": true,
+      "mode": "new",
+      "expect": {
+        "fields": [],
+        "editable": false,
+        "showCard": false
+      }
+    }
+  ]
+}
