@@ -26,6 +26,7 @@ import {
   emptyOrganoidForm,
   externalOrganoidPayload,
   fetchOrganoidHints,
+  internalOrganoidPatch,
   internalOrganoidPayload,
   toOrganoidFormValue,
   updateExtOrganoid,
@@ -306,8 +307,10 @@ async function submit() {
       uni.showToast({ title: '已提交', icon: 'none' })
     }
     else if (isInternal.value) {
-      // ★ 修改模式走 PUT（不是再 POST 一次 —— 会撞内部编号唯一性）
-      await updateIntSample({ id: organoidId.value, ...internalOrganoidPayload(form.value) })
+      // ★ 修改模式走 PUT（不是再 POST 一次 —— 会撞内部编号唯一性）。
+      //   且**不带 sampleKind**：类别是这条记录的类目身份，不是可改字段（issue #105）——
+      //   带上它会让「点错行进来保存」把一条组织样本静默改判成类器官（后端同口径 400 兜底）。
+      await updateIntSample({ id: organoidId.value, ...internalOrganoidPatch(form.value) })
       uni.showToast({ title: '已保存', icon: 'none' })
     }
     else {

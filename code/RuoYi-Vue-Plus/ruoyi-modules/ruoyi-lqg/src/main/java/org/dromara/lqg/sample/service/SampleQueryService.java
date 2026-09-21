@@ -22,6 +22,13 @@ import java.util.List;
 /**
  * 样本读侧（doc/api-contract.md 的 {@code GET /lqg/sample/list} / {@code GET /lqg/sample/{id}}）。
  *
+ * <p>★ <b>issue #105（S1）修在 {@link #buildWrapper}</b>：{@code sort=recent} 的「经手人」判据
+ * 是 {@code create_by ∈ 内部 OR update_by ∈ 内部}，这一组 OR 必须自己包一层 {@code and(w -&gt; …)}。
+ * MyBatis-Plus 只给 {@code and(consumer)} 加括号，顶层裸 {@code .or()} 会把整条 AND 链拆成
+ * {@code (全部筛选 AND 经手A) OR 经手B}（OR 左结合），于是 {@code sampleKind / sourceUnitId /
+ * internalNo / mine} 等筛选全被短路 —— 复现与 p6spy 原始 SQL 见
+ * {@code doc/waves/reports/D2-rework-r3-issue105.md}。
+ *
  * <p>★ 四条口径都落在这一层：
  * <ol>
  *   <li><b>加密列只支持精确查询</b>（ADR-0006）：{@code donorName} / {@code hospitalNo} 的查询值
@@ -97,58 +104,7 @@ public class SampleQueryService {
                 // 该组别下没有任何外部档案 → 空集，直接回空页（别退化成「不过滤 = 全表」）
                 return TableDataInfo.build(new Page<SampleVo>(page.getCurrent(), page.getSize(), 0L).setRecords(List.of()));
             }
-            LambdaQueryWrapper<Sample> wrapper = new LambdaQueryWrapper<Sample>()
-                .eq(StringUtils.isNotBlank(q.getSampleKind()), Sample::getSampleKind, trim(q.getSampleKind()))
-                .eq(StringUtils.isNotBlank(q.getVerifyStatus()), Sample::getVerifyStatus, trim(q.getVerifyStatus()))
-                .eq(StringUtils.isNotBlank(q.getInternalNo()), Sample::getInternalNo, trim(q.getInternalNo()))
-                // ★ 提交来源钉在样本行已落库的列上（提交当时的快照），不按提交人当前角色现算
-                .eq(StringUtils.isNotBlank(q.getSubmitSource()), Sample::getSubmitSource, trim(q.getSubmitSource()))
-                // 加密列：先把查询值加密再 eq（明文 eq 查不到任何东西）
-                .eq(StringUtils.isNotBlank(q.getDonorName()), Sample::getDonorName, fieldCipher.encrypt(q.getDonorName()))
-                .eq(StringUtils.isNotBlank(q.getHospitalNo()), Sample::getHospitalNo, fieldCipher.encrypt(q.getHospitalNo()))
-                // ★ 来源单位钉在**样本行自己的** source_unit_id 快照上（issue #96）：
-                //   内部人员录的行（submit_source='internal'、提交人没有外部档案）也要能被这个筛选筛出来
-                //   —— 工作台「来源单位」列显示的就是这一列（UI:admin.sample.list / REQ-SAMPLE-011）。
-                //   自填单位名（source_unit_id 为空、只有 source_unit_name）的行不落进按 id 的筛选；
-                //   同名不同 id 时以 id 为准，按名字找走 keyword 的 LIKE 那一支（见 SampleQueryBo）。
-                .eq(q.getSourceUnitId() != null, Sample::getSourceUnitId, q.getSourceUnitId())
-                // 组别：样本行上没有这一列 → 外部档案的 id 集合（不看档案核验状态）
-                .in(submitterIds != null, Sample::getSubmitterId, submitterIds == null ? List.of() : submitterIds)
-                // 收样日期区间：两端都含（begin <= receive_date <= end）
-                .ge(q.getReceiveDateBegin() != null, Sample::getReceiveDate, q.getReceiveDateBegin())
-                .le(q.getReceiveDateEnd() != null, Sample::getReceiveDate, q.getReceiveDateEnd())
-                // 自由文本两项走模糊（不是加密列，没有精确匹配的约束）
-                .like(StringUtils.isNotBlank(q.getTissueType()), Sample::getTissueType, trim(q.getTissueType()))
-                .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()))
-                // ★ 表格页搜索框（SAMPLE-MP-002 / 契约第 49 行）：内部编号等值 OR 来源单位模糊。
-                //   单独一个括号（`w -&gt;` 那层会加括号），不把别的筛选卷进 OR 里。
-                .and(StringUtils.isNotBlank(q.getKeyword()), w -> w
-                    .eq(Sample::getInternalNo, trim(q.getKeyword()))
-                    .or()
-                    .like(Sample::getSourceUnitName, trim(q.getKeyword())));
-
-            if (SampleQueryBo.isRecentSort(q.getSort())) {
-                // 「经手过」= create_by 或 update_by 是内部账号（sys_user.user_type='sys_user'）。
-                // 外部登录建的账号一律是 app_user（AUTH-LOGIN-001），所以外部送来没人动过的
-                // （待核验 / 无效）与外部自己改过的都不进「历史编辑记录」。
-                String internalUsers = "SELECT user_id FROM sys_user WHERE user_type = 'sys_user' AND del_flag = '0'";
-                Long me = currentUserId();
-                wrapper.inSql(Sample::getCreateBy, internalUsers)
-                    .or()
-                    .inSql(Sample::getUpdateBy, internalUsers);
-                if (Boolean.TRUE.equals(q.getMine()) && me != null) {
-                    // 「只看我提交的」开关打开：在上面那个范围里再按经手人收窄（create_by OR update_by）
-                    wrapper.and(w -> w.eq(Sample::getCreateBy, me).or().eq(Sample::getUpdateBy, me));
-                }
-                // ★ 表达式排序只能走 last()：MyBatis-Plus 3.5.16 的 Func 接口只留了 SFunction 重载
-                //（orderByDesc(R, R...)），没有接受列名字符串的重载 —— COALESCE(...) 不是列引用，
-                // 编译期就报 no suitable method found。分页插件的 LIMIT 接在这段 ORDER BY 之后。
-                wrapper.last("ORDER BY COALESCE(update_time, create_time) DESC, id DESC");
-            } else {
-                // ★ 待核验置顶（工作台总表）：布尔表达式 true 在前；再按创建时间倒序。
-                // 与 accept 1 末段「pageSize=2 的前两行 verifyStatus 都是 pending」同源。
-                wrapper.last("ORDER BY (verify_status = 'pending') DESC, create_time DESC, id DESC");
-            }
+            LambdaQueryWrapper<Sample> wrapper = buildWrapper(q, submitterIds, currentUserId());
 
             Page<Sample> result = sampleMapper.selectPage(page, wrapper);
             List<SampleVo> rows = result.getRecords().stream().map(this::toVo).toList();
@@ -157,6 +113,96 @@ public class SampleQueryService {
             return TableDataInfo.build(new Page<SampleVo>(result.getCurrent(), result.getSize(), result.getTotal())
                 .setRecords(rows));
         });
+    }
+
+    /**
+     * 「经手人 = 内部账号」的子查询（{@code user_type='sys_user'}）。
+     *
+     * <p>包内可见：契约测试拿它拼「这一组 OR 被括号包住」的期望串（issue #105）。
+     */
+    static final String INTERNAL_USERS_SQL =
+        "SELECT user_id FROM sys_user WHERE user_type = 'sys_user' AND del_flag = '0'";
+
+    /**
+     * 组装列表的 {@code WHERE} 链与 {@code ORDER BY}（**包内可见**：{@code SampleRecentFilterContractTest}
+     * 直接拿它的 {@code getTargetSql()} 断「OR 有没有被包住」）。
+     *
+     * <p>★ issue #105（S1）就修在这里：所有「多个条件里夹一组 OR」的地方一律走
+     * {@code and(w -&gt; …)} 嵌套，绝不写顶层裸 {@code .or()}。MyBatis-Plus 3.5.x 的
+     * {@code AbstractWrapper} 只在 {@code and(consumer)} / {@code nested(consumer)} 外面补括号，
+     * 顶层 {@code or()} 只是往 SQL 里塞一个 {@code OR}：
+     * <pre>
+     * 病灶（修前）：WHERE del_flag='0' AND (sample_kind='organoid'
+     *                 AND create_by IN (内部) OR update_by IN (内部))
+     * 修后        ：WHERE del_flag='0' AND (sample_kind='organoid'
+     *                 AND (create_by IN (内部) OR update_by IN (内部)))
+     * </pre>
+     * 修前 OR 左结合 → {@code (sampleKind AND create_by∈内部) OR update_by∈内部}，
+     * 只要某行的 {@code update_by} 是内部账号，前面**全部**筛选（sampleKind / sourceUnitId /
+     * internalNo / keyword / mine …）统统被短路；{@code mine} 那个 {@code and(…)} 还只挂在
+     * 第二个析取项上，「只看我提交的」开关静默失效。
+     *
+     * @param q          查询入参（已 trim 语义由下面逐项守卫）
+     * @param submitterIds 组别筛出来的提交人 id 集合（{@code null} = 不带组别筛选）
+     * @param me         当前登录人（取不到 = {@code null}；{@code mine=true} 时才用得上）
+     */
+    LambdaQueryWrapper<Sample> buildWrapper(SampleQueryBo q, List<Long> submitterIds, Long me) {
+        LambdaQueryWrapper<Sample> wrapper = new LambdaQueryWrapper<Sample>()
+            .eq(StringUtils.isNotBlank(q.getSampleKind()), Sample::getSampleKind, trim(q.getSampleKind()))
+            .eq(StringUtils.isNotBlank(q.getVerifyStatus()), Sample::getVerifyStatus, trim(q.getVerifyStatus()))
+            .eq(StringUtils.isNotBlank(q.getInternalNo()), Sample::getInternalNo, trim(q.getInternalNo()))
+            // ★ 提交来源钉在样本行已落库的列上（提交当时的快照），不按提交人当前角色现算
+            .eq(StringUtils.isNotBlank(q.getSubmitSource()), Sample::getSubmitSource, trim(q.getSubmitSource()))
+            // 加密列：先把查询值加密再 eq（明文 eq 查不到任何东西）
+            .eq(StringUtils.isNotBlank(q.getDonorName()), Sample::getDonorName, fieldCipher.encrypt(q.getDonorName()))
+            .eq(StringUtils.isNotBlank(q.getHospitalNo()), Sample::getHospitalNo, fieldCipher.encrypt(q.getHospitalNo()))
+            // ★ 来源单位钉在**样本行自己的** source_unit_id 快照上（issue #96）：
+            //   内部人员录的行（submit_source='internal'、提交人没有外部档案）也要能被这个筛选筛出来
+            //   —— 工作台「来源单位」列显示的就是这一列（UI:admin.sample.list / REQ-SAMPLE-011）。
+            //   自填单位名（source_unit_id 为空、只有 source_unit_name）的行不落进按 id 的筛选；
+            //   同名不同 id 时以 id 为准，按名字找走 keyword 的 LIKE 那一支（见 SampleQueryBo）。
+            .eq(q.getSourceUnitId() != null, Sample::getSourceUnitId, q.getSourceUnitId())
+            // 组别：样本行上没有这一列 → 外部档案的 id 集合（不看档案核验状态）
+            .in(submitterIds != null, Sample::getSubmitterId, submitterIds == null ? List.of() : submitterIds)
+            // 收样日期区间：两端都含（begin <= receive_date <= end）
+            .ge(q.getReceiveDateBegin() != null, Sample::getReceiveDate, q.getReceiveDateBegin())
+            .le(q.getReceiveDateEnd() != null, Sample::getReceiveDate, q.getReceiveDateEnd())
+            // 自由文本两项走模糊（不是加密列，没有精确匹配的约束）
+            .like(StringUtils.isNotBlank(q.getTissueType()), Sample::getTissueType, trim(q.getTissueType()))
+            .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()))
+            // ★ 表格页搜索框（SAMPLE-MP-002 / 契约第 49 行）：内部编号等值 OR 来源单位模糊。
+            //   单独一个括号（`w -&gt;` 那层会加括号），不把别的筛选卷进 OR 里。
+            .and(StringUtils.isNotBlank(q.getKeyword()), w -> w
+                .eq(Sample::getInternalNo, trim(q.getKeyword()))
+                .or()
+                .like(Sample::getSourceUnitName, trim(q.getKeyword())));
+
+        if (SampleQueryBo.isRecentSort(q.getSort())) {
+            // 「经手过」= create_by 或 update_by 是内部账号（sys_user.user_type='sys_user'）。
+            // 外部登录建的账号一律是 app_user（AUTH-LOGIN-001），所以外部送来没人动过的
+            // （待核验 / 无效）与外部自己改过的都不进「历史编辑记录」。
+            //
+            // ★ issue #105（S1）：这一组 OR **必须**用 and(w -> …) 自己包一层（理由见方法注释）。
+            //   写成顶层 `.inSql(createBy,…).or().inSql(updateBy,…)` 会让上面全部筛选被短路，
+            //   并且让下面的 mine 只挂在第二个析取项上。
+            wrapper.and(w -> w.inSql(Sample::getCreateBy, INTERNAL_USERS_SQL)
+                .or()
+                .inSql(Sample::getUpdateBy, INTERNAL_USERS_SQL));
+            if (Boolean.TRUE.equals(q.getMine()) && me != null) {
+                // 「只看我提交的」开关打开：在上面那个范围里再按经手人收窄（create_by OR update_by）。
+                // 同样是一组 OR，同样包一层；包完再与「经手人 ∈ 内部」那一组**相与**（不是并列）。
+                wrapper.and(w -> w.eq(Sample::getCreateBy, me).or().eq(Sample::getUpdateBy, me));
+            }
+            // ★ 表达式排序只能走 last()：MyBatis-Plus 3.5.16 的 Func 接口只留了 SFunction 重载
+            //（orderByDesc(R, R...)），没有接受列名字符串的重载 —— COALESCE(...) 不是列引用，
+            // 编译期就报 no suitable method found。分页插件的 LIMIT 接在这段 ORDER BY 之后。
+            wrapper.last("ORDER BY COALESCE(update_time, create_time) DESC, id DESC");
+        } else {
+            // ★ 待核验置顶（工作台总表）：布尔表达式 true 在前；再按创建时间倒序。
+            // 与 accept 1 末段「pageSize=2 的前两行 verifyStatus 都是 pending」同源。
+            wrapper.last("ORDER BY (verify_status = 'pending') DESC, create_time DESC, id DESC");
+        }
+        return wrapper;
     }
 
     /**

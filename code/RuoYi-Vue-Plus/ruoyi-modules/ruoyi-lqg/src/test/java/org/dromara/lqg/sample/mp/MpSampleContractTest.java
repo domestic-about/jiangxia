@@ -3,11 +3,13 @@ package org.dromara.lqg.sample.mp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import org.dromara.common.core.exception.ServiceException;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleQueryBo;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitBo;
@@ -39,6 +41,12 @@ import org.springframework.web.bind.annotation.RestController;
  *       别的值 / 空值都走「内部管理表格页的全表」那一支，不会被误当排序键拼进 SQL。</li>
  *   <li><b>{@code mine} 默认不是本人</b>：契约写的是「开关打开时才带」，默认 false
  *       = 中心全部内部人员（甲方 9-18「江夏实验室所有的工作人员」）。</li>
+ *   <li><b>★ 类目身份不可越类改</b>（issue #105 · D2 r3 返工）：补丁里的 {@code sampleKind}
+ *       与库里不一致 → 400。病灶是「点错行 + 前端把 {@code sampleKind} 当可改字段发出去」——
+ *       一条组织样本从小程序类器官表单保存后会被静默改判成类器官。
+ *       {@code sample_kind} 是创建入口定下的记录身份（{@code FIELD:t_lqg_sample.sample_kind} /
+ *       {@code FLOW:F-SAMPLE-01.step1}、{@code FLOW:F-SAMPLE-02.step1|step2} 的 {@code writes}），
+ *       不是修改路径的字段。</li>
  * </ol>
  *
  * @author SAMPLE-MP-001
@@ -157,6 +165,64 @@ class MpSampleContractTest {
         s.setId(9000001001L);
         s.setVerifyStatus(verifyStatus);
         return s;
+    }
+
+    /**
+     * ★ issue #105 的另一半（D2 r3 返工）：{@code sample_kind} 是这条记录的**类目身份**，不是可改字段。
+     *
+     * <p>病灶（L2 片的危害证据）：小程序类器官表单保存时调
+     * {@code updateIntSample({id, sampleKind:'organoid', …})}，而 PUT 对 valid 行「谁录的都能改」
+     * —— 一条组织样本点错行进来保存后就被静默改判成类器官（两页签/两套必填集也跟着错）。
+     * 修法选「拒绝（400）」而不是「静默忽略」：忽略只是把「改判」换成「类器官字段写进了组织记录」，
+     * 两种都不可见；拒绝会让前端与 QA 当场看到 400。
+     */
+    @Test
+    void putRejectsASampleKindThatDiffersFromTheStoredRow() {
+        Sample tissueRow = sample("valid");
+        tissueRow.setSampleKind("tissue");
+
+        SampleSubmitBo organoidPayload = new SampleSubmitBo();
+        organoidPayload.setId(9000001001L);
+        organoidPayload.setSampleKind("organoid");
+        organoidPayload.setOrganoidType("结直肠类器官");
+
+        ServiceException e = assertThrows(ServiceException.class,
+            () -> MpSampleService.assertKindUnchanged(tissueRow, organoidPayload),
+            "★ 组织样本被当成类器官保存必须拒绝 —— 否则库里多一条类别错乱的记录");
+        assertEquals(Integer.valueOf(400), e.getCode(), "按契约第 49 行的 400 口径（不是 500）");
+        assertTrue(e.getMessage().contains("tissue") && e.getMessage().contains("organoid"),
+            "拒绝理由要写清当前类别与请求类别，前端/QA 才看得出是点错行");
+
+        // 反向同样拒（两头都收）：类器官行被 tissue 表单带着 sampleKind='tissue' 保存
+        Sample organoidRow = sample("valid");
+        organoidRow.setSampleKind("organoid");
+        SampleSubmitBo tissuePayload = new SampleSubmitBo();
+        tissuePayload.setSampleKind("tissue");
+        assertEquals(Integer.valueOf(400), assertThrows(ServiceException.class,
+            () -> MpSampleService.assertKindUnchanged(organoidRow, tissuePayload)).getCode());
+    }
+
+    /** 传的就是库里那个类别（正常保存）→ 放行；不传 / 空 / 只有空白 → 沿用库里现值，也放行。 */
+    @Test
+    void putAcceptsTheSameOrAnAbsentSampleKind() {
+        Sample tissueRow = sample("valid");
+        tissueRow.setSampleKind("tissue");
+
+        SampleSubmitBo same = new SampleSubmitBo();
+        same.setSampleKind("tissue");
+        MpSampleService.assertKindUnchanged(tissueRow, same); // 不抛
+
+        SampleSubmitBo whitespace = new SampleSubmitBo();
+        whitespace.setSampleKind("  tissue  ");
+        MpSampleService.assertKindUnchanged(tissueRow, whitespace); // trim 后相等，也不抛
+
+        SampleSubmitBo absent = new SampleSubmitBo();
+        absent.setTissueType("肝组织（更正）");
+        MpSampleService.assertKindUnchanged(tissueRow, absent); // 补丁不带类别 = 沿用现值
+
+        SampleSubmitBo blank = new SampleSubmitBo();
+        blank.setSampleKind("");
+        MpSampleService.assertKindUnchanged(tissueRow, blank);
     }
 
 }

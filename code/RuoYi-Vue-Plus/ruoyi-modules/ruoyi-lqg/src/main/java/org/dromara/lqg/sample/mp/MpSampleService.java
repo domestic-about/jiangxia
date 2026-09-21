@@ -85,6 +85,9 @@ public class MpSampleService {
      * <p>★ 先读现状（同时拿到状态与待合并的字段），待核验 / 无效 → 400（见类注释口径 2）。
      * 把补丁合并成完整入参之后再交给 {@link SampleService#update}：那边是「整体替换」语义
      * （工作台的修改页会带全字段），所以补齐这件事必须在这里做。
+     *
+     * <p>★ <b>类目身份不可越类改</b>（issue #105 的第二半，防再次发生）：补丁里的
+     * {@code sampleKind} 与库里不一致 → 400，见 {@link #assertKindUnchanged}。
      */
     public void update(SampleSubmitBo bo) {
         if (bo == null || bo.getId() == null) {
@@ -97,8 +100,46 @@ public class MpSampleService {
         if (!SampleQueryService.isEditable(exists)) {
             throw new ServiceException("待核验与无效的样本只能在网页工作台核验或改判，小程序里不能改");
         }
+        assertKindUnchanged(exists, bo);
         sampleService.update(mergePatch(exists, bo));
         log.info("小程序内部修改样本：id={} internalNo={}", bo.getId(), bo.getInternalNo());
+    }
+
+    /**
+     * <b>样本类别（{@code sample_kind}）是这条记录的类目身份，不是可改字段</b>（issue #105）。
+     *
+     * <p>口径来源：
+     * <ul>
+     *   <li>{@code doc/authority/} 的 {@code FIELD:t_lqg_sample.sample_kind}
+     *       —— 「tissue 组织样本（样本记录信息表）/ organoid 类器官（类器官收样记录）」：
+     *       它决定这条记录属于哪张工作表、哪套必填集（{@code SampleKindRules}），
+     *       是<b>创建当时</b>由入口定下的身份
+     *       （{@code FLOW:F-SAMPLE-01.step1} / {@code FLOW:F-SAMPLE-02.step1|step2}
+     *       把 {@code sample_kind} 写在 {@code writes} 里，修改路径的 {@code writes} 里没有它）；</li>
+     *   <li>{@code doc/api-contract.md} 第 49 行：{@code PUT} 的不可改字段原先只列了
+     *       {@code submitNo / submitSource / submitterId}，本票把 {@code sampleKind} 一并列进去
+     *       （同一条 issue #105 的返工，报告里有记录）。</li>
+     * </ul>
+     *
+     * <p>★ 为什么选「拒绝（400）」而不是「静默忽略」：这条路径的病灶正是
+     * <b>点错行 + 前端把 {@code sampleKind} 当可改字段发出去</b>（小程序类器官表单保存时固定发
+     * {@code updateIntSample({sampleKind:'organoid'})}），一条组织样本保存后就被静默改判成类器官
+     * —— 静默忽略只会把「改判」换成「字段写进了别类记录」，两种都不可见。拒绝会让前端与 QA
+     * 当场看到 400，而不是在库里留下一条类别错乱的记录。
+     *
+     * <p>不传 / 传空 = 沿用库里现值（{@link #mergePatch} 的补丁语义），不算不一致。
+     */
+    static void assertKindUnchanged(Sample exists, SampleSubmitBo patch) {
+        String requested = patch == null ? null : trim(patch.getSampleKind());
+        if (isBlank(requested)) {
+            return;
+        }
+        String current = trim(exists.getSampleKind());
+        if (!requested.equals(current)) {
+            throw new ServiceException(
+                "样本类别不可修改（当前 " + current + "，请求 " + requested + "）：类别是这条记录的身份，"
+                    + "要换类别请在工作台按对应工作表新增", 400);
+        }
     }
 
     /**
@@ -147,6 +188,11 @@ public class MpSampleService {
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    /** 与 {@code SampleQueryService.trim} 同口径：查询 / 补丁值一律 trim 后比较 */
+    private static String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
 }

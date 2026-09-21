@@ -65,10 +65,32 @@ export function toOrganoidFormValue(detail: Partial<SampleDetail> | null | undef
   }
 }
 
-/** 内部提交体（POST 新增 / PUT 修改同一份；PUT 时另加 id） */
+/**
+ * 内部**新增**提交体（`POST /mp/int/sample`）。
+ *
+ * ★ `sampleKind` 只在新增时带：它是这条记录的**类目身份**
+ * （`FIELD:t_lqg_sample.sample_kind`，`tissue` 组织样本 / `organoid` 类器官收样记录），
+ * 由入口决定、创建时写死，不是修改路径的字段（issue #105）。
+ * 修改走 {@link internalOrganoidPatch}（不带 `sampleKind`）—— 否则一条**组织样本**被
+ * 类器官表单改了别的字段，保存后会被静默改判成类器官。
+ */
 export function internalOrganoidPayload(form: OrganoidFormValue): Record<string, unknown> {
   return {
     sampleKind: 'organoid',
+    ...internalOrganoidPatch(form),
+  }
+}
+
+/**
+ * 内部**修改**（`PUT /mp/int/sample`）的补丁主体 —— 与新增同一份字段，**去掉 `sampleKind`**。
+ *
+ * ★ 为什么单独一个函数、而不是给 {@link internalOrganoidPayload} 加个布尔开关：
+ *   「修改模式不许发类目身份」是**口径**（issue #105），加开关时谁忘了传就又会静默改判；
+ *   两个入口各一个具名函数，调用点一眼看得出走的是哪条口径。
+ *   后端 `PUT /mp/int/sample` 同口径兜底：`sampleKind` 与库里不一致 → 400（两头都收）。
+ */
+export function internalOrganoidPatch(form: OrganoidFormValue): Record<string, unknown> {
+  return {
     sourceUnitId: form.sourceUnitId,
     sourceUnitName: form.sourceUnitName.trim(),
     organoidType: form.organoidType.trim(),

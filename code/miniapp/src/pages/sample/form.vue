@@ -266,7 +266,6 @@ function formatMs(ms: number, type: 'date' | 'datetime'): string {
 function payload(): Record<string, unknown> {
   const f = form.value
   const body: Record<string, unknown> = {
-    sampleKind: 'tissue',
     sourceUnitName: f.sourceUnitName,
     donorName: f.donorName,
     gender: f.gender,
@@ -275,6 +274,12 @@ function payload(): Record<string, unknown> {
     tissueType: f.tissueType,
     hasPathology: f.hasPathology,
     remark: f.remark,
+  }
+  // ★ `sampleKind` 只在**新增**时带（issue #105）：它是这条记录的**类目身份**
+  //   （`FIELD:t_lqg_sample.sample_kind`），由入口定下、创建时写死，不是可改字段。
+  //   修改模式再发它 = 一条别的类别的记录被点错行保存后静默改判（后端同口径 400 兜底）。
+  if (mode.value === 'new') {
+    body.sampleKind = 'tissue'
   }
   if (isInternal.value) {
     body.receiveDate = f.receiveDate || null
