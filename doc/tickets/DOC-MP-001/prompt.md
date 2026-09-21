@@ -62,6 +62,7 @@ accept:
 - [ ] 扫 `doc/change-log.md`：涉及本 ticket 的 CR **以 CR 为准**（CR 覆盖本文）
 - [ ] 逐条取权威（别全文读蓝图）：`python3 ~/claude-config/skills/xuqiu/scripts/authority_lint.py show <锚>`，锚见上方 `blueprint_refs`；接口形状见 `doc/api-contract.md`
 - [ ] 必读：
+  - **视觉按方向 A**（CR-20260921-08）：`doc/design-options/direction-a/落地规范.md` §5 与 §6 本页那一行；样式类用 SYS-MP-001 已落的 `src/style/components.scss`（`.lqg-*`），零颜色字面量。下面提到的图廊帧画于方向 A 之前，**只取内容块与排布，不取它的无阴影小圆角外观**
   - 视觉基准 = **方案 A**（按样本分组），Kevin 2026-09-17 已选定（CR-20260917-03）；看图 `doc/design-options/gallery.html#mp-doc-a`。方案 B（按时间平铺）已否决
   - **REQ-DOC-010 是 clarify**：页签名与板块名甲方还没定。默认「文档」「质控文档」，放配置里，改名不发版
 - [ ] 口径复述（本张最容易做反的）：

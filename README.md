@@ -3,7 +3,7 @@
 甲方：湖北江夏实验室类器官研究中心　乙方：武汉市添达信息技术服务有限公司　合同编号：ZH-2026-LQG-SJ
 来源：chores 任务 T007；售前工作区 `freelance/proposals/leiqiguanshiyanshi-songjianyuyangbengua/`（方案 v6、合同底稿、内部简报）。
 
-**现在在哪一步**：①需求拆解（/xuqiu）已完成，闸门全绿；六个关键页面的设计方案 Kevin 已选定（2026-09-17：首页 B，其余 A）；同日甲方看了设计稿 v1、提了 5 条意见，已按变更链落地（CR-20260917-04）；晚上 Kevin 重定了小程序结构（CR-20260917-05：首页内外部同一个样子并去掉数字、外部三张表、「我的」里历史编辑记录与只读的内部管理），给甲方的设计稿 v2 已按它原地重出 → 等 Kevin 几件事（见 `_manifest.json` 的 `needs_human`）→ 进 ②执行（/zhixing D1）。
+**现在在哪一步**：①需求拆解（/xuqiu）已完成，闸门全绿（2026-09-21 重跑）。设计口径以 `doc/change-log.md` 顶部为准：CR-20260917-05 定小程序结构，CR-20260918-07 落甲方 9 条意见，CR-20260921-08 定小程序视觉方向 A「清爽卡片」（规范在 `doc/design-options/direction-a/`）。下一步进 ②执行（/zhixing D1）；给甲方的稿子与确认单是否发出、计费等仍见 `_manifest.json` 的 `needs_human`。
 
 ## 目录
 

@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>类器官送检设计方向</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* ───────── 外框页面（说明用，不是设计稿本身） ───────── */
+:root{
+  --bg:#EDF0F0; --panel:#FFFFFF; --ink:#14201F; --ink2:#55656A; --ink3:#86959A;
+  --line:#D9E1E1; --accent:#0E7C7B; --accent-soft:#DCEFEC; --warn:#9A6212; --warn-soft:#FBEFD8;
+  --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1414; --panel:#162020; --ink:#E3EBEA; --ink2:#A2B1B1; --ink3:#788A8A;
+    --line:#283535; --accent:#5DC2BD; --accent-soft:#15302E; --warn:#E3B062; --warn-soft:#2E2414;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1414; --panel:#162020; --ink:#E3EBEA; --ink2:#A2B1B1; --ink3:#788A8A;
+  --line:#283535; --accent:#5DC2BD; --accent-soft:#15302E; --warn:#E3B062; --warn-soft:#2E2414;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;padding-inline:16px;line-height:1.6}
+.wrap{max-width:1240px;margin:0 auto;padding-block:48px 80px;display:flex;flex-direction:column;gap:64px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:6px 0 0;font-size:34px;line-height:1.2;font-weight:650;letter-spacing:.01em;text-wrap:balance}
+.lead{max-width:66ch;margin:14px 0 0;font-size:15px;color:var(--ink2)}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.facts span{font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--panel);border:1px solid var(--line);color:var(--ink2)}
+.facts b{color:var(--ink);font-weight:600}
+.jump{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.jump a{font-size:13px;text-decoration:none;color:var(--ink);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);display:flex;gap:8px;align-items:center}
+.jump a:hover{border-color:var(--accent)}
+.jump a:focus-visible,.dir a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.jump a b{font-family:var(--mono);color:var(--accent)}
+
+.dir{display:flex;flex-direction:column;gap:22px;scroll-margin-top:24px}
+.dhead{display:flex;gap:18px;align-items:flex-start}
+.letter{flex:none;width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-family:var(--mono);font-size:24px;font-weight:600;color:#fff}
+.dhead h2{margin:0;font-size:24px;line-height:1.3;font-weight:650}
+.dhead h2 small{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink3);margin-left:10px;letter-spacing:.04em}
+.dhead p{margin:6px 0 0;max-width:72ch;font-size:14.5px;color:var(--ink2)}
+
+.row{display:flex;gap:36px;overflow-x:auto;padding:6px 6px 26px;margin:0 -6px;scrollbar-width:thin}
+.shot{flex:none;display:flex;flex-direction:column;gap:10px}
+.shot figcaption{font-size:12.5px;color:var(--ink2);display:flex;gap:8px;align-items:baseline}
+.shot figcaption b{font-family:var(--mono);font-size:11px;color:var(--ink3);font-weight:500}
+figure{margin:0}
+
+.spec{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.card h3{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--ink3);letter-spacing:.06em}
+dl.rules{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px 18px;margin:0;font-size:13.5px}
+dl.rules dt{color:var(--ink3);white-space:nowrap}
+dl.rules dd{margin:0;color:var(--ink)}
+dl.rules dd.chg{color:var(--warn)}
+.pros{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;font-size:13.5px}
+.pros li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px}
+.pros li::before{font-family:var(--mono);font-weight:600}
+.pros li.y::before{content:"+";color:var(--accent)}
+.pros li.n::before{content:"−";color:var(--warn)}
+
+table.cmp{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px}
+.cmpwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+table.cmp th,table.cmp td{text-align:left;padding:12px 16px;border-top:1px solid var(--line);vertical-align:top}
+table.cmp thead th{border-top:0;font-size:12px;color:var(--ink3);font-weight:600;letter-spacing:.04em}
+table.cmp tbody th{color:var(--ink3);font-weight:500;white-space:nowrap;width:120px}
+.rec{background:var(--accent-soft);border-radius:12px;padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+.rec h3{margin:0;font-size:17px}
+.rec p{margin:0;max-width:78ch;font-size:14px;color:var(--ink)}
+.next{font-size:13.5px;color:var(--ink2);margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+h2.sec{margin:0 0 14px;font-size:20px;font-weight:650}
+@media (max-width:860px){.spec{grid-template-columns:minmax(0,1fr)} h1{font-size:28px}}
+
+/* ═════════════ 手机设计稿 · 公共部分 ═════════════ */
+.phone{width:375px;height:812px;border-radius:44px;overflow:hidden;position:relative;display:flex;flex-direction:column;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  box-shadow:0 0 0 1px rgba(20,32,31,.10),0 30px 60px -30px rgba(20,32,31,.35);line-height:1.35;color-scheme:light}
+.phone *{box-sizing:border-box}
+.mono{font-family:Menlo,Consolas,"SF Mono",monospace;letter-spacing:0}
+.ic{width:20px;height:20px;flex:none;display:block}
+.sb{height:47px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 9px 34px;font-size:15px;font-weight:600;letter-spacing:.01em}
+.sbi{display:flex;gap:6px;align-items:center}
+.sbi svg{height:11px;width:auto;display:block}
+.bat{width:24px;height:11.5px;border-radius:3.5px;border:1.2px solid currentColor;opacity:.9;position:relative;padding:1.5px}
+.bat::before{content:"";display:block;height:100%;width:78%;border-radius:1.5px;background:currentColor}
+.bat::after{content:"";position:absolute;right:-3.5px;top:3px;width:1.6px;height:4px;border-radius:0 1px 1px 0;background:currentColor;opacity:.6}
+.nav{height:44px;flex:none;position:relative;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600}
+.nav .back{position:absolute;left:10px;top:10px;width:24px;height:24px}
+.cap{position:absolute;right:7px;top:6px;width:87px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:space-around;padding:0 10px}
+.cap .dots{display:flex;gap:3px}.cap .dots i{width:4px;height:4px;border-radius:50%;background:currentColor}
+.cap .sep{width:1px;height:18px;opacity:.35;background:currentColor}
+.cap .ring{width:16px;height:16px;border-radius:50%;border:2px solid currentColor;position:relative}
+.cap .ring::after{content:"";position:absolute;inset:3px;border-radius:50%;background:currentColor}
+.scr{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.tabbar{height:83px;flex:none;display:flex;padding-top:7px;position:relative}
+.tabbar span{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px}
+.tabbar .ic{width:24px;height:24px}
+.hi{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#101A1A}
+.bbar{flex:none;position:relative;padding:10px 16px 34px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+
+/* ═════════════ 方向 A · 清爽卡片 ═════════════ */
+.A{--bg:#F2F5F5;--ink:#15232A;--ink2:#5B6B72;--ink3:#9AA6AB;--line:#EDF1F1;--pri:#0E7C7B;--pri-d:#0A605F;--tint:#E2F2F0;
+   --amber:#A8690F;--amber-t:#FDF2DC;--ok:#2F7D4F;--ok-t:#E1F2E7;
+   --sh:0 1px 2px rgba(16,52,51,.04),0 6px 16px -4px rgba(16,52,51,.09);background:var(--bg);color:var(--ink)}
+.A .sb,.A .nav{background:#fff}
+.A .cap{border:1px solid #E4E9E9;background:rgba(255,255,255,.7);color:#15232A}
+.A .greet{padding:22px 20px 2px;display:flex;flex-direction:column;gap:6px}
+.A .greet .l1{display:flex;align-items:center;gap:8px}
+.A .greet b{font-size:21px;font-weight:600}
+.A .chip{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--tint);color:var(--pri);font-weight:500}
+.A .greet small{font-size:13px;color:var(--ink2)}
+.A .sh{display:flex;justify-content:space-between;align-items:baseline;padding:22px 20px 12px}
+.A .sh b{font-size:15px;font-weight:600}
+.A .sh span{font-size:12px;color:var(--ink3)}
+.A .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 16px}
+.A .tile{background:#fff;border-radius:14px;box-shadow:var(--sh);padding:16px 14px 16px;display:flex;flex-direction:column;gap:14px}
+.A .well{width:42px;height:42px;border-radius:12px;background:var(--tint);color:var(--pri);display:grid;place-items:center}
+.A .well .ic{width:22px;height:22px}
+.A .tile b{display:block;font-size:15px;font-weight:600}
+.A .tile small{display:block;margin-top:3px;font-size:12px;color:var(--ink2)}
+.A .note{margin:16px 16px 0;padding:12px 14px;border-radius:12px;background:rgba(14,124,123,.06);color:var(--ink2);font-size:12.5px;display:flex;gap:8px;align-items:center}
+.A .note .ic{color:var(--pri);width:18px;height:18px}
+.A .tabbar{background:#fff;box-shadow:0 -1px 0 var(--line)}
+.A .tabbar span{color:#A3AEB2}.A .tabbar span.on{color:var(--pri);font-weight:600}
+/* 表单 */
+.A .ocr{margin:12px 16px 0;background:#fff;border-radius:14px;box-shadow:var(--sh);padding:14px}
+.A .ocr .two{display:flex;gap:10px}
+.A .ob{flex:1;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600}
+.A .ob.p{background:var(--pri);color:#fff;box-shadow:0 6px 14px -6px rgba(14,124,123,.65)}
+.A .ob.s{background:var(--tint);color:var(--pri)}
+.A .ocr p{margin:10px 2px 0;font-size:12px;color:var(--ink3)}
+.A .ocr p u{color:var(--pri);text-decoration:none}
+.A .gl{padding:20px 20px 8px;font-size:13px;color:var(--ink2);font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.A .gl em{font-style:normal;font-size:11px;color:var(--ink3);font-weight:400}
+.A .cg{margin:0 16px;background:#fff;border-radius:14px;box-shadow:var(--sh);overflow:hidden;flex:none}
+.A .cell{display:flex;align-items:center;min-height:52px;padding:0 14px;gap:10px;position:relative}
+.A .cell+.cell::before{content:"";position:absolute;top:0;left:14px;right:0;height:1px;background:var(--line)}
+.A .lb{width:82px;flex:none;font-size:15px}
+.A .vl{flex:1;min-width:0;display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:15px}
+.A .vl.ph{color:var(--ink3)}
+.A .vl .ic{width:16px;height:16px;color:#C3CCCF}
+.A .mk{font-size:10.5px;padding:2px 6px;border-radius:6px;background:var(--amber-t);color:var(--amber);white-space:nowrap;font-weight:500}
+.A .seg{display:flex;gap:6px}
+.A .seg i{font-style:normal;min-width:46px;height:30px;padding:0 10px;border-radius:9px;display:grid;place-items:center;font-size:14px;background:#F2F5F5;color:var(--ink2)}
+.A .seg i.on{background:var(--tint);color:var(--pri);font-weight:600;box-shadow:inset 0 0 0 1px var(--pri)}
+.A .bbar{background:#fff;box-shadow:0 -1px 0 var(--line)}
+.A .btn{height:48px;border-radius:12px;background:var(--pri);color:#fff;font-size:16px;font-weight:600;box-shadow:0 8px 18px -8px rgba(14,124,123,.75)}
+.A .btn.o{background:#fff;color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri)}
+.A .btn .ic{width:18px;height:18px}
+/* 表格 */
+.A .sheets{margin:12px 16px 0;background:#fff;border-radius:12px;box-shadow:var(--sh);padding:4px;display:flex;flex:none}
+.A .sheets span{flex:1;text-align:center;padding:8px 0;font-size:13px;color:var(--ink2);border-radius:9px}
+.A .sheets span.on{background:var(--pri);color:#fff;font-weight:600}
+.A .srow{display:flex;gap:8px;margin:12px 16px 0;flex:none}
+.A .srch{flex:1;height:38px;background:#fff;border-radius:10px;box-shadow:var(--sh);display:flex;align-items:center;gap:6px;padding:0 12px;color:var(--ink3);font-size:13px}
+.A .srch .ic,.A .flt .ic{width:16px;height:16px}
+.A .flt{height:38px;padding:0 12px;background:#fff;border-radius:10px;box-shadow:var(--sh);display:flex;align-items:center;gap:4px;font-size:13px}
+.A .cnt{margin:14px 20px 8px;font-size:12px;color:var(--ink3);flex:none}
+.A .tw{margin:0 16px;background:#fff;border-radius:14px;box-shadow:var(--sh);overflow:hidden;flex:none}
+.A .lg{border-collapse:separate;border-spacing:0;width:560px;font-size:13px}
+.A .lg th{background:#EEF6F5;color:var(--ink2);font-weight:600;font-size:12px;text-align:left;padding:10px 12px;white-space:nowrap}
+.A .lg td{padding:9px 12px;border-top:1px solid var(--line);white-space:nowrap;background:#fff}
+.A .lg .fz{width:118px;box-shadow:1px 0 0 var(--line),8px 0 10px -8px rgba(16,52,51,.18);position:relative}
+.A .lg th.fz{background:#EEF6F5}
+.A .lg td.fz b{display:block;font-size:13px;font-weight:600}
+.A .lg td.fz small{display:block;margin-top:2px;font-size:11px;color:var(--ink3)}
+.A .lg tr.pend td{background:#FFF8EA}
+.A .lg tr.pend td.fz small{color:var(--amber);font-weight:600}
+.A .hint{margin:12px 20px 0;font-size:12px;color:var(--ink3)}
+
+/* ═════════════ 方向 B · 实验记录本 ═════════════ */
+.B{--bg:#F3F6F6;--ink:#16232B;--ink2:#5A6B74;--ink3:#93A1A8;--line:#E2E9EA;--pri:#0E7C7B;--tint:#DDF0EE;
+   --amber:#B7791F;--amber-t:#FCF1DA;--ok:#2F7D4F;--ok-t:#DFF1E6;background:var(--bg);color:var(--ink)}
+.B .sb{background:#fff}
+.B .nav{background:#fff;border-bottom:1px solid var(--line)}
+.B .cap{border:1px solid var(--line);background:#fff;color:#16232B}
+.B .greet{padding:16px 16px 4px;display:flex;flex-direction:column;gap:5px}
+.B .greet .l1{display:flex;align-items:center;gap:8px}
+.B .greet b{font-size:18px;font-weight:600}
+.B .chip{font-size:10.5px;padding:2px 7px;border-radius:5px;background:var(--tint);color:var(--pri)}
+.B .greet small{font-size:12px;color:var(--ink2)}
+.B .sh{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 8px}
+.B .sh b{font-size:13px;font-weight:600;letter-spacing:.12em}
+.B .sh span{font-size:11px;color:var(--ink3)}
+.B .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 12px}
+.B .tile{background:#fff;border:1px solid var(--line);border-radius:10px;padding:13px 12px;display:flex;flex-direction:column;gap:10px}
+.B .glyph{width:30px;height:30px;border-radius:7px;background:var(--tint);color:var(--pri);display:grid;place-items:center;font-size:14px;font-weight:600}
+.B .tile b{display:block;font-size:13.5px;font-weight:600}
+.B .tile small{display:block;margin-top:2px;font-size:11px;color:var(--ink3)}
+.B .tile .code{font-family:Menlo,Consolas,monospace;font-size:10px;color:var(--ink3);letter-spacing:.04em}
+.B .tile .top{display:flex;justify-content:space-between;align-items:flex-start}
+.B .note{margin:12px 16px 0;font-size:11.5px;color:var(--ink3);display:flex;gap:6px;align-items:center}
+.B .note .ic{width:15px;height:15px}
+.B .tabbar{background:#fff;border-top:1px solid var(--line)}
+.B .tabbar .ic{width:22px;height:22px}
+.B .tabbar span{color:var(--ink3)}.B .tabbar span.on{color:var(--pri);font-weight:600}
+/* 表单 */
+.B .ocr{margin:10px 12px 0;border-radius:10px;background:var(--tint);border:1px solid #C6E4E0;display:flex;flex:none}
+.B .ocr span{flex:1;height:42px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--pri)}
+.B .ocr span+span{border-left:1px solid #C6E4E0}
+.B .ocr .ic{width:17px;height:17px}
+.B .ocrp{margin:6px 14px 0;font-size:11px;color:var(--ink2);flex:none}
+.B .ocrp u{color:var(--pri)}
+.B .blk{margin:10px 12px 0;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.B .bh{display:flex;justify-content:space-between;align-items:center;height:34px;padding:0 12px;background:#F8FAFA;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600}
+.B .bh span{font-family:Menlo,Consolas,monospace;font-size:10.5px;color:var(--ink3);font-weight:400}
+.B .bh em{font-style:normal;font-size:10.5px;font-weight:400;color:var(--ink2);padding:1px 6px;border-radius:5px;border:1px solid var(--line);background:#fff}
+.B .row{display:flex;align-items:center;min-height:44px;padding:0 12px;gap:10px}
+.B .row+.row{border-top:1px solid var(--line)}
+.B .lb{width:74px;flex:none;font-size:13px;color:var(--ink2)}
+.B .vl{flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:14px}
+.B .vl.ph{color:var(--ink3)}
+.B .vl .sp{flex:1}
+.B .vl .ic{width:15px;height:15px;color:#BCC7CB}
+.B .mk{font-size:10px;padding:1px 5px;border-radius:5px;background:var(--amber-t);color:var(--amber);white-space:nowrap}
+.B .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.B .seg i{font-style:normal;padding:5px 14px;font-size:13px;color:var(--ink2);background:#fff}
+.B .seg i+i{border-left:1px solid var(--line)}
+.B .seg i.on{background:var(--pri);color:#fff}
+.B .bbar{background:#fff;border-top:1px solid var(--line)}
+.B .btn{height:44px;border-radius:9px;background:var(--pri);color:#fff;font-size:15px;font-weight:600}
+.B .btn.o{background:#fff;color:var(--pri);border:1px solid var(--pri)}
+.B .btn .ic{width:17px;height:17px}
+/* 表格 */
+.B .tabs{display:flex;background:#fff;border-bottom:1px solid var(--line);flex:none}
+.B .tabs span{flex:1;text-align:center;height:42px;line-height:42px;font-size:13.5px;color:var(--ink2);position:relative}
+.B .tabs span.on{color:var(--pri);font-weight:600}
+.B .tabs span.on::after{content:"";position:absolute;left:28%;right:28%;bottom:0;height:2px;border-radius:2px;background:var(--pri)}
+.B .srow{padding:10px 12px;display:flex;gap:8px;background:#fff;border-bottom:1px solid var(--line);flex:none}
+.B .srch{flex:1;height:32px;background:var(--bg);border-radius:9px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12.5px;color:var(--ink3)}
+.B .flt{height:32px;border:1px solid var(--line);border-radius:9px;display:flex;align-items:center;gap:3px;padding:0 10px;font-size:12.5px}
+.B .srch .ic,.B .flt .ic{width:15px;height:15px}
+.B .cnt{padding:8px 14px;font-size:11.5px;color:var(--ink3);flex:none}
+.B .tw{margin:0 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;flex:none}
+.B .lg{border-collapse:collapse;width:580px;font-size:12.5px}
+.B .lg th{background:#F3F6F6;color:var(--ink2);font-weight:600;font-size:11.5px;text-align:left;padding:8px 10px;border-right:1px solid var(--line);white-space:nowrap}
+.B .lg td{padding:7px 10px;border-top:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap}
+.B .lg tr:nth-child(odd) td{background:#FAFCFC}
+.B .lg .fz{width:112px;border-right:2px solid #C8D5D6}
+.B .lg td.fz b{display:block;font-size:12.5px;font-weight:600}
+.B .lg td.fz small{display:block;font-size:10.5px;color:var(--ink3)}
+.B .lg tr.pend td{background:#FDF5E3}
+.B .lg tr.pend td.fz small{color:var(--amber);font-weight:600}
+.B .hint{margin:10px 14px 0;font-size:11.5px;color:var(--ink3)}
+
+/* ═════════════ 方向 C · 沉稳机构 ═════════════ */
+.C{--bg:#F0F3F3;--band:#0C4F4D;--ink:#132120;--ink2:#566867;--ink3:#93A2A1;--line:#E1E8E7;--pri:#0E7C7B;--tint:#E0F0EE;--field:#F4F7F7;
+   --amber:#A8690F;--amber-t:#FCF0D9;background:var(--bg);color:var(--ink)}
+.C .band{background:var(--band);color:#fff;flex:none}
+.C .cap{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.10);color:#fff}
+.C .greet{padding:10px 22px 50px;display:flex;flex-direction:column;gap:8px}
+.C .greet .l1{display:flex;align-items:center;gap:10px}
+.C .greet b{font-size:22px;font-weight:600;letter-spacing:.02em}
+.C .chip{font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid rgba(255,255,255,.45);color:#fff}
+.C .greet small{font-size:13px;color:rgba(255,255,255,.72)}
+.C .panel{margin:-34px 16px 0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:none}
+.C .ph{display:flex;justify-content:space-between;align-items:baseline;padding:16px 16px 14px}
+.C .ph b{font-size:15px;font-weight:600}
+.C .ph span{font-size:12px;color:var(--ink3)}
+.C .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--line)}
+.C .tile{padding:18px 16px 18px;display:flex;flex-direction:column;gap:10px}
+.C .tile:nth-child(odd){border-right:1px solid var(--line)}
+.C .tile:nth-child(-n+2){border-bottom:1px solid var(--line)}
+.C .tile .ic{width:26px;height:26px;color:var(--pri)}
+.C .tile b{display:block;font-size:14.5px;font-weight:600}
+.C .tile small{display:block;margin-top:3px;font-size:12px;color:var(--ink3)}
+.C .note{margin:16px 22px 0;font-size:12.5px;color:var(--ink2);display:flex;gap:8px;align-items:center}
+.C .note .ic{width:17px;height:17px;color:var(--pri)}
+.C .tabbar{background:#fff;border-top:1px solid var(--line)}
+.C .tabbar span{color:var(--ink3)}.C .tabbar span.on{color:var(--band);font-weight:600}
+/* 表单 */
+.C .ocr{margin:14px 16px 0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;flex:none}
+.C .ocr .two{display:flex;gap:10px}
+.C .ot{flex:1;height:70px;border-radius:8px;border:1px dashed #AFD3CF;background:#F6FBFA;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:500;color:var(--ink)}
+.C .ot .ic{width:24px;height:24px;color:var(--pri)}
+.C .ocr p{margin:10px 2px 0;font-size:11.5px;color:var(--ink3)}
+.C .ocr p u{color:var(--pri);text-decoration:none}
+.C .sec{display:flex;align-items:center;gap:10px;margin:18px 20px 10px;font-size:14px;font-weight:600;flex:none}
+.C .sec::after{content:"";order:1;flex:1;height:1px;background:var(--line)}
+.C .sec em{order:2;font-style:normal;font-size:11px;font-weight:400;color:var(--ink3)}
+.C .fields{margin:0 16px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 14px 2px;flex:none}
+.C .fd{margin-bottom:12px}
+.C .fd label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink2);margin-bottom:6px}
+.C .ip{height:40px;border-radius:8px;background:var(--field);padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:14.5px}
+.C .ip.ph{color:var(--ink3)}
+.C .ip .ic{width:16px;height:16px;color:#B9C5C4}
+.C .two2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px}
+.C .mk{font-size:10.5px;padding:1px 6px;border-radius:4px;background:var(--amber-t);color:var(--amber)}
+.C .seg{display:flex;gap:6px}
+.C .seg i{flex:1;height:40px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;font-style:normal;font-size:14px;color:var(--ink2);background:#fff}
+.C .seg i.on{border-color:var(--pri);background:var(--tint);color:var(--band);font-weight:600}
+.C .bbar{background:#fff;border-top:1px solid var(--line)}
+.C .btn{height:46px;border-radius:8px;background:var(--band);color:#fff;font-size:16px;font-weight:600;letter-spacing:.08em}
+.C .btn.o{background:#fff;color:var(--band);border:1px solid var(--band);letter-spacing:0}
+.C .btn .ic{width:18px;height:18px}
+/* 表格 */
+.C .tabs{display:flex;padding:0 8px}
+.C .tabs span{flex:1;text-align:center;height:40px;line-height:40px;font-size:13.5px;color:rgba(255,255,255,.62);position:relative}
+.C .tabs span.on{color:#fff;font-weight:600}
+.C .tabs span.on::after{content:"";position:absolute;left:30%;right:30%;bottom:4px;height:2px;border-radius:2px;background:#fff}
+.C .srow{display:flex;gap:8px;padding:8px 16px 16px}
+.C .srch{flex:1;height:36px;border-radius:8px;background:rgba(255,255,255,.12);display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;color:rgba(255,255,255,.66)}
+.C .flt{height:36px;border-radius:8px;border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;gap:4px;padding:0 12px;font-size:13px;color:#fff}
+.C .srch .ic,.C .flt .ic{width:16px;height:16px}
+.C .cnt{margin:14px 20px 8px;font-size:12px;color:var(--ink3);flex:none}
+.C .tw{margin:0 16px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:none}
+.C .lg{border-collapse:separate;border-spacing:0;width:570px;font-size:13px}
+.C .lg th{background:var(--band);color:#fff;font-weight:600;font-size:12px;text-align:left;padding:10px 12px;white-space:nowrap}
+.C .lg td{padding:10px 12px;border-top:1px solid var(--line);white-space:nowrap;background:#fff}
+.C .lg .fz{width:120px;box-shadow:1px 0 0 var(--line)}
+.C .lg th.fz{box-shadow:1px 0 0 rgba(255,255,255,.18)}
+.C .lg td.fz b{display:block;font-size:13px;font-weight:600}
+.C .lg td.fz small{display:flex;align-items:center;gap:5px;margin-top:2px;font-size:11px;color:var(--ink3)}
+.C .lg td.fz small::before{content:"";width:6px;height:6px;border-radius:50%;background:#2F7D4F}
+.C .lg tr.pend td{background:#FDF5E4}
+.C .lg tr.pend td.fz small{color:var(--amber);font-weight:600}
+.C .lg tr.pend td.fz small::before{background:var(--amber)}
+.C .hint{margin:12px 20px 0;font-size:12px;color:var(--ink3)}
+</style>
+</head>
+<body>
+
+<!-- 线性图标 · 1.6 描边 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-tube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 3h7M10 3v12.5a2 2 0 0 0 4 0V3"/><path d="M10 10.5h4"/></symbol>
+    <symbol id="i-organoid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="9.5" r="4.5"/><circle cx="16" cy="14" r="3.5"/><circle cx="9.5" cy="17.5" r="2.5"/></symbol>
+    <symbol id="i-paraffin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5L12 4.5l8 4-8 4z"/><path d="M4 12.5l8 4 8-4"/><path d="M4 16.5l8 4 8-4"/></symbol>
+    <symbol id="i-cryo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/><path d="M9.6 4.6L12 6l2.4-1.4M9.6 19.4L12 18l2.4 1.4"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4.1-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.5h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.3"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20 16l-4.5-4.5L7 19"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M19.5 19.5l-4.1-4.1"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx=".7"/><rect x="5" y="5.5" width="3" height="6.5" rx=".7"/><rect x="10" y="3" width="3" height="9" rx=".7"/><rect x="15" y="0" width="3" height="12" rx=".7"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.2c2.4 0 4.6.9 6.3 2.5l1.3-1.4A10.9 10.9 0 0 0 8 .3 10.9 10.9 0 0 0 .4 3.3l1.3 1.4A9 9 0 0 1 8 2.2zm0 3.7c1.4 0 2.7.5 3.7 1.4L13 5.9A7.2 7.2 0 0 0 8 4a7.2 7.2 0 0 0-5 1.9l1.3 1.4c1-.9 2.3-1.4 3.7-1.4zM8 9.6l1.9-2A3.3 3.3 0 0 0 8 7.7c-.7 0-1.4.3-1.9.8z"/></symbol>
+  </defs>
+</svg>
+
+<main class="wrap">
+
+<header>
+  <div class="eyebrow">类器官送检 · 小程序视觉方向</div>
+  <h1>三个方向，挑一个往下做</h1>
+  <p class="lead">页面结构和每页的内容块已经定了，以 UI 权威为准，这里只比视觉语言。三个方向画的是同一组代表页：首页、样本记录信息表填写页、内部管理表格页，分别代表入口宫格、长表单、宽表格三种形态，其余页面都能从这三种里推出来。</p>
+  <div class="facts">
+    <span>主色 <b>青绿 #0E7C7B</b> 三个方向都保留，贵方已经看过</span>
+    <span>字体 <b>只用系统中文字体</b>，小程序加载中文网络字体不现实</span>
+    <span>组件底座 <b>wot-design-uni 1.14</b>，与东角山同一套</span>
+    <span>编号类 <b>一律等宽</b></span>
+    <span>网页工作台 <b>不在此列</b></span>
+  </div>
+  <nav class="jump" aria-label="跳到方向">
+    <a href="#dir-a"><b>A</b>清爽卡片</a>
+    <a href="#dir-b"><b>B</b>实验记录本</a>
+    <a href="#dir-c"><b>C</b>沉稳机构</a>
+    <a href="#compare"><b>≡</b>对比与建议</a>
+  </nav>
+</header>
+
+<!-- ════════════════════════ 方向 A ════════════════════════ -->
+<section class="dir" id="dir-a">
+  <div class="dhead">
+    <div class="letter" style="background:#0E7C7B">A</div>
+    <div>
+      <h2>清爽卡片 <small>CLEAN CARD</small></h2>
+      <p>白卡浮在浅灰底上，靠柔和的低阴影分层；圆润、留白足，录入页像手机系统设置。骨架直接沿用东角山方向 A，那套 cell 表单和底部提交栏在真机上调过。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <figure class="shot"><figcaption>首页 <b>内部人员</b></figcaption>
+      <div class="phone A">
+        <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+        <div class="nav">类器官送检<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+        <div class="scr">
+          <div class="greet"><div class="l1"><b>李工，上午好</b><span class="chip">内部人员</span></div><small>类器官研究中心</small></div>
+          <div class="sh"><b>填写</b><span>点表新增一条</span></div>
+          <div class="grid">
+            <div class="tile"><span class="well"><svg class="ic"><use href="#i-tube"/></svg></span><span><b>样本记录信息表</b><small>组织样本送检与收样</small></span></div>
+            <div class="tile"><span class="well"><svg class="ic"><use href="#i-organoid"/></svg></span><span><b>类器官收样记录</b><small>收到的类器官</small></span></div>
+            <div class="tile"><span class="well"><svg class="ic"><use href="#i-paraffin"/></svg></span><span><b>石蜡包埋送样记录</b><small>包埋、切片、染色</small></span></div>
+            <div class="tile"><span class="well"><svg class="ic"><use href="#i-cryo"/></svg></span><span><b>-80 冻存记录</b><small>冻存批次</small></span></div>
+          </div>
+          <div class="note"><svg class="ic"><use href="#i-clock"/></svg>填过的记录在「我的 → 历史编辑记录」里找回和修改</div>
+        </div>
+        <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-home"/></svg>首页</span><span><svg class="ic"><use href="#i-doc"/></svg>文档</span><span><svg class="ic"><use href="#i-user"/></svg>我的</span><i class="hi"></i></div>
+      </div>
+    </figure>
+
+    <figure class="shot"><figcaption>样本记录信息表 <b>新增 · 识别预填后</b></figcaption>
+      <div class="phone A">
+        <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+        <div class="nav"><svg class="back"><use href="#i-back"/></svg>样本记录信息表<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+        <div class="scr">
+          <div class="ocr"><div class="two"><span class="ob p"><svg class="ic"><use href="#i-camera"/></svg>拍照识别</span><span class="ob s"><svg class="ic"><use href="#i-image"/></svg>从相册选</span></div><p>识别结果仅作预填，请核对后提交 · <u>查看识别到的原文</u></p></div>
+          <div class="gl">送检信息</div>
+          <div class="cg">
+            <div class="cell"><span class="lb">来源单位</span><span class="vl">A 医院<svg class="ic"><use href="#i-right"/></svg></span></div>
+            <div class="cell"><span class="lb">供体姓名</span><span class="vl"><span class="mk">识别 · 请核对</span>张某某</span></div>
+            <div class="cell"><span class="lb">性别</span><span class="vl"><span class="seg"><i class="on">男</i><i>女</i><i>未知</i></span></span></div>
+            <div class="cell"><span class="lb">年龄</span><span class="vl"><span class="mk">识别 · 请核对</span>56</span></div>
+            <div class="cell"><span class="lb">住院号</span><span class="vl"><span class="mk">识别 · 请核对</span><span class="mono">Z2609170</span></span></div>
+            <div class="cell"><span class="lb">组织类型</span><span class="vl ph">请输入，如 肝组织</span></div>
+            <div class="cell"><span class="lb">有无病理</span><span class="vl"><span class="seg"><i>有</i><i>无</i></span></span></div>
+          </div>
+          <div class="gl">收样信息<em>仅内部人员</em></div>
+          <div class="cg">
+            <div class="cell"><span class="lb">收样日期</span><span class="vl">2026-09-12<svg class="ic"><use href="#i-right"/></svg></span></div>
+            <div class="cell"><span class="lb">内部编号</span><span class="vl mono">hli52</span></div>
+          </div>
+        </div>
+        <div class="bbar"><span class="btn">提交</span><i class="hi"></i></div>
+      </div>
+    </figure>
+
+    <figure class="shot"><figcaption>内部管理 · 表格页 <b>样本记录</b></figcaption>
+      <div class="phone A">
+        <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+        <div class="nav"><svg class="back"><use href="#i-back"/></svg>样本记录信息表<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+        <div class="scr">
+          <div class="sheets"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span>-80 冻存</span></div>
+          <div class="srow"><span class="srch"><svg class="ic"><use href="#i-search"/></svg>搜索 内部编号 / 来源单位 / 供体</span><span class="flt">核验<svg class="ic"><use href="#i-down"/></svg></span></div>
+          <div class="cnt">共 128 条 · 左右滑动看全部 14 列</div>
+          <div class="tw"><table class="lg">
+            <tr><th class="fz">内部编号</th><th>来源单位</th><th>供体姓名</th><th>性别</th><th>年龄</th><th>住院号</th></tr>
+            <tr class="pend"><td class="fz"><b class="mono">SJ00000131</b><small>待核验 · 外部</small></td><td>A 医院</td><td>张**</td><td>男</td><td>56</td><td class="mono">Z2609170</td></tr>
+            <tr><td class="fz"><b class="mono">hli52</b><small>有效 · 外部</small></td><td>A 医院</td><td>刘**</td><td>女</td><td>61</td><td class="mono">Z2609102</td></tr>
+            <tr><td class="fz"><b class="mono">hli49</b><small>有效 · 外部</small></td><td>B 大学</td><td>赵**</td><td>男</td><td>47</td><td class="mono">Z2608277</td></tr>
+            <tr><td class="fz"><b class="mono">hli48</b><small>有效 · 内部</small></td><td>本中心</td><td>孙**</td><td>女</td><td>52</td><td class="mono">Z2608231</td></tr>
+            <tr><td class="fz"><b class="mono">hli47</b><small>有效 · 外部</small></td><td>A 医院</td><td>周**</td><td>男</td><td>66</td><td class="mono">Z2608190</td></tr>
+            <tr><td class="fz"><b class="mono">hli46</b><small>有效 · 外部</small></td><td>C 医院</td><td>吴**</td><td>女</td><td>39</td><td class="mono">Z2608154</td></tr>
+          </table></div>
+          <div class="hint">点一行看详情，详情里可「修改」 · 浅黄色是待核验</div>
+        </div>
+        <div class="bbar"><span class="btn o"><svg class="ic"><use href="#i-export"/></svg>导出 Excel</span><i class="hi"></i></div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="spec">
+    <div class="card"><h3>规则</h3>
+      <dl class="rules">
+        <dt>分层</dt><dd>两档柔和阴影，不用边框</dd>
+        <dt>圆角</dt><dd class="chg">卡片 14 · 输入与按钮 12 · 徽标 6</dd>
+        <dt>导航</dt><dd>白底，居中标题</dd>
+        <dt>密度</dt><dd>表单行高 52，正文 15px</dd>
+        <dt>表单</dt><dd>cell 分组卡，标签在左、值在右</dd>
+        <dt>按钮组</dt><dd>独立圆角块，选中是浅底加描边</dd>
+        <dt>表格</dt><dd>白卡圆角，薄荷底表头，冻结列带投影</dd>
+        <dt>现行口径</dt><dd class="chg">推翻「小程序不用阴影」；圆角 10 / 9 / 5 改 14 / 12 / 6</dd>
+        <dt>wot 落地</dt><dd>--wot-cell-* 与 cell-group 圆角；东角山 tokens.scss 的映射机制、.dt-card / .dt-seg / .dt-submit-bar 和 ui/ 组件层可以大段复用</dd>
+      </dl>
+    </div>
+    <div class="card"><h3>取舍</h3>
+      <ul class="pros">
+        <li class="y">东角山真机验证过，组件层现成，实现最省</li>
+        <li class="y">合作单位的医生第一眼观感最好，不像内部工具</li>
+        <li class="n">表格页装在白卡里略松，一屏比 B 少一两行</li>
+        <li class="n">要改一条已写进权威的视觉口径，走一条变更记录</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 方向 B ════════════════════════ -->
+<section class="dir" id="dir-b">
+  <div class="dhead">
+    <div class="letter" style="background:#3F6E73">B</div>
+    <div>
+      <h2>实验记录本 <small>LAB LEDGER</small></h2>
+      <p>把现行视觉口径精修一遍：不用阴影，1px 边框分层，每个区块带一条表头条，数据排得密，像一本实验记录本。贵方看过的稿子就是这个底子，token 与圆角原样不动。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <figure class="shot"><figcaption>首页 <b>内部人员</b></figcaption>
+      <div class="phone B">
+        <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+        <div class="nav">类器官送检<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+        <div class="scr">
+          <div class="greet"><div class="l1"><b>李工，上午好</b><span class="chip">内部人员</span></div><small>类器官研究中心</small></div>
+          <div class="sh"><b>填写</b><span>点表新增一条</span></div>
+          <div class="grid">
+            <div class="tile"><div class="top"><span class="glyph">样</span><span class="code">表 1</span></div><span><b>样本记录信息表</b><small>组织样本送检与收样</small></span></div>
+            <div class="tile"><div class="top"><span class="glyph">类</span><span class="code">表 2</span></div><span><b>类器官收样记录</b><small>收到的类器官</small></span></div>
+            <div class="tile"><div class="top"><span class="glyph">蜡</span><span class="code">表 3</span></div><span><b>石蜡包埋送样记录</b><small>包埋、切片、染色</small></span></div>
+            <div class="tile"><div class="top"><span class="glyph">冻</span><span class="code">表 4</span></div><span><b>-80 冻存记录</b><small>冻存批次</small></span></div>
+          </div>
+          <div class="note"><svg class="ic"><use href="#i-clock"/></svg>填过的记录在「我的 → 历史编辑记录」里找回和修改</div>
+        </div>
+        <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-home"/></svg>首页</span><span><svg class="ic"><use href="#i-doc"/></svg>文档</span><span><svg class="ic"><use href="#i-user"/></svg>我的</span><i class="hi"></i></div>
+      </div>
+    </figure>
+
+    <figure class="shot"><figcaption>样本记录信息表 <b>新增 · 识别预填后</b></figcaption>
+      <div class="phone B">
+        <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+        <div class="nav"><svg class="back"><use href="#i-back"/></svg>样本记录信息表<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+        <div class="scr">
+          <div class="ocr"><span><svg class="ic"><use href="#i-camera"/></svg>拍照识别</span><span><svg class="ic"><use href="#i-image"/></svg>从相册选</span></div>
+          <div class="ocrp">识别结果仅作预填，请核对后提交 · <u>查看识别到的原文</u></div>
+          <div class="blk">
+            <div class="bh">送检信息<span>8 项</span></div>
+            <div class="row"><span class="lb">来源单位</span><span class="vl">A 医院<span class="sp"></span><svg class="ic"><use href="#i-right"/></svg></span></div>
+            <div class="row"><span class="lb">供体姓名</span><span class="vl">张某某<span class="mk">识别 · 请核对</span></span></div>
+            <div class="row"><span class="lb">性别</span><span class="vl"><span class="seg"><i class="on">男</i><i>女</i><i>未知</i></span></span></div>
+            <div class="row"><span class="lb">年龄</span><span class="vl">56<span class="mk">识别 · 请核对</span></span></div>
+            <div class="row"><span class="lb">住院号</span><span class="vl"><span class="mono">Z2609170</span><span class="mk">识别 · 请核对</span></span></div>
+            <div class="row"><span class="lb">组织类型</span><span class="vl ph">请输入，如 肝组织</span></div>
+            <div class="row"><span class="lb">有无病理</span><span class="vl"><span class="seg"><i>有</i><i>无</i></span></span></div>
+            <div class="row"><span class="lb">备注</span><span class="vl ph">选填</span></div>
+          </div>
+          <div class="blk">
+            <div class="bh">收样信息<em>仅内部人员</em></div>
+            <div class="row"><span class="lb">收样日期</span><span class="vl">2026-09-12<span class="sp"></span><svg class="ic"><use href="#i-right"/></svg></span></div>
+            <div class="row"><span class="lb">内部编号</span><span class="vl mono">hli52</span></div>
+          </div>
+        </div>
+        <div class="bbar"><span class="btn">提交</span><i class="hi"></i></div>
+      </div>
+    </figure>
+
+    <figure class="shot"><figcaption>内部管理 · 表格页 <b>样本记录</b></figcaption>
+      <div class="phone B">
+        <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+        <div class="nav"><svg class="back"><use href="#i-back"/></svg>样本记录信息表<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+        <div class="scr">
+          <div class="tabs"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span>-80 冻存</span></div>
+          <div class="srow"><span class="srch"><svg class="ic"><use href="#i-search"/></svg>搜索 内部编号 / 来源单位 / 供体</span><span class="flt">核验<svg class="ic"><use href="#i-down"/></svg></span></div>
+          <div class="cnt">共 128 条 · 左右滑动看全部 14 列</div>
+          <div class="tw"><table class="lg">
+            <tr><th class="fz">内部编号</th><th>来源单位</th><th>供体姓名</th><th>性别</th><th>年龄</th><th>住院号</th></tr>
+            <tr class="pend"><td class="fz"><b class="mono">SJ00000131</b><small>待核验 · 外部</small></td><td>A 医院</td><td>张**</td><td>男</td><td>56</td><td class="mono">Z2609170</td></tr>
+            <tr><td class="fz"><b class="mono">hli52</b><small>有效 · 外部</small></td><td>A 医院</td><td>刘**</td><td>女</td><td>61</td><td class="mono">Z2609102</td></tr>
+            <tr><td class="fz"><b class="mono">hli49</b><small>有效 · 外部</small></td><td>B 大学</td><td>赵**</td><td>男</td><td>47</td><td class="mono">Z2608277</td></tr>
+            <tr><td class="fz"><b class="mono">hli48</b><small>有效 · 内部</small></td><td>本中心</td><td>孙**</td><td>女</td><td>52</td><td class="mono">Z2608231</td></tr>
+            <tr><td class="fz"><b class="mono">hli47</b><small>有效 · 外部</small></td><td>A 医院</td><td>周**</td><td>男</td><td>66</td><td class="mono">Z2608190</td></tr>
+            <tr><td class="fz"><b class="mono">hli46</b><small>有效 · 外部</small></td><td>C 医院</td><td>吴**</td><td>女</td><td>39</td><td class="mono">Z2608154</td></tr>
+            <tr><td class="fz"><b class="mono">hli45</b><small>有效 · 内部</small></td><td>本中心</td><td>郑**</td><td>男</td><td>58</td><td class="mono">Z2608102</td></tr>
+            <tr><td class="fz"><b class="mono">hli44</b><small>有效 · 外部</small></td><td>B 大学</td><td>王**</td><td>女</td><td>44</td><td class="mono">Z2608066</td></tr>
+          </table></div>
+          <div class="hint">点一行看详情，详情里可「修改」 · 浅黄色是待核验</div>
+        </div>
+        <div class="bbar"><span class="btn o"><svg class="ic"><use href="#i-export"/></svg>导出 Excel</span><i class="hi"></i></div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="spec">
+    <div class="card"><h3>规则</h3>
+      <dl class="rules">
+        <dt>分层</dt><dd>1px 边框加区块表头条，不用阴影</dd>
+        <dt>圆角</dt><dd>卡片 10 · 按钮 9 · 徽标 5，现行值不变</dd>
+        <dt>导航</dt><dd>白底带一道底线</dd>
+        <dt>密度</dt><dd>表单行高 44，正文 14px；表格行高约 38</dd>
+        <dt>表单</dt><dd>标签在左、值也靠左，像登记簿；区块表头注明项数</dd>
+        <dt>按钮组</dt><dd>连体分段，选中是实底白字</dd>
+        <dt>表格</dt><dd>全网格线加斑马纹，冻结列右侧加粗线，最像 Excel</dd>
+        <dt>现行口径</dt><dd>零改动，B 节 token 表与 C 节组件原样沿用</dd>
+        <dt>wot 落地</dt><dd>token 映射照东角山的机制写；组件层要自做一套边框版，东角山的阴影卡片不能直接拿</dd>
+      </dl>
+    </div>
+    <div class="card"><h3>取舍</h3>
+      <ul class="pros">
+        <li class="y">不用改权威，贵方已经认过这个底子</li>
+        <li class="y">表格页一屏行数最多，内部人员批量查看最高效</li>
+        <li class="n">观感偏工具，合作单位的医生看着朴素</li>
+        <li class="n">复用东角山最少，组件层基本要重做</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 方向 C ════════════════════════ -->
+<section class="dir" id="dir-c">
+  <div class="dhead">
+    <div class="letter" style="background:#0C4F4D">C</div>
+    <div>
+      <h2>沉稳机构 <small>INSTITUTIONAL</small></h2>
+      <p>深青绿品牌带压住顶部，白色面板压在带上；分区用标题加细线，像质控文档的版式。给合作单位一种「研究中心出的正规系统」的信任感。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <figure class="shot"><figcaption>首页 <b>内部人员</b></figcaption>
+      <div class="phone C">
+        <div class="band">
+          <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+          <div class="nav">类器官送检<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+          <div class="greet"><div class="l1"><b>李工，上午好</b><span class="chip">内部人员</span></div><small>类器官研究中心</small></div>
+        </div>
+        <div class="scr">
+          <div class="panel">
+            <div class="ph"><b>填写</b><span>点表新增一条</span></div>
+            <div class="grid">
+              <div class="tile"><svg class="ic"><use href="#i-tube"/></svg><span><b>样本记录信息表</b><small>组织样本送检与收样</small></span></div>
+              <div class="tile"><svg class="ic"><use href="#i-organoid"/></svg><span><b>类器官收样记录</b><small>收到的类器官</small></span></div>
+              <div class="tile"><svg class="ic"><use href="#i-paraffin"/></svg><span><b>石蜡包埋送样记录</b><small>包埋、切片、染色</small></span></div>
+              <div class="tile"><svg class="ic"><use href="#i-cryo"/></svg><span><b>-80 冻存记录</b><small>冻存批次</small></span></div>
+            </div>
+          </div>
+          <div class="note"><svg class="ic"><use href="#i-clock"/></svg>填过的记录在「我的 → 历史编辑记录」里找回和修改</div>
+        </div>
+        <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-home"/></svg>首页</span><span><svg class="ic"><use href="#i-doc"/></svg>文档</span><span><svg class="ic"><use href="#i-user"/></svg>我的</span><i class="hi"></i></div>
+      </div>
+    </figure>
+
+    <figure class="shot"><figcaption>样本记录信息表 <b>新增 · 识别预填后</b></figcaption>
+      <div class="phone C">
+        <div class="band">
+          <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+          <div class="nav"><svg class="back"><use href="#i-back"/></svg>样本记录信息表<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+        </div>
+        <div class="scr">
+          <div class="ocr"><div class="two"><span class="ot"><svg class="ic"><use href="#i-camera"/></svg>拍照识别</span><span class="ot"><svg class="ic"><use href="#i-image"/></svg>从相册选</span></div><p>识别结果仅作预填，请核对后提交 · <u>查看识别到的原文</u></p></div>
+          <div class="sec">送检信息</div>
+          <div class="fields">
+            <div class="fd"><label>来源单位</label><div class="ip">A 医院<svg class="ic"><use href="#i-right"/></svg></div></div>
+            <div class="fd"><label>供体姓名<span class="mk">识别 · 请核对</span></label><div class="ip">张某某</div></div>
+            <div class="two2">
+              <div class="fd"><label>性别</label><div class="seg"><i class="on">男</i><i>女</i><i>未知</i></div></div>
+              <div class="fd"><label>年龄<span class="mk">识别 · 请核对</span></label><div class="ip">56</div></div>
+            </div>
+            <div class="fd"><label>住院号<span class="mk">识别 · 请核对</span></label><div class="ip"><span class="mono">Z2609170</span></div></div>
+            <div class="fd"><label>组织类型</label><div class="ip ph">请输入，如 肝组织</div></div>
+          </div>
+        </div>
+        <div class="bbar"><span class="btn">提交</span><i class="hi"></i></div>
+      </div>
+    </figure>
+
+    <figure class="shot"><figcaption>内部管理 · 表格页 <b>样本记录</b></figcaption>
+      <div class="phone C">
+        <div class="band">
+          <div class="sb"><span>9:41</span><span class="sbi"><svg viewBox="0 0 18 12"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12"><use href="#i-wifi"/></svg><span class="bat"></span></span></div>
+          <div class="nav"><svg class="back"><use href="#i-back"/></svg>样本记录信息表<div class="cap"><span class="dots"><i></i><i></i><i></i></span><span class="sep"></span><span class="ring"></span></div></div>
+          <div class="tabs"><span class="on">样本记录</span><span>类器官收样</span><span>石蜡包埋</span><span>-80 冻存</span></div>
+          <div class="srow"><span class="srch"><svg class="ic"><use href="#i-search"/></svg>搜索 内部编号 / 来源单位 / 供体</span><span class="flt">核验<svg class="ic"><use href="#i-down"/></svg></span></div>
+        </div>
+        <div class="scr">
+          <div class="cnt">共 128 条 · 左右滑动看全部 14 列</div>
+          <div class="tw"><table class="lg">
+            <tr><th class="fz">内部编号</th><th>来源单位</th><th>供体姓名</th><th>性别</th><th>年龄</th><th>住院号</th></tr>
+            <tr class="pend"><td class="fz"><b class="mono">SJ00000131</b><small>待核验 · 外部</small></td><td>A 医院</td><td>张**</td><td>男</td><td>56</td><td class="mono">Z2609170</td></tr>
+            <tr><td class="fz"><b class="mono">hli52</b><small>有效 · 外部</small></td><td>A 医院</td><td>刘**</td><td>女</td><td>61</td><td class="mono">Z2609102</td></tr>
+            <tr><td class="fz"><b class="mono">hli49</b><small>有效 · 外部</small></td><td>B 大学</td><td>赵**</td><td>男</td><td>47</td><td class="mono">Z2608277</td></tr>
+            <tr><td class="fz"><b class="mono">hli48</b><small>有效 · 内部</small></td><td>本中心</td><td>孙**</td><td>女</td><td>52</td><td class="mono">Z2608231</td></tr>
+            <tr><td class="fz"><b class="mono">hli47</b><small>有效 · 外部</small></td><td>A 医院</td><td>周**</td><td>男</td><td>66</td><td class="mono">Z2608190</td></tr>
+          </table></div>
+          <div class="hint">点一行看详情，详情里可「修改」 · 浅黄色是待核验</div>
+        </div>
+        <div class="bbar"><span class="btn o"><svg class="ic"><use href="#i-export"/></svg>导出 Excel</span><i class="hi"></i></div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="spec">
+    <div class="card"><h3>规则</h3>
+      <dl class="rules">
+        <dt>分层</dt><dd>顶部品牌带加 1px 边框，不用阴影</dd>
+        <dt>圆角</dt><dd class="chg">卡片 12 · 输入与按钮 8 · 徽标 4</dd>
+        <dt>导航</dt><dd class="chg">透明叠在品牌带上，白字；新增深色 #0C4F4D</dd>
+        <dt>密度</dt><dd>输入框高 40，标签在上</dd>
+        <dt>表单</dt><dd>标签在上、灰底输入框，短字段两列并排</dd>
+        <dt>按钮组</dt><dd>等宽描边块，选中浅底深字</dd>
+        <dt>表格</dt><dd>深青绿表头白字，冻结格用圆点标状态</dd>
+        <dt>现行口径</dt><dd class="chg">保留无阴影；圆角与导航形态要改</dd>
+        <dt>wot 落地</dt><dd>wd-navbar 透明加自定义顶部区；表单要自排字段布局，不走 wd-cell 默认，改动最大</dd>
+      </dl>
+    </div>
+    <div class="card"><h3>取舍</h3>
+      <ul class="pros">
+        <li class="y">辨识度最高，最像一个研究中心自己的系统</li>
+        <li class="y">标签在上，对「细胞活率报告」「琼脂糖包埋样本送样」这类长标签最友好</li>
+        <li class="n">标签在上占高度，长表单要多滚，一屏只放得下五六项</li>
+        <li class="n">自定义导航和字段布局，开发量三个里最大</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 对比与建议 ════════════════════════ -->
+<section class="dir" id="compare">
+  <h2 class="sec">对比与建议</h2>
+  <div class="cmpwrap"><table class="cmp">
+    <thead><tr><th></th><th>A 清爽卡片</th><th>B 实验记录本</th><th>C 沉稳机构</th></tr></thead>
+    <tbody>
+      <tr><th>分层方式</th><td>柔和阴影</td><td>1px 边框</td><td>品牌带加边框</td></tr>
+      <tr><th>圆角</th><td>14 / 12 / 6</td><td>10 / 9 / 5</td><td>12 / 8 / 4</td></tr>
+      <tr><th>表单形态</th><td>标签左、值右</td><td>标签左、值左，最紧凑</td><td>标签在上，最舒展</td></tr>
+      <tr><th>表格一屏</th><td>6 行</td><td>8 行</td><td>5 行</td></tr>
+      <tr><th>改现行口径</th><td>改阴影与圆角</td><td>不改</td><td>改圆角与导航</td></tr>
+      <tr><th>复用东角山</th><td>token 机制加组件层</td><td>只复用 token 机制</td><td>只复用 token 机制</td></tr>
+      <tr><th>开发量</th><td>最小</td><td>中</td><td>最大</td></tr>
+      <tr><th>观感</th><td>亲和、现代</td><td>专业、工具感</td><td>正式、机构感</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="rec">
+    <h3>建议选 A</h3>
+    <p>你说「样式和组件应该都是类似的」，三个方向里只有 A 能把这句话兑现到组件层：东角山的 tokens.scss 映射、.dt-* 范式类和 ui/ 组件层可以大段搬过来，cell 表单与提交栏在真机上已经调过。代价是推翻「小程序不用阴影」这一条口径并调圆角，走一条变更记录即可，内容块一个都不动。</p>
+    <p>如果你更看重「贵方已经认过的样子一点不变」，选 B；它不用改权威，但组件层要自己做。</p>
+  </div>
+
+  <div class="card"><h3>选定之后我产出</h3>
+    <ol class="next">
+      <li>落地规范：token 表、组件形态、状态色与字典值的对应、空态加载态失败态，替换 design-authority 的 B 节与 C 节</li>
+      <li>tokens.scss：项目 token 加 --wot-* 映射，挂在 page 上，一处生效全站</li>
+      <li>components.scss 范式类与 ui/ 组件清单，照东角山的分层</li>
+      <li>同步成 claude.ai/design 的设计系统，后续页面集在那边细化</li>
+    </ol>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

@@ -57,6 +57,7 @@ accept:
 - [ ] 扫 `doc/change-log.md`：涉及本 ticket 的 CR **以 CR 为准**（CR 覆盖本文）
 - [ ] 逐条取权威（别全文读蓝图）：`python3 ~/claude-config/skills/xuqiu/scripts/authority_lint.py show <锚>`，锚见上方 `blueprint_refs`；接口形状见 `doc/api-contract.md`
 - [ ] 必读：
+  - **视觉按方向 A**（CR-20260921-08）：`doc/design-options/direction-a/落地规范.md` §5 与 §6 本页那一行；样式类用 SYS-MP-001 已落的 `src/style/components.scss`（`.lqg-*`），零颜色字面量。下面提到的图廊帧画于方向 A 之前，**只取内容块与排布，不取它的无阴影小圆角外观**
   - 填写页视觉基准 = **方案 A**（识别是表单顶部的可选动作），Kevin 2026-09-17 已选定（CR-20260917-03）；看图 `doc/design-options/gallery.html#mp-form-a`。方案 B（三步向导）已否决
   - `doc/verify/fixtures/prefill-cases.json`：预填合并规则的验收用例
   - **ADR-0007**（全文在 `doc/_adr/`，`authority_lint.py show ADR-0007` 取结构化口径）

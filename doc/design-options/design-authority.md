@@ -1,6 +1,7 @@
 # 设计权威抽取（/xuqiu §3 第 3b 步）
 
 > 输入：`gallery.html`（本项目没有设计师交接包，也没有甲方原型；设计稿 = AI 出的 HTML 草案）。
+> **2026-09-21 选定视觉方向 A「清爽卡片」（CR-20260921-08）**：小程序视觉改为柔和阴影分层、卡片不描边、圆角 14 / 12 / 6，token 挪到 `src/style/tokens.scss` 并映射 `--wot-*`。色值不变。落地规范与两份参考样式在 `direction-a/`，三个方向的对比在 `directions/设计方向对比.html`。B 节、C 节已随之改；图廊各帧只作内容与排布的依据，外观以 `direction-a/落地规范.md` 为准。网页工作台不受影响。
 > **视觉基准已锁定**：Kevin 2026-09-17 选定首页 = 方案 B、其余五页 = 方案 A（CR-20260917-03）。首页与最初按「AI 推荐」抽取的不同，D-2、E、A 三处已重过。
 > **2026-09-17 下午按甲方看稿意见改稿（CR-20260917-04）**：新增 `#mp-ledger-a` / `#mp-ledger-b`（⑩ 表格页，待 Kevin 选，先按 A；两帧 9-17 夜已删）；`#mp-home-b` `#mp-doc-a` `#mp-preview-a` `#mp-detail-ext` `#mp-cryo` 五帧按意见改了。A、C、D、E、F 节已随之更新。
 > **2026-09-18 晚补画（CR-20260918-07 第二轮）**：Kevin 指出改动只写在文字里、图上看不见。新增 5 帧——`#mp-ledger-view`（只读详情，右上角「修改」）、`#mp-ledger-edit`（修改模式）、`#mp-detail-ext-on`（开关打开后的外部详情）、`#admin-cryo`（工作台取用登记与转液氮）、`#admin-config`（系统管理 · 参数设置）；新增权威 `UI:admin.config`，由 SYS-WEB-001 认领。
@@ -19,6 +20,7 @@
 |---|---|---|
 | 🥇 ground truth | `gallery.html` 里标「定稿」的帧：首页 `#mp-home-final`（外部 `#mp-home-final-ext`）、`#mp-form-a`、外部送样 `#mp-embed-ext`、`#mp-doc-a`、`#mp-preview-a`、「我的」`#mp-me-int` / `#mp-me-ext`、历史编辑记录 `#mp-history` / `#mp-history-int`、内部管理表格页 `#mp-ledger` + `#mp-ledger-view` + `#mp-ledger-edit`、`#admin-sample-a`、`#admin-qc-a`、`#admin-cryo`、`#admin-config`，加四个单方案帧（`#mp-detail-ext` / `#mp-detail-ext-on`、`#mp-cryo`、`#admin-home`） | UI 索引逐页锚到对应 `#锚点` |
 | ❌ **已删除** | 未采用与作废的帧：首页方案 A 与上午选定的 B、②~⑥ 的方案 B、⑩ 的两种挂法 | 2026-09-17 夜按 Kevin 要求从图廊删掉（CR-20260917-06），图廊里看到的都是要照着做的。选型经过只在 `README.md` 与变更记录里留文字；**别照文字里描述的任何未采用方案实现**：顶部数字摘要、最近记录、「我的送检」、入口角标、表格页挂首页或加底部页签、「＋ 新增一行」都不做 |
+| 🥇 ground truth · 小程序外观 | `direction-a/落地规范.md` + `direction-a/tokens.scss` + `direction-a/components.scss`；视觉参照 `directions/设计方向对比.html` 方向 A | CR-20260921-08 起小程序长什么样以它为准。图廊帧画于方向 A 之前，**只取内容块与排布，不取它的无阴影小圆角外观** |
 | 🥇 ground truth | 甲方 7 份模板原件（`_input/templates/`） | 表单字段顺序、Excel 导出表头与列序、三份 Word 的版式，**以它为准，不以草案里的示意为准** |
 | 🟡 衍生 | 草案里的字段排布、文案 | 结构可参考；**里面的数据全是假的**（hli52、SJ00000127、E21-1-2026.09.10、刘某某…） |
 | ❌ 误导 | 草案里那张缩小的「样本质控表」页面示意 | 只是示意有一张 Word 页面，字段不全、版式不对；Word 版式唯一权威是 `_input/templates/样本质控表模板.docx` |
@@ -29,6 +31,7 @@
 ## B. Design Token
 
 只做**一套浅色主题**（需求里没有深色；工作台用 plus-ui 默认浅色 + 主色覆盖）。小程序与工作台共用同一组语义色。
+**小程序的完整 token（含阴影、圆角、字号、间距与 `--wot-*` 映射）以 `direction-a/tokens.scss` 为准**（CR-20260921-08）；下表是两端共用的色值部分，工作台 `lqg-tokens.scss` 照它写。
 
 | token | 值 | 用在哪 |
 |---|---|---|
@@ -44,13 +47,16 @@
 | `--lqg-danger` / `--lqg-danger-soft` | `#B3362B` / `#FBE4E1` | 无效、-80 超期、角标 |
 
 - 字体：正文系统中文字体；**编号类内容一律等宽**（小程序 `font-family: Menlo, Consolas, monospace`，工作台同）——内部编号、送检单号、石蜡块编号、冻存样品名称、住院号。
-- 圆角：卡片 10px、按钮 9px、徽标 5px；小程序不用阴影，靠 1px 边框分层。
+- 圆角与分层（小程序，CR-20260921-08 方向 A）：卡片 14、主按钮与控件 12、搜索框 10、按钮组单块 9、徽标 6、底部弹层 16；**柔和阴影分层、卡片不描边**，1px `--lqg-line` 只用于 cell 之间与表格行之间；阴影只有 `--lqg-shadow-sm / -md / -brand / -freeze` 四档。工作台沿用 plus-ui 默认圆角与阴影。
+  ~~圆角：卡片 10px、按钮 9px、徽标 5px；小程序不用阴影，靠 1px 边框分层。~~（9-21 起作废）
 - 语义色与字典值一一对应：`lqg_verify_status`（pending 琥珀 / valid 绿 / invalid 红）、`lqg_submit_source`（internal 青绿 / external 蓝）、`lqg_doc_status`（draft 琥珀 / published 绿）、冻存位置（minus80 中性 / ln2 蓝 / 超期 红）。
-- **硬约束**：组件内零颜色字面量，全部走上表变量（小程序写在 `uni.scss`，工作台写在 `src/assets/styles/lqg-tokens.scss`）。
+- **硬约束**：组件内零颜色字面量，全部走变量（小程序写在 `src/style/tokens.scss`，拷自 `direction-a/tokens.scss`，`src/uni.scss` 保持模板默认；工作台写在 `src/assets/styles/lqg-tokens.scss`）。
 
 ---
 
 ## C. 组件全集（逐帧扫出来的，不是拍脑袋列的）
+
+> 下表管组件的**职责与内容**。小程序组件的**外观**（卡片、cell 表单、按钮组、徽标、表格、底部栏、弹层、三种非正常态）统一按 `direction-a/落地规范.md` §5，对应的样式类在 `direction-a/components.scss`（`.lqg-*`）。表里仍写着的「白底圆角分组卡片」「灰底提示」等外观描述，以落地规范为准（CR-20260921-08）。
 
 | 端 | 组件 | 用途 · 要点 · 数据来源 |
 |---|---|---|

@@ -107,6 +107,7 @@ accept:
 - [ ] 扫 `doc/change-log.md`：涉及本 ticket 的 CR **以 CR 为准**（CR 覆盖本文）
 - [ ] 逐条取权威（别全文读蓝图）：`python3 ~/claude-config/skills/xuqiu/scripts/authority_lint.py show <锚>`，锚见上方 `blueprint_refs`；接口形状见 `doc/api-contract.md`
 - [ ] 必读：
+  - **视觉按方向 A**（CR-20260921-08）：`doc/design-options/direction-a/落地规范.md` §5 与 §6 本页那一行；样式类用 SYS-MP-001 已落的 `src/style/components.scss`（`.lqg-*`），零颜色字面量。下面提到的图廊帧画于方向 A 之前，**只取内容块与排布，不取它的无阴影小圆角外观**
   - 表格页看图 `doc/design-options/gallery.html#mp-ledger`（表格）、`#mp-ledger-view`（只读详情，右上角「修改」）、`#mp-ledger-edit`（修改模式）。挂在「我的 → 内部管理」（Kevin 2026-09-17 晚定，CR-20260917-05；⑩ 原来的 A / B 两种挂法都作废）。**表格本身没有新增、没有行内编辑、没有核验**，底部只有「导出 Excel」；点一行进该表填写页的只读模式，只读页右上角有「修改」，点它切到修改模式（CR-20260918-07）
   - 甲方四份 xlsx 模板原件第 1 行（`_input/templates/`）：表格页的列名、列序照它；期望已抄进 `doc/verify/fixtures/ledger-columns-cases.json`，并由 accept 第 2 条和原件逐字对账
   - 类器官收样填写页的布局用例在 `doc/verify/fixtures/organoid-form-cases.json`：外部三项、内部七项、三种模式

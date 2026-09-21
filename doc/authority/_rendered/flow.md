@@ -62,7 +62,7 @@
 | 步 | 谁 | 做什么 | 写什么 | 产出 |
 |---|---|---|---|---|
 | `FLOW:F-CRYO-01.step1` | 内部人员(mp/admin) | 选样本 → 冻存样品名称（用「内部编号-」预填，手改）、代数（P+数字）、冻存时间、数量、密度、是否暂存 -80、冻存人；选「否」时必须填液氮储存位置 | FIELD:t_lqg_cryo_batch.sample_id, FIELD:t_lqg_cryo_batch.cryo_name, FIELD:t_lqg_cryo_batch.passage, FIELD:t_lqg_cryo_batch.freeze_time, FIELD:t_lqg_cryo_batch.init_qty, FIELD:t_lqg_cryo_batch.density, FIELD:t_lqg_cryo_batch.in_minus80, FIELD:t_lqg_cryo_batch.frozen_by, FIELD:t_lqg_cryo_batch.ln2_location, FIELD:t_lqg_cryo_batch.remark | 批次建立，剩余 = 初始支数；同一样本可有多条不同代数的批次。之后批次的每一项都可以改（含初始支数，校验见 FLOW:F-CRYO-02.step5） |
-| `FLOW:F-CRYO-01.step2` | 系统 | 超期 = in_minus80='Y' 且 to_ln2_time 为空 且 剩余支数 > 0 且 当前日期 − freeze_time ≥ 14 天（第 14 天当天即算）。读时计算，不落标志位； 每天 08:00 的定时任务只负责把当日超期数写日志 / 供首页缓存，不是判定依据。 |  | 超期批次清单（含已超天数） |
+| `FLOW:F-CRYO-01.step2` | 系统 | 超期 = in_minus80='Y' 且 to_ln2_time 为空 且 剩余支数 > 0 且 当前日期 − freeze_time ≥ 阈值天数（默认 14，第 14 天当天即算）。读时计算，不落标志位； 所以登记转液氮（to_ln2_time 落值）、或支数被取空之后，这一条立刻退出超期清单、提醒消失（CR-20260918-07 甲方问「转移后还会有提示吗」）。 阈值天数存在系统参数 `lqg.cryo.overdue-days`（默认 14），内部人员在工作台系统管理里改，改完下一次读时即生效（CR-20260918-07 甲方问「这儿是有什么设置吗」）； 每天 08:00 的定时任务只负责把当日超期数写日志 / 供首页缓存，不是判定依据。 |  | 超期批次清单（含已超天数） |
 | `FLOW:F-CRYO-01.step3` | 系统 | 工作台首页待办卡片显示超期批次数并可直达；冻存列表超期行置顶并标红「已超 N 天」（工作台，以及小程序「我的 → 内部管理」冻存表格页的超期页签） |  | 内部人员一进系统就看到哪些该转液氮 |
 | `FLOW:F-CRYO-01.step4` | 内部人员(admin) | 填转移至液氮时间（不得早于冻存时间）与液氮储存位置 → 保存 | FIELD:t_lqg_cryo_batch.to_ln2_time, FIELD:t_lqg_cryo_batch.ln2_location | 该批次当前位置 = 液氮，出提醒清单 |
 | `FLOW:F-CRYO-01.step5` | 内部人员(admin) | 导出「-80 冻存」9 列，表头与列序和模板逐字一致；其后追加两列「代数」「当前剩余/支」 |  | xlsx 文件 |
@@ -134,7 +134,7 @@
 | `FLOW:F-EMBED-01.step1` | 内部人员(mp/admin) | 从有效样本里选一个（按内部编号搜）→ 填石蜡块编号（全库唯一）；样本类型、类器官来源类型手填；组织收样时间、组织处理时间从样本带出可改 | FIELD:t_lqg_embed.sample_id, FIELD:t_lqg_embed.paraffin_block_no, FIELD:t_lqg_embed.sample_type, FIELD:t_lqg_embed.organoid_source_type, FIELD:t_lqg_embed.tissue_receive_time, FIELD:t_lqg_embed.tissue_process_time | 一条包埋记录，工序时间全空 |
 | `FLOW:F-EMBED-01.step2` | 内部人员(mp/admin) | 琼脂糖包埋样本时间、包埋人、脱水时间、琼脂糖包埋样本送样时间、石蜡包埋时间、切片时间，做完一步填一步，全部允许留空 | FIELD:t_lqg_embed.agarose_embed_time, FIELD:t_lqg_embed.embed_by, FIELD:t_lqg_embed.dehydrate_time, FIELD:t_lqg_embed.agarose_send_time, FIELD:t_lqg_embed.paraffin_embed_time, FIELD:t_lqg_embed.section_time | 记录逐步完整 |
 | `FLOW:F-EMBED-01.step3` | 内部人员(mp/admin) | 染色五个按钮多选（HE / IF / IHC / 其他 / 无染色），「无染色」与其余互斥，选「其他」必须写具体名称； marker 表达可加多行，每行 = 名称（可空）+ 三按钮单选（阴性 / 弱表达 / 强表达） | FIELD:t_lqg_embed.stain_types, FIELD:t_lqg_embed.stain_other, FIELD:t_lqg_embed_marker.marker_name, FIELD:t_lqg_embed_marker.expression, FIELD:t_lqg_embed.operator_name, FIELD:t_lqg_embed.remark | 染色与 marker 落库；非法组合（NONE 与别的并存、OTHER 无名称）被拒 |
-| `FLOW:F-EMBED-01.step4` | 系统 | 外部在自己（或同组）样本的详情里看到该样本的石蜡包埋记录：石蜡块编号、各工序时间、染色、marker、核验状态（外部提交还没核验的显示「待核验」、无效的带原因）； 不含包埋人、操作人、内部编号、核验人 |  | ExtEmbedVo 列表（过 FLOW:F-EXT-01） |
+| `FLOW:F-EMBED-01.step4` | 系统 | 外部在自己（或同组）样本的详情里看到该样本的石蜡包埋记录：石蜡块编号、各工序时间、染色、marker、操作人与包埋人（CR-20260918-07 按甲方意见放开）、核验状态（外部提交还没核验的显示「待核验」、无效的带原因）； 不含核验人、冻存信息；内部编号按系统参数 lqg.ext.show-internal-no 决定 |  | ExtEmbedVo 列表（过 FLOW:F-EXT-01） |
 | `FLOW:F-EMBED-01.step5` | 内部人员(admin) | 导出「石蜡包埋送样记录」16 列，表头与列序和模板逐字一致；「样本编号」列 = 内部编号；染色导出为中文标签用顿号连接；marker 拼成「名称：表达」分号连接 |  | xlsx 文件 |
 | `FLOW:F-EMBED-01.step6` | 外部人员(mp) | 首页点「石蜡包埋送样记录」进填写页：从本人送检过、没被判无效的样本里选一个（按送检单号），填样本类型、类器官来源类型后提交； 待核验或无效时本人可改后重提（回到待核验），核验有效后只读 | FIELD:t_lqg_embed.sample_id, FIELD:t_lqg_embed.submit_source, FIELD:t_lqg_embed.submitter_id, FIELD:t_lqg_embed.verify_status, FIELD:t_lqg_embed.sample_type, FIELD:t_lqg_embed.organoid_source_type | 一条 submit_source=external、verify_status=pending、石蜡块编号为空的记录 |
 | `FLOW:F-EMBED-01.step7` | 内部人员(admin) | 工作台「石蜡包埋」页待核验的行置顶浅黄 → 核验抽屉：判有效必须填石蜡块编号（全库唯一）且所挂样本已核验有效，之后照常补工序与染色； 判无效必须写原因。合法转移同样本主档：pending→valid、pending→invalid、invalid→pending（外部重提）、invalid→valid；内部录入的直接 valid | FIELD:t_lqg_embed.verify_status, FIELD:t_lqg_embed.verify_by, FIELD:t_lqg_embed.verify_time, FIELD:t_lqg_embed.invalid_reason, FIELD:t_lqg_embed.paraffin_block_no | valid（有石蜡块编号）或 invalid（有原因）；工作台首页「待核验石蜡包埋送样」数字随之变化 |
@@ -153,7 +153,7 @@
 |---|---|---|---|---|
 | `FLOW:F-EXT-01.step1` | 系统 | visibleSampleIds(userId) = 本人提交的样本 ∪（本人 bind_status=verified 时）同 group_id 且 bind_status=verified 的其他外部用户提交的样本。 只含 del_flag='0' 的样本；不按来源单位名称匹配，只按提交人。 |  | 一个样本 id 集合（可能为空） |
 | `FLOW:F-EXT-01.step2` | 系统 | 样本详情、包埋情况、文档列表、预览图、下载链接，凡带 sampleId 的请求先 assertVisible(sampleId)；不可见一律按「不存在」返回（不泄露存在性） |  | 越权请求得到 404 语义的业务码，响应体不含任何样本字段 |
-| `FLOW:F-EXT-01.step3` | 系统 | 返回值只能是 Ext*Vo。白名单：送检单号、送检段字段、核验状态与无效原因、提交人姓名与「是否本人」标记、石蜡块编号与包埋各工序时间 / 染色 / marker、已完成文档的元信息（含已完成评分表的合计分）。 不含：内部编号（开关 lqg.ext.show-internal-no=true 时才填）、操作人 / 包埋人 / 冻存人、冻存的一切、核验人、其他提交人的手机号。 |  | 外部拿到的 JSON 里没有上述字段的键 |
+| `FLOW:F-EXT-01.step3` | 系统 | 返回值只能是 Ext*Vo。白名单：送检单号、送检段字段、核验状态与无效原因、提交人姓名与「是否本人」标记、石蜡块编号与包埋各工序时间 / 染色 / marker、 石蜡包埋的操作人与包埋人（CR-20260918-07 起对外可见）、已完成文档的元信息（含已完成评分表的合计分）。 不含：冻存人、冻存的一切、核验人、其他提交人的手机号；内部编号默认也不含，只有系统参数 lqg.ext.show-internal-no=true 时才填（CR-20260918-07 起该参数是若依 sys_config，运行时可改）。 |  | 外部拿到的 JSON 里没有上述字段的键 |
 | `FLOW:F-EXT-01.step4` | 系统 | 外部的新增 / 修改只作用于 submitter_id = 本人 且 verify_status ∈ {pending, invalid} 的记录，且只能写送检段字段；同组的可看不可改。 三种记录：组织样本（样本记录信息表）、类器官样本（类器官收样记录：来源单位、类器官类型、备注）、石蜡包埋送样（只能挂本人送检过、未判无效的样本； 样本类型、类器官来源类型）。每种各一个外部专用入参对象，只含上述字段 |  | 越界写入被拒且库里不产生任何变化 |
 
 ## 小程序：首页填写、历史编辑记录、内部管理

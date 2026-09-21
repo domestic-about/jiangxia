@@ -24,6 +24,34 @@
 
 ## CR 列表
 
+## CR-20260921-08: 小程序视觉方向定为 A「清爽卡片」——柔和阴影分层、圆角放大、token 挪到 src/style/tokens.scss 并映射 wot
+
+- **提出人**：Kevin（2026-09-21：「dongjiaoshan 有成熟的经验，样式和组件应该都是类似的」「需求拆解后，设计应先出几个页面，然后 2-3 个设计方向给我选择」；看过三个方向后：「那就选择A吧」）
+- **范围归属**：合同内。只换小程序视觉基准，不动需求、字段、接口、页面内容块；组件层照东角山方向 A 的分层复用，不增工期
+- **影响 ticket**（`authority_lint.py diff`：✅ 权威无变更；`impact`：无 ticket 受影响。本 CR 不动 flows / field-ssot / ui-index，受影响的票按「谁照视觉做」手工核）：
+  - SYS-MP-001（D1）**改**：token 从 `src/uni.scss` 挪到 `src/style/tokens.scss`（原样拷自 `doc/design-options/direction-a/tokens.scss`，含 `--wot-*` 映射），范式类拷 `components.scss`；§0 必读换成落地规范；**新增第 3 条 accept**：两份 tokens 的变量名集合相等、index.scss 引了 tokens 与 components、`src/pages` 与 `src/components` 样式里没有色值字面量（页面 route 块里的导航栏与背景配置已排除）。该 accept 已在临时目录空跑：正例过，页面写色值、token 缺一组两个反例都红
+  - SAMPLE-MP-001、SAMPLE-MP-002、EMBED-MP-001、CRYO-MP-001、OCR-MP-001、DOC-MP-001、DOC-MP-002 **改**：§0 必读各加一行，指向落地规范 §5 / §6，写明图廊帧只取内容与排布、不取旧外观。accept 不动
+  - SYS-WEB-001、AUTH-STAFF-001：逐条核过，无需改动。工作台沿用 plus-ui，主色与语义色值没变
+- **背景**：9-17 的视觉基准是 AI 出的 HTML 草案，外观偏原型（无阴影、小圆角、单字字标），没有和 wot-design-uni 的真实渲染及东角山验证过的组件分层对齐。9-21 按东角山的流程先出三个方向对比（`design-options/directions/设计方向对比.html`：A 清爽卡片、B 实验记录本、C 沉稳机构，各画首页、填写页、表格页），Kevin 选 A
+- **变更前**：
+  - `design-authority.md` §B：「圆角：卡片 10px、按钮 9px、徽标 5px；小程序不用阴影，靠 1px 边框分层」；token 写在 `src/uni.scss`
+  - 视觉依据 = 图廊各帧
+- **变更后**：
+  - 分层：柔和低阴影、卡片不描边，1px 线只用于 cell 之间与表格行之间；阴影四档 `--lqg-shadow-sm / -md / -brand / -freeze`，主按钮以外不加辉光
+  - 圆角：卡片 14、主按钮与控件 12、搜索框 10、按钮组单块 9、徽标 6、底部弹层 16
+  - 字号：cell 标签与值 15、默认 14、表格 13、说明 12、徽标 11
+  - **色值不变**（§B 那组），只新增三个派生值：`--lqg-table-head`、`--lqg-warn-row`、`--lqg-danger-row`
+  - token 位置：`src/style/tokens.scss`，挂在 `page`，末段 `--wot-*` 映射让全部 wd-* 换青绿；`src/uni.scss` 保持模板默认
+  - 视觉依据：`design-options/direction-a/落地规范.md` + `tokens.scss` + `components.scss`；图廊各帧降为内容与排布依据
+  - 网页工作台不受影响
+- **影响下游**：
+  - 新增 `design-options/directions/设计方向对比.html`（已发布为私有 Artifact，仅 Kevin 可见）、`design-options/direction-a/` 三份（两份 scss 已用 sass 编译通过，且过 SYS-MP-001 第 1 条 accept 的选择器 grep）
+  - `design-authority.md` 页首、A 节（加一行小程序外观依据）、B 节（圆角与分层、token 位置）、C 节（表前说明外观以落地规范为准）
+  - `design-options/briefs/` 11 份粘贴稿与索引的视觉语言一行改成方向 A
+  - **未做，留作后续**：图廊 16 帧与甲方稿按方向 A 重绘（本会话原定的第三段，等 Claude Design 出稿或另行排期）；同步成 claude.ai/design 的设计系统。这两件不挡 /zhixing：实现以落地规范为准，帧只取内容
+- **决策**：✅ 接受
+- **签字**：Kevin @ 2026-09-21（「那就选择A吧」）
+
 ## CR-20260918-07: 甲方看设计图后的 9 条——表格页加修改入口、历史记录看全中心、外部可见操作人与包埋人、内部编号开关、冻存超期口径
 
 - **提出人**：甲方（2026-09-18 在《测试问题记录表》「小程序」子表填的 9 条，逐字落在 `_input/feedback/2026-09-18-甲方看设计图的9条意见.md`，截图存 `2026-09-18-shots/`）

@@ -103,6 +103,7 @@ accept:
 - [ ] 扫 `doc/change-log.md`：涉及本 ticket 的 CR **以 CR 为准**（CR 覆盖本文）
 - [ ] 逐条取权威（别全文读蓝图）：`python3 ~/claude-config/skills/xuqiu/scripts/authority_lint.py show <锚>`，锚见上方 `blueprint_refs`；接口形状见 `doc/api-contract.md`
 - [ ] 必读：
+  - **视觉按方向 A**（CR-20260921-08）：`doc/design-options/direction-a/落地规范.md` §5 与 §6 本页那一行；样式类用 SYS-MP-001 已落的 `src/style/components.scss`（`.lqg-*`），零颜色字面量。下面提到的图廊帧画于方向 A 之前，**只取内容块与排布，不取它的无阴影小圆角外观**
   - 填写页视觉基准 = **方案 A**（单页分组长表单），Kevin 2026-09-17 已选定（CR-20260917-03）；看图 `doc/design-options/gallery.html#mp-form-a`。方案 B（三步向导）已否决。识别条本张只留位置，OCR-MP-001 接
   - 历史编辑记录看图 `gallery.html#mp-history`（外部）、`#mp-history-int`（内部）；口径以 `UI:mp.history` 为准。Kevin 2026-09-17 晚：「所有人员想看历史编辑记录，都可以在我的页面查看」（CR-20260917-05）。**原来的「我的送检」页作废**，由它取代。
     2026-09-18 甲方「我们内部人员也有多个哦，江夏实验室所有的工作人员」：**内部视角改为中心全员默认全列 + 「只看我提交的」开关 + 经手人列**（CR-20260918-07），外部视角不变

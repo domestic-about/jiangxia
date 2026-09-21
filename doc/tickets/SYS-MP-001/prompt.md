@@ -55,10 +55,27 @@ accept:
       外部入口清单里混进了 cryo → 「外部」用例红，node 那段也红：冻存对外不可见。
       meSections 写成 identity !== 'external' 就给内部管理 → 空身份 / 'admin' / 'INTERNAL' 三条红：身份没取到的人会看到内部管理入口。
       entryTarget 把内部入口指到表格页 → targetCases 期望填写页红（Kevin 定的是点进去都是编辑）。
-      首页还留着方案 B 的数字、最近记录，或入口上挂了红点角标 → 最后一段红（身份徽标用 wd-tag，不算角标）。
+      首页还留着方案 B 的数字、最近记录，或入口上挂了红点角标 → 最后一段红（身份徽标用 .lqg-tag 或 wd-tag，都不算角标）。
       spec 自己写期望值而不读 fixture → 第 1 段 grep 红；把不过的用例标 skip → 第 2 段红。
       删 fixture 里期望为空的病灶用例来过关 → node 那段红。
       底部小字照抄 9-17 的老版「修改、核验、冻存取用请到网页工作台」→ 最后一段红（老串把新串整个包在里面，所以这里要正反两条 grep）：⑩ 表格页 9-18 起有「修改」入口了（CR-20260918-07），这行小字再把人支到工作台去就是错的。
+  - name: "方向 A 设计 token 落地：src/style/tokens.scss 与 doc 里的规范逐变量一致、全局引入 tokens 与范式类、页面与组件里没有色值字面量（CR-20260921-08）"
+    form: API
+    run: |-
+      cd code/miniapp &&
+      A=$(grep -oE -- '--(lqg|wot)-[a-z0-9-]+' ../../doc/design-options/direction-a/tokens.scss | sort -u) &&
+      B=$(grep -oE -- '--(lqg|wot)-[a-z0-9-]+' src/style/tokens.scss | sort -u) &&
+      [ -n "$B" ] && [ "$A" = "$B" ] &&
+      grep -qE "@import ['\"]\./tokens(\.scss)?['\"]" src/style/index.scss &&
+      grep -qE "@import ['\"]\./components(\.scss)?['\"]" src/style/index.scss &&
+      grep -q -- '--wot-color-theme' src/style/tokens.scss &&
+      ! grep -rnE '(color|background|border|fill|stroke|shadow)[^;{]*#[0-9a-fA-F]{3,8}\b' src/pages src/components --include=*.vue --include=*.scss 2>/dev/null | grep -vE 'navigationBar[A-Za-z]*Color|backgroundColor(Top|Bottom)?["'\'' ]*:' | grep -q .
+    counterfeit: |-
+      token 还照旧口径写在 src/uni.scss、或者 src/style/tokens.scss 少了阴影与圆角那几组变量 → 两个变量集合不相等，红：D1 就把「不用阴影、圆角 10 / 9 / 5」的旧外观焊进了壳子。
+      tokens.scss 拷了但没在 index.scss 里引 → 两条 @import grep 红：变量不生效，wd-* 还是 wot 默认蓝。
+      漏了 --wot-* 映射段 → 集合不等且 --wot-color-theme grep 红：wd-button 仍是 #4d80f0。
+      页面里图省事写 color: #0E7C7B 或 background: #fff → 最后一段红：组件内零颜色字面量是硬约束，换肤时这些地方会漏。
+      （页面 route 块里的 navigationBarBackgroundColor、backgroundColor 是小程序页面配置不是样式，已排除，不算违规。）
 ---
 
 # SYS-MP-001 · 小程序壳：三个页签、登录页、请求层、首页（内外部同一个样子，点表就是填写）、我的（历史编辑记录入口与内部管理板块）
@@ -72,7 +89,7 @@ accept:
 - [ ] 必读：
   - 首页与「我的」按 Kevin 2026-09-17 晚定的结构做（CR-20260917-05）：看图 `doc/design-options/gallery.html#mp-home-final`（内部首页）、`#mp-home-final-ext`（外部首页）、`#mp-me-int`（内部的「我的」）、`#mp-me-ext`（外部的「我的」）；口径以 `UI:mp.home`、`UI:mp.home.entries`、`UI:mp.me` 为准。**方案 B 顶部的数字摘要已作废，别照着做**。
     `#mp-me-int` 图上内部管理板块底部那行小字还是 9-17 的老版「修改、核验、冻存取用请到网页工作台」，**别照抄**：以 `UI:mp.me` 为准写成「核验、冻存取用请到网页工作台」（CR-20260918-07）
-  - `doc/design-options/design-authority.md` §B（token）§C（组件全集）：组件内零颜色字面量
+  - **视觉按方向 A**（CR-20260921-08）：`doc/design-options/direction-a/落地规范.md` 全文，看图 `doc/design-options/directions/设计方向对比.html` 方向 A 的首页。上面那几张图廊帧画于方向 A 之前，**只取内容块与排布，不取它的无阴影小圆角外观**。组件职责仍见 `design-authority.md` §C；组件内零颜色字面量
   - 栈包 gotchas §6：biz 组件必须直接 `.vue` 路径导入；wxss 不支持 `:not()` / `*`；业务页只用 `wd-*` 组件
   - **ADR-0001**（全文在 `doc/_adr/`，`authority_lint.py show ADR-0001` 取结构化口径）
 - [ ] 口径复述（本张最容易做反的）：
@@ -93,7 +110,7 @@ accept:
 ## 2 实现要点
 
 - `code/miniapp/`：unibest 模板（uni-app + Vue3 + wot-design-uni + pinia）。页面用文件路由生成 `pages.json`，别手改产物。
-- 设计 token：`src/uni.scss` 里定义 `design-authority.md` §B 的全部 `--lqg-*` 变量；编号类文本统一用 `.lqg-mono`。
+- 设计 token 与范式类（CR-20260921-08 方向 A）：把 `doc/design-options/direction-a/tokens.scss`、`components.scss` **原样**拷到 `src/style/`，在 `src/style/index.scss` 里先引 tokens 再引 components，全局引一次；`src/uni.scss` 保持模板默认、不写 token。全局导航栏白底黑字、页面底 `#F3F6F6`（写在 unibest 的 `pages.config.ts` 的 `globalStyle`，由它生成 pages.json，别手改产物）。首页宫格、我的分组卡、底部栏按落地规范 §5.2、§5.3、§5.8 用 `.lqg-*` 类；编号类文本统一用 `.lqg-mono`。
 - 请求层 `src/utils/request.ts`：自动带 `Authorization` 与 `clientid`；业务码 401 → 清 token 跳登录页；其余非 200 → toast `msg`。
 - 登录页 `pages/login/index`：协议勾选 + 一个按钮（`open-type="getPhoneNumber"`）。流程：`wx.login` 拿 code → 按钮回调拿 phoneCode → `POST /auth/login`（grantType=xcx）→ 存 token → `GET /mp/me` 入 store → 进首页。
   拒绝授权手机号：停在本页，提示「需要手机号才能送检和查看结果」。开发者工具里 `VITE_MOCK_LOGIN=1` 时提供一个调试入口选 seed 身份（只在 dev 构建里存在，生产构建里这段代码必须被摇掉）。
@@ -116,7 +133,7 @@ accept:
 
 ## 4 完工报告要求
 
-1. 微信开发者工具里三个页签、登录页、内部首页（2×2）、外部首页（三格）、内部的「我的」（有内部管理板块）、外部的「我的」（没有）的截图各一张；点四格各自跳到哪（占位页标题即可）的录屏
+1. 微信开发者工具里（外观对照方向 A：白卡柔阴影、圆角 14、青绿主按钮带辉光）三个页签、登录页、内部首页（2×2）、外部首页（三格）、内部的「我的」（有内部管理板块）、外部的「我的」（没有）的截图各一张；点四格各自跳到哪（占位页标题即可）的录屏
 2. 生产构建产物里搜不到调试登录入口的证据（grep 输出）
 3. **改了哪些文件**（含 Flyway 文件名与取号依据、新增的类 / 页面 / 接口清单）
 4. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）

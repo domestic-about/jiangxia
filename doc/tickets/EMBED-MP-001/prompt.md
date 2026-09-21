@@ -107,6 +107,7 @@ accept:
 - [ ] 扫 `doc/change-log.md`：涉及本 ticket 的 CR **以 CR 为准**（CR 覆盖本文）
 - [ ] 逐条取权威（别全文读蓝图）：`python3 ~/claude-config/skills/xuqiu/scripts/authority_lint.py show <锚>`，锚见上方 `blueprint_refs`；接口形状见 `doc/api-contract.md`
 - [ ] 必读：
+  - **视觉按方向 A**（CR-20260921-08）：`doc/design-options/direction-a/落地规范.md` §5 与 §6 本页那一行；样式类用 SYS-MP-001 已落的 `src/style/components.scss`（`.lqg-*`），零颜色字面量。下面提到的图廊帧画于方向 A 之前，**只取内容块与排布，不取它的无阴影小圆角外观**
   - 2026-09-17 晚 Kevin 定（CR-20260917-05）：首页点「石蜡包埋送样记录」就是填写，外部也能填；改自己填过的从「我的 → 历史编辑记录」进；内部管理里的石蜡包埋工作表只读（表格仍然只读，但 CR-20260918-07 在只读详情上加了「修改」入口，见下一条）。布局用例在 `doc/verify/fixtures/embed-form-cases.json`；外部填写页看图 `doc/design-options/gallery.html#mp-embed-ext`
   - **CR-20260918-07（甲方 2026-09-18 看设计图后提的）**，本张连带两处：
     ① 内部管理表格页从「纯只读」改成**只读表格 + 只读详情里的「修改」入口**——点一行进 `mode=view` 的只读详情，右上角「修改」切到 `mode=edit`，内部人员**可以改任何人录的**（外部送来还没核验 / 判无效的仍只读）；表格本身仍没有行内编辑、没有新增、没有核验（`UI:mp.ledger`、`UI:mp.embed.list`）
