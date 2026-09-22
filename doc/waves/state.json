@@ -12,9 +12,9 @@
     },
     {
       "id": "D2",
-      "status": "qa_running",
-      "qa_rounds": 1,
-      "qa_seq": 3,
+      "status": "qa_passed",
+      "qa_rounds": 2,
+      "qa_seq": 4,
       "rearms": [
         {
           "reason": "Kevin 授权：D2 连红 2 轮的判断成立——两轮抓到的是不同的实现缺陷（r1 3×S0+2×S1 已修并经 r2 复验；r2 新发现 #96 工作台来源单位筛选筛不出内部录的样本，根因清楚、修法机械），不是蓝图/口径问题。授权一批返工修 #96 后重跑 r3。",
@@ -1522,6 +1522,26 @@
       "type": "ux",
       "title": "外部新增样本不落 source_unit_id → 工作台「来源单位+组别」组合筛选带不出（权威允许为空，属设计后果）",
       "detail": "D2 r4 L2 片发现：小程序外部新增样本实测 source_unit_id 为空，于是工作台『来源单位=A 医院 + 组别』组合筛选带不出这条（单一『组别』带得出，因为组别走提交人档案）。★主会话取证：权威 FIELD:t_lqg_sample.source_unit_id 明写「FK→t_lqg_source_unit.id；**自填单位名时为空**」且 nullable:true —— 外部提交走的是单位名入参，所以 id 为空是权威允许的设计，不是产品缺陷，故维持 S2 不上调。要改的话是口径问题：要么让外部提交时按名字解析出 id（当名字命中已有单位），要么让工作台筛来源单位时同时按 name 匹配。请在 all_done 时定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 113,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "核验/状态机「被拒」实回 code=500，而契约第 10/49 行与 MpSampleService 注释都写 400",
+      "detail": "D2 r4 L3 片发现。行为正确（被拒且库不变），前端 request.ts 对任意非 200 一律 toast .msg → 无用户可见差异；对照组 sampleKind 不一致实测是正确 400。连带 SAMPLE-VERIFY-001 的 /verify 缺必填路径。方案：统一成 400 并同步契约/注释（与既有的『业务码 400/500 混用』那条 S3 一起收）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 114,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "外部 PUT 重提会把既有 source_unit_id 清成 null（source_unit_name 仍在）",
+      "detail": "D2 r4 L3 片发现：#100（外部重提）会把 seed 里既有行的 source_unit_id（1002=9000009001）清空。根因与 #112 同族（没有『单位名→id』解析）。影响仅『来源单位+组别』组合筛选少一行。权威 field-ssot.yaml:144 明写该列 nullable「自填单位名时为空」→ 按本轮口径不判 S0/S1，建议与 #112 合并处理。",
       "status": "open",
       "decision": ""
     }
