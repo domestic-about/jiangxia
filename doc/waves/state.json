@@ -31,8 +31,9 @@
     },
     {
       "id": "D4",
-      "status": "qa_running",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D5",
@@ -1363,8 +1364,8 @@
       "type": "arch",
       "title": "【S1】工作台「来源单位」筛选筛不出内部录的样本（会传染 D3 导出）",
       "detail": "纯 seed 即可复现：按内部编号 T-oco01 筛出 SJ90000009，行内来源单位列写『B 大学』；把筛选选成来源单位=B 大学后它消失（total=1 只剩 SJ90000006）。根因：SampleQueryService.list 把『组别/来源单位』一律走 t_lqg_ext_profile（提交人外部档案）取 user_id 集合再 submitter_id IN (...)；注释给的理由『样本行上没有 group_id』只对组别成立——来源单位在样本行上有 source_unit_id/source_unit_name → 内部账号提交的行永远筛不出来。影响：老师按来源单位筛会拿不到界面标着该单位的样本；FLOW:F-SAMPLE-02.step5 的导出范围 = 当前筛选结果 → D3 的样本/类器官导出会静默漏掉内部样本（影响另一个 ticket 的实现路径）。修法：来源单位按样本行自己的 source_unit_id 筛；组别仍走外部档案（或一并按提交人的档案 JOIN，但两条口径要分开写清）。旧 accept 只测 A 医院（其下无内部样本）所以 r1 没暴露。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：D2 r2 返工项，已在 b8b160fe 修复（来源单位筛选改为按样本行自己的 source_unit_id，不再走提交人的外部档案）；D2 QA r4 L0+L1 片对四组缺陷逐条独立复验通过（含本条），r4 L2 片 78/78 全绿。D3 导出侧同源已被同一修法覆盖（SAMPLE-EXPORT-001 的 sourceUnitId 筛选 accept 绿）。"
     },
     {
       "id": 97,
@@ -1453,8 +1454,8 @@
       "type": "arch",
       "title": "【S1】SampleQueryService 顶层 .or() 未加括号 → sort=recent 与其它筛选串味，mine=true 失效",
       "detail": "SampleQueryService.java:136-142 用顶层 .or() 拼「create_by 是内部 OR update_by 是内部」，MyBatis-Plus 不给它加括号 → SQL 退化为 (其它筛选 AND create_by IN 内部) OR update_by IN 内部。实测（reseed + staff 改 1001）：/mp/int/sample/list?sampleKind=organoid&sort=recent = [1001(tissue!),9000001009]；sourceUnitId=9000009002&sort=recent、internalNo=T-oco01&sort=recent、mine=true&… 同样串味。第二形态：admin 建一行（staff 从没碰过），staff sort=recent&mine=true 仍返回它 → 「只看我提交的」开关根本没生效。小程序 history/sources.ts 内部两个页签固定发 sampleKind+sort=recent(+mine)，即「我的→历史编辑记录」的类器官页签会出现组织样本、点进去还进 organoid 表单；违背 CR-20260918-07 与剧本 7，并落到 SAMPLE-MP-002 的取数路径。修法：用 .and(w -> w.in(create_by,…).or().in(update_by,…)) 把 OR 包成一组；mine 同理 .and(w -> w.eq(create_by,me).or().eq(update_by,me))。p6spy 原始 SQL 在 D2-r3-L01.json 的 evidence 里。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：D2 r3 拦门项，已在 c6c6371a 修复（SampleQueryService 顶层裸 .or() 改成 .and(w -> w.a().or().b())；全仓 .or() 扫描只此一处；并补「类目身份不可越类改」）。D2 QA r4 L0+L1 与 L2 两片独立复验通过（r4 L2 78/78），含历史页签/mine=true/类器官表单不再把组织样本静默改判。残留：给下游的静态闸缺失已另记 issue #110。"
     },
     {
       "id": 106,
@@ -2123,6 +2124,76 @@
       "type": "debt",
       "title": "冻存工作表按 UI:mp.cryo.list 没有搜索框；超期行冻结格第二行整行变红",
       "detail": "两条都是与哑组件（LedgerTable 的 cells 是字符串矩阵）的形状有关：要只红后半句需扩展单元格类型。方案：若要与工作台一致的红字粒度，另开小票扩展 LedgerTable。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 173,
+      "ticket": "CRYO-FLOW-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "CryoFlowConcurrencyTest 用自己的 withLock 把 10 线程串行化了：删掉写方法的 @Transactional 它仍 7/7 全绿",
+      "detail": "复现：删掉 CryoFlowService.create 的 @Transactional → mvn -pl ruoyi-modules/ruoyi-lqg test 该单测 7/7 全绿；而真库 5 并发 take 2 抢 3005 剩 2 时全 200、剩余 -8。根因：测试用 fake.withLock(...) 包住每次 service 调用，withLock 拿的就是那把模拟 SELECT…FOR UPDATE 的 ReentrantLock → 线程本来就被测试串行化，它只钉住『调用了 selectByIdForUpdate』，钉不住『加锁发生在事务里』。影响：并发正确性的单测是假绿，只有真库并发 accept 抓得住（D4 L3 已真跑并抓过一次）。建议 a) 测试改成真并发（真 DataSource + 多线程库连接）；b) 或加一条『service 方法带 @Transactional』的反射/ArchUnit 断言，成本更低。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 174,
+      "ticket": "CRYO-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "CRYO-MP-001 accept#5「填写页在产物里」只是 test -f：把 pages/cryo/form.vue 掏成 3 行空壳后六段全过",
+      "detail": "复现：把 code/miniapp/src/pages/cryo/form.vue 换成 3 行空壳 → pnpm build:mp-weixin → accept#5 六段 checks 全过、exit 0。影响：『小程序填写页是空白页』这一形态在机器验收里假绿（本轮靠 L2 截图/DOM 兜住）。建议 accept#5 补一条产物级结构断言（如产物 JS 里出现表单必填字段名的集合、或 fixture 驱动的 DOM 用例）而不是只看文件存在。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 175,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "（#163 同根补充）阈值行的 V202609241205 迁移是永久空操作，那条 config_type='Y' 分支是死代码",
+      "detail": "复现：V202609241205 用 INSERT … WHERE NOT EXISTS 想插 config_type='Y'、名『-80 冻存超期天数』，但该 config_key 早由 SYS-WEB-001 的 V202609210830 以 config_type='N'、名『-80 冻存超期提醒天数』插好 → 每次都命中 NOT EXISTS，迁移永不生效。影响：功能无影响（参数可改可生效，删行会回落 14 + WARN），但 'N' 允许在参数设置页被删，删了之后行为只剩回落；且 ticket §2 与库里实际不符属权威漂移。建议回写 ticket §2，或删掉这段死 SQL。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 176,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S2",
+      "type": "ux",
+      "title": "工作台流水抽屉抬头「当前剩余：N 支」是打开时的行快照，改/删登记后不刷新 batch",
+      "detail": "复现：打开 3001 流水抽屉（抬头『当前剩余 6 支』）→ 改一笔 take 2→1 → 抽屉明细里该行显示『操作后剩余 7』，而抬头仍写 6；删光该批次全部流水后抬头仍 6、抽屉外列表已回到 8。根因：抽屉只重取 rows，不重取 batch。影响：同一屏内两个相反的数字，老师会怀疑自己改错了；无数据损坏，关抽屉即恢复。建议 a) 抽屉内改/删成功后一并 re-fetch batch；b) 或抬头改成从 rows 的末笔 balanceAfter 现算。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 177,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "overdueDays=0 时工作台写「今天到期」、小程序写「已超 0 天」，且与权威锚「已超 N 天」措辞不符",
+      "detail": "复现：3005 恰好第 14 天 → 工作台行徽标『今天到期』，小程序同行小字『已超 0 天』；权威 doc/authority/ui-index.yaml 的冻存超期措辞是『已超 N 天』。影响：同一事实两端两种说法，且都没跟权威对齐。建议统一成『今天到期』作为 N=0 的特例并在权威里补一句，或两端都写『已超 0 天』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 178,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "冻存登记被拒时同时弹后端原话 Notification 与通用「保存失败，请重试」",
+      "detail": "复现：把 3003 一笔 take 改成 8 → 界面同时出现后端原话『已取走 7 支，冻存数量不能少于 7』与通用『保存失败，请重试』两条。核心要求（原样显示后端提示）已满足，属冗余提示。#148 是这个形态的同类（核验抽屉业务码 500 时两条同文案 el-message）。建议全局拦截器在已有业务 msg 时不再补通用兜底。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 179,
+      "ticket": "CRYO-FLOW-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "改流水被拒时后端复用「冻存数量」话术，没指出是哪一笔流水",
+      "detail": "复现：改 3003/3104 那笔 take 的 qty 8（挪早+加量让中途为负）→ 400『已取走 7 支，冻存数量不能少于 7』——这句是改初始支数的判据话术，用在改流水上语义错位，也没说清是哪一笔（时间/类型）导致中途为负。影响：老师知道被拒但不知道改哪笔能过。建议 msg 带上目标流水的 freeze_time/类型与冲突点。",
       "status": "open",
       "decision": ""
     }
