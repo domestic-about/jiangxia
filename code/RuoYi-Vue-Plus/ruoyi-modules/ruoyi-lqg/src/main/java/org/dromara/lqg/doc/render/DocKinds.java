@@ -37,13 +37,20 @@ public final class DocKinds {
     /** 有独立模板的三个种类（merged 没有自己的模板，它是三份的拼接）。 */
     public static final List<String> TEMPLATED = MERGED_ORDER;
 
-    /** 中文名（拼文件名用）。 */
+    /**
+     * 中文名（拼文件名用，{@code DocRenderModelFactory#displayName}）。
+     *
+     * <p>★ 合并件的名字是 <b>「质控文档（合并）」</b>（DOC-MP-002 ticket §0 口径 5：合并文件叫
+     * 「质控文档（合并）」）—— 它同时是微信里「发送到微信」看到的那个名字，
+     * 所以前端 {@code pages/doc/download.ts#downloadFileName} 用的是同一条规则
+     * （两条必须一字不差，否则下载下来的与发出去的名字不一样）。
+     */
     public static String label(String docKind) {
         return switch (docKind) {
             case SAMPLE_QC -> "样本质控表";
             case ORGANOID_QC -> "类器官质控表";
             case ORGANOID_SCORE -> "类器官质量评分表";
-            case MERGED -> "质控文档合并件";
+            case MERGED -> "质控文档（合并）";
             default -> docKind;
         };
     }

@@ -1,0 +1,106 @@
+# DOC-MP-002 · counterfeit 逐条打红（改坏真文件 → 跑真断言 → 红 → 还原 → 绿）
+
+★ 断言敏感性说明：accept 1 是**文本 grep**，注释里出现同样的字面量也会命中。
+  为此本票把注释里那几处字面量改写成中文描述，让每个 grep 只可能命中**真代码**：
+/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/miniapp/src/components/lqg/PageImageViewer.vue:33:  uni.previewImage({ urls: all, current, indicator: 'number' })
+/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/miniapp/src/components/lqg/ThumbStrip.vue:50:  uni.previewImage({ urls, current: Math.min(index, urls.length - 1), indicator: 'number' })
+130:      showMenu: true,
+140:    const api = (uni as any).shareFileMessage
+
+## counterfeit-1 「文档中的图片」点开用的还是预览图地址（甲方「看得更清楚一点」落空）
+断言载体 A（真跑单测）：src/pages/doc/download.fixture.spec.ts 的『★ 看原图』一例
+  已把 imageOpenUrl 改成「点开也用 previewUrl」
+  改坏后：{"numPassedTests":16,"numFailedTests":1}  ← 红
+  死在：附件 / 图片的平台能力判定 ★ 看原图：默认开 url（原图）；TIFF 等小程序打不开的格式退回 previewUrl 并标 fallback
+  还原后：{"numPassedTests":17,"numFailedTests":0}  ← 绿
+
+断言载体 B（真跑 H5）：点缩略图后，全屏看图器里实际打开的地址必须是**原图**而不是缩略图地址
+  缩略图显示 : http://127.0.0.1:9000/ruoyi/2026/09/22/340f9c000f5a47a486e9b1d1fa01a624.jpg?X-Amz-Algorithm=AWS4
+  点开实际打开: http://127.0.0.1:9000/ruoyi/2026/09/22/2f5f9946752442cc98907e3b7f7f60e5.png?X-Amz-Algorithm=AWS4
+  两者不同    : true   ← true = 缩略用预览图、点开用原图
+  点页面图打开: http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/544b40a9b5e9-p1.png?X-Amz-Algo
+  与首屏页面图同一个地址: true
+
+## counterfeit-2 openDocument 没带 showMenu（打开了文件却没有任何保存 / 转发入口）
+断言载体：accept 1 的 grep -qE 'showMenu:[[:space:]]*true' src/components/lqg/DownloadBar.vue
+  已把真代码里的 showMenu: true 改成 false
+  改坏后 grep exit=1（1 = 红）
+  还原后 grep exit=0（0 = 绿）
+
+## counterfeit-2b 「打开」根本没调平台接口（grep 里的 previewImage/shareFileMessage 同理可被注释满足）
+断言载体：grep -q 'shareFileMessage' src/components/lqg/DownloadBar.vue
+  已把转发接口调用断掉
+  改坏后 grep exit=1（1 = 红）
+  还原后 grep exit=0（0 = 绿）
+
+## counterfeit-3 把后端的失败原因原样显示给用户（accept 1 第 5 段 / 禁字）
+断言载体：accept 1 的 ! grep -nE 'errorMsg|error_msg' src/pages/doc/preview.vue
+  已在 preview.vue 里读了服务端的失败原因并传到失败态
+116:    leaked.value = String((data as any).errorMsg ?? '')
+116:    leaked.value = String((data as any).errorMsg ?? '')
+  改坏后 ! grep exit=1（1 = 红）
+  还原后 ! grep exit=0（0 = 绿）
+
+## counterfeit-4 列表上的「下载」另写了一套 downloadFile + openDocument、没复用 DownloadBar
+断言载体：accept 1 的 grep -q '@/components/lqg/DownloadBar.vue' src/components/lqg/DownloadSheet.vue
+  已把弹层对 DownloadBar 的复用断掉（= 另起一套的实现形态）
+  改坏后 grep exit=1（1 = 红）
+  还原后 grep exit=0（0 = 绿）
+
+## 结构性补证：下载实现只有一套（列表页没有另写 downloadFile / openDocument）
+$ grep -rn "downloadFile\|openDocument" src --include=*.vue --include=*.ts | grep -v "page/doc/download.ts"
+src/components/lqg/DownloadBar.vue:7://   ★ accept 1 的 counterfeit 点名的就是「列表另写一套 downloadFile + openDocument」——
+src/components/lqg/DownloadBar.vue:12://   2. 「打开」→ `uni.downloadFile` 到临时目录 → 微信内置查看器（打开时把 showMenu 传开，
+src/components/lqg/DownloadBar.vue:25:import { downloadFileName, hasMergedRow, normalizeFormat, openDocumentType, waitForMerged } from '@/pages/doc/download'
+src/components/lqg/DownloadBar.vue:105:    const api = (uni as any).downloadFile
+src/components/lqg/DownloadBar.vue:113:      fail: () => reject(new Error('downloadFile 失败')),
+src/components/lqg/DownloadBar.vue:121:    const api = (uni as any).openDocument
+src/components/lqg/DownloadBar.vue:129:      fileType: openDocumentType(fileName),
+src/components/lqg/DownloadBar.vue:132:      fail: () => reject(new Error('openDocument 失败')),
+src/components/lqg/DownloadBar.vue:158: * H5（本地 Mock 验收面）/ 没有 `wx.openDocument` 的端：如实退化。
+src/components/lqg/DownloadBar.vue:160: * ★ 这里**不是**小程序的行为：小程序端 `uni.openDocument` 一定在，走的是微信内置查看器。
+src/components/lqg/DownloadBar.vue:162: *   平台专属能力（微信的 openDocument / 转发文件到聊天）**在 H5 上不可验**，报告里如实标注。
+src/components/lqg/DownloadBar.vue:191:    const fileName = String(info?.fileName ?? '').trim() || downloadFileName(props.docKind, props.no, format.value)
+src/components/lqg/DownloadBar.vue:195:      // 平台没有 downloadFile（H5）：退化成浏览器打开 / 一句提示
+src/components/lqg/DownloadSheet.vue:7:// ★★ **不在这里另写一套 downloadFile / openDocument**：本文件只做两件事 ——
+src/components/lqg/AttachmentList.vue:4:// 点开 → `uni.downloadFile` 到临时目录 → **图片**走 `uni.previewImage`、
+src/components/lqg/AttachmentList.vue:5:// **文档**（pdf / doc / xls / ppt）走 `uni.openDocument({showMenu: true})`
+src/components/lqg/AttachmentList.vue:10:// ★ 平台差异**如实处理**：`uni.downloadFile` / `uni.openDocument` 在小程序端才有；
+src/components/lqg/AttachmentList.vue:15:import { fileSizeText, isImageFile, openDocumentType } from '@/pages/doc/download'
+src/components/lqg/AttachmentList.vue:34:    const api = (uni as any).downloadFile
+src/components/lqg/AttachmentList.vue:42:      fail: () => reject(new Error('downloadFile 失败')),
+src/components/lqg/AttachmentList.vue:49:    const api = (uni as any).openDocument
+src/components/lqg/AttachmentList.vue:56:      fileType: openDocumentType(fileName),
+src/components/lqg/AttachmentList.vue:60:      fail: () => reject(new Error('openDocument 失败')),
+src/components/lqg/DocGroupCard.vue:19://   ★ 列表上**不另写**一套 downloadFile / openDocument（accept 1 的 counterfeit 第 4 条）。
+src/pages/doc/download.fixture.spec.ts:12:  downloadFileName,
+src/pages/doc/download.fixture.spec.ts:20:  openDocumentType,
+src/pages/doc/download.fixture.spec.ts:26:describe('downloadFileName(docKind, no, format)', () => {
+src/pages/doc/download.fixture.spec.ts:28:    expect(downloadFileName('sample_qc', 'T-hli01', 'pdf')).toBe('样本质控表-T-hli01.pdf')
+src/pages/doc/download.fixture.spec.ts:32:    expect(downloadFileName('organoid_score', 'SJ90000001', 'docx')).toBe('类器官质量评分表-SJ90000001.docx')
+src/pages/doc/download.fixture.spec.ts:37:    expect(downloadFileName('merged', 'T-hli01', 'pdf')).toBe('质控文档（合并）-T-hli01.pdf')
+src/pages/doc/download.fixture.spec.ts:38:    expect(downloadFileName('merged', 'SJ90000004', 'docx')).toBe('质控文档（合并）-SJ90000004.docx')
+src/pages/doc/download.fixture.spec.ts:42:    expect(downloadFileName('organoid_qc', '', 'docx')).toBe('类器官质控表.docx')
+src/pages/doc/download.fixture.spec.ts:43:    expect(downloadFileName('organoid_qc', null, 'pdf')).toBe('类器官质控表.pdf')
+src/pages/doc/download.fixture.spec.ts:44:    expect(downloadFileName('organoid_qc', '   ', 'pdf')).toBe('类器官质控表.pdf')
+src/pages/doc/download.fixture.spec.ts:57:    expect(downloadFileName('bogus_kind', 'X1', 'pdf')).toBe('bogus_kind-X1.pdf')
+src/pages/doc/download.fixture.spec.ts:63:  it('openDocument 的 fileType 按扩展名给（含 query 的签名链接也认）', () => {
+src/pages/doc/download.fixture.spec.ts:64:    expect(openDocumentType('质控文档-T1.pdf')).toBe('pdf')
+src/pages/doc/download.fixture.spec.ts:65:    expect(openDocumentType('https://oss.example.com/a/b.docx?sign=xyz&e=1')).toBe('docx')
+src/pages/doc/download.fixture.spec.ts:66:    expect(openDocumentType('x.xlsx')).toBe('xls')
+src/pages/doc/download.fixture.spec.ts:67:    expect(openDocumentType('y.pptx')).toBe('ppt')
+src/pages/doc/download.fixture.spec.ts:68:    expect(openDocumentType('z.txt')).toBeUndefined()
+src/pages/doc/download.fixture.spec.ts:69:    expect(openDocumentType('')).toBeUndefined()
+src/pages/doc/download.fixture.spec.ts:72:  it('图片附件走 previewImage，文档附件走 openDocument', () => {
+src/pages/doc/download.ts:5://   在 `api/doc.ts`（取数）与各组件（`uni.downloadFile` / `openDocument` / `previewImage`）里。
+src/pages/doc/download.ts:50: *   而 `wx.downloadFile` 只给临时路径（没有可用的名字）。服务端下载接口也会返回
+src/pages/doc/download.ts:53:export function downloadFileName(docKind?: string | null, no?: string | null, format?: string | null): string {
+src/pages/doc/download.ts:59:/** 小程序 `wx.openDocument` 认的 fileType（认不出来给 undefined → 由微信按扩展名猜） */
+src/pages/doc/download.ts:60:export function openDocumentType(fileName?: string | null): 'docx' | 'xls' | 'ppt' | 'pdf' | undefined {
+src/pages/doc/download.ts:79:/** 图片附件走 `wx.previewImage`（文档附件走 `wx.openDocument`） */
+
+## 还原核对：四个文件与还原前逐字节一致
+  ✓ src/pages/doc/download.ts 已还原（字节一致）
+  ✓ src/components/lqg/DownloadBar.vue 已还原（字节一致）
+  ✓ src/pages/doc/preview.vue 已还原（字节一致）
+  ✓ src/components/lqg/DownloadSheet.vue 已还原（字节一致）

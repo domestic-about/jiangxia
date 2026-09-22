@@ -1,0 +1,120 @@
+# DOC-MP-002 · 机器证据
+
+## 1. 后端进程 / jar / 迁移号
+  jar mtime        : 2026-09-22 21:26:39   （epoch 1790083599）
+  源码比 jar 新     : []
+  8094 listener    : PID 79146
+  8080（Kevin）    : 
+  本票迁移          : 一支都没有（无 DDL / 无菜单 / 无授权 → 不取号）
+  库里已应用最大版本: 202609261430
+  给后续要加迁移的票: 版本号必须 > 202609261430（spring.flyway.out-of-order=false）
+
+## 2. 两个新端点的原样输出（内部身份 staff）
+$ GET /mp/int/doc/9000001006/organoid_score/pages
+{"code":200,"status":"done","docKind":"organoid_score","audience":"internal","pages":2,"images":0,"attachments":0}
+$ GET /mp/int/doc/9000001006/organoid_score/download?format=pdf
+{"code":200,"fileName":"类器官质量评分表-T-hco04.pdf","urlHasInternal":true}
+$ GET /mp/int/doc/9000001006/organoid_score/download?format=docx
+{"code":200,"fileName":"类器官质量评分表-T-hco04.docx"}
+$ GET .../download?format=bogus  （format 非法必须 400，不静默给别的格式）
+400	format 只能是 docx 或 pdf，收到：bogus
+$ GET .../pages  docKind 不认识 → 400
+400	文档种类只能是 sample_qc / organoid_qc / organoid_score / merged，收到：bogus_kind
+$ GET .../pages  不可用（published 但内部版没渲染过）→ 404（与「没这份文档」不可区分）
+404	文档不存在
+  （1004 的样本质控表在库里 doc_status='published'，只是内部版没渲染过 —— 判据仍是共享的 DocAvailabilityService）
+
+## 3. 内外部隔离：内部端点只给内部；audience 不是入参
+$ extD 打内部端点（pages / download 两条路都 403）
+403	没有访问权限，请联系管理员授权
+403	没有访问权限，请联系管理员授权
+$ 请求里带 audience=external 也改不了（签名里没有这个入参，Spring 忽略陌生查询参数）
+{"code":200,"urlHasInternal":true,"urlHasExternal":false}
+$ 声明期：MpDocController 的两个新 handler 签名里没有 audience
+75:    public R<DocPagesVo> pages(@PathVariable Long sampleId, @PathVariable String docKind) {
+88:    public R<DocDownloadVo> download(@PathVariable Long sampleId,
+90:                                     @RequestParam(required = false, defaultValue = "docx") String format) {
+$ 取数是写死的 INTERNAL（不是读进来的）
+92:        availability.requireAvailable(sampleId, kind, DocAudiences.INTERNAL);
+93:        return pagesService.pages(sampleId, kind, DocAudiences.INTERNAL);
+106:        availability.requireAvailable(sampleId, kind, DocAudiences.INTERNAL);
+107:        return renderService.download(sampleId, kind, fmt, DocAudiences.INTERNAL);
+143:                if (!availability.available(sampleId, kind, DocAudiences.INTERNAL)) {
+169:            .eq(DocFile::getAudience, DocAudiences.INTERNAL)
+
+## 4. ★ 「能不能给出去」只有一处判据（没有自己再实现一遍、没有比 content_hash）
+84:     * <p>★ 先过共享判据 {@code availability.requireAvailable(..., INTERNAL)} 再取数 ——
+92:        availability.requireAvailable(sampleId, kind, DocAudiences.INTERNAL);
+106:        availability.requireAvailable(sampleId, kind, DocAudiences.INTERNAL);
+  MpDocService 里出现 content_hash 的次数（只该是注释里那一处说明）：
+1
+
+## 5. ★ 合并件「份数够但还没渲染好」（issue #259）—— 服务端侧真值（只走真接口，不改库）
+  step 0：把 9000001001 的三份内部版渲染出来（accept 2 的 reseed 之后盘上没有它们）
+  清单：["sample_qc","organoid_qc","organoid_score","merged"]
+  step 1：撤回 organoid-qc（真接口 POST /lqg/qc/9000001001/organoid-qc/unpublish）
+  撤回后清单：["sample_qc","organoid_score"]  ← 还剩 2 份（≥2，前端仍出「合并」入口），但 merged 行没了
+  撤回后 merged pages：404	文档不存在   ← 与「没这份文档」同码
+  step 2：重新发布那一份 → 成员变了 → 合并件作废并**异步**重渲染
+  发布后 0s ：["sample_qc","organoid_qc","organoid_score"]
+  发布后 3s：["sample_qc","organoid_qc","organoid_score","merged"]
+  发布后 6s：["sample_qc","organoid_qc","organoid_score","merged"]
+  发布后 9s：["sample_qc","organoid_qc","organoid_score","merged"]
+  发布后 12s：["sample_qc","organoid_qc","organoid_score","merged"]
+  → 小程序侧的处置（本票实现）：清单里没有 merged 行 = 进「文档生成中」态 + 轮询（3s 一次、最多 60s）+ 可重试；
+    渲染好之后自行切到真页面。H5 实测（真 DOM）见 shots-evidence.json 的 mergedGenerating。
+
+## 6. ★ 正对照：真图上传（框架 OSS 上传可用）之前 / 之后
+  上传（POST /resource/oss/upload，--form file=@…）：
+    小图 360x240   → ossId 2102391714726547457（长边 ≤2000 → 预览图 = 原图）
+    大图 2400x1600 → ossId 2102391714944651265（长边 >2000 → 后端另存一张预览图）
+
+  ★ 说明：accept 2 会 reseed（回到确定性快照），所以下面这一段的正对照是在最后一次 reseed
+    之后重新上传 / 重新挂 / 重新 publish + render 的结果（命令与参数都在本节）。
+  挂到 9000001001 的样本质控表（POST /lqg/qc/9000001001/sample-qc/image）：
+    [{"hasUrl":false,...},{"hasUrl":true,"previewIsDifferent":true},{"hasUrl":false,...},{"hasUrl":false,...},{"hasUrl":true,"previewIsDifferent":false}]
+    ← 5 个图片位：3 个是 seed 的假地址（url=null，前端跳过）；2 张真图可用，
+      其中**大图那一张 url != previewUrl**（后端另存了预览图）—— 这正是「缩略用 previewUrl、
+      点开用 url（原图）」在 H5 上被实测到的那一对（见 counterfeit-transcript 的 counterfeit-1B）。
+  附件同理（页面上只渲染能签出链接的那一个）：
+    [{"fileName":"活率报告.pdf","hasUrl":false},{"fileName":"阅片原图.png","hasUrl":true}]
+    ← seed 的假附件被前端跳过，真附件照常渲染（H5 断言 attachments = ["阅片原图.png"]）
+
+## 7. 取不到字节的图 / 附件：跳过 + WARN（issue #217 裁定①）
+  seed 的图片位 / 附件是假地址（sys_oss.service=seed）→ DocArtifactStore#signedUrl 返回 null，
+  后端日志里的告警条数：203
+  → 前端 ThumbStrip / AttachmentList **跳过**这些行（不挂一排点了没反应的死行），
+    正对照那两张真图照常显示（H5 断言：thumbImgs 只有 2 张、attachments 只有 1 个）。
+
+## 8. 外部那条端点的形状没变（#254：外部预览只给页面图，没有 images / attachments）
+$ GET /mp/ext/doc/9000001001/sample_qc/pages  （extA；外部版已渲染）
+{"code":200,"keys":["docKind","pages","status"],"pages":2}
+  ← keys **恰好 3 个**：外部这条链路拿不到 images / attachments / 失败原因 / 指纹（AUTH-EXT-003 的
+    ExtDocPagesVo 契约）。所以外部视角下「文档中的图片」「附件」两段就是空的 —— 那不是本票的 bug，
+    而是上游那条端点的形状（#254）；本票**没有**动它、也没有发明一个统一形状。
+
+## 9. 前端：新文件零色值字面量（方向 A 落地规范 §8 红线）
+  查法：抽出每个文件的 `<style>` 块，找十六进制色值与 rgb/rgba 函数（.ts 无样式块则全文找 6 位色值）。
+  ★ 注意：不要用「`#`+3~8 位十六进制」这种宽 pattern —— 注释里的 issue 编号（#259 / #254 / #217）
+    会被误判成色值（本票第一次就误报过；DOC-MP-001 的同一句检查也是这个坑）。
+  src/pages/doc/download.ts : 样式块里的色值字面量 0 处
+  src/pages/doc/download.fixture.spec.ts : 样式块里的色值字面量 0 处
+  src/components/lqg/DocTabs.vue : 样式块里的色值字面量 0 处
+  src/components/lqg/PageImageViewer.vue : 样式块里的色值字面量 0 处
+  src/components/lqg/ThumbStrip.vue : 样式块里的色值字面量 0 处
+  src/components/lqg/AttachmentList.vue : 样式块里的色值字面量 0 处
+  src/components/lqg/DownloadBar.vue : 样式块里的色值字面量 0 处
+  src/components/lqg/DownloadSheet.vue : 样式块里的色值字面量 0 处
+  src/pages/doc/preview.vue : 样式块里的色值字面量 0 处
+  src/components/lqg/DocGroupCard.vue : 样式块里的色值字面量 0 处
+
+## 10. pages.json / 生成物
+ M code/miniapp/src/pages.json
+ M code/miniapp/src/types/components.d.ts
+ code/miniapp/src/pages.json | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+  ← pages.json 的差异**只有一行生成器注释**（PLATFORM: MP-WEIXIN → H5 || MP-WEIXIN，H5 dev server 写的），
+    tabBar 顺序仍是 [index, doc, me]（见下面 app.json）；按任务书②**有意保留**、没有 git checkout。
+"pages/index/index"
+"pages/doc/index"
+"pages/me/index"

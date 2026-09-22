@@ -1,0 +1,4 @@
+# DOC-MP-002 accept[1] 构建是本次产物；预览页用到了两层放大、打开、发送到微信四个平台能力；组件直接路径导入；失败态不泄露内部错误；列表上的下载弹层与预览页顶部三份切换已接上
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true

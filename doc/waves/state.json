@@ -156,12 +156,12 @@
       "note": "小程序「我的文档」清单页：分组卡片、单份下载、合并预览/下载入口。后端新增 doc/mp/{MpDocController,MpDocService,MpDocQueryBo,MpDocVo}（GET /mp/int/doc/list，类级 @SaCheckRole(\"lqg_internal\")）+ doc/service/DocAvailabilityService（把「能不能给出去」抽成**按 audience 参数化**的共享闸；DocExternalQueryService 改为委托它、公开 API 一字未改 → 回归已证行为不变）；小程序新增 api/doc.ts、pages/doc/{group.ts,group.fixture.spec.ts,index.vue,preview.vue}、components/lqg/DocGroupCard.vue、config/app.ts，改 pages.config.ts(tab→pages/doc/index)/router/config.ts/detail-ext.vue 第③段。accept 2/2 绿（唯一 NF1 去 --fresh-module）；acc1 fixture 7 passed/0 failed；acc2 整段 exit 0（tabBar[1]=pages/doc/index、内部清单 [[T-hco04,B 大学,organoid_score,18]]、extD→403）；三条 counterfeit 逐条实测打红后还原转绿；模块 mvn test 257/0 BUILD SUCCESS；**上游回归 AUTH-EXT-003 accept 2/2 + 探针 46/46**（证明重构无行为变化）。**无迁移**（不建表/不加菜单/不加授权 → 不取号）。★四条要点：①**票面前提不成立**——票面 §2 假设内外两个接口行形状都是 {sampleId,title,subtitle}，实际外部给的是 {sampleId,submitNo,donorNameMasked}（ExtDocVo 6 键被 AUTH-EXT-003 的形状契约钉死）→ 前端在 group.ts 一处归一化（title ?? submitNo），**没改外部 VO**（改它会破 AUTH-EXT-003 守的隔离面）；契约只差把内部行形状补进第 86 行。②**src/pages.json 有意未还原**：uni-pages 的 merge 是 **old 优先**，tabBar 顺序由上次生成结果决定——实测保留重生成版 → [index,doc,me] + accept 绿；先 git checkout 再 build → [index,me,doc]（旧页 pages/docs/index 占第 2 位）+ accept 红（双向实跑留证）。我已按此改 README-modeB 的收尾规则（改 tabBar 的票不许 checkout；要重生成就先 rm 再 build）。③**合并入口口径冲突**：AUTH-EXT-003 §7.8 建议「按有没有 merged 行判」，而蓝图 FLOW:F-DOC-02.step1 写「每组最多三份」+ fixture 第四例要求 merged 不算一份 → 实现按蓝图+fixture（showMerge = 非 merged 份数 ≥2）；**DOC-MP-002 接真下载前必须处理「份数够但 merged 未渲染」**（已写进它的派单）。④未做真机/体验版（Kevin 2026-09-22 决策），验收面 = H5 + Playwright 真 DOM + 真后端 + 真库，4 张截图只登记路径与断言值、未读 PNG。★越界 10 条（含那个共享闸与生成物），只读区 porcelain 全空。"
     },
     "DOC-MP-002": {
-      "status": "pending",
+      "status": "done",
       "phase": "D7",
       "track": "DOC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序文档预览页：两层放大（缩略图条 + 全屏）、打开、发送到微信、三份切换、下载弹层、附件。**新端点**（本票自己提供）：GET /mp/int/doc/{sampleId}/{docKind}/pages（= 契约第 85 行 DocPagesVo，含 images/attachments）与 …/download?format=docx|pdf（{url,fileName}），类级 lqg_internal、audience 写死 INTERNAL、先过共享 DocAvailabilityService。accept 2/2 绿（acc1 nf=[] 零归一化；acc2 nf=[NF1] 即沙箱 ps 限制去掉 --fresh-module，等价证据已补）；上游 DOC-MP-001 accept 复跑 2/2。**无迁移**（库内最大仍 202609261430）。★五条关键：①**接住了上游留的口子**（issue #259「份数够但 merged 未渲染」）：用「清单里有没有 merged 行」当正向信号（清单只列服务端已判可用的行）→ 生成中态 + 轮询 3s/最多 60s + 重试；H5 真 DOM 实测「生成中 → 脚本外真重新发布 → 自动切成 5 页真页面」；**没有去调渲染接口、没有自己判可见性**（照我说的用共享闸）。②**两层放大用真 URL 对照证明**：上传 2400×1600 真图（长边>2000 → 后端另存预览图）→ H5 实测缩略图显示 …340f9c00….jpg（预览图）而全屏打开 …2f5f9946….png（原图）differs=true——这是 accept1 counterfeit-1 的硬证据，不是「组件存在」式弱断言。③★**accept-1 是文本 grep，注释里的同字面量也能满足它**：实测把真代码 showMenu: true 改成 false、只要注释还写着它就照样绿 → 它把注释里 previewImage / showMenu: true / shareFileMessage 改写成中文描述，让这三处只命中真代码（改坏即红）；但 groupDocs 那条仍只能命中注释（已记 issue）。④**平台差异如实标注**：uni-h5 没有 shareFileMessage（实测 typeof undefined），点了给人话「「发送到微信」要在微信里用」并作为 H5 断言记录；真机/微信未覆盖、downloadFile 合法域名未配也未验（已记 issue，交 SYS-RELEASE-001）。⑤seed 图/附件是假地址（signedUrl 返回 null）→ 前端跳过这些行（#217 裁定①）不挂死行，正对照靠自备真图。★越界：DocKinds.label 对齐票面「质控文档（合并）」（1 行，全仓无旧值引用）+ 6 个新组件/2 个新文件；pages.json **有意保留**（差异只有一行生成器注释，tabBar 仍 [index,doc,me]），没 checkout。"
     },
     "DOC-PDF-001": {
       "status": "done",
@@ -3036,6 +3036,46 @@
       "type": "harness",
       "title": "调度器流程缺陷：agent 还在跑时我用 git add -A 提交，把它当时的半成品一并带进了历史",
       "detail": "复现：commit 069801e（AUTH-EXT-003 终报入账那次）里包含了 DOC-MP-001 当时尚未完工的后端 5 类 + 前端若干文件，实现方在交接时点出「不是我提交的」。根因：我在另一个 impl agent 正在写同一工作树时用了 git add -A。后果：本次无害（那些文件本就属那张票、随后也真完工了），但**坏处是把一个当时可能编译不过的中间态写进了提交历史**，且让「谁改的」变得难以追溯——这与 D1 那次并行污染是同一类问题（共享工作树 + 粗粒度提交）。改法：**有 agent 在跑时只 git add 我自己动过的具体路径**（票面/台账/工具/我自己的文档），绝不 add -A。已按此改。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 264,
+      "ticket": "DOC-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ accept-1 是文本 grep，注释里的同字面量就能满足它（实测：真代码改坏、注释还在 → 照样绿）",
+      "detail": "复现（DOC-MP-002 实测）：accept1 用 grep 找 previewImage / showMenu: true / shareFileMessage / groupDocs 等字面量。把**真代码**的 showMenu: true 改成 false、只要**注释里**还写着同样字面量，grep 照样命中 → 断言绿。影响：这是「源码 grep 型断言对等价写法/注释无力」这一族的**第 4 次**出现（前三次：#236 硬编码分值三处全绿、#242 form[internalNo] 绕过只读 grep、#243 扩大 #236）。缓解（本票已做）：把注释里的字面量改写成中文描述，让这三处只命中真代码；但 **groupDocs 那条仍只能命中注释**（真调用点在别处），所以它仍然是弱断言。方案 a) accept 换成**行为断言**：在 H5 真 DOM 里点「下载」看请求打到哪个端点、点缩略图看全屏 src 是否换成原图 URL（本票的「两层放大真 URL 对照」就是这种打法，应固化进 accept/回归包）；b) 至少加一条「preview.vue 里真的调了 groupDocs」的行为或 AST 级断言。★根因值得记：**①侧 accept 大量用源码 grep，而它对注释与等价写法都无力**——真正有效的是本票那种「真 URL / 真请求 / 真 DOM」对照。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 265,
+      "ticket": "DOC-MP-002",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "合并件文件名口径：票面「质控文档（合并）」vs 后端旧 label「质控文档合并件」",
+      "detail": "实现把 DocKinds.label 对齐到票面（1 行越界改动，核实全仓无旧值引用）。影响：这是命名口径分歧，改完与票面一致；但若有别处（导出、甲方文档）按旧名匹配会不一致。方案：把「合并件显示名」写进契约或 UI 权威锚，避免再各处各写。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 266,
+      "ticket": "DOC-MP-002",
+      "severity": "S3",
+      "type": "debt",
+      "title": "内部 pages 端点会把 errorMsg 发给小程序前端（内部 audience；mp 前端目前不读）",
+      "detail": "现状：GET /mp/int/doc/{sampleId}/{docKind}/pages 的返回体带 errorMsg（渲染失败原因）。影响：内部角色可见，风险低；但它把后端错误文本下到了端上（若将来前端把它直显，会把内部技术信息暴露给内部用户——不是外部隔离面）。方案：要么前端明确不读、要么后端只给「有失败」布尔 + 受控文案。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 267,
+      "ticket": "DOC-MP-002",
+      "severity": "S3",
+      "type": "debt",
+      "title": "downloadFile 合法域名未定（D7/D8 的 release blocker）：真机下载在域名未配前必然失败",
+      "detail": "现状：小程序下载走 downloadFile，需在微信后台把下载链接域名加进「downloadFile 合法域名」；当前 appid 与后台配置都没有（Kevin 2026-09-22 明确暂时无法提供）→ **真机下载无法验**，H5 上不受此限。影响：属上线档；它同时是 SYS-RELEASE-001 的输入之一。方案：appid 到位后把 OSS/后端下载域名加进后台白名单，并把它写进 SYS-RELEASE-001 的发布清单。",
       "status": "open",
       "decision": ""
     }

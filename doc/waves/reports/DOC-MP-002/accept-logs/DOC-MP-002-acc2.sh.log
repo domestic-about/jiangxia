@@ -1,0 +1,5 @@
+# DOC-MP-002 accept[2] 内部的页面图片接口可用且只给内部；页数与 PDF 一致；外部身份打内部接口被拒
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true

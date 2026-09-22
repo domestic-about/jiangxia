@@ -1,0 +1,33 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "DOC-MP-002",
+   "index": 1,
+   "form": "API",
+   "name": "构建是本次产物；预览页用到了两层放大、打开、发送到微信四个平台能力；组件直接路径导入；失败态不泄露内部错误；列表上的下载弹层与预览页顶部三份切换已接上",
+   "exit": 0,
+   "seconds": 6.4,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-MP-002-acc1.sh",
+   "log": ".tmp/doc-mp002-accept-logs/DOC-MP-002-acc1.sh.log"
+  },
+  {
+   "ticket": "DOC-MP-002",
+   "index": 2,
+   "form": "DATA",
+   "name": "内部的页面图片接口可用且只给内部；页数与 PDF 一致；外部身份打内部接口被拒",
+   "exit": 0,
+   "seconds": 6.5,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-MP-002-acc2.sh",
+   "log": ".tmp/doc-mp002-accept-logs/DOC-MP-002-acc2.sh.log"
+  }
+ ]
+}

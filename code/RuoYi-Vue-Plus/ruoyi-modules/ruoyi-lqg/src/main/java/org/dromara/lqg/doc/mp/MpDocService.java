@@ -9,11 +9,15 @@ import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.doc.pdf.DocArtifactRows;
+import org.dromara.lqg.doc.pdf.DocPagesService;
+import org.dromara.lqg.doc.pdf.domain.vo.DocPagesVo;
 import org.dromara.lqg.doc.render.DocAudiences;
 import org.dromara.lqg.doc.render.DocKinds;
 import org.dromara.lqg.doc.render.DocRenderModelFactory;
 import org.dromara.lqg.doc.render.domain.DocFile;
+import org.dromara.lqg.doc.render.domain.vo.DocDownloadVo;
 import org.dromara.lqg.doc.render.mapper.DocFileMapper;
+import org.dromara.lqg.doc.render.service.DocRenderService;
 import org.dromara.lqg.doc.service.DocAvailabilityService;
 import org.dromara.lqg.sample.domain.Sample;
 import org.springframework.stereotype.Service;
@@ -52,7 +56,10 @@ import java.util.Map;
  * <p>★ <b>title / subtitle 由后端按身份给</b>（ticket §0 口径 1）：内部 = 内部编号 / 来源单位，
  * 前端不自己拼内部编号（accept 2 的禁字 grep）。
  *
- * @author DOC-MP-001
+ * <p>★ DOC-MP-002 在本类加了 {@link #pages} / {@link #download} 两个方法：内部侧的
+ * 预览与下载入口（{@code audience} 写死 internal、先过同一道可用性闸）。
+ *
+ * @author DOC-MP-001（清单） / DOC-MP-002（预览 + 下载）
  */
 @Slf4j
 @Service
@@ -64,6 +71,41 @@ public class MpDocService {
     private final DocFileMapper docFileMapper;
     private final DocRenderModelFactory modelFactory;
     private final DocAvailabilityService availability;
+    private final DocPagesService pagesService;
+    private final DocRenderService renderService;
+
+    // ══════════════════════════════════════════════════════════════════════
+    // GET /mp/int/doc/{sampleId}/{docKind}/pages|download（DOC-MP-002）
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * 预览（页面图 + 图片位 + 附件），{@code audience} 写死 {@code internal}。
+     *
+     * <p>★ 先过共享判据 {@code availability.requireAvailable(..., INTERNAL)} 再取数 ——
+     * 与清单**同一个**判据，所以不会出现「列表里有、点进去 404」或反过来。
+     * 不过这一道的话，{@code DocPagesService} 对「没渲染过」的行会抛 400（带一句
+     * 「先 POST render」的实现提示）—— 那是工作台的口径，小程序侧一律按 404
+     * 「没有这份文档」处理，不把实现细节漏给页面。
+     */
+    public DocPagesVo pages(Long sampleId, String docKind) {
+        String kind = DocKinds.require(docKind);
+        availability.requireAvailable(sampleId, kind, DocAudiences.INTERNAL);
+        return pagesService.pages(sampleId, kind, DocAudiences.INTERNAL);
+    }
+
+    /**
+     * 10 分钟签名下载链接 + 文件名，{@code audience} 写死 {@code internal}。
+     *
+     * <p>顺序与外部那条一致：<b>先归一化 format → 再判可用性 → 再签发</b>。
+     * {@code format} 非法一律 400（{@code DocAvailabilityService.requireFormat}），
+     * 不会悄悄给一份别的格式。
+     */
+    public DocDownloadVo download(Long sampleId, String docKind, String format) {
+        String kind = DocKinds.require(docKind);
+        String fmt = DocAvailabilityService.requireFormat(format);
+        availability.requireAvailable(sampleId, kind, DocAudiences.INTERNAL);
+        return renderService.download(sampleId, kind, fmt, DocAudiences.INTERNAL);
+    }
 
     // ══════════════════════════════════════════════════════════════════════
     // GET /mp/int/doc/list

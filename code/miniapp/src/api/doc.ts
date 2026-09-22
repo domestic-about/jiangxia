@@ -86,3 +86,114 @@ export async function fetchSampleDocs(sampleId: string | number, identity: 'inte
   const res = await fetcher({ sampleId, pageSize: 100 })
   return (res.rows ?? []) as DocListRow[]
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 预览（pages）与下载（download）—— DOC-MP-002
+// ══════════════════════════════════════════════════════════════════════════
+//
+// 契约第 86/87 行：
+//   内部 `GET /mp/int/doc/{sampleId}/{docKind}/pages|download`（audience 写死 internal，类级 lqg_internal）
+//   外部 `GET /mp/ext/doc/{sampleId}/{docKind}/pages|download`（AUTH-EXT-003，audience 写死 external）
+//
+// ★★ 两个 shapes **不是同一个**（如实按接口写，别发明统一的形状，issue #254/#257）：
+//   内部那条的 `data` = 工作台同款 `DocPagesVo`：
+//     {status, docKind, audience, contentHash, templateVersion, errorMsg?, pages:[{pageNo,url}],
+//      images:[{url,previewUrl}], attachments:[{fileName,fileSize,url}]}
+//   外部那条（`ExtDocPagesVo`）只有 `{docKind, status, pages:[{pageNo,url}]}` ——
+//     **没有** images / attachments（外部预览只给页面图）、也**没有**失败原因与指纹。
+//   → 所以下面的读取一律 `?? []`，外部视角下「文档中的图片」「附件」两段就是空的（不是 bug）。
+//
+// ★ 一律 `silent: true`：成败由页面自己表达（渲染中 / 生成中 / 一句人话的失败态），
+//   不让请求层弹后端的 msg —— 那正是「把内部错误显示给用户」的形态（accept 1 第 5 段）。
+// ★ 链接都是 10 分钟签名链接：**不缓存**，每次进页 / 切份都重新取（DOC-MP-001 §7.5）。
+// ★ `docKind` 是**下划线**那四个（sample_qc / organoid_qc / organoid_score / merged）。
+
+/** 一页页面图（`url` 是 10 分钟签名链接） */
+export interface DocPageItem {
+  pageNo?: number | null
+  url?: string | null
+}
+
+/** 一个「文档中的图片」位：`url` = 原图（看细节），`previewUrl` = 缩略图 */
+export interface DocImageRow {
+  url?: string | null
+  previewUrl?: string | null
+}
+
+/** 一个附件 */
+export interface DocAttachmentRow {
+  fileName?: string | null
+  fileSize?: number | null
+  url?: string | null
+}
+
+/**
+ * 预览的 `data`（内部那条的形状；外部那条是它的子集）。
+ *
+ * `errorMsg` / `contentHash` / `templateVersion` 只在**内部**那条上有 ——
+ * 页面**不读它们**（外部拿不到、内部也不给用户看），列在这里只是为了让类型与接口一致。
+ */
+export interface DocPagesData {
+  docKind?: string | null
+  status?: string | null
+  audience?: string | null
+  pages?: DocPageItem[] | null
+  images?: DocImageRow[] | null
+  attachments?: DocAttachmentRow[] | null
+}
+
+/** 下载的 `data`：10 分钟签名链接 + 后端按身份给的文件名 */
+export interface DocDownloadData {
+  url?: string | null
+  fileName?: string | null
+}
+
+function docPath(prefix: 'int' | 'ext', sampleId: string | number, docKind: string, tail: 'pages' | 'download'): string {
+  return `/mp/${prefix}/doc/${encodeURIComponent(String(sampleId))}/${encodeURIComponent(docKind)}/${tail}`
+}
+
+/** 内部预览（`audience` 固定 internal） */
+export function fetchIntDocPages(sampleId: string | number, docKind: string) {
+  return http.get<DocPagesData>(docPath('int', sampleId, docKind, 'pages'), {}, { silent: true })
+}
+
+/** 外部预览（AUTH-EXT-003；只有页面图） */
+export function fetchExtDocPages(sampleId: string | number, docKind: string) {
+  return http.get<DocPagesData>(docPath('ext', sampleId, docKind, 'pages'), {}, { silent: true })
+}
+
+/**
+ * 预览：按身份选内部 / 外部那条（与清单同一个口径：认不出来就按外部这条最窄的打）。
+ */
+export function fetchDocPages(sampleId: string | number, docKind: string, identity: 'internal' | 'external' | null) {
+  return identity === 'internal'
+    ? fetchIntDocPages(sampleId, docKind)
+    : fetchExtDocPages(sampleId, docKind)
+}
+
+/** 内部下载链接 */
+export function fetchIntDocDownload(sampleId: string | number, docKind: string, format: 'docx' | 'pdf' | string) {
+  return http.get<DocDownloadData>(docPath('int', sampleId, docKind, 'download'), { format }, { silent: true })
+}
+
+/** 外部下载链接 */
+export function fetchExtDocDownload(sampleId: string | number, docKind: string, format: 'docx' | 'pdf' | string) {
+  return http.get<DocDownloadData>(docPath('ext', sampleId, docKind, 'download'), { format }, { silent: true })
+}
+
+/**
+ * 下载链接：按身份选内部 / 外部那条。
+ *
+ * ★ 列表上的「下载」「合并下载」与预览页底部 `DownloadBar` 调的是**同一个**函数
+ *   （CR-20260917-04：两处入口一套实现；accept 1 的 counterfeit 点名的就是「列表另写一套」）。
+ */
+export function fetchDocDownload(
+  sampleId: string | number,
+  docKind: string,
+  format: 'docx' | 'pdf' | string,
+  identity: 'internal' | 'external' | null,
+) {
+  return identity === 'internal'
+    ? fetchIntDocDownload(sampleId, docKind, format)
+    : fetchExtDocDownload(sampleId, docKind, format)
+}
