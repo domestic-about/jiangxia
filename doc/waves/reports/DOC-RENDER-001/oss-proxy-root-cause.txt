@@ -1,0 +1,40 @@
+# 环境病灶：macOS 系统代理让 JVM 把发往 127.0.0.1:9000(MinIO) 的请求丢给代理
+# 复现时间 2026-09-22；与 ticket 代码无关 —— 挂的是框架自带的 POST /resource/oss/upload。
+
+$ scutil --proxy   # 本机的系统代理
+  HTTPEnable : 1
+  HTTPPort : 1081
+  HTTPProxy : 127.0.0.1
+  HTTPSEnable : 1
+  HTTPSPort : 1081
+  HTTPSProxy : 127.0.0.1
+
+$ java -XshowSettings:properties -version 2>&1 | grep -E 'proxyHost|nonProxyHosts'
+    http.nonProxyHosts = captive.apple.com|*.captive.apple.com|localhost|*.localhost|192.168.3.1.dns|*.192.168.3.1.dns|local|*.local|172.16.0.0/12|*.172.16.0.0/12|10.0.0.0/8|*.10.0.0.0/8|198.18.0.0/15|*.198.18.0.0/15|192.168.0.0/16|*.192.168.0.0/16
+    http.proxyHost = 127.0.0.1
+    http.proxyPort = 1081
+  ↑ JDK 从 macOS 系统设置灌进 http.proxyHost；而 http.nonProxyHosts 里**没有 127.0.0.1**（只有 localhost）
+  ↑ curl 不受影响：它认环境变量 NO_PROXY=127.0.0.1
+
+$ 后端日志里的原始报错（未修前）
+  POST /resource/oss/upload -> 500 上传文件失败，请检查配置信息:[The service request was not made
+  within 120 seconds of doBlockingWrite being invoked. Make sure to invoke the service request BEFORE
+  invoking doBlockingWrite if your caller is single-threaded.]  （耗时 120397ms）
+
+$ 独立复现（脱离 Spring，只 new OssClient 后 uploadSuffix；探针源码见同目录 oss-probe/）
+  无 JAVA_TOOL_OPTIONS： [probe] FAILED in 120324ms: org.dromara.common.oss.exception.OssException: 上传文件失败，请检查配置信息:[The service request was not made within 120 seconds of doBlockingWrite being invoked. Make sure to invoke the service request BEFORE invoking doBlockingWrite if your caller is single-threaded.]
+  有 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1： [probe] OK url=http://127.0.0.1:9000/ruoyi/2026/09/22/ff7fe71c1c064331b4fdc5551fe4bcdb.txt in 459ms
+
+$ 底层 SDK 探针（同一份 Netty 客户端）
+  [A] putObject FAILED in 8647ms: java.util.concurrent.ExecutionException: software.amazon.awssdk.core.exception.SdkClientException: Unable to execute HTTP request: The connection was closed during the request. The request will usually succeed on a retry, but if it does not: consider disabling any proxies you have configured, enabling debug logging, or performing a TCP dump to identify the root cause. If this is a streaming operation, validate that data is being read or written in a timely manner. Channel Information: ChannelDiagnostics(channel=[id: 0x50bc2f5a, L:/127.0.0.1:50016 ! R:/127.0.0.1:1081], channelAge=PT1.318423S, requestCount=1, responseCount=0)
+  [B] transferManager FAILED in 8282ms: java.util.concurrent.ExecutionException: software.amazon.awssdk.core.exception.SdkClientException: Unable to execute HTTP request: The connection was closed during the request. The request will usually succeed on a retry, but if it does not: consider disabling any proxies you have configured, enabling debug logging, or performing a TCP dump to identify the root cause. If this is a streaming operation, validate that data is being read or written in a timely manner. Channel Information: ChannelDiagnostics(channel=[id: 0xd5e14fc0, L:/127.0.0.1:50046 ! R:/127.0.0.1:1081], channelAge=PT1.314834S, requestCount=1, responseCount=0)
+    ↑ FAILED 时 ChannelDiagnostics 里是 R:/127.0.0.1:1081（= 代理），不是 9000
+  带 nonProxyHosts 后：
+    [A] putObject(fromBytes) OK "f51541a807971801fd1fcc8ea7c2c438" in 131ms
+    [B] transferManager OK "cf793b479135413709363ef9f30c8c4b" in 18ms
+
+$ 修法（本票采用）：把 127.0.0.1 加进 JVM 的 nonProxyHosts —— 写进 code/deploy/dev/.env（**git 忽略的**本机环境文件）
+   JAVA_TOOL_OPTIONS='-Dhttp.nonProxyHosts=localhost|127.0.0.1|*.local|local'
+   qa-up.sh 起后端前会 'set -a; . code/deploy/dev/.env; set +a'，所以任何一次 qa-up 都会带上它。
+   修后：POST /resource/oss/upload -> 200（accept 1 全程绿）
+   ★ 值必须带引号：| 在 shell 里是管道，不引起来会 . .env 时把后半截当命令跑（本票踩过一次）。

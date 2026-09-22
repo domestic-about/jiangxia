@@ -1,0 +1,31 @@
+# accept 没覆盖、本票另跑的探针（2026-09-22，jar @ 2026-09-22 17:44:45）
+
+## 1) merged 合并件（ticket §2 要求，accept 不测）
+{"status":"done","docKind":"merged","audience":"internal","ossId":"2102333387070021634","errorMsg":null}
+-rw-r--r--  1 wkui  wheel  15539 Sep 22 17:45 /tmp/lqg-merged.docx
+✓ 全文 539 字，图片 0 张
+合并件 PDF 页数（每份另起一页）：5
+  顺序 样本质控表<类器官质控表<类器官质量评分表 : OK
+merged 外部版：
+"done"
+✓ 全文 532 字，图片 0 张
+
+## 2) 失败可见：样本还没建质控草稿 → 400 带原因（不是静默出空文件）
+{"code":400,"msg":"这个样本还没有样本质控表（先在工作台打开一次质控页）"}
+{"code":400,"msg":"这个样本还没有已完成的质控文档，合并件无从拼起"}
+不认识的 docKind / audience：
+{"code":400,"msg":"文档种类只能是 sample_qc / organoid_qc / organoid_score / merged，收到：nope"}
+{"code":400,"msg":"文档版本只能是 internal / external，收到：public"}
+
+## 3) 本票不做 PDF：format=pdf 明确 400（DOC-PDF-001 的范围）
+{"code":400,"msg":"本接口当前只支持 format=docx（format=pdf 的产物属于 DOC-PDF-001）"}
+
+## 4) 未渲染就下载 → 400
+{"code":400,"msg":"这份文档还没生成（先 POST /lqg/doc/9000001009/sample_qc/render?audience=internal）"}
+
+## 5) 对象键与签名链接形状（ticket §2 约定：lqg/doc/<sampleId>/<docKind>/<audience>/<指纹前12位>.docx）
+http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/6374ba628a0f.docx
+external  64232d557dbd26019d16359c0d2fa06e70d26a4b59338e9cd51095181e505389  ->  2102333392740720642
+internal  6374ba628a0fa2c01eb281cf7c291b1f1404e9be2afb23c57eb65eefcb7cc810  ->  2102333387070021634
+lqg/doc/9000001001/merged/external/64232d557dbd.docx
+lqg/doc/9000001001/merged/internal/6374ba628a0f.docx

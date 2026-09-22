@@ -119,6 +119,11 @@ D7/D8 多为配置/发布/文档票，且相当一部分要等外部输入。这
 - **单测可能抓不住丢事务**（#173：`CryoFlowConcurrencyTest` 用自己的锁把线程串行化了）→
   并发正确性只有**真库并发**能验。
 - 关进程**只按 PID**。`pkill -f 'ruoyi-admin.jar'` 会误杀 8080 上 Kevin 的本机服务（#46）。
+- **JVM 必须显式给 `-Dhttp.nonProxyHosts` 含 `127.0.0.1`**（qa-up.sh 已内置）：macOS 的系统代理会被
+  JDK 灌成 `http.proxyHost`，而 JDK 自带的 `nonProxyHosts` **只含 localhost、不含 127.0.0.1** →
+  AWS SDK(Netty) 把发往 `127.0.0.1:9000`(MinIO) 的请求丢给代理 → 框架自带的
+  `POST /resource/oss/upload` 直接 500（阻塞 120s 才报错）。**curl 不受影响，只有 JVM 踩**，
+  所以从外部极难看出是代理问题（DOC-RENDER-001 花了很久才定位，见 issue #215）。
 
 ## 7. 成本预期
 

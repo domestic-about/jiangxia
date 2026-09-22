@@ -1,0 +1,5 @@
+[run] 2 条 accept，单条超时 900s
+  [32m✓[0m DOC-RENDER-001 acc1 [DATA] 渲染出的 Word：带出字段与填写字段都在、两句印死的注逐字保留、没有残留占位符、图片真的嵌进去了；外部版里找不到内部编号而内部 (1.9s)
+  [32m✓[0m DOC-RENDER-001 acc2 [STATE] 渲染产物表与 SSOT 相符；指纹缓存成立：内容没变不重出、改了任何一处都重出、内外部各一份互不覆盖 (5.9s)
+[ok] 结果落盘 .tmp/doc-render-accept.json
+[run] 通过 2/2

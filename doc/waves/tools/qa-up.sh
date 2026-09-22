@@ -129,7 +129,16 @@ fi
 
 echo "── 起后端（dev profile + --api-decrypt.enabled=false + 端口 ${BPORT}）"
 set -a; . "${ROOT}/code/deploy/dev/.env"; set +a
-BACKEND_PID="$(start_detached "${ROOT}" "${RUNDIR}/backend.log" java -jar "${JAR}" \
+# ★ 必须显式给 JVM 一个含 127.0.0.1 的 nonProxyHosts（2026-09-22 DOC-RENDER-001 查出的环境病灶）：
+#   macOS 的系统代理（127.0.0.1:1081）会被 JDK 灌成 http.proxyHost，而 JDK 自带的
+#   http.nonProxyHosts **只含 localhost、不含 127.0.0.1** → AWS SDK(Netty) 把发往
+#   127.0.0.1:9000 的 MinIO 请求丢给那个代理 → 框架自带 POST /resource/oss/upload 直接 500
+#   （阻塞到 120s 才报 "doBlockingWrite ... within 120 seconds"）。
+#   curl 不受影响（它认 NO_PROXY），**只有 JVM 踩**，所以极难从外部看出是代理问题。
+#   原先的修法写在 **gitignored** 的 code/deploy/dev/.env 里 —— 那不可复现（换台机器/清库就丢），
+#   所以在这里直接作为 JVM 参数注入：任何用 qa-up 起的环境都自带，不依赖任何 gitignored 文件。
+BACKEND_PID="$(start_detached "${ROOT}" "${RUNDIR}/backend.log" java \
+  '-Dhttp.nonProxyHosts=localhost|127.0.0.1|*.local|local' -jar "${JAR}" \
   --spring.profiles.active=dev --api-decrypt.enabled=false --server.port="${BPORT}")"
 READY=0
 for i in $(seq 1 90); do
