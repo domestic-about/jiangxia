@@ -25,7 +25,7 @@
     },
     {
       "id": "D3",
-      "status": "pending",
+      "status": "qa_running",
       "qa_rounds": 0
     },
     {
@@ -1802,6 +1802,46 @@
       "type": "debt",
       "title": "columns.ts 里 embed 的「样本编号」key 是 sampleSubmitNo 而实际字段是 internalNo（实施方在 api/embed.ts 对齐）",
       "detail": "列 key 与字段名不一致，容易在下一个消费方（导出/小程序其它页）踩。方案：把 columns.ts 的 key 改成 internalNo，或加映射注释。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 141,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "embed-form fixture 漏钉「外部 + 待核验 + 非本人」在 edit 模式下的 editable 判据（证伪实测为假）",
+      "detail": "D3 r1 L0+L1 片证伪实测：把 layout.ts 的  去掉后 9 条 embed-form fixture 全绿——而票面 counterfeit 声称该情形会红。产品代码是对的，纯 harness 期望表缺一条病灶用例。方案：在 doc/verify/fixtures/embed-form-cases.json 里补「外部 + 待核验 + 非本人 + mode=edit → editable=false」一例。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 142,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 层「2006 置顶」被 seed 时间戳顺带满足（拆掉置顶 ORDER BY 后 accept 仍绿）",
+      "detail": "D3 r1 L0+L1 片证伪实测：拆掉『待核验置顶』的 ORDER BY 后 EMBED-MODEL accept 3 与 EMBED-MP accept 1 仍绿，因为 seed 里 2006 本来 create_time 就最新；单测 EmbedQueryContractTest.orderByTwoModes 会红，有兜底。方案：accept 里加一条『把 2006 create_time 回拨仍应置顶』（L0+L1 片就是这么补验的）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 143,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【实锤·待 Kevin】issue #129：5210 下 perms 现为 7 个，SAMPLE-WEB-001「恰六个」断言 exit 1",
+      "detail": "D3 r1 独立实测确认。裁定按需求归属解（导出权限归 SAMPLE-EXPORT-001 所有），但需求层文件未改。等 Kevin 定：让我按此口径回填该断言，还是走一轮 ①。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 144,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【实锤·待 Kevin】issue #137：EMBED sort=recent 返回全 5 条（含外部提交的 2006），SAMPLE 只回 {1008,1009} 已按权威收窄",
+      "detail": "D3 r1 独立实测：EMBED 全 5 条、SAMPLE 已收窄；权威 UI:mp.history 明写内部视角 = 中心全部内部人员新增或修改过的记录；而 EMBED-MP-001 accept 1 明文要五条全在 → 票面与权威互斥。等 Kevin 定（按权威对齐并放宽该 accept / 记已知偏差）。",
       "status": "open",
       "decision": ""
     }

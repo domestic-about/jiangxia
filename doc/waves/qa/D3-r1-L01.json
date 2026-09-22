@@ -1,0 +1,58 @@
+{
+  "phase": "D3",
+  "round": 1,
+  "auditor": "independent",
+  "levels": {
+    "L0": {
+      "status": "pass",
+      "evidence": "环境：后端 pid 94718 @ http://127.0.0.1:8081（bash .tmp/run-backend.sh，dev + --api-decrypt.enabled=false）；反 stale 自证（未用 api.sh --fresh-module）：find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer ruoyi-admin.jar = 0 行；lsof -p 94718 命中 ruoyi-admin.jar 2 行；libproc 取进程启动 2026-09-22 10:13:57 ≥ jar mtime 2026-09-22 10:13:47。后端编译+单测：`mvn -pl ruoyi-modules/ruoyi-lqg -am clean install`（-s .mvn-settings.xml -Dmaven.repo.local=.m2repo -Duser.home=.buildhome）→ BUILD SUCCESS，`Tests run: 120, Failures: 0, Errors: 0, Skipped: 0`（clean 全量重编，10.3s；日志 .tmp/d3l01-mvn-clean.log）。染色校验：EmbedRulesContractTest 8/8（StainRules 五值白名单/互斥/OTHER 必填名称）。SampleHint 单次查询：SampleHintContractTest 9/9，含 twentySampleIdsTriggerExactlyOneQuery（mapper spy 数调用次数==1 且一次吃下整页 20 个 id）。两个前端 build：code/plus-ui `rm -rf dist && pnpm build:prod` exit 0（dist/index.html 重建，454 个文件）；code/miniapp `rm -rf dist/build/mp-weixin && pnpm build:mp-weixin` exit 0（dist/build/mp-weixin/app.json + pages/embed/form.js + pages/ledger/index.js 均为本次产物）。stain-toggle fixture 两边都过：plus-ui `pnpm vitest run src/views/lqg/embed/stain.fixture.spec.ts` = 19/19 passed / 0 failed；miniapp `pnpm vitest run src/pages/embed/stain.fixture.spec.ts` = 19/19 passed / 0 failed（同一份 doc/verify/fixtures/stain-toggle-cases.json，含 PAS 字典外值一条）；两份 spec 都引用 fixture 且无 .skip/.todo/.only。miniapp embed-form fixture：`pnpm vitest run src/pages/embed/layout.fixture.spec.ts` = 17/17 passed / 0 failed；票面 node 结构守卫 rc=0（cases=9、externalFields=3、editable=false 恰 5 例）；grep showEditEntry 在 src/pages/embed/layout.ts 与 form.vue 命中。回归包重放：bash doc/waves/regression/D1/verify.sh（全量，含自建 build）→ L0.1 BUILD SUCCESS 120 tests、L0.3 plus-ui build:prod 通过、L0.4 miniapp build:mp-weixin 通过、L1.1/L1.2/L1.3 全绿，仅 1 条已登记的 harness 假红「D1 的 7 支迁移全部记录在案 → 实际 14」（脚本写死 7，现 14 支迁移）；新鲜度守卫（上一轮的 SIGPIPE 假红）已绿。D2 回归资产只读了 git log（852de43/2245349/3cbe0cf…）与目录，未重放、未当作独立证据。"
+    },
+    "L1": {
+      "status": "pass",
+      "evidence": "① ddl_vs_ssot：`ddl_vs_ssot.py --table t_lqg_embed --table t_lqg_embed_marker --require-public create_dept,create_by,create_time,update_by,update_time,del_flag` → exit 0（2 张表逐列相符，含公共字段 6 个、部分唯一索引、普通索引）；flyway_schema_history 里 V20260923110%__EMBED-MODEL-001-% == 1，源码树有 V202609231100__EMBED-MODEL-001-embed.sql 且含 CREATE TABLE t_lqg_embed_marker。② 三张导出 vs _input/templates 甲方原件（xlsx_header.py，两侧不同源）：tissue「样本记录信息表模板.xlsx」14 列表头逐字逐序一致、数据 8 行 = `SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND sample_kind='tissue'`(8)；--find 内部编号=T-hli01 → 来源单位=A 医院,供体姓名=测试供体甲,性别=男,年龄=56,住院号=ZY0000001,组织类型=肝组织,有无固定=有,质控表=有,细胞活率报告=有,操作人=李工 全中；加密列确为明文（库里 donor_name / hospital_no 是裸 Base64：TcVJXrqPUYwPPs4JJt6NRg== / wPSK1WEmQBZMqojc8zK+Sw==，导出是明文中文与 ZY 号）。organoid「类器官收样记录模板.xlsx」7 列表头逐字一致、数据 1 行 = 同条件 list total(1)，--find T-oco01 逐格中。embed「石蜡包埋送样记录模板.xlsx」16 列表头逐字一致（含原样的「mark的表达情况」）、数据 5 行 = 库侧 e.del_flag='0' AND s.del_flag='0' 的独立 count(5)；染色格式 HE染色、IHC染色 / 其他（Masson） / 无染色 / 空，mark=Ki67：强表达；CK19：阴性，包埋人=李工、操作人=李工，全部逐格中；带筛选：internalNo=T-hli01 → 2 行 = list total；verifyStatus=valid → 4 行 = list total。独立补强（qa_scope 说「行数 = 同条件列表 total」，票面只用了 1 行的筛选）：sourceUnitId=9000009001 → list(sampleKind=tissue).total=6 == 导出 6 行；再加 verifyStatus=valid → list.total=3 == 导出 3 行；sourceUnitId=9000009002 → 1 == 1；端点类别不可被入参覆盖：/export/tissue?sampleKind=organoid 仍导 tissue 8 行、/export/organoid?sampleKind=tissue 仍导 organoid 1 行。按钮字段双向：把 1005 的 is_fixed 临时改成 'N' 后导出，--find 内部编号=T-hga03 --expect 有无固定=无 → rc=0（端到端确为「有 / 无」，不是 Y/N）；未选的待核验行三格留空；跑完已 reseed。外部角色导出：extA POST /lqg/sample/export/tissue → 业务码 403。③ 切片染色提示（reseed 快照，/lqg/sample/list?pageSize=100 逐行）：1001=[2,true,[HE,IHC]]、1004=[1,true,[]]、1006=[1,true,[OTHER]]、1008=[0,false,[]]（软删的 2005 不计）、1002=[0,false,[]]（待核验的 2006 不算块）；各行 blockCount 之和 = 4 == 独立 SQL `t_lqg_embed e JOIN t_lqg_sample s AND s.del_flag='0' WHERE e.del_flag='0' AND e.verify_status='valid'` 的 count=4；小程序侧同源：/mp/int/sample/list 与 /lqg/sample/list 的 9 行 hint 逐行相等（0 处不一致）。④ 外部可见集合与工作台：extA=extB=[2001,2002,2003,2006]、extC=extE=extF=[]、extD=[2004]；onlyMine 后 extA=[2006]、extB=[]；extB 看 1001 的 embeds 键集合恰为 24 键白名单，embedBy=李工、operatorName=李工 都在，internalNo/verifyBy/remark/冻存类键都不在（按 CR-20260918-07，不按旧 scope 判）；extC 取 1001 与 2001 都 404；开关 lqg.ext.show-internal-no：false 时 extB 的样本详情连 internalNo 键都没有，extA 改系统参数被 403、admin 改 true 后 extB.internalNo==T-hli01（待核验的 1002 仍为 null），改回 false 后键消失；工作台 /lqg/embed/list?pageSize=100 rows[0]=9000002006、verifyStatus=pending、sampleVerifyStatus=pending、submitNo=SJ90000002、paraffinBlockNo=null；把 2006 的 create_time 回拨到 2020-01-01 后它仍排第一（待核验置顶确为真实现，而非仅靠 seed 时间戳）；软删的 2005 不出现在任何一侧。⑤ 附带：SAMPLE-EXPORT 菜单/权限 accept 2 全绿（5217:lqg:sample:export:5210、授 101/102、getRouters 有 lqg/sample/index、staff getInfo 含该权限串、plus-ui 两个导出按钮已接）；EMBED-WEB accept 2 菜单全绿（5310:embed:lqg/embed/index、父下 7 个按钮权限集合精确相等、getRouters 命中）；EMBED-MP accept 1 的 API 段全绿（/mp/int/embed/list 五条、extA 403、sort=recent 五条+2006 打头+handlerName/mine 逐行、mine=true=[2001,2003] == 库侧 create_by/update_by 独立集合）。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S2",
+      "level": "L1",
+      "type": "doc-drift",
+      "ticket": "SAMPLE-WEB-001 / SAMPLE-EXPORT-001",
+      "title": "issue #129 现场复核：5210 下按钮权限现为 7 个，SAMPLE-WEB-001「精确等于六个」的断言已红",
+      "detail": "复现：python3 doc/verify/db.py --sql \"SELECT perms FROM sys_menu WHERE parent_id = 5210 AND menu_type='F'\" --col-set \"lqg:sample:list,lqg:sample:query,lqg:sample:add,lqg:sample:edit,lqg:sample:remove,lqg:sample:verify\" → exit 1，实测多出 lqg:sample:export（SAMPLE-EXPORT-001 的 5217 按钮：已 seed、授 101/102、staff 的 getInfo 已下发该权限串）。这正是台账 issue #129：SAMPLE-WEB-001 的票面断言与SAMPLE-EXPORT-001 必须新增的权限互斥，已裁定按需求归属解（导出权限归导出票），正确现状 = 七个。影响：跑 SAMPLE-WEB-001 accept 2 会看到一条既有规格冲突的红，不是 D3 实现缺陷；两个 ticket 的实现路径都不因此断。定级依据：不影响老师主流程、无产品产出错误，属规格层冲突 → S2（不拦门，如实记账）。"
+    },
+    {
+      "severity": "S2",
+      "level": "L1",
+      "type": "doc-drift",
+      "ticket": "EMBED-MP-001 / EMBED-MODEL-001",
+      "title": "issue #137 现场复核：EMBED 域 sort=recent 只排序不收窄，与 SAMPLE 域既有行为及权威 UI:mp.history 不一致",
+      "detail": "实测（同一 reseed 快照）：EMBED `GET /mp/int/embed/list?sort=recent` 返回全部 5 条 [2006,2004,2003,2002,2001]（含外部用户提交、内部从未经手的 2006）；同一时刻 SAMPLE `GET /mp/int/sample/list?sort=recent` 只返回 [1008,1009]（内部人员经手过的，已按权威收窄）。EMBED-MP-001 accept 1 明文要求「五条全在」且 2006 打头，而权威 UI:mp.history 的内部视角 = 中心全部内部人员新增或修改过的记录 → 按权威收窄必然打红该 accept，票面与权威互斥，已留 Kevin 裁定。旁证：小程序 code/miniapp/src/pages/history/sources.ts:146 的注释写「sort=recent 同时是范围口：外部送来待核验 / 无效……不进这张清单」，与后端实测（2006 会进）相反——实现方前端也按权威理解写的，是后端这段没做收窄。定级依据：票面与权威互斥、非实现可自决；不阻断任何一条主流程 → S2（不拦门，如实记录两侧表现）。"
+    },
+    {
+      "severity": "S3",
+      "level": "L0",
+      "type": "doc-drift",
+      "ticket": "EMBED-MP-001",
+      "title": "issue #138 现场复核：accept 3 最后一段 grep 的路径不存在，断言恒真",
+      "detail": "复现：`! grep -nE 'internalNo' code/miniapp/src/pages/embed/SamplePickerExt.vue` —— 该路径不存在（组件实际在 src/components/lqg/SamplePickerExt.vue，避免被 uni-pages 注册成路由），grep 退出 2，`!` 反成 0，恒绿。证伪动手：在真组件 src/components/lqg/SamplePickerExt.vue 里加一行引用 row.internalNo 后，票面那条 grep 仍 exit 0（绿），而实施方补在 src/pages/embed/layout.fixture.spec.ts 里按真实路径 readFileSync 的断言变红（1 failed）—— 覆盖已由更强断言补上，票面那段只是空转。定级依据：有替代覆盖、无产品风险 → S3（记账）。"
+    },
+    {
+      "severity": "S2",
+      "level": "L0",
+      "type": "harness",
+      "ticket": "EMBED-MP-001",
+      "title": "embed-form fixture 漏钉「外部 + 待核验/无效 + 非本人」在 edit 模式下的 editable；票面对应的 counterfeit 说法不成立",
+      "detail": "证伪动手：把 code/miniapp/src/pages/embed/layout.ts 外部分支由 `mine && (pending||invalid)` 改成去掉 mine 后，doc/verify/fixtures/embed-form-cases.json 驱动的 9 条用例全绿（唯一红的是同 spec 里另一条 SamplePickerExt 断言，与本次改动无关）。原因：fixture 里唯一的「外部看同组别人的待核验」用例 mode=view，而 embedLayout 的 view 分支无条件 editable=false，根本不走 edit 分支的 mine 判据 → 票面 accept 1 counterfeit 第 2 条「外部 editable 漏了 mine → 该用例红」实测为假，这条守卫没有任何机器证据。现状产品代码是对的（有 mine 判据），且后端 PUT 也会拒；所以只是断言不够狠，不是产品缺陷。定级依据：type=harness 封顶 S2，记账不拦门。建议（只报不改）：补一条 `embedLayout('external','pending',false,'edit').editable === false`。"
+    },
+    {
+      "severity": "S3",
+      "level": "L0",
+      "type": "harness",
+      "ticket": "EMBED-MODEL-001 / EMBED-MP-001",
+      "title": "「待核验置顶 / 2006 打头」在 accept 层被 seed 时间戳顺带满足：拆掉置顶排序这两条 accept 仍绿",
+      "detail": "seed 里 2006 的 create_time 是「今天零点过几秒」、其余四条是 30 天前，所以任何「单纯按 create_time 倒序」的实现也把 2006 排在第一。证伪动手：把 EmbedQueryService 的 `ORDER BY (verify_status='pending') DESC, create_time DESC, id DESC` 改成 `ORDER BY create_time DESC, id DESC`，重打包重启后 EMBED-MODEL accept 3（rows[0]==2006）与 EMBED-MP accept 1（sort=recent 五条全在且 2006 打头）都仍绿。产品侧实测确为真置顶：把 2006 的 create_time 回拨到 2020-01-01，它仍排第一，而 sort=recent 下它掉到最后（两种排序确实不同）。单测 EmbedQueryContractTest.orderByTwoModes 在打断时确实变红（「默认必须待核验置顶」失败），覆盖存在、无残余风险。定级依据：仅 accept 层断言偏弱、有 L0 单测兜底 → S3（记账）。"
+    }
+  ]
+}
