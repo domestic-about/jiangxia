@@ -1,0 +1,35 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "AUTH-EXT-003",
+   "index": 1,
+   "form": "API",
+   "name": "外部文档清单钉死在 seed 上：同组可见、草稿不给、外部版没渲染成功的不给、异组按不存在返回；带 audience=internal 也拿不到内部版；链接里的对象键是外部版",
+   "exit": 0,
+   "seconds": 9.1,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/AUTH-EXT-003-acc1.sh",
+   "log": ".tmp/auth-ext003-accept-logs-final/AUTH-EXT-003-acc1.sh.log"
+  },
+  {
+   "ticket": "AUTH-EXT-003",
+   "index": 2,
+   "form": "STATE",
+   "name": "四条结构性不变量在加了文档接口之后仍然成立；新增的 VO 不带内部专用字段",
+   "exit": 0,
+   "seconds": 4.2,
+   "nf": [
+    "NF2"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/AUTH-EXT-003-acc2.sh",
+   "log": ".tmp/auth-ext003-accept-logs-final/AUTH-EXT-003-acc2.sh.log"
+  }
+ ]
+}

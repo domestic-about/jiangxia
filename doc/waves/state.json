@@ -2918,6 +2918,56 @@
       "detail": "两类：①**陈旧前提**——acc1 断 1001 外部版 sample_qc/organoid_qc 渲染 failed，而实测三份全 done（因 issue #217 裁定：docx 阶段个别图取不到 = 跳过+WARN、文档照出 done；票面 counterfeit 那句「seed 假图 → 外部版渲染必然失败」是裁定前的旧写法）。连带 4 处派生期望也偏：清单 2 行→4 行、docKind 1 种→3 种（段7/段14）、pages 404→200。②**路径少子包段**——acc2 写 ext/ExtDocController.java 与 ext/ExtDocVo.java、ext/ExtDocPagesVo.java，实际在 ext/controller/ 与 ext/domain/vo/（ext 根目录下没有任何 java 文件），其中 ExtDocVo.java 是 AUTH-EXT-001 建的占位、本票开工前就在 ext/domain/vo/。处置：先自己核实（ls 目录 + git log --diff-filter=A 查占位文件来源 + 复现前置实测数组值），再只改这 7 处字面量、实现一行未动，独立重跑 accept 得 2/2；改完跑 dag_lint 复核 43 张票无结构性错误。★这是同一形态的第 2 次（上次是 DOC-PUBLISH-001 的 True/true，issue #248）——**①侧票面的断言字面与实现行为会漂移，尤其当上游裁定了语义（#217）之后**。已形成的做法：派单里明确要求「发现票面断言本身有错**不要自己改票面**，把证据写进报告报我」——本票实现方照做，处置正确。建议：①侧每次裁定语义后回扫受影响的票面断言。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 252,
+      "ticket": "AUTH-EXT-003",
+      "severity": "S3",
+      "type": "debt",
+      "title": "新完成一份文档到合并件重出之间约 1s 窗口：期间对外给的是「少了刚完成那一份」的旧合并件",
+      "detail": "复现（AUTH-EXT-003 探针，已量化，doc/waves/reports/AUTH-EXT-003/probes/merged-window-transcript.txt）：publish 完成后 scheduleRender 是异步的，而合并件的可用性判据锚在产物上（当前指纹下有页图 + PDF 与 header 同版）——在「本次发布已经把 header 指纹改掉、但合并件还没重渲染出来」的约 1 秒里，对外返回的是**上一版**合并件（少了刚完成的那一份）。影响：极窄窗口内的时序问题，不是隔离泄漏（旧合并件本身是当时合法的产物）。一行修法：DocPublishService.publish 在 scheduleRender 之前**同步**调一次 invalidateMerged。**实现方没动**（属 DOC 域，且会改到 DOC-PUBLISH-001 的语义）。方案 a) 采纳那一行；b) 或在合并件的可用性判据里额外要求「header.rendered_time >= 所有成员最新完成时间」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 253,
+      "ticket": "AUTH-EXT-003",
+      "severity": "S3",
+      "type": "debt",
+      "title": "/mp/ext/doc/list 是内存分页（可见样本 × ≤4 种文档逐样本取数）：可见样本上千时退化",
+      "detail": "实现方式：先解析可见样本集合，再逐样本取该样本下的文档，最后在内存里分页。影响：外部可见样本规模大时（上千）响应时间与内存线性增长；当前 seed 规模无感。方案：改成按文档表 join 可见样本集合做 SQL 分页（需在 doc 域加读口，仍守 ADR-0004 i4）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 254,
+      "ticket": "AUTH-EXT-003",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "外部文档端点（pages / download）的 data 形状没进契约；且外部预览只给页面图、不给 images/attachments",
+      "detail": "现状：/mp/ext/doc/{sampleId}/{docKind}/pages 返回页面图；/mp/ext/doc/.../download 返回签名链接。**两个端点的 data 形状都没写进 doc/api-contract.md**（只有内部 /lqg/doc/.../pages 的形状写了）。而且外部预览**只给页面图、不给 images/attachments**（内部 pages 会给这两个）。影响：①契约缺形状 → 前端只能照实现猜；②**DOC-MP-001 若要在分组卡片上显示图片位或附件，必须先改契约**（按「要改先改契约再改断言」的规矩）。已把这条转达给正在跑的 DOC-MP-001。方案：把两个端点的 data 形状补进契约，并明确「外部是否给 images/attachments」（若给，需同时确认不泄漏内部专用字段）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 255,
+      "ticket": "AUTH-EXT-003",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "合并件的 publishedTime 取「成员里最新那一份」的时间（契约没规定）",
+      "detail": "现状：merged 行的 published_time 取成员文档里最新的那份。影响：契约没写，前端/外部若按「合并件自己的完成时间」理解会不一致；撤回一份后合并件重出，这个时间也会跟着变。方案：把这句语义写进契约（或改成「合并件自身的完成时间」）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 256,
+      "ticket": "AUTH-EXT-003",
+      "severity": "S3",
+      "type": "debt",
+      "title": "刻意不拿「此刻指纹」当对外可见的门槛：否则模板升级后历史文档会全部对外隐藏（内部却照旧显示）",
+      "detail": "设计取舍（实现方在报告里明写）：对外可见判据锚在「当前指纹下有真实页产物 + PDF 与 header 同版」，而**不是**「header.rendered_time/hash 等于此刻现算的值」。若用后者，一次模板版本升级会让所有未重渲染的历史文档**全部对外消失**，而内部页面照旧显示 → 送检方以为文档没了。影响：这是有意的语义选择，但它意味着「模板升级后历史文档对外仍可见（内容是旧模板渲染的）」。方案：把这条语义写进契约或验收说明，并在 DOC-PROOF-001 给甲方的说明里点一句。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

@@ -2,8 +2,6 @@ package org.dromara.lqg.doc.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.dromara.common.core.exception.ServiceException;
-import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.doc.pdf.DocArtifactRows;
 import org.dromara.lqg.doc.pdf.DocArtifactStore;
@@ -15,10 +13,6 @@ import org.dromara.lqg.doc.render.DocRenderModelFactory;
 import org.dromara.lqg.doc.render.domain.DocFile;
 import org.dromara.lqg.doc.render.domain.vo.DocDownloadVo;
 import org.dromara.lqg.doc.render.service.DocRenderService;
-import org.dromara.lqg.qc.domain.QcOrganoidDoc;
-import org.dromara.lqg.qc.domain.QcSampleDoc;
-import org.dromara.lqg.qc.domain.QcScoreDoc;
-import org.dromara.lqg.qc.service.QcDocRules;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.service.SampleFieldCipher;
 import org.dromara.system.domain.SysOss;
@@ -64,6 +58,9 @@ import java.util.List;
  *
  * <p>★ <b>audience 写死 external</b>（ticket §0 口径 2）：本类所有方法都<b>没有</b>
  * {@code audience} 入参 —— 不是「传进来再覆盖」，是调用方根本传不进来。
+ * 「能不能给出去」这道判据本身在 {@link DocAvailabilityService}（DOC-MP-001 把它抽成
+ * 按 audience 参数化的共享类，内部清单用的是同一份判据）；本类只负责
+ * 「可见范围之外不查库 + 拼外部的行 + 签发前核对象键」。
  *
  * <p>★ <b>链接签发前再核一遍对象键</b>（ticket §0 口径 3）：
  * 对象键约定 {@code lqg/doc/<sampleId>/<docKind>/<audience>/<指纹前 12 位>}
@@ -84,6 +81,7 @@ public class DocExternalQueryService {
     private final DocPagesService pagesService;
     private final DocRenderService renderService;
     private final SampleFieldCipher fieldCipher;
+    private final DocAvailabilityService availability;
 
     /**
      * 一行「外部可见的文档」。
@@ -165,32 +163,14 @@ public class DocExternalQueryService {
      * 这一份文档现在能不能给外部看 —— <b>清单、预览、下载三处必须是同一个判据</b>，
      * 否则会出现「列表里有、点进去 404」或「列表里没有、却能直接预览」。
      *
-     * <p>四个条件：
-     * <ol>
-     *   <li>有 {@code audience='external'} 的 header 行（{@code docx} / {@code page_no=0}）；</li>
-     *   <li>它是 {@code done} 且有产物（渲染在途 / 失败都不给 —— FLOW:F-DOC-02.step1 的 produces）；</li>
-     *   <li>{@link #artifactComplete}：<b>这一版产物真的完整</b>（当前指纹下有页图 +
-     *       PDF 行与 header 同一版）。★ 这一条是合并件「成员被撤回后不再露出去」的唯一有效闸，
-     *       理由见 {@link #artifactComplete}；</li>
-     *   <li>单份文档还要 {@code doc_status='published'}（{@link #isPublished}）。
-     *       合并件没有自己的 {@code doc_status} —— 它由成员决定，成员状态变了就走第 3 条。</li>
-     * </ol>
+     * <p>四个条件（header 存在 / {@code done} 且有产物 / 产物完整 / 单份还要 published）
+     * 逐条在 {@link DocAvailabilityService#available}（按 audience 参数化的共享判据）里，
+     * 本方法只是把 audience 写死成 {@code external}。★
+     * 「合并件成员被撤回后不再露出去」靠的是那里的 {@code artifactComplete}
+     * （**不是**比 header 的 {@code content_hash} 与此刻指纹 —— 那条实测无效）。
      */
     public boolean available(Long sampleId, String docKind) {
-        String kind = DocKinds.require(docKind);
-        if (sampleId == null) {
-            return false;
-        }
-        DocFile header = rows.header(sampleId, kind, DocAudiences.EXTERNAL);
-        if (header == null
-            || !DocArtifactRows.STATUS_DONE.equals(header.getRenderStatus())
-            || header.getOssId() == null) {
-            return false;
-        }
-        if (!artifactComplete(sampleId, kind, header)) {
-            return false;
-        }
-        return DocKinds.isMerged(kind) || isPublished(sampleId, kind);
+        return availability.available(sampleId, DocKinds.require(docKind), DocAudiences.EXTERNAL);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -214,7 +194,7 @@ public class DocExternalQueryService {
      */
     public DocDownloadVo download(Long sampleId, String docKind, String format) {
         String kind = DocKinds.require(docKind);
-        String fmt = requireFormat(format);
+        String fmt = DocAvailabilityService.requireFormat(format);
         requireAvailable(sampleId, kind);
         requireExternalObjectKey(sampleId, kind, fmt);
         return renderService.download(sampleId, kind, fmt, DocAudiences.EXTERNAL);
@@ -229,20 +209,8 @@ public class DocExternalQueryService {
      */
     private void requireAvailable(Long sampleId, String docKind) {
         if (!available(sampleId, docKind)) {
-            throw notFound();
+            throw DocAvailabilityService.notFound();
         }
-    }
-
-    /**
-     * {@code format} 归一化。与 {@code DocRenderService.download} 同一句话 —— 这里必须先判，
-     * 因为「核对象键」要按格式找行，格式非法时找行会得到 null 而错误地报 404。
-     */
-    private static String requireFormat(String format) {
-        String fmt = StringUtils.isBlank(format) ? DocArtifactRows.FORMAT_DOCX : format.trim();
-        if (!DocArtifactRows.FORMAT_DOCX.equals(fmt) && !DocArtifactRows.FORMAT_PDF.equals(fmt)) {
-            throw new ServiceException("format 只能是 docx 或 pdf，收到：" + fmt, 400);
-        }
-        return fmt;
     }
 
     /**
@@ -259,98 +227,19 @@ public class DocExternalQueryService {
         if (key == null || !key.contains("/" + DocAudiences.EXTERNAL + "/")) {
             log.error("外部文档的对象键里没有 external 段，拒绝签发下载链接：sampleId={} docKind={} format={} key={}",
                 sampleId, docKind, format, key);
-            throw notFound();
+            throw DocAvailabilityService.notFound();
         }
     }
 
-    /**
-     * ★★ <b>这一版产物真的完整</b>：当前指纹下有一组 {@code done} 的页图，且 PDF 行与 header
-     * 行是同一版（{@code content_hash} 相等且都 {@code done}）。
-     *
-     * <p>为什么不是「把 header 行的 {@code content_hash} 与此刻算出来的指纹比」
-     * （DOC-PUBLISH-001 给下游 §6.1 写的那一条）—— <b>实测这条规则无效</b>：
-     * 合并件的成员集合一变，{@code DocRenderService#invalidateMerged} 会把 header 行的
-     * {@code content_hash} <b>改写成此刻该有的指纹</b>（{@code DocArtifactRows#markStale}），
-     * 于是「header 的指纹 == 此刻算出来的指纹」当场成立，而桶里那份 docx 还是旧成员拼的
-     * —— 撤回了一份文档之后，送检方仍能列到、预览到、下载到含该文档的旧合并件
-     * （本票探针 P28/P29/P30 就是这么红的，日志见完工报告 §4.2）。
-     *
-     * <p>{@code markStale} <b>只动 header 的 {@code content_hash}</b>：页图行与 PDF 行保持旧指纹。
-     * 所以「页图 + PDF 同版」这两条才是真正锚在**产物**上的判据 —— 它们也正是内部
-     * {@code pages}（{@code DocArtifactRows#pngPages} 按指纹取页）与 {@code download}
-     * （PDF 必须与 header 同指纹）本来就用的那两道闸。合并件的成员一变，这里立刻为假，
-     * 不依赖那次异步的 {@code invalidateMerged} 有没有跑完。
-     *
-     * <p>对单份文档这一条同样成立且有益：它顺手把「header 说 done、但页图/PDF 缺了一块」
-     * （理论上渲染成功就不会有，可一旦有）挡在门外 —— 那正是票面 counterfeit 说的
-     * 「送检方点进去是一片空白」。
-     */
-    private boolean artifactComplete(Long sampleId, String docKind, DocFile header) {
-        String hash = header.getContentHash();
-        if (hash == null) {
-            return false;
-        }
-        if (rows.pngPages(sampleId, docKind, DocAudiences.EXTERNAL, hash).isEmpty()) {
-            return false;
-        }
-        DocFile pdf = rows.find(sampleId, docKind, DocAudiences.EXTERNAL, DocArtifactRows.FORMAT_PDF, 0);
-        return pdf != null
-            && DocArtifactRows.STATUS_DONE.equals(pdf.getRenderStatus())
-            && hash.equals(pdf.getContentHash());
-    }
-
-    private boolean isPublished(Long sampleId, String docKind) {
-        return QcDocRules.STATUS_PUBLISHED.equals(docStatusOf(sampleId, docKind));
-    }
-
-    /** 三张质控表各自的 {@code doc_status}；行不存在 → null（不建行）。 */
-    private String docStatusOf(Long sampleId, String docKind) {
-        return switch (docKind) {
-            case DocKinds.SAMPLE_QC -> {
-                QcSampleDoc doc = modelFactory.sampleDoc(sampleId);
-                yield doc == null ? null : doc.getDocStatus();
-            }
-            case DocKinds.ORGANOID_QC -> {
-                QcOrganoidDoc doc = modelFactory.organoidDoc(sampleId);
-                yield doc == null ? null : doc.getDocStatus();
-            }
-            case DocKinds.ORGANOID_SCORE -> {
-                QcScoreDoc doc = modelFactory.scoreDoc(sampleId);
-                yield doc == null ? null : doc.getDocStatus();
-            }
-            default -> null;
-        };
-    }
+    // ── 下面四个只是把「按 audience 参数化的共享判据/取数」钉在 external 这一版上 ──────
 
     /** 完成时间（评分表行的 {@code totalScore} 是外部唯一能看到的「分数」）。 */
     private Date publishedTimeOf(Long sampleId, String docKind) {
-        return switch (docKind) {
-            case DocKinds.SAMPLE_QC -> {
-                QcSampleDoc doc = modelFactory.sampleDoc(sampleId);
-                yield doc == null ? null : doc.getPublishedTime();
-            }
-            case DocKinds.ORGANOID_QC -> {
-                QcOrganoidDoc doc = modelFactory.organoidDoc(sampleId);
-                yield doc == null ? null : doc.getPublishedTime();
-            }
-            case DocKinds.ORGANOID_SCORE -> {
-                QcScoreDoc doc = modelFactory.scoreDoc(sampleId);
-                yield doc == null ? null : doc.getPublishedTime();
-            }
-            default -> null;
-        };
+        return availability.publishedTimeOf(sampleId, docKind);
     }
 
     /** 合计分只在评分表那一行上有（FLOW:F-EXT-01.step3 的白名单：「含已完成评分表的合计分」）。 */
     private Integer totalScoreOf(Long sampleId, String docKind) {
-        if (!DocKinds.ORGANOID_SCORE.equals(docKind)) {
-            return null;
-        }
-        QcScoreDoc doc = modelFactory.scoreDoc(sampleId);
-        return doc == null ? null : doc.getTotalScore();
-    }
-
-    private static ServiceException notFound() {
-        return new ServiceException("文档不存在", 404);
+        return availability.totalScoreOf(sampleId, docKind);
     }
 }

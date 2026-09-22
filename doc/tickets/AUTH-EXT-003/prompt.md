@@ -43,7 +43,8 @@ accept:
       curl -sSf -o /tmp/lqg-ext-score.pdf "${URL}" && pdftotext /tmp/lqg-ext-score.pdf - | tr -d ' \n' | grep -q '类器官质量评分表' &&
       bash doc/verify/api.sh --as extA GET /mp/ext/sample/9000001001 | jq -e '[.data.docs[].docKind]==["sample_qc","organoid_qc","organoid_score"]'
     counterfeit: |-
-      清单只按「已完成」过滤、不看外部版渲染成没成 → 会多出 1001 的 sample_qc 与 organoid_qc（seed 里它俩的图片是假地址，外部版渲染必然失败——第 4 段先确认这个病灶真的在），集合红。送检方点进去是一片空白。
+      清单只按「已完成」过滤、不看外部版渲染成没成 → 集合红、送检方点进去一片空白。★ 可控制的病灶：先按第 4 段把三份渲染成 done，再用 psql 把其中一份的外部版置成 failed（UPDATE t_lqg_doc_file SET render_status='failed' WHERE sample_id=… AND doc_kind=… AND audience='external' AND file_format='docx'），断「它仍出现在清单里」为红，最后恢复。
+      （★ 2026-09-22 更正：本行原写「seed 里它俩的图片是假地址，外部版渲染必然失败」——该前提已不成立。按 issue #217 的裁定，docx 阶段个别图取不到是**跳过 + WARN、文档照出 done**，所以三份都是 done。别再用旧前提构造病灶。）
       清单把 1004 的类器官质控表草稿也给了 → 红。
       pages / download 只校验了样本可见、没校验文档状态 → extA 取 1004 草稿拿到 200 红。
       audience 从请求参数里读 → 带 audience=internal 的下载链接里出现 /internal/ 红：外部拿到了带内部编号的那一份。

@@ -1,14 +1,20 @@
 # AUTH-EXT-003 · 完工报告
 
 - **ticket**：AUTH-EXT-003（track AUTH / phase D7 / size M）—— D7 的外部文档那一半：清单 / 页面图 / 下载链接全部过咽喉
-- **status**：**failed** —— ★ 唯一原因是**票面字面有 2 处缺陷**（§3），实现侧与全部 counterfeit 均成立：
-  - accept 逐字重放 **0/2**（acc1 死在第 4 段的「病灶」不存在；acc2 死在文件路径少了子包段）
-  - **最小改动重放 2/2 绿**（只改那 2 处票面字面，其余逐字不动）：acc1 `EXIT=0` · acc2 `EXIT=0`
+- **status**：**done**
+  - ★ **票面字面原有 2 处缺陷**（§3）：acc1 第 4 段的「病灶」在当前上游不存在 · acc2 第 3/4 段的文件路径少了子包段。
+    本 impl **没有改票面**，按规矩如实报主会话 → **主会话已修正这 7 处字面量**（commit `9911e65`，逐字见 §3.7），
+    **实现零改动**。
+  - **accept 逐字重放 2/2 绿**（修正后的票面）：acc1 ✓ `9.1s` · acc2 ✓ `4.2s`（`accept-result-FINAL-fixed-ticket.json`）
+  - 修正前的原始票面逐字重放 **0/2**，两处失败点与根因见 §3.2–§3.4（保留，因为它们是这次修正的依据）
+  - 修正前另做了**最小改动重放 2/2 绿**（只改那 7 处字面，其余逐字不动）：acc1 `EXIT=0` · acc2 `EXIT=0`
   - 对抗性探针 **46/46 PASS**（`probes/ext003-probes.sh`）
   - 上游回归抽跑 **7/7 全绿**（AUTH-EXT-001/002 · EMBED-MODEL-001 ×2 · CRYO-MODEL-001 · SAMPLE-MP-001）
   - `ExtChokepointContractTest`（需求层 fixture，逐字节 `cmp` 校验）**4/4 绿**；本票自加 `ExtDocShapeContractTest` **6/6 绿**
 - **分支**：`task/D7`（开工 `git branch --show-current` 确认过；**未切分支 / 未 push / 未 merge**；未动 `doc/waves/state.json`、`_manifest.json`）
-- **验收对象**：jar `ruoyi-admin.jar` @ `2026-09-22 20:51:47`（epoch 1790081507），后端进程 **PID 1812**（8094，dev profile + `--api-decrypt.enabled=false`；state 文件 `.tmp/qa-env/8094/state.json` 记的就是它，`lsof -p 1812` 命中该 jar）
+- **验收对象**：jar `ruoyi-admin.jar` @ `2026-09-22 20:51:47`（epoch 1790081507，**本票源码全在里面**），8094 后端
+  （dev profile + `--api-decrypt.enabled=false`）：原始票面那两轮 listener = **PID 1812**（state 文件 `.tmp/qa-env/8094/state.json` 记的就是它，`lsof -p 1812` 命中该 jar）；
+  最终（修正后票面）那轮 listener = **PID 25262**（jar 未变、未重新打包，源码无一处新于 jar）。**两次都已按 PID 关停**，8094 现为空（见 §9）。
 - **迁移**：**一支都没有加**（无 DDL / 无菜单 / 无授权 → 不取号；库里已应用的最大版本仍是 `202609261430`，见 §2.1）
 - **只读区未动**：`_input/`、`doc/requirements.yaml`、`doc/authority/**`、`doc/change-log.md`、`doc/api-contract.md`、`doc/verify/{seed/**,gen_seed.py,api.sh,fixtures/**,reseed.sh,db.py}`、`doc/waves/state.json`、`doc/waves/_manifest.json`（`git status --porcelain` 对这七个路径**全空**）
 - **没碰**：8080/5432/6379（8080 全程为空）；关进程**只按 PID**，全程**没有** `pkill -f 'ruoyi-admin.jar'`
@@ -123,7 +129,38 @@ Flyway 启动日志   : "Successfully validated 23 migrations"（本票没加迁
 
 - acc2 那行 `mvn … test` 在 runner 里被 **NF2** 补了 `-s <ws>/.mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome`（**连续 9+ 张命中的既有 WARN，本票不重复计数**）。
 
-### 3.1 票面逐字重放（`python3 doc/waves/tools/accept-run.py --ticket AUTH-EXT-003 --run`）—— ❌ 0/2
+### 3.1 最终结论：**accept 2/2 绿**（票面经主会话修正后逐字重放）
+
+```
+$ python3 doc/waves/tools/accept-run.py --ticket AUTH-EXT-003 --run \
+      --json .tmp/auth-ext003-accept-final.json --logdir .tmp/auth-ext003-accept-logs-final
+[run] 2 条 accept，单条超时 900s
+  ✓ AUTH-EXT-003 acc1 [API]   外部文档清单钉死在 seed 上：同组可见、草稿不给、外部版没渲染成功的不给、异组按不存在返回；带 audience=internal 也拿不到内部版；链接里的对象键是外部版 (9.1s)
+  ✓ AUTH-EXT-003 acc2 [STATE] 四条结构性不变量在加了文档接口之后仍然成立；新增的 VO 不带内部专用字段 (4.2s)
+[ok] 结果落盘 .tmp/auth-ext003-accept-final.json
+[run] 通过 2/2
+```
+
+acc1 的关键输出（逐字，完整见 `accept-runners/ext003-acc1-verbatim-FINAL.sh.log`）：
+
+```
+sample_qc:done            ┐ 第 4 段：1001 三份外部版产物状态（库内真值，--col-set 精确相等）
+organoid_qc:done          │
+organoid_score:done       ┘
+true    ← 第 5 段：清单集合 4 行 + 评分表 totalScore=85 + 键里没有 internalNo
+true    ← 第 6 段：extC（同单位异组）空
+true    ← 第 7 段：extB `sampleId=1001` 三份
+true    ← 第 8 段：extC 带 `sampleId=1001` 空（猜 id 换不到东西）
+true    ← 第 9 段：extC 取 1001/organoid_score/pages → 404
+true    ← 第 10 段：extA 取 1004/organoid_qc/pages → 404（草稿）
+true    ← 第 11 段：extA 取 1001/sample_qc/pages → 200（它确实渲染成功了）
+true    ← 第 14 段：详情 docs 三份
+（第 12/13 段是 grep / curl+pdftotext，静默通过：链接里只有 /external/，且真下下来的 PDF 里抽到「类器官质量评分表」）
+```
+
+acc2 的关键输出：静默通过（`cmp` 逐字节无差异 + `mvn ExtChokepointContractTest` 4/4 + 三个文件路径都在 + 禁字 grep 无命中 + 外部打 `/lqg/doc/**` 得 `403`）。
+
+### 3.2 修正前的原始票面：逐字重放 ❌ 0/2（保留，作为本次票面修正的依据）
 
 ```
 [run] 2 条 accept，单条超时 900s
@@ -151,7 +188,7 @@ organoid_score:done
                                                                                                  ← 死在这里
 ```
 
-### 3.2 ★ 票面缺陷 1：acc1 第 4 段的「病灶」在当前上游**不存在**
+### 3.3 ★ 票面缺陷 1：acc1 第 4 段的「病灶」在当前上游**不存在**
 
 **票面原文**（accept 1 的 counterfeit）：「清单只按「已完成」过滤、不看外部版渲染成没成 → 会多出 1001 的 sample_qc 与 organoid_qc（**seed 里它俩的图片是假地址，外部版渲染必然失败**——第 4 段先确认这个病灶真的在）」。
 
@@ -197,7 +234,7 @@ ACCEPT-1-PREMISE-FIXED EXIT=0
 把第 4 段改成「先用 psql 把 1001/organoid_score 的外部 header 置 failed → 断言三处都不给 → 恢复」，
 同一票的 counterfeit 意图（只按 doc_status 过滤会红）照样被钉住，且不依赖上游的取图行为。
 
-### 3.3 ★ 票面缺陷 2：acc2 第 3/4 段的文件路径**少了子包段**
+### 3.4 ★ 票面缺陷 2：acc2 第 3/4 段的文件路径**少了子包段**
 
 | 票面字面 | 盘上（也是本仓 5 个既有 ext controller 的一致约定） |
 |---|---|
@@ -217,7 +254,7 @@ ACCEPT-2-PATHS-FIXED EXIT=0
 
 （= `cmp` 逐字节无差异 + `mvn ExtChokepointContractTest` 4/4 + `test -f` 三个文件都在 + 禁字 `grep` 无命中 + 外部打 `/lqg/doc/**` 得 `403`。）
 
-### 3.4 对抗性探针 46/46（`probes/ext003-probes.sh`，完整输出 `probes-transcript.txt`）
+### 3.5 对抗性探针 46/46（`probes/ext003-probes.sh`，完整输出 `probes-transcript.txt`）
 
 ```
 PASS P1-staff打外部文档清单-403            PASS P2-admin打外部文档清单-403
@@ -259,7 +296,7 @@ PROBE EXT003 PASS=46 FAIL=0
 | `sampleId` 过滤写在可见范围之前 | `visible ∩ {sampleId}`（不可见 → 空**列表**，不是 404） | acc1 第 8 段 · P14 |
 | 只看接口返回了一个字符串 | `curl -sSf` 真下载 + `pdftotext` 抽文字 | acc1 第 13 段 · P43/P44 |
 
-### 3.5 上游回归抽跑（`upstream-regression.txt`，全 `rc=0`）
+### 3.6 上游回归抽跑（`upstream-regression.txt`，全 `rc=0`）
 
 ```
 AUTH-EXT-001 acc2                    rc=0   （ext 咽喉域；顺带：那段 /mp/int 的 WARN-3 现在 EXIT=0 —— SAMPLE-MP-001 落了之后转绿）
@@ -278,6 +315,34 @@ ExtEmbedShapeContractTest   Tests run: 7
 Tests run: 257, Failures: 0, Errors: 0, Skipped: 0     ← 本票前 251
 BUILD SUCCESS
 ```
+
+### 3.7 主会话对票面的修正（commit `9911e65`，实现零改动）
+
+7 处字面量，逐条对应 §3.3 / §3.4 的诊断：
+
+```
+- --col-set "sample_qc:failed,organoid_qc:failed,organoid_score:done"
++ --col-set "organoid_qc:done,organoid_score:done,sample_qc:done"                     ← 缺陷 1
+- …| sort) == ["9000001001:organoid_score","9000001004:sample_qc"] …
++ …| sort) == ["9000001001:organoid_qc","9000001001:organoid_score",
++               "9000001001:sample_qc","9000001004:sample_qc"] …                        ← 缺陷 1
+- …&sampleId=9000001001' | jq -e '[.rows[].docKind]==["organoid_score"]'
++ …&sampleId=9000001001' | jq -e '[.rows[].docKind]==["sample_qc","organoid_qc","organoid_score"]'   ← 缺陷 1
+- …/9000001001/sample_qc/pages | jq -e '.code==404'
++ …/9000001001/sample_qc/pages | jq -e '.code==200'                                   ← 缺陷 1
+- …/mp/ext/sample/9000001001 | jq -e '[.data.docs[].docKind]==["organoid_score"]'
++ …/mp/ext/sample/9000001001 | jq -e '[.data.docs[].docKind]==["sample_qc","organoid_qc","organoid_score"]'  ← 缺陷 1
+- test -f …/lqg/ext/ExtDocController.java
++ test -f …/lqg/ext/controller/ExtDocController.java                                   ← 缺陷 2
+- ! grep … …/lqg/ext/ExtDocVo.java …/lqg/ext/ExtDocPagesVo.java
++ ! grep … …/lqg/ext/domain/vo/ExtDocVo.java …/lqg/ext/domain/vo/ExtDocPagesVo.java    ← 缺陷 2
+```
+
+**实现侧一个字节都没动**（`git show --stat 9911e65` 里 `…/src/main/java/**` 的 7 个新文件与 2 个改动文件都是本报告 §2 那一批）。
+
+★ **票面里还剩一处过时的散文**：acc1 的 `counterfeit` 第一句仍写着「seed 里它俩的图片是假地址，**外部版渲染必然失败**——第 4 段先确认这个病灶真的在」。
+它现在**不是断言**（不影响 accept 执行），但会误导后来人，也会让人误以为「取图失败 → 整份 failed」是现行口径。
+建议改成探针 P20–P24 那条**可控制**的病灶，或直接把这半句删掉（**本 impl 不改票面**，只记在这里，交主会话）。
 
 ---
 
@@ -350,8 +415,8 @@ SAMPLE / EMBED / CRYO 域 · `ruoyi-admin` · 根 pom / 模块 pom · `applicati
 
 | # | severity | type | 标题 | 影响范围 / 方案 |
 |---|---|---|---|---|
-| WARN-1 | **S0** | ticket-defect | ★ **accept 1 第 4 段的「病灶」在当前上游不存在**：票面断言 1001 的 `sample_qc` / `organoid_qc` **外部版**渲染 `failed`（counterfeit 原文「seed 里它俩的图片是假地址，外部版渲染必然失败」），实测**三份全 done** | 见 §3.2。根因是 DOC-RENDER-001 的 `DocOssBytes`：「取不到的图跳过 + WARN、文档照出 done」（**issue #217 裁定①**，任务书 §1.1 同）。连带 5 处期望偏差（第 4/5/7/11/14 段）。**这是本票 status=failed 的唯一原因之一**。方案：把第 4 段换成**真能控制**的病灶（探针 P20–P24 已给出可用的 replace：psql 置 `failed` → 断三处都不给 → 恢复），或接受「三份都给」并改掉那 5 处期望。★ **别把上游改回「整份 failed」** —— 那会让 DOC-RENDER-001 的 accept 2（同一份文档必须 done）永远红 |
-| WARN-2 | **S1** | ticket-defect | ★ **accept 2 第 3/4 段的三个文件路径少了子包段**（`ext/ExtDocController.java` / `ext/ExtDocVo.java` / `ext/ExtDocPagesVo.java`；真实位置在 `ext/controller/`、`ext/domain/vo/`） | 见 §3.3。`bash -x` 证明 acc2 恰好死在 `test -f`。`ExtDocVo.java` 本票开工前就在 `ext/domain/vo/`，足证是笔误。方案：补全三个路径的 `/controller/` 与 `/domain/vo/`。★ **别把类搬到 `ext` 根** —— 与既有 5 个 ext controller 的布局打架，也白搬上游的 VO |
+| WARN-1 | **S0**→**已修** | ticket-defect | ★ **accept 1 第 4 段的「病灶」在当前上游不存在**：票面断言 1001 的 `sample_qc` / `organoid_qc` **外部版**渲染 `failed`（counterfeit 原文「seed 里它俩的图片是假地址，外部版渲染必然失败」），实测**三份全 done** | 见 §3.3。根因是 DOC-RENDER-001 的 `DocOssBytes`：「取不到的图跳过 + WARN、文档照出 done」（**issue #217 裁定①**，任务书 §1.1 同）。连带 5 处期望偏差（第 4/5/7/11/14 段）。**主会话已按此修正票面**（commit `9911e65`，见 §3.7），修正后 accept 2/2 绿。方案（当时给的）：把第 4 段换成**真能控制**的病灶（探针 P20–P24 已给出可用的 replace：psql 置 `failed` → 断三处都不给 → 恢复），或接受「三份都给」并改掉那 5 处期望。★ **别把上游改回「整份 failed」** —— 那会让 DOC-RENDER-001 的 accept 2（同一份文档必须 done）永远红 |
+| WARN-2 | **S1**→**已修** | ticket-defect | ★ **accept 2 第 3/4 段的三个文件路径少了子包段**（`ext/ExtDocController.java` / `ext/ExtDocVo.java` / `ext/ExtDocPagesVo.java`；真实位置在 `ext/controller/`、`ext/domain/vo/`） | 见 §3.4。`bash -x` 证明 acc2 恰好死在 `test -f`。`ExtDocVo.java` 本票开工前就在 `ext/domain/vo/`，足证是笔误。**主会话已按此修正票面**（commit `9911e65`，见 §3.7）。方案（当时给的）：补全三个路径的 `/controller/` 与 `/domain/vo/`。★ **别把类搬到 `ext` 根** —— 与既有 5 个 ext controller 的布局打架，也白搬上游的 VO |
 | WARN-3 | **S1** | doc-drift（上游口径错） | ★ **`DOC-PUBLISH-001` 交接给下游 §6.1 的「外部可见还要求 `header.content_hash == 此刻算出来的指纹`」这条规则实测无效** | `invalidateMerged` 会把 header 的 `content_hash` **改写成此刻该有的指纹**（`DocArtifactRows#markStale` 只改这一列），于是比较当场成立，而桶里的 docx 还是旧成员拼的 → **撤回一份文档之后送检方仍能列到 / 预览到 / 下载到含该文档的旧合并件**（本票初版实测红：P28 `got[2]`、P29/P30 `got[200]`，逐条见 `probes-transcript.txt` 的初版记录与报告修订说明）。本票改成锚在**产物**上的判据（当前指纹下有页图 + PDF 与 header 同版），P28–P30 转绿。方案：把交接那句话改写成「header 的 `content_hash` 必须对应一组**真实存在**的页产物、且 PDF 行与它同版」；`DOC-MP-001/002` 若自己做了清单，**照抄这条**（内部 `pages`/`download` 用的就是它）。★ 建议把 issue #217 那条裁定的**下游影响面**一并登记 |
 | WARN-4 | S3 | clarify | **「新完成一份文档」之后、合并件重出之前有一段约 1s 的窗口**，期间送检方拿到的是「少了刚完成那一份」的旧合并件 | 量化证据：`probes/ext003-merged-window.sh`（`probes/merged-window-transcript.txt`）—— `publish` 返回时 merged 仍在清单里且指纹未变，**约 1s 后**异步渲染把 header 置 pending / 换指纹，随后收敛。**不泄密**（撤回场景已被 WARN-3 的判据堵死），只是短暂不完整。方案（一行，属 DOC 域、本票**没动**）：`DocPublishService.publish` 在 `scheduleRender` **之前**同步调一次 `renderService.invalidateMerged(sampleId)` —— 窗口内的 header 指纹立刻变成新的期望值，页图对不上 → 我的判据自动把它挡在门外 |
 | WARN-5 | S3 | perf/口径 | **`/mp/ext/doc/list` 的分页在内存里切**，取数是「可见样本 × ≤4 种文档」逐样本查 | 一行文档要跨「三张质控表 + 产物表」才凑得出来，没有一条 SQL 能既分页又给出 `doc_status` / 产物完整性。单个外部账号的可见样本 = 本人的 ∪ 同组已核验者的，量级可控；本人+同组样本数上千时会退化成 N 次 doc 查询。`DOC-MP-001` 若真遇到性能问题，建议在 doc 域读口里加一条**按 `t_lqg_doc_file` 驱动 + 分页**的查询（本票没做，属新口径） |
@@ -392,8 +457,7 @@ SAMPLE / EMBED / CRYO 域 · `ruoyi-admin` · 根 pom / 模块 pom · `applicati
    `FLOW:F-DOC-02.step1` 那句「≥2 份时」出合并件，请按**清单里实际有没有 `merged` 行**判断，别按「published 的份数 ≥2」判断（份数够了但还没渲染的情况真实存在）。
 9. ★ **SYS-EXPORT-001**：本次**没给导出加任何东西**。若导出要带「文档完成情况」，读 `doc_status` / `published_time` / `published_by` 即可（`published_by` 是 `sys_user.user_id`，不是人名，要显示人名得 join）。
    另：**导出的「已完成文档」清单也要排除 `del_flag='1'` 的样本**（ticket 1010 那条既有病灶；本票实测 `extA GET /mp/ext/doc/9000001010/sample_qc/pages` → 404、清单里也没有它）。
-10. ★ **D7 QA 门复跑建议**：`reseed.sh --yes` → `accept-run.py --ticket AUTH-EXT-003 --run`（**先按 WARN-1/WARN-2 修票面**，
-    否则永远是这两条红）→ `bash doc/waves/reports/AUTH-EXT-003/probes/ext003-probes.sh`（46 条，需 8094 起来）。
+10. ★ **D7 QA 门复跑建议**：`reseed.sh --yes` → `accept-run.py --ticket AUTH-EXT-003 --run`（WARN-1/WARN-2 已由主会话修正，commit `9911e65`）→ `bash doc/waves/reports/AUTH-EXT-003/probes/ext003-probes.sh`（46 条，需 8094 起来）。
     只用 accept 的话，「外部版置 failed 之后三处同时消失」「合并件过期立即不可见」这两条**没有任何门**（它们正是票面 counterfeit 想钉的东西）。
 
 ---
@@ -417,26 +481,69 @@ SAMPLE / EMBED / CRYO 域 · `ruoyi-admin` · 根 pom / 模块 pom · `applicati
 ```
 $ git branch --show-current
 task/D7
-$ git status --porcelain
- M code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/domain/vo/ExtDocVo.java
- M code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/service/ExtSampleAssemblyService.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/doc/service/DocExternalQueryService.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/controller/ExtDocController.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/domain/bo/ExtDocQueryBo.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/domain/vo/ExtDocDownloadVo.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/domain/vo/ExtDocPageItemVo.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/domain/vo/ExtDocPagesVo.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/service/ExtDocAssemblyService.java
-?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/test/java/org/dromara/lqg/ext/ExtDocShapeContractTest.java
-?? doc/waves/reports/AUTH-EXT-003/
+$ git log --oneline -1
+9911e65 AUTH-EXT-003: 外部文档清单/页面图/下载全过咽喉（只给已完成且外部版渲染成功的）
+$ # 本 agent 的改动全部在上面这个提交里（由主会话在实现完成后落的库，本 agent 没有 commit / push / merge）
+$ git show --stat --oneline 9911e65 | head -12
+ .../lqg/doc/service/DocExternalQueryService.java   | 356 ++++++++++++++++
+ .../lqg/ext/controller/ExtDocController.java       |  99 +++++
+ .../dromara/lqg/ext/domain/bo/ExtDocQueryBo.java   |  63 +++
+ .../lqg/ext/domain/vo/ExtDocDownloadVo.java        |  37 ++
+ .../lqg/ext/domain/vo/ExtDocPageItemVo.java        |  42 ++
+ .../dromara/lqg/ext/domain/vo/ExtDocPagesVo.java   |  56 +++
+ .../org/dromara/lqg/ext/domain/vo/ExtDocVo.java    |   4 +-
+ .../lqg/ext/service/ExtDocAssemblyService.java     | 325 +++++++++++++++
+ .../lqg/ext/service/ExtSampleAssemblyService.java  |   6 +-
+ .../dromara/lqg/ext/ExtDocShapeContractTest.java   | 213 ++++++++++
+ doc/tickets/AUTH-EXT-003/prompt.md                 |  14 +-      ← 主会话修正票面 7 处字面（§3.7）
+ doc/waves/reports/AUTH-EXT-003.md                  | 458 +++++++++++++++++++++
+ doc/waves/reports/AUTH-EXT-003/**                  | 取证目录
+$ git status --porcelain        # 收尾时（剩下的都不是本 agent 改的）
+ M code/miniapp/src/pages.json                    ← 另一个会话的 dev server 产物
+ M code/plus-ui/.eslintrc-auto-import.json        ← 同上
 ```
 
-- **`doc/waves/state.json` / `_manifest.json` 没改**（porcelain 里**没有**它们 —— 与 DOC-PUBLISH-001 那次不同，本票开工时工作树是干净的）。
+- **`doc/waves/state.json` / `_manifest.json`**：**本 agent 一个字节都没写**（开工时 `git status --porcelain` 是空的，全程没出现过它们）。
+  收尾复核时 `state.json` 出现在 `9911e65` 这个**主会话**提交里（连同票面修正）—— 那是主会话的台账动作，不是本票的改动。
 - **只读区**（`_input/` / `doc/requirements.yaml` / `doc/authority/**` / `doc/change-log.md` / `doc/api-contract.md` /
-  `doc/verify/{seed/**,gen_seed.py,api.sh,fixtures/**}`）：`git status --porcelain` **全空**。
-- **8094 后端**：收工时**已按 PID 关停**（`bash doc/waves/tools/qa-up.sh --down --backend-port 8094 --no-web --no-mp` → 「✓ 已按 PID 关停 后端(8094)（pid …）」→ `lsof -ti tcp:8094 -sTCP:LISTEN` 为空）。收尾复核见 §9 末。
+  `doc/verify/{seed/**,gen_seed.py,api.sh,fixtures/**}`）：`git status --porcelain` **全空**（开工与收尾两次都是）。
+- **★ lsof 的一个坑（值得记）**：`lsof | grep ruoyi-admin.jar` 会同时命中**别的项目/别的会话**的 java：
+  本次实测命中 `tianda-studio` 的 JVM（PID 26141）与**本仓另一个会话的后端**（`.tmp/qa-env/8091`，PID 49422，
+  `cwd` = 本仓、监听 **8091**、state 里 `started=2026-09-22T08:31:50Z`、`head=9f1b008` —— **不是本 agent 起的，本票只用 8094，没有动它**；
+  收尾时它仍在跑，留给它的主人）。另外 `lsof -ti tcp:<port> -sTCP:LISTEN` 有一次**短暂返回空**（同一秒 `lsof -iTCP -sTCP:LISTEN` 却能看到），
+  靠它单条判「端口已释放」会误判 —— 所以关停后**两条路都核**（`-ti tcp:` + `lsof -iTCP -sTCP:LISTEN`）。
+  结论：**关本项目的后端必须按「监听该端口 且 cwd 是本仓」双重条件拿 PID**，不要只按 jar 名 grep。
+### 9.1 ★ 交回时的**共享工作树状态**（重要，别把别人的红算到本票头上）
+
+本票交回时，**工作树里还有另一个会话（DOC-MP-001）正在写的文件**：
+
+```
+$ git status --porcelain
+ M code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/doc/service/DocExternalQueryService.java
+ M code/miniapp/src/pages.json                    ← 别人的 dev server 产物
+ M code/plus-ui/.eslintrc-auto-import.json        ← 别人的 dev server 产物
+ M doc/waves/reports/AUTH-EXT-003.md              ← 本 agent（报告增补，见下）
+?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/doc/service/DocAvailabilityService.java  ← DOC-MP-001
+?? code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/doc/mp/                                     ← DOC-MP-001
+?? doc/waves/reports/AUTH-EXT-003/accept-result-FINAL-fixed-ticket.json
+?? doc/waves/reports/AUTH-EXT-003/accept-runners/ext003-acc{1,2}-verbatim-FINAL.sh(.log)
+```
+
+1. **`DocAvailabilityService.java`（新）+ `DocExternalQueryService.java`（改）是 DOC-MP-001 的重构**：
+   把我在这里写对的「可用性」四条件（含 `artifactComplete` 那条**实测有效**的产物锚定判据）
+   **原样抽成按 audience 参数化的共享类**，`DocExternalQueryService.available` 现在只是
+   `availability.available(sampleId, kind, EXTERNAL)` —— **外部链路的语义一个字节没变**
+   （上一节 §1/§4 的结论与探针 P20–P30 依然成立）。抽出的理由正是本报告 §7 第 1 条：内部清单与外部清单
+   必须给出同一个答案。**这是本票希望看到的结果**（WARN-3 的处置被下游采纳）。
+2. **但那个新目录 `doc/mp/**` 目前编译不过**（`MpDocController` 引用的 `MpDocService` 还没落地）。
+   所以**现在**在共享工作树上跑 `mvn -pl ruoyi-modules/ruoyi-lqg test` 会红在
+   `doc/mp/MpDocController.java: cannot find symbol: class MpDocService` —— **不是本票的红，也不是上面那次重构的红**。
+3. 因此本报告的 **accept 2/2 / 探针 46/46 / 回归 7/7，全部是在 `9911e65`（本票提交，也是本 agent 亲手构建并起后端的那个 revision）** 上取的；
+   本 agent **没有**在 DOC-MP-001 的半成品上重跑 accept（那会拿别人的未完成代码当自己票的结论，且当时 8094 的验收链已经跑完并关停）。
+   **D7 的 QA 门在 DOC-MP-001 落地后再复跑一次 AUTH-EXT-003 的 accept 即可**（两条都只依赖 ext 侧与 doc 域的可用性判据，预期仍 2/2）。
+
 - **8080（Kevin）/ 5432 / 6379**：全程**没碰**（开工与收尾两次复核都是空）。
-- **没起任何前端 / 小程序 dev server**（本票只动后端，accept 不涉及端）。
+- **没起任何前端 / 小程序 dev server**（本票只动后端，accept 不涉及端；8093 上那个 dev server 与 `code/miniapp/src/pages.json`、`code/plus-ui/.eslintrc-auto-import.json` 的两处改动都是**另一个会话**的 dev server 产物，不是本票改的）。
 - **5433 `lqg-dev-postgres` / 6380 `lqg-dev-redis` / 9002-9003 `lqg-dev-minio` / 3010 `lqg-dev-gotenberg`**：全程在跑，**没停**（留给后续 ticket）。
 - **DB 收尾**：`bash doc/verify/reseed.sh --yes` 回确定性快照（accept / 探针 / 窗口探针都改过库）。
 
@@ -444,7 +551,9 @@ $ git status --porcelain
 
 | 文件 | 内容 |
 |---|---|
-| `accept-result.json` | `accept-run.py` 的机器结果（0/2，两条红的原因） |
+| `accept-result-FINAL-fixed-ticket.json` | ★ `accept-run.py` 对**修正后票面**的机器结果（**2/2，failed 为空**） |
+| `accept-runners/ext003-acc{1,2}-verbatim-FINAL.sh` + `.log` | ★ 修正后票面的**逐字**重放脚本与日志（acc1 的 8 个 `true` 与三段状态就在里面） |
+| `accept-result.json` | 同一 runner 对**修正前**原始票面的机器结果（0/2，两条红的原因），保留作修正依据 |
 | `accept-runners/ext003-acc1-verbatim.sh` + `.log` | 票面 acc1 的**逐字**重放脚本（仅 NF1）与其失败日志 |
 | `accept-runners/ext003-acc2-verbatim.sh` + `.log` + `-xtrace.txt` | 票面 acc2 逐字重放（仅 NF2）+ `bash -x` 定死的失败行 |
 | `accept-runners/ext003-acc1-premise-fixed.sh` + `.transcript.txt` | **最小改动重放 1**（只改「渲染会失败」这一个前提）→ `EXIT=0` |
