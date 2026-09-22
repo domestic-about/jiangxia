@@ -2376,6 +2376,26 @@
       "detail": "复现：测试机上 docker ps 显示 gz-ruoyi-admin-staging Up 4 hours (unhealthy)，StartedAt 早于本项目部署（RestartCount=0）→ 与本项目部署无关。影响：不属本项目，但同一台机器上有个 unhealthy 的生产/预发容器值得 Kevin 知道；也提醒我们「同机共享资源」要在部署时避开。方案：报告给 Kevin 由其处理；本项目不做任何处置。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 198,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "测试环境的 buildCommit 戳落后于本地 HEAD（部署早于后续 doc-only 提交）→ 票面反 stale 断言字面红",
+      "detail": "复现：curl -s https://songjian.tianda.studio/lqg/sys/ping → buildCommit=01dd4e388a41，而本地 HEAD=2b435f34213c。**但不是代码 stale**：①远端 /app/app.jar 的 md5 与本地 code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar 逐字节相同；②jar 内 BOOT-INF/classes/application-test.yml 与仓库 HEAD 那份逐字节相同；③自证：git diff --stat 01dd4e3..HEAD -- code/ **为空** —— 期间三个提交（9f1b008 台账、2b435f3 模式 B 工具、3422f6a 计划文档）一个字节的 code/ 都没动。影响：反 stale 断言（票面 acc1 第 1 段之一）字面红；**下次部署会自然消解**（BUILD_COMMIT 会盖新号）。已按 Kevin 的口径把上线相关动作推迟，故本轮不重部署，改记 known-red 并如实标注漏登（L2 片发现 gate 时该段就已红，而 known-red 只归因了 #191）。方案 a) 上线一轮统一重部署（推荐）；b) 若希望戳与代码解耦，改成断言「jar md5 == 本地构建产物 md5」而不是提交号。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 199,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "勘误：#198 里引用的自证基线写错了（用了 01dd4e3 而不是 9f1b008）",
+      "detail": "我在 #198 的 detail 里写了『git diff --stat 01dd4e3..HEAD -- code/ 为空』——**这是错的**：01dd4e3 是部署**之前**的提交，SYS-STAGING-001 自己的产物（code/deploy/**、application-test.yml、Dockerfile、.env.test、upload-mp.mjs 等 25 个文件）正在这个区间里，所以该 diff 不空。**正确基线是 9f1b008**（SYS-STAGING-001 的提交）：git diff --stat 9f1b008..HEAD -- code/ **为空**，git diff --name-only 9f1b008..HEAD 只有 doc/waves/{plan-D5-D8.md,qa/D5-r1-L01.json,regression/D5/known-red.txt,tools/{accept-run.py,gate-audit.py,gate.sh}} —— 全是文档/工具，没动 code/。结论不变（部署产物 == 9f1b008 的代码 == 当前代码；buildCommit 戳 01dd4e388a41 是部署时工作树未提交、取到的上一提交号），但 #198 的推理链要按本条修正后引用。教训：**别在台账里写自己没跑过的 diff 基线**——第一次就该用部署提交做基线。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
