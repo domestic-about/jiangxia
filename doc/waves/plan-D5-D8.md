@@ -137,3 +137,13 @@ Kevin 原话：「上线的任务先放一放吧，我们先在本地做完验�
 - `OCR-SPIKE-001`（等甲方照片；照片与真 provider 落地后要**连带修** L3 发现的解析器 S2：
   `姓名:张三 床号:12` → `donorName=张三床号`，见台账；**开启真 provider 前必修**）。
 - 安全组收紧（Kevin 已选「只报告不动」）。
+
+## 7. ★ 外部输入决策（2026-09-22 Kevin 明确）
+
+| 外部输入 | 决策 | 后果与替代方案 |
+|---|---|---|
+| **甲方 OCR 照片**（10–20 张，含 ≥3 张手写） | **暂时无法提供** | `OCR-SPIKE-001` 保持 `escalated`（不空转、不假装）；**真 provider 不落地**，生产继续走 `NoneOcrProvider` + 「请手动填写」。★连带：解析器缺陷（`姓名:张三 床号:12` → `donorName=张三床号`，issue #203）**只在真 provider 落地时才可达**，故仍然「开启真 provider 前必修」，不在本地上线前修。D5 的门已按 qa_scope 明文把它记为 blocked（不算 QA 失败）。 |
+| **小程序 appid + 上传密钥 + request 合法域名** | **暂时无法提供** | **体验版/真机档一律不做**，改为**本地 Mock 测试小程序**：H5（`pnpm dev:h5`，`env/.env.development` 带 `VITE_MOCK_LOGIN=1`）+ Playwright 真 DOM，打本地后端。**这是被 owner 接受的替代口径**——所有小程序票的验收以「H5 + mock 登录 + 真 DOM + 真库」为准，报告里如实写「未在真机/微信里覆盖」。`SYS-STAGING-001` 里已实现的 `pnpm upload:mp`（miniprogram-ci）保留待用，等 appid 到位即可出体验版。 |
+| 云资源 / 域名 ICP 备案 / 甲方主体认证 | 随「上线一轮」 | 见 §6.2；`SYS-PROD-001` / `SYS-BACKUP-001` / `SYS-RELEASE-001` 全部等这一轮。 |
+
+**对 QA 派单的含义**：D7 起所有小程序相关分片，**不要再把「体验版/真机」当成本轮要做的项**，直接按 H5+mock 口径验，并把它写进 `escalated_noted` 说明这是 owner 决策的替代口径（不是遗漏）。
