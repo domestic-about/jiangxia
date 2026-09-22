@@ -1,6 +1,7 @@
 package org.dromara.lqg.embed.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
@@ -10,6 +11,7 @@ import org.dromara.lqg.embed.domain.bo.EmbedQueryBo;
 import org.dromara.lqg.embed.domain.bo.EmbedSubmitBo;
 import org.dromara.lqg.embed.domain.bo.EmbedVerifyBo;
 import org.dromara.lqg.embed.domain.vo.EmbedVo;
+import org.dromara.lqg.embed.export.EmbedExportService;
 import org.dromara.lqg.embed.service.EmbedQueryService;
 import org.dromara.lqg.embed.service.EmbedService;
 import org.dromara.lqg.embed.service.EmbedVerifyService;
@@ -56,6 +58,7 @@ public class EmbedController {
     private final EmbedService embedService;
     private final EmbedQueryService embedQueryService;
     private final EmbedVerifyService embedVerifyService;
+    private final EmbedExportService embedExportService;
 
     /**
      * 列表（分页）。
@@ -116,6 +119,24 @@ public class EmbedController {
     public R<Void> verify(@PathVariable Long id, @Valid @RequestBody EmbedVerifyBo bo) {
         embedVerifyService.verify(id, bo);
         return R.ok();
+    }
+
+    /**
+     * 按当前筛选导出「石蜡包埋送样记录」xlsx（FLOW:F-EMBED-01.step5，EMBED-WEB-001）。
+     *
+     * <p>参数与 {@code GET /lqg/embed/list} 同一组（同一个 {@link EmbedQueryBo} 绑定）；
+     * 文件流由 {@code EmbedExportService} 出 —— 表头 16 列与甲方模板
+     * {@code _input/templates/石蜡包埋送样记录模板.xlsx} 逐字同序。
+     *
+     * <p>★ 排障：筛选走 <b>query 参数</b>（不是 JSON body），
+     * {@code POST /lqg/embed/export?internalNo=T-hli01} —— 与 {@code api.sh} 的形状一致。
+     * ★ 小程序表格页的 {@code GET /mp/int/export/embed}（SYS-EXPORT-001）复用同一个
+     * {@code EmbedExportService}，两处文件逐列一致。
+     */
+    @SaCheckPermission("lqg:embed:export")
+    @PostMapping("/export")
+    public void export(EmbedQueryBo query, HttpServletResponse response) {
+        embedExportService.export(query, response);
     }
 
 }

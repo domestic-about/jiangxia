@@ -5,7 +5,9 @@ import org.dromara.common.core.domain.dto.DictDataDTO;
 import org.dromara.common.core.service.DictService;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -49,6 +51,28 @@ public class EmbedDictService {
      */
     public List<String> markerExprValues() {
         return values(DICT_MARKER_EXPR);
+    }
+
+    /**
+     * 一本字典的 value → label 映射（EMBED-WEB-001 的导出用：染色要导中文标签
+     * {@code HE染色、IHC染色}，不能导 value {@code HE,IHC}）。
+     *
+     * <p>★ 只多这一个只读口，写侧继续走 {@link #stainValues()} / {@link #markerExprValues()}；
+     * 读不到字典 / 空字典 → 空表，调用方（{@code EmbedExportService}）对「字典里没有的历史值」
+     * 原样带出 value —— 一次字典抖动不该把整张导出打挂。
+     */
+    public Map<String, String> labels(String dictType) {
+        List<DictDataDTO> data = dictService.getDictData(dictType);
+        if (data == null) {
+            return Map.of();
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        for (DictDataDTO row : data) {
+            if (row.getDictValue() != null) {
+                out.put(row.getDictValue(), row.getDictLabel());
+            }
+        }
+        return out;
     }
 
     private List<String> values(String dictType) {

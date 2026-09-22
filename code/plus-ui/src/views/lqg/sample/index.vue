@@ -230,7 +230,15 @@
               {{ scope.row.verifyStatus === 'pending' ? t('lqg.sample.rowAction.verify') : t('lqg.sample.rowAction.edit') }}
             </el-button>
             <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.qcDoc') }}</el-button>
-            <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.embed') }}</el-button>
+            <!-- ★ 石蜡包埋入口（EMBED-WEB-001 点亮）：带 sampleId 跳到工作台「石蜡包埋」页并自动过滤 -->
+            <el-button
+              v-hasPermi="['lqg:embed:list']"
+              link
+              type="primary"
+              @click="handleEmbed(scope.row)"
+            >
+              {{ t('lqg.sample.rowAction.embed') }}
+            </el-button>
             <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.cryo') }}</el-button>
             <el-button v-hasPermi="['lqg:sample:remove']" link type="danger" icon="Delete" @click="handleDelete(scope.row)"></el-button>
           </template>
@@ -260,6 +268,7 @@ import { useI18n } from 'vue-i18n';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
+const router = useRouter();
 
 // 字典全部走 useDict（ticket §2.2）；文案走 lqg.sample.*
 const { lqg_sample_kind, lqg_submit_source, lqg_verify_status, lqg_gender } = toRefs<any>(
@@ -352,6 +361,17 @@ const handleOpen = (row: SampleVO) => {
 
 const handleExportNotYet = (sheet: string) => {
   proxy?.$modal.msgWarning(t('lqg.sample.toolbar.exportNotYet') + ' · ' + sheet);
+};
+
+/**
+ * 「石蜡包埋」行操作：带 sampleId 跳到工作台「石蜡包埋」页（EMBED-WEB-001）。
+ *
+ * ★ 跳转参数是 **sampleId**（后端 `EmbedQueryBo.sampleId` 的既有筛选），
+ *   不是内部编号 —— 待核验样本还没有内部编号，用编号跳会筛出空页。
+ */
+const handleEmbed = (row: SampleVO) => {
+  // 路径就是菜单 5310 的 path（'embed'，顶级 = /embed），不是 /lqg/embed
+  router.push({ path: '/embed', query: { sampleId: String(row.id) } });
 };
 
 const handleDelete = async (row: SampleVO) => {

@@ -1,0 +1,36 @@
+{
+  "sampleRowAction": {
+    "firstRowButtons": [
+      {
+        "text": "编辑",
+        "disabled": false
+      },
+      {
+        "text": "质控文档",
+        "disabled": true
+      },
+      {
+        "text": "石蜡包埋",
+        "disabled": false
+      },
+      {
+        "text": "冻存",
+        "disabled": true
+      },
+      {
+        "text": "",
+        "disabled": false
+      }
+    ],
+    "firstRowInternalNo": "T-hli01"
+  },
+  "afterJump": {
+    "url": "/embed?sampleId=9000001001",
+    "rowCount": 2,
+    "sampleTag": "只看样本 9000001001 的包埋记录",
+    "blockNos": [
+      "T-E01-2",
+      "T-E01-1"
+    ]
+  }
+}

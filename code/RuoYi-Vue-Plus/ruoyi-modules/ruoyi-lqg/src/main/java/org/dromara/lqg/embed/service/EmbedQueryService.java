@@ -161,6 +161,75 @@ public class EmbedQueryService {
         return DataPermissionHelper.ignore(() -> embedMapper.selectById(id));
     }
 
+    /**
+     * <b>导出用的整表（不分页）</b>：与 {@link #list(EmbedQueryBo)} 同一份 wrapper、
+     * 同一份装配 —— {@code POST /lqg/embed/export} 与 {@code GET /lqg/embed/list} 口径逐条一致
+     * （accept 1 的「带筛选导出只出筛选结果」与「行数与列表 total 一致」两段钉的就是这个）。
+     *
+     * <p>★ 排序与筛选用<b>同一个</b> {@link #buildWrapper}：直接拿实体 VO 导出、
+     * 或者另写一份「导出专用 SQL」，正是 accept 1 counterfeit 点名要抓的形态。
+     *
+     * <p>★ <b>软删不出现、所挂样本软删的也不出现</b>：实体 {@code @TableLogic} 兜住前者；
+     * 后者由装配时 {@code sampleMapper.selectBatchIds} 查不到样本 → 该行 {@code internalNo} 为
+     * {@code null} 暴露出来，导出侧按「样本已删 → 不导」跳过（与样本导出口径一致）。
+     */
+    public List<EmbedVo> exportRows(EmbedQueryBo query) {
+        EmbedQueryBo q = query == null ? new EmbedQueryBo() : query;
+        return DataPermissionHelper.ignore(() -> {
+            List<Long> sampleIds = null;
+            if (StringUtils.isNotBlank(q.getInternalNo())) {
+                sampleIds = sampleIdsOfInternalNo(q.getInternalNo());
+                if (sampleIds.isEmpty()) {
+                    return List.of();
+                }
+            }
+            List<EmbedVo> rows = assemble(embedMapper.selectList(buildWrapper(q, sampleIds, currentUserId())));
+            Set<Long> missing = missingSampleIds(rows);
+            if (missing.isEmpty()) {
+                return rows;
+            }
+            return rows.stream()
+                .filter(row -> row.getSampleId() == null || !missing.contains(row.getSampleId()))
+                .toList();
+        });
+    }
+
+    /**
+     * 这一批行里，哪些行的<b>所挂样本已经查不到</b>（软删或不存在）。
+     *
+     * <p>给 {@link #exportRows} 用：{@link #assemble} 对查不到样本的行只留 {@code sampleId}
+     * （{@code internalNo} / {@code submitNo} 都是 {@code null}）。列表页照旧显示这些行，
+     * 但导出按 ticket 口径要剔掉 —— 「行数 = 未删的石蜡包埋送样记录数，<b>且所挂样本未删</b>」。
+     */
+    private Set<Long> missingSampleIds(Collection<EmbedVo> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return Set.of();
+        }
+        Set<Long> wanted = new LinkedHashSet<>();
+        for (EmbedVo row : rows) {
+            if (row.getSampleId() != null) {
+                wanted.add(row.getSampleId());
+            }
+        }
+        if (wanted.isEmpty()) {
+            return Set.of();
+        }
+        List<Sample> found = sampleMapper.selectBatchIds(wanted);
+        Set<Long> alive = new LinkedHashSet<>();
+        if (found != null) {
+            for (Sample sample : found) {
+                alive.add(sample.getId());
+            }
+        }
+        Set<Long> missing = new LinkedHashSet<>();
+        for (Long id : wanted) {
+            if (!alive.contains(id)) {
+                missing.add(id);
+            }
+        }
+        return missing;
+    }
+
     // ── wrapper / 装配 ────────────────────────────────────────────────────────
 
     /**

@@ -1,0 +1,12 @@
+{
+  "alertText": [
+    "所挂样本已核验有效，可以判为有效 判为有效要给石蜡块编号（全库唯一），之后照常补工序与染色；判为无效必须写原因。"
+  ],
+  "validDisabled": false,
+  "validClass": "el-button el-button--primary el-button--default",
+  "footerButtons": [
+    "判为有效并保存",
+    "判为无效",
+    "取 消"
+  ]
+}
