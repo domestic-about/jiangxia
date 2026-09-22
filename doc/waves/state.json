@@ -37,9 +37,9 @@
     },
     {
       "id": "D5",
-      "status": "pending",
-      "qa_rounds": 1,
-      "qa_seq": 1
+      "status": "qa_passed",
+      "qa_rounds": 2,
+      "qa_seq": 2
     },
     {
       "id": "D6",
@@ -3254,6 +3254,16 @@
       "type": "ux",
       "title": "同一张卡的「下载」与「合并下载」共用一个 DownloadBar 实例 → 格式选择会从上一次带过来",
       "detail": "复现（D7 r1 L2 场景 A）：在一张卡上先选 PDF 触发「下载」，再点「合并下载」，实际下到的是 **PDF** 而不是默认的 Word（首次打开默认 Word 是对的）。根因：两个入口共用一个 DownloadBar 实例，格式选择状态没按入口重置。影响：老师会拿到与预期不符的格式（且文件名里写着 .docx 还是 .pdf 才看得出来）。方案：打开弹层时按入口重置格式选择（或每个入口给独立的默认值）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 285,
+      "ticket": "SYS-ACCEPT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ 调度器缺陷：sync 的「回退重跑」判据没把 escalated 当已落定，与 next 的 phase_done 口径不一致 → 含 escalated 票的任务过门后再 sync 就被莫名回退",
+      "detail": "复现：本会话给 D7 加了新票 SYS-ACCEPT-001 后跑 python3 ~/claude-config/skills/zhixing/scripts/task_state.py sync → 输出「以下任务已通过 QA 门但又出现未完成 ticket，已回退待重跑 QA: **D5**」，于是 next 从「D7 派新票」变成「D5 重新过门」。根因（读源码确认）：task_state.py 的 cmd_sync 里回退判据是 `undone = [t for t,v in state[\"tickets\"].items() if v[\"phase\"]==ph[\"id\"] and v[\"status\"] != \"done\"]` —— **只认 done**；而 cmd_next 的 phase_done 判据是 `v[\"status\"] not in (\"done\",\"escalated\")` —— **认 escalated 为已落定**。D5 有 OCR-SPIKE-001 escalated（等甲方照片，owner 已确认暂时无法提供），因此每次 sync 都会把 D5 从 qa_passed 打回 pending。影响：①任何含 escalated 票的任务一旦过门，后续每次 sync（加票/改归属都要跑）都会把它回退，导致**重复跑一遍完整的 QA 门**（本轮 D5 门 ≈ 3 个分片）；②D7 有 DOC-PROOF-001 escalated，将来同样会中招；③这是**在 Kevin 的全局 skill 里**（~/claude-config/skills/zhixing/scripts/task_state.py），不只影响本项目。处置（本轮）：我把 D5 手工恢复成 qa_passed（--audit-json doc/waves/qa/D5-r1.json），并在此后避免不必要的 sync。建议修复（一行）：把 cmd_sync 的判据改成 `v[\"status\"] not in (\"done\",\"escalated\")`，与 phase_done 对齐；或在回退前把 phase 里的 escalated 票显式排除。**这需要改全局 skill，我没有擅自改**——请 Kevin 拍板（改全局 / 我在项目内放一份 fork 用）。",
       "status": "open",
       "decision": ""
     }
