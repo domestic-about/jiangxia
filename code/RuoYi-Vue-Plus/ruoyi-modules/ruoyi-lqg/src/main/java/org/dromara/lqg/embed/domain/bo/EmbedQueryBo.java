@@ -57,6 +57,21 @@ public class EmbedQueryBo extends PageQuery {
     @Schema(description = "内部编号（所挂样本的，等值）")
     private String internalNo;
 
+    /**
+     * 小程序内部管理表格页那<b>一个</b>搜索框（UI:mp.embed.list：搜索 = 石蜡块编号 / 内部编号）。
+     *
+     * <p>★ 语义 = <b>石蜡块编号模糊 OR 所挂样本内部编号等值</b>，两个判据<b>合成一组 OR</b>
+     * （{@code EmbedQueryService.buildWrapper} 里用 {@code and(w -> …)} 包住 —— 顶层裸
+     * {@code .or()} 会让 SQL 退化成 {@code (A AND B) OR C}，D2 的 S1 #105 就是这个形态）。
+     *
+     * <p>★ 为什么加在父 BO 上而不是 {@code MpEmbedQueryBo}：判据只有
+     * {@code EmbedQueryService.list} 一条读路径，落在那儿才与别的筛选同源（子类声明会让
+     * service 反向 import {@code embed.mp}）。与 SAMPLE 域 {@code SampleQueryBo.keyword}
+     * 的落法逐字一致（SAMPLE-MP-002）。工作台不发这个参数，行为一字不变。
+     */
+    @Schema(description = "搜索（石蜡块编号模糊 / 所挂样本内部编号等值），内部管理表格页用")
+    private String keyword;
+
     @Schema(description = "所挂样本 id")
     private Long sampleId;
 

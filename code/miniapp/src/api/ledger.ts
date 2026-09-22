@@ -40,15 +40,17 @@ export interface LedgerRow {
   [key: string]: unknown
 }
 
-/** 表格页的两个筛选条件（两个工作表之间切换时**保留**，ticket §2） */
+/** 表格页的筛选条件（切换工作表时**保留**，ticket §2） */
 export interface LedgerFilters {
   keyword: string
   verifyStatus: string
+  /** 染色（只有石蜡包埋这张表有这一档；值域 = 字典 `lqg_stain_type`） */
+  stain: string
 }
 
 /** 空筛选 */
 export function emptyFilters(): LedgerFilters {
-  return { keyword: '', verifyStatus: '' }
+  return { keyword: '', verifyStatus: '', stain: '' }
 }
 
 /**

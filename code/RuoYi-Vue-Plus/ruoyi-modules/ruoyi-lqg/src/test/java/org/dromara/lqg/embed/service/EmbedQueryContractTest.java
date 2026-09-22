@@ -139,4 +139,31 @@ class EmbedQueryContractTest {
         assertFalse(sql.contains(" OR "), "WHERE 段里不应出现裸 OR：" + sql);
     }
 
+    @Test
+    @DisplayName("⑤ 搜索框 keyword：石蜡块编号模糊 OR 所挂样本内部编号等值，且这一组 OR 被括号包住")
+    void keywordOrIsGrouped() {
+        EmbedQueryBo q = query();
+        q.setKeyword("T-E01");
+        q.setVerifyStatus("valid");
+        // 搜索命中了内部编号那一半：两个判据合成一组 OR，与 verify_status 相与
+        LambdaQueryWrapper<Embed> wrapper = EmbedQueryService.buildWrapper(
+            q, null, java.util.List.of(9000001001L), null);
+        String sql = wrapper.getTargetSql();
+        assertTrue(sql.contains("(paraffin_block_no LIKE ? OR sample_id IN (?)"),
+            "★ keyword 的两个判据必须包成一组 OR（顶层裸 OR 会退化成 (A AND B) OR C）：" + sql);
+        assertTrue(sql.contains("verify_status = ?"), sql);
+
+        // 反证：内部编号那一半没命中时退化成「只按石蜡块编号模糊」，不许留一个空的 IN ()
+        LambdaQueryWrapper<Embed> blockOnly = EmbedQueryService.buildWrapper(
+            q, null, java.util.List.of(), null);
+        String blockSql = blockOnly.getTargetSql();
+        assertTrue(blockSql.contains("paraffin_block_no LIKE ?"), blockSql);
+        assertFalse(blockSql.contains(" OR "), "没有命中样本时不该出现 OR：" + blockSql);
+        assertFalse(blockSql.contains("sample_id IN"), blockSql);
+
+        // 不带 keyword 时一个字都不多（工作台那两个端点行为不变）
+        LambdaQueryWrapper<Embed> none = EmbedQueryService.buildWrapper(query(), null, null, null);
+        assertFalse(none.getTargetSql().contains("paraffin_block_no"), none.getTargetSql());
+    }
+
 }

@@ -78,7 +78,7 @@ public class EmbedQueryService {
                     return emptyPage(page);
                 }
             }
-            LambdaQueryWrapper<Embed> wrapper = buildWrapper(q, sampleIds, currentUserId());
+            LambdaQueryWrapper<Embed> wrapper = buildWrapper(q, sampleIds, keywordSampleIds(q), currentUserId());
             Page<Embed> result = embedMapper.selectPage(page, wrapper);
             List<EmbedVo> rows = assemble(result.getRecords());
             return TableDataInfo.build(new Page<EmbedVo>(result.getCurrent(), result.getSize(), result.getTotal())
@@ -183,7 +183,8 @@ public class EmbedQueryService {
                     return List.of();
                 }
             }
-            List<EmbedVo> rows = assemble(embedMapper.selectList(buildWrapper(q, sampleIds, currentUserId())));
+            List<EmbedVo> rows = assemble(embedMapper
+                .selectList(buildWrapper(q, sampleIds, keywordSampleIds(q), currentUserId())));
             Set<Long> missing = missingSampleIds(rows);
             if (missing.isEmpty()) {
                 return rows;
@@ -240,11 +241,24 @@ public class EmbedQueryService {
      * 补括号，顶层裸 {@code .or()} 会把整条 AND 链拆成 {@code (A AND B) OR C}
      * （D2 的 S1 #105 就是这个，全仓已扫过一遍 —— 本类不引入同类形态）。
      *
-     * @param q         查询入参
-     * @param sampleIds 按 internalNo 查出来的样本 id 集合（{@code null} = 不带这个筛选）
-     * @param me        当前登录人（{@code mine=true} 时才用得上；取不到 = {@code null}）
+     * <p>本重载保留给「只要原有筛选」的调用方（工作台导出 / 既有契约测试）：
+     * 等价于不带 {@code keyword} 的那一条路。
      */
     static LambdaQueryWrapper<Embed> buildWrapper(EmbedQueryBo q, List<Long> sampleIds, Long me) {
+        return buildWrapper(q, sampleIds, null, me);
+    }
+
+    /**
+     * 组装列表的 {@code WHERE} 链与 {@code ORDER BY}。
+     *
+     * @param q                 查询入参
+     * @param sampleIds         按 {@code internalNo} 查出来的样本 id 集合（{@code null} = 不带这个筛选）
+     * @param keywordSampleIds  按 {@code keyword} 命中的样本内部编号查出来的样本 id 集合
+     *                          （{@code null} / 空 = 这个搜索只可能命中石蜡块编号）
+     * @param me                当前登录人（{@code mine=true} 时才用得上；取不到 = {@code null}）
+     */
+    static LambdaQueryWrapper<Embed> buildWrapper(EmbedQueryBo q, List<Long> sampleIds,
+                                                 List<Long> keywordSampleIds, Long me) {
         LambdaQueryWrapper<Embed> wrapper = new LambdaQueryWrapper<Embed>()
             .like(StringUtils.isNotBlank(q.getParaffinBlockNo()), Embed::getParaffinBlockNo,
                 trim(q.getParaffinBlockNo()))
@@ -255,6 +269,19 @@ public class EmbedQueryService {
             .eq(StringUtils.isNotBlank(q.getVerifyStatus()), Embed::getVerifyStatus, trim(q.getVerifyStatus()))
             // 提交来源钉在已落库的列上（提交当时的快照），不按提交人当前角色现算
             .eq(StringUtils.isNotBlank(q.getSubmitSource()), Embed::getSubmitSource, trim(q.getSubmitSource()));
+        // ★ 搜索框（UI:mp.embed.list：石蜡块编号 / 内部编号）：两个判据**合成一组 OR**，
+        //   与别的筛选相与。所挂样本的内部编号是等值（这一列不是加密列，等值才能让
+        //   「T-hli01」一次命中；石蜡块编号按模糊，用户常常只记得前几段）。
+        String keyword = trim(q.getKeyword());
+        if (StringUtils.isNotBlank(keyword)) {
+            List<Long> hitSamples = keywordSampleIds == null ? List.of() : keywordSampleIds;
+            if (hitSamples.isEmpty()) {
+                wrapper.like(Embed::getParaffinBlockNo, keyword);
+            } else {
+                wrapper.and(w -> w.like(Embed::getParaffinBlockNo, keyword)
+                    .or().in(Embed::getSampleId, hitSamples));
+            }
+        }
         // ★ 染色：数组包含，不是 LIKE '%HE%'。
         //   两侧补逗号、外层再加通配 —— 整串 = '%,HE,%'，精确等价于「逗号串里有一个元素 == HE」：
         //   HE,IHC 命中；OTHER（O-T-HE-R）不命中；IF 不命中。参数走 {0} 占位，无字符串插值。
@@ -383,6 +410,21 @@ public class EmbedQueryService {
                 .select(Sample::getId)
                 .eq(Sample::getInternalNo, internalNo.trim()))
             .stream().map(Sample::getId).filter(Objects::nonNull).toList();
+    }
+
+    /**
+     * 搜索框（{@code keyword}）里「所挂样本内部编号」那一半命中的样本 id 集合。
+     *
+     * <p>★ 与 {@code internalNo} 筛选同一个查法（等值），但语义不同：{@code internalNo} 是
+     * <b>只按内部编号</b>筛（命中不了就回空页），{@code keyword} 是<b>或</b>关系 ——
+     * 这一个半边落空时还有「石蜡块编号模糊」那一半，所以调用方拿到空集合时
+     * <b>不能</b>直接回空页（{@link #buildWrapper} 会退化成只按石蜡块编号 LIKE）。
+     */
+    private List<Long> keywordSampleIds(EmbedQueryBo q) {
+        if (q == null || StringUtils.isBlank(q.getKeyword())) {
+            return null;
+        }
+        return sampleIdsOfInternalNo(q.getKeyword());
     }
 
     private static TableDataInfo<EmbedVo> emptyPage(Page<Embed> page) {

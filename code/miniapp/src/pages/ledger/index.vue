@@ -44,9 +44,9 @@ const tabs = computed(() => sheetsFor())
 const cols = computed(() => columnsOf(sheet.value))
 const columnLabels = computed(() => cols.value?.columns.map(c => c.label) ?? [])
 const tableWidth = computed(() => ledgerTableWidth(columnLabels.value.length))
-const tableRows = computed<LedgerTableRow[]>(() => toTableRows(rows.value))
-// 表格页的筛选是「该表自己的筛选项」，两张样本表都是核验状态
-const statusOptions = computed(() => sheet.value.filters[0]?.options ?? [])
+const tableRows = computed<LedgerTableRow[]>(() => toTableRows(rows.value, sheet.value))
+/** 该表的筛选项（样本两张表只有核验状态；石蜡包埋那张另有染色） */
+const filterGroups = computed(() => sheet.value.filters)
 const rowById = computed(() => new Map(rows.value.map(row => [String(row.id), row])))
 /** 这一页只给内部人员（外部连入口都没有，「我的」里整块不渲染） */
 const isExternal = computed(() => store.me !== null && store.me !== undefined && normalizeIdentity(store.identity) !== 'internal')
@@ -93,12 +93,17 @@ function pickSheet(item: LedgerSheet) {
   load()
 }
 
-function pickStatus(value: string) {
-  if (filters.value.verifyStatus === value) {
+function pickFilter(key: 'verifyStatus' | 'stain', value: string) {
+  if (filters.value[key] === value) {
     return
   }
-  filters.value.verifyStatus = value
+  filters.value[key] = value
   load()
+}
+
+/** 该筛选组当前选中的值（模板里读 `filters[x]` 不便，收一个函数） */
+function activeFilter(key: 'verifyStatus' | 'stain'): string {
+  return filters.value[key]
 }
 
 function onKeyword(value: string) {
@@ -164,14 +169,14 @@ onShow(start)
       >{{ item.short }}</text>
     </view>
 
-    <!-- ② 筛选行：搜索框 + 核验状态 -->
+    <!-- ② 筛选行：搜索框 + 该表自己的筛选项（核验状态 / 染色，由 sheets.ts 给） -->
     <view class="lqg-filter">
       <view class="lqg-filter__chip ledger-page__search">
         <input
           class="ledger-page__input"
           type="text"
           :value="filters.keyword"
-          placeholder="搜编号或单位"
+          :placeholder="sheet.searchPlaceholder"
           placeholder-class="ledger-page__ph"
           confirm-type="search"
           @input="onKeywordInput"
@@ -179,13 +184,13 @@ onShow(start)
         >
       </view>
     </view>
-    <view class="lqg-filter ledger-page__chips">
+    <view v-for="group in filterGroups" :key="group.key" class="lqg-filter ledger-page__chips">
       <text
-        v-for="opt in statusOptions"
-        :key="opt.value"
+        v-for="opt in group.options"
+        :key="`${group.key}-${opt.value}`"
         class="lqg-filter__chip ledger-page__chip"
-        :class="{ 'ledger-page__chip--on': filters.verifyStatus === opt.value }"
-        @click="pickStatus(opt.value)"
+        :class="{ 'ledger-page__chip--on': activeFilter(group.key) === opt.value }"
+        @click="pickFilter(group.key, opt.value)"
       >{{ opt.label }}</text>
     </view>
 
