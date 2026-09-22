@@ -1,0 +1,32 @@
+[
+  {
+    "name": "三页签:存在未保存改动提示",
+    "pass": false,
+    "detail": "页面文本出现「未保存/尚未保存/有改动」=false"
+  },
+  {
+    "name": "三页签:启动前页签1的值",
+    "pass": true,
+    "detail": "diag=\"多页签保存探针-临床诊断\""
+  },
+  {
+    "name": "保存草稿:提示文案",
+    "pass": true,
+    "detail": "草稿已保存"
+  },
+  {
+    "name": "保存后:未保存页签的改动仍在内存(DOM)",
+    "pass": true,
+    "detail": "diag=\"多页签保存探针-临床诊断\" growth=\"多页签保存探针-生长状态\""
+  },
+  {
+    "name": "刷新后:页签1未保存改动丢失",
+    "pass": true,
+    "detail": "diag=\"测试诊断\""
+  },
+  {
+    "name": "刷新后:页签2未保存改动丢失",
+    "pass": true,
+    "detail": "growth=\"良好\""
+  }
+]

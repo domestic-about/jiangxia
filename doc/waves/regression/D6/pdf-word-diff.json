@@ -1,0 +1,313 @@
+{
+  "diffs": [
+    {
+      "kind": "sample_qc",
+      "item": "表格结构（表数/行列/合并格）",
+      "verdict": "与原件一致",
+      "detail": "原件=[{'rows': 11, 'cols': 6, 'gridSpan': 13, 'vMerge': 0}] 渲染=[{'rows': 11, 'cols': 6, 'gridSpan': 13, 'vMerge': 0}]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "tblGrid 列宽（版式地基）",
+      "verdict": "与原件逐字一致",
+      "detail": "1 个 tblGrid"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "字体（原件）",
+      "verdict": "记录",
+      "detail": "[\"Times New Roman\", \"zh-CN\", \"宋体\"]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "字体（渲染）",
+      "verdict": "记录",
+      "detail": "[\"Noto Serif SC\", \"Tinos\", \"zh-CN\"]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "占位符残留",
+      "verdict": "无残留",
+      "detail": "[]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "内部编号（内部版）",
+      "verdict": "有",
+      "detail": "T-hli01"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "内部编号（外部版）",
+      "verdict": "无（符合口径）",
+      "detail": "T-hli01"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "PDF 字体清单",
+      "verdict": "记录",
+      "detail": "[{\"line\": \"BAAAAA+NotoSerifSC-Bold              Type 1            Builtin          yes yes yes     19  0\", \"name\": \"BAAAAA+NotoSerifSC-Bold\", \"emb\": \"yes\"}, {\"line\": \"CAAAAA+NotoSerifSC-Regular           Type 1            Builtin          yes yes yes     29  0\", \"name\": \"CAAAAA+NotoSerifSC-Regular\", \"emb\": \"yes\"}, {\"line\": \"DAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     44  0\", \"name\": \"DAAAAA+Tinos-Regular\", \"emb\": \"yes\"}, {\"line\": \"EAAAAA+NotoSerifSC-Regular           Type 1            Builtin          yes yes yes     24  0\", \"name\": \"EAAAAA+NotoSerifSC-Regular\", \"emb\": \"yes\"}, {\"line\": \"FAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     39  0\", \"name\": \"FAAAAA+Tinos-Regular\", \"emb\": \"yes\"}, {\"line\": \"GAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     34  0\", \"name\": \"GAAAAA+Tinos-Regular\", \"emb\": \"yes\"}]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "PDF 有 CJK 开源字体",
+      "verdict": "是",
+      "detail": "[\"BAAAAA+NotoSerifSC-Bold\", \"CAAAAA+NotoSerifSC-Regular\", \"EAAAAA+NotoSerifSC-Regular\"]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "PDF 无 DejaVu/Liberation 回退",
+      "verdict": "是",
+      "detail": "[]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "PDF 全部字体已嵌入",
+      "verdict": "是",
+      "detail": "[\"yes\", \"yes\", \"yes\", \"yes\", \"yes\", \"yes\"]"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "PDF 抽得出中文（非豆腐块）",
+      "verdict": "是",
+      "detail": "中文字符数=163"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "PDF 页数",
+      "verdict": "记录",
+      "detail": "2"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "内部/外部版 PDF 页数",
+      "verdict": "一致",
+      "detail": "内部=2 外部=2"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "表格结构（表数/行列/合并格）",
+      "verdict": "与原件一致",
+      "detail": "原件=[{'rows': 7, 'cols': 2, 'gridSpan': 1, 'vMerge': 0}] 渲染=[{'rows': 7, 'cols': 2, 'gridSpan': 1, 'vMerge': 0}]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "tblGrid 列宽（版式地基）",
+      "verdict": "与原件逐字一致",
+      "detail": "1 个 tblGrid"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "字体（原件）",
+      "verdict": "记录",
+      "detail": "[\"Times New Roman\", \"zh-CN\", \"宋体\"]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "字体（渲染）",
+      "verdict": "记录",
+      "detail": "[\"Noto Serif SC\", \"Tinos\", \"zh-CN\"]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "占位符残留",
+      "verdict": "无残留",
+      "detail": "[]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "内部编号（内部版）",
+      "verdict": "无",
+      "detail": "T-hli01"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "内部编号（外部版）",
+      "verdict": "无（符合口径）",
+      "detail": "T-hli01"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "PDF 字体清单",
+      "verdict": "记录",
+      "detail": "[{\"line\": \"BAAAAA+NotoSerifSC-Bold              Type 1            Builtin          yes yes yes     11  0\", \"name\": \"BAAAAA+NotoSerifSC-Bold\", \"emb\": \"yes\"}, {\"line\": \"CAAAAA+NotoSerifSC-Regular           Type 1            Builtin          yes yes yes     16  0\", \"name\": \"CAAAAA+NotoSerifSC-Regular\", \"emb\": \"yes\"}, {\"line\": \"DAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     21  0\", \"name\": \"DAAAAA+Tinos-Regular\", \"emb\": \"yes\"}]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "PDF 有 CJK 开源字体",
+      "verdict": "是",
+      "detail": "[\"BAAAAA+NotoSerifSC-Bold\", \"CAAAAA+NotoSerifSC-Regular\"]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "PDF 无 DejaVu/Liberation 回退",
+      "verdict": "是",
+      "detail": "[]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "PDF 全部字体已嵌入",
+      "verdict": "是",
+      "detail": "[\"yes\", \"yes\", \"yes\"]"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "PDF 抽得出中文（非豆腐块）",
+      "verdict": "是",
+      "detail": "中文字符数=56"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "PDF 页数",
+      "verdict": "记录",
+      "detail": "1"
+    },
+    {
+      "kind": "organoid_qc",
+      "item": "内部/外部版 PDF 页数",
+      "verdict": "一致",
+      "detail": "内部=1 外部=1"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "表格结构（表数/行列/合并格）",
+      "verdict": "有差异",
+      "detail": "原件=[{'rows': 14, 'cols': 4, 'gridSpan': 1, 'vMerge': 24}] 渲染=[{'rows': 15, 'cols': 4, 'gridSpan': 1, 'vMerge': 24}]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "tblGrid 列宽（版式地基）",
+      "verdict": "与原件逐字一致",
+      "detail": "1 个 tblGrid"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "字体（原件）",
+      "verdict": "记录",
+      "detail": "[\"Times New Roman\", \"宋体\"]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "字体（渲染）",
+      "verdict": "记录",
+      "detail": "[\"Noto Serif SC\", \"Tinos\"]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "占位符残留",
+      "verdict": "无残留",
+      "detail": "[]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "内部编号（内部版）",
+      "verdict": "无",
+      "detail": "T-hli01"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "内部编号（外部版）",
+      "verdict": "无（符合口径）",
+      "detail": "T-hli01"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "PDF 字体清单",
+      "verdict": "记录",
+      "detail": "[{\"line\": \"BAAAAA+NotoSerifSC-Bold              Type 1            Builtin          yes yes yes     12  0\", \"name\": \"BAAAAA+NotoSerifSC-Bold\", \"emb\": \"yes\"}, {\"line\": \"CAAAAA+NotoSerifSC-Regular           Type 1            Builtin          yes yes yes     22  0\", \"name\": \"CAAAAA+NotoSerifSC-Regular\", \"emb\": \"yes\"}, {\"line\": \"DAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     32  0\", \"name\": \"DAAAAA+Tinos-Regular\", \"emb\": \"yes\"}, {\"line\": \"EAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     37  0\", \"name\": \"EAAAAA+Tinos-Regular\", \"emb\": \"yes\"}, {\"line\": \"FAAAAA+NotoSerifSC-Regular           Type 1            Builtin          yes yes yes     17  0\", \"name\": \"FAAAAA+NotoSerifSC-Regular\", \"emb\": \"yes\"}, {\"line\": \"GAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     27  0\", \"name\": \"GAAAAA+Tinos-Regular\", \"emb\": \"yes\"}]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "PDF 有 CJK 开源字体",
+      "verdict": "是",
+      "detail": "[\"BAAAAA+NotoSerifSC-Bold\", \"CAAAAA+NotoSerifSC-Regular\", \"FAAAAA+NotoSerifSC-Regular\"]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "PDF 无 DejaVu/Liberation 回退",
+      "verdict": "是",
+      "detail": "[]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "PDF 全部字体已嵌入",
+      "verdict": "是",
+      "detail": "[\"yes\", \"yes\", \"yes\", \"yes\", \"yes\", \"yes\"]"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "PDF 抽得出中文（非豆腐块）",
+      "verdict": "是",
+      "detail": "中文字符数=99"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "PDF 页数",
+      "verdict": "记录",
+      "detail": "2"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "内部/外部版 PDF 页数",
+      "verdict": "一致",
+      "detail": "内部=2 外部=2"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "固定文字: 注：合格，活率≥70%；基本合格，50%~70%；不…",
+      "verdict": "原件有 / docx有 / pdf有",
+      "detail": "逐字比较（去空白）"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "固定文字: 样本按质控要求，保持2-8℃低温环境运输至实验室。…",
+      "verdict": "原件有 / docx有 / pdf有",
+      "detail": "逐字比较（去空白）"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "固定文字: 样本外观呈黄白色。…",
+      "verdict": "原件有 / docx无 / pdf无",
+      "detail": "逐字比较（去空白）"
+    },
+    {
+      "kind": "sample_qc",
+      "item": "固定文字: 样本经剪切等预处理，显微镜下观察组织漏出细胞量适中，…",
+      "verdict": "原件有 / docx无 / pdf无",
+      "detail": "逐字比较（去空白）"
+    },
+    {
+      "kind": "organoid_score",
+      "item": "固定文字: 注：类器官质量评分≤50表示类器官质量偏差，药敏实验…",
+      "verdict": "原件有 / docx有 / pdf有",
+      "detail": "逐字比较（去空白）"
+    },
+    {
+      "kind": "merged",
+      "item": "合并 PDF 三份顺序（样本质控→类器官质控→评分）",
+      "verdict": "正确",
+      "detail": "{\"样本质控表\": 20, \"类器官质控表\": 951, \"类器官质量评分表\": 1094}"
+    },
+    {
+      "kind": "merged",
+      "item": "合并 PDF 页数",
+      "verdict": "记录",
+      "detail": "5"
+    },
+    {
+      "kind": "merged",
+      "item": "合并 PDF 字体",
+      "verdict": "记录",
+      "detail": "[\"BAAAAA+NotoSerifSC-Bold\", \"CAAAAA+NotoSerifSC-Regular\", \"DAAAAA+Tinos-Regular\", \"EAAAAA+NotoSerifSC-Regular\", \"FAAAAA+Tinos-Regular\", \"GAAAAA+Tinos-Regular\", \"HAAAAA+Tinos-Regular\"]"
+    }
+  ],
+  "human_checklist": [
+    "sample_qc: 版式外观（字号/行距/单元格内边距/图片在格内的对齐与缩放）需人眼并排看",
+    "organoid_qc: 版式外观（字号/行距/单元格内边距/图片在格内的对齐与缩放）需人眼并排看",
+    "organoid_score: 版式外观（字号/行距/单元格内边距/图片在格内的对齐与缩放）需人眼并排看",
+    "sample_qc: 与原件并排看页边距 / 表格是否跨页断行 / 表头是否重复",
+    "organoid_qc: 与原件并排看页边距 / 表格是否跨页断行 / 表头是否重复",
+    "organoid_score: 与原件并排看页边距 / 表格是否跨页断行 / 表头是否重复",
+    "三份文档的原件是**空白模板**：渲染出来的是填了数据的版本，逐格『内容对不对』属 DOC-PROOF-001 的甲方确认范围"
+  ]
+}

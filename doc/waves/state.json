@@ -2485,8 +2485,8 @@
       "type": "debt",
       "title": "预览图真转换分支在确定性数据里跑不到：seed 是假 URL 取不到字节 + 本机 ImageIO 读不了 TIFF",
       "detail": "票面要求「非 jpg/png 或长边>2000px → 生成长边≤2000px 的 JPEG 另存 OSS，填 preview_oss_id；否则 preview_oss_id = oss_id」。实测：seed 的 sys_oss 行 service='seed'、url 是假地址 → 取不到字节，于是**一律退回 preview_oss_id = oss_id**；且本机 ImageIO 默认读不了 TIFF（需 imageio-tiff 插件，本票未装）。影响：**真转换分支（缩放/格式转换/另存）在确定性数据上没有端到端证据**，只有代码路径与单元级判断；D6 qa_scope L2 有一条「TIFF 显示预览图」，QA 门要么补真图字节的测试数据、要么如实记为未覆盖。方案 a) 给 seed 加一张真实 TIFF 与一张长边>2000px 的图（放 OSS 或本地 fixture），并装 imageio-tiff 插件；b) 或在 QA 门里明确把该条记为未覆盖并让 Kevin 知晓。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "partially-fixed：部分结案（2026-09-22，D6 L2 片实测纠正）：**错误的一半**——「本机 ImageIO 读不了 TIFF、需 imageio-tiff 插件」不成立，JDK 17 ImageIO 自带 TIFF reader，TIFF→JPEG 预览分支实测端到端可用（真 TIFF 经框架 OSS 上传 → preview_oss_id≠oss_id → 下载确认 JPEG；2400px PNG 也真走了缩放）。**仍成立的一半**——seed 的 sys_oss 是 https://seed.invalid 假地址取不到字节，所以预览转换在确定性 seed 数据上跑不到；要验它必须自备真图上传（D6 L2 已这么做并全绿）。结论改成：预览能力可用，缺的是「seed 里没有可真取的图」，属测试数据问题而非实现问题。已另记勘误 issue。"
     },
     {
       "id": 209,
@@ -2775,6 +2775,16 @@
       "type": "clarify",
       "title": "两个页签都按蓝图加了「底部附件区」（票面 §2 字面未枚举，可能被判镀金）",
       "detail": "票面 §2 对 OrganoidQcTab / ScoreTab 的字面清单里没写附件区，但蓝图锚 UI:admin.qc.editor 的该页签下有附件；实现按蓝图加了（**prompt 与蓝图冲突时以蓝图为准**，符合派单规则）。影响：范围界定问题——若 QA 门按票面字面判「镀金」，这条会被误判。方案 a) 保留（有蓝图依据）；b) 让 ① 侧把票面 §2 与蓝图对齐。已在报告 §5 WARN-5 记明。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 238,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "勘误 #208：本机 ImageIO 读不了 TIFF 的说法不成立——TIFF→JPEG 预览分支实测端到端可用",
+      "detail": "D6 的 L2 片独立实测推翻了 #208 的一半诊断：把真 TIFF 经框架 OSS 上传后，preview_oss_id ≠ oss_id 且下载确认是 JPEG；2400px 的 PNG 也真的走了缩放分支。也就是说 **JDK 17 的 ImageIO 自带 TIFF reader**，「本机 ImageIO 读不了 TIFF，需 imageio-tiff 插件」这条不成立。#208 里仍然成立的那一半是：**seed 的 sys_oss 是 https://seed.invalid 假地址取不到字节**，所以「预览转换」在**确定性 seed 数据上**跑不到——要验它必须自备真图上传。影响：若 D7/后续票按 #208 的错前提去装 imageio-tiff 或做别的预案，会白做。纠正后的结论：①预览分支本身可用（L2 已端到端验）；②缺的是「seed 里没有可真取的图」，属测试数据问题不是实现问题；③DOC-PROOF-001 若要出样张、以及 D6 L2 的 TIFF 预览断言，都应自备真图而不是依赖 seed。",
       "status": "open",
       "decision": ""
     }
