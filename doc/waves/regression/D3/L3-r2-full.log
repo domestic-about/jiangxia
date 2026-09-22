@@ -1,0 +1,99 @@
+== G1 染色与挂靠规则 ==
+  baseline t_lqg_embed=6
+  [PASS] 基线非空（t_lqg_embed=6）
+  [PASS] 1a 无染色+HE 同时提交被拒 -> code=500 msg=「无染色」与其余染色互斥，不能同时选
+  [PASS] 1a-库 拒后未多行 [=6]
+  [PASS] 1b 选「其他」不写名称被拒 -> code=500 msg=选了「其他」必须写具体染色名称
+  [PASS] 1b-库 拒后未多行 [=6]
+  [PASS] 1c 字典外染色值(PAS)被拒 -> code=500 msg=染色「PAS」不在字典 lqg_stain_type 里（只能是 HE / IF / IHC / OTHER / NONE）
+  [PASS] 1c-库 拒后未多行 [=6]
+  [PASS] 1d-前置 1002 仍是 pending（否则 1d 恒绿） [=pending]
+  [PASS] 1d 挂到待核验样本(1002)被拒 -> code=500 msg=内部录入只能挂到已核验有效的样本（当前状态：pending）
+  [PASS] 1d-库 拒后未多行 [=6]
+  [PASS] 1-终态 无 T-X% 行 [=0]
+RESULT g1 pass=11 fail=0
+== G2 valid→invalid 闸 ==
+  1004 名下已核验石蜡块=1
+  [PASS] 前置：1004 确有 ≥1 个已核验石蜡块
+  [PASS] 2-前置 1004 现为 valid [=valid]
+  [PASS] 2 有已核验石蜡块的样本改判无效被拒 -> code=500 msg=该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效
+  [PASS] 2-库 仍 valid [=valid]
+  [PASS] 2-库 invalid_reason 仍为空 [=1]
+  [PASS] 2-库 1004 石蜡块数未变 [=1]
+RESULT g2 pass=6 fail=0
+== G3 外部送样 ==
+  baseline ext=1 all=6 marker=3
+  [PASS] 基线非空（external 行=1）
+  [PASS] 3a extB 替同组 extA 的 1001 送样被拒 -> code=400 msg=只能挂本人送检过的样本
+  [PASS] 3a-库 外部送样数不变 [=1]
+  [PASS] 3b-前置 1003 是 invalid [=invalid]
+  [PASS] 3b extA 挂自己无效样本 1003 被拒 -> code=400 msg=这条样本已判无效，不能提交石蜡包埋送样
+  [PASS] 3b-库 总数不变 [=6]
+  [PASS] 3c extA 正常送样（夹带 6 字段）仍 200 -> code=200
+  [PASS] 3c-库 夹带字段全不生效 [=external|pending|-|-|-|-]
+  [PASS] 3c-库 submitter 仍是王医生 [=王医生]
+  [PASS] 3c-库 只多 1 行（无额外副作用） [=7]
+  [PASS] 3c-库 marker 未被夹带写入 [=3]
+  [PASS] 3c-库 无 T-hack9 [=0]
+  [PASS] 3d-前置 2006 pending|所挂1002 pending [=pending|pending]
+  [PASS] 3d 所挂样本未核验时判有效被拒 -> code=500 msg=所挂样本还未核验有效（当前状态：pending），不能判为有效
+  [PASS] 3d-库 2006 仍 pending|- [=pending|-]
+  [PASS] 3e 普通保存改待核验送样被拒 -> code=400 msg=待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）
+  [PASS] 3e-库 2006 行不变 [=pending|-|-|组织]
+  [PASS] 3f extA 改实验室录的 2001 被拒 -> code=400 msg=只能修改重提本人提交的送样（同组的可以看，但不能改）
+  [PASS] 3g extB 改同组 extA 的 2006 被拒 -> code=400 msg=只能修改重提本人提交的送样（同组的可以看，但不能改）
+  [PASS] 3f-库 无被改行 [=0]
+  [PASS] 3f-库 2001 行不变 [=valid|T-E01-1|组织]
+RESULT g3 pass=21 fail=0
+== G4 外部详情 embeds 键集合 ==
+  [PASS] 4a embeds 形状（2 块 T-E01-1/T-E01-2，已切片、HE+IHC）
+  [PASS] 4b embedBy=李工 / operatorName=李工 对外可见（CR 精确豁免）
+  [PASS] 4c embeds 键集合 ⊆ CR 白名单（24 键，无越界）
+  [PASS] 4d embedBy 与 operatorName 确在键集合内（不是被漏掉而恒绿）
+  [PASS] 4e 默认开关关：详情与 embeds 均无 internalNo
+  [PASS] 4f embeds 无 verifyBy/verifiedBy/remark/冻存/创建更新人/手机号
+  [PASS] 4g 样本详情级无 operatorName/embedBy/verifyBy/冻存人
+  实到 embeds 键: ["agaroseEmbedTime","agaroseSendTime","dehydrateTime","editable","embedBy","id","invalidReason","markers","mine","operatorName","organoidSourceType","paraffinBlockNo","paraffinEmbedTime","sampleId","sampleType","sectionTime","sectioned","stainOther","stainTypes","submitNo","submitterName","tissueProcessTime","tissueReceiveTime","verifyStatus"]
+  [PASS] 4h extC 取 1001 详情 404 -> code=404 msg=样本不存在
+  [PASS] 4i extE（同组未核验）取 1001 详情 404 -> code=404 msg=样本不存在
+  [PASS] 4j-前置 开关默认 false [=false]
+  [PASS] 4k admin 把开关置 true -> code=200
+  [PASS] 4l 开关开：详情 internalNo=T-hli01
+  [PASS] 4m-库 开关已还原 false [=false]
+RESULT g4 pass=13 fail=0
+== G5 导出边界 ==
+  [PASS] 5a-前置 全量导出接口未报错
+  [PASS] 5a-前置 全量导出表头逐字一致且行数=8（=同条件列表 total）
+  [PASS] 5a-前置 全量行数>1（下面「只出筛选结果」才有意义）
+  [PASS] 5b 外部角色(extA)调导出 403 -> code=403 msg=没有访问权限，请联系管理员授权
+  同条件列表 total=1 ids=[9000001006]
+  [PASS] 5c 带筛选导出接口未报错
+  [PASS] 5c-库/件 带筛选导出只出筛选结果（行数=1=列表 total）
+  [PASS] 5c-件 筛选结果含筛选内的 1006/T-hco04
+  [PASS] 5c-件 筛选结果未混入筛选外的 T-hli01
+  [PASS] 5c-件 带筛选导出非空（≠0 行的空态）
+  [PASS] 5d 空结果导出接口未报错（exit=0）
+  [PASS] 5d-件 空结果导出只有表头、0 数据行
+  [PASS] 5d-件 空结果仍产出非空 xlsx 文件（3935 bytes）
+RESULT g5 pass=12 fail=0
+== G6 #145 后端侧（verify 可判 / 普通保存仍拒，两条状态各带库内对照）==
+  [PASS] 6a-前置 extA 建一条 pending 送样（挂 1001） -> code=200
+  E1=2102238677286547458
+  [PASS] 6a-前置 E1 状态 pending|- [=pending|-]
+  [PASS] 6b PUT /lqg/embed 对 pending 仍拒 -> code=400 msg=待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）
+  [PASS] 6b-库 pending 行原样（status|block|sampleType） [=pending|-|组织]
+  [PASS] 6c PUT /lqg/embed/{id}/verify pending→valid（带编号） -> code=200
+  [PASS] 6c-库 valid|T-r2l3-A|核验人有值 [=valid|T-r2l3-A|set]
+  [PASS] 6d-前置 extA 再建一条 pending 送样 -> code=200
+  E2=2102238680910426113
+  [PASS] 6e PUT /lqg/embed/{id}/verify pending→invalid（带原因） -> code=200
+  [PASS] 6e-库 invalid|原因 [=invalid|测-r2l3-无效原因]
+  [PASS] 6f PUT /lqg/embed 对 invalid 仍拒 -> code=400 msg=待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）
+  [PASS] 6f-库 invalid 行原样（status|reason|sampleType） [=invalid|测-r2l3-无效原因|组织]
+  [PASS] 6g PUT /lqg/embed/{id}/verify invalid→valid（走核验端点） -> code=200
+  [PASS] 6g-库 valid|T-r2l3-B|旧原因已清 [=valid|T-r2l3-B|-]
+  [PASS] 6h-前置 extA 再建一条 pending 送样(E3) -> code=200
+  [PASS] 6i verify 判有效缺编号被拒 -> code=500 msg=判有效必须填石蜡块编号
+  [PASS] 6j verify 判无效缺原因被拒 -> code=500 msg=判无效必须写原因
+  [PASS] 6i/j-库 E3 仍 pending|-|无原因 [=pending|-|-]
+RESULT g6 pass=17 fail=0

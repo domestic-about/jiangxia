@@ -25,9 +25,9 @@
     },
     {
       "id": "D3",
-      "status": "qa_running",
-      "qa_rounds": 1,
-      "qa_seq": 1
+      "status": "qa_passed",
+      "qa_rounds": 2,
+      "qa_seq": 2
     },
     {
       "id": "D4",
@@ -1853,8 +1853,8 @@
       "type": "arch",
       "title": "【S0】工作台核验抽屉「判为有效并保存」点不动：前端先 PUT /lqg/embed 被 400 拒，verify 端点一次都没发",
       "detail": "复现（100%）：extA 提交挂在已核验有效样本(1001)上的外部送样 → 工作台 /embed 该行置顶浅黄、点「核验」→ 抽屉里提示正确、按钮可点（不置灰）→ 填唯一石蜡块编号点保存。抓到：唯一写请求是 PUT /lqg/embed，后端 400『待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）』；PUT /lqg/embed/{id}/verify 一次都没发；库里仍 pending|-|noverify；抽屉不关、无任何 el-message（静默失败）+ 未捕获 rejection。根因（源码）：EmbedDrawer.vue submitValid() 先 await saveBeforeVerify() → updateEmbed(PUT /lqg/embed)，对该记录必被 400 拒，异常在 verifyEmbed() 之前抛出；submitInvalid() 同一段前置 → 判无效同样走不通。反证：直接 api.sh --as staff PUT /lqg/embed/{id}/verify {action:valid,paraffinBlockNo:...} → 200、库里 valid|T-r1l2-E1|9000000101 → 后端核验端点是好的，缺陷纯在前端调用顺序。定级：这就是 D3 主流程（外部提交→实验室核验给编号，CR-20260917-05）——老师走到该步按钮无反应、拿不到编号、永远停待核验 → S0；下游 EMBED-MP-001『外部有效后展示包埋卡片』在真实路径不可达。修法方向：待核验/无效的外部送样**不要**先走普通保存（后端本来就拒），直接调 verify 端点（必填项随 verify 一起送）；仅当记录处于可普通保存的状态（内部录入/已生效且内部改）才先 save。静默失败（无提示）是同一根因的 UX 症状，一并修：失败必须 toast 且不关抽屉。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：D3 r2 两片独立复验：#145 已修。L0+L1 片（真 UI 22/22）与 L2 片（真实点击）都实测「pending 记录只发 1 次 PUT /lqg/embed/{id}/verify、无预保存、200、抽屉关、库落 valid|编号|核验人」；判无效路径与撞号负对照（500 + toast + 抽屉不关 + 库不变）均过；L3 片另从后端侧复验 17/17（含缺编号/缺原因被拒且库不变）。r1 的未捕获 rejection 不再出现。"
     },
     {
       "id": 146,
