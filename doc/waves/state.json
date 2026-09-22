@@ -43,8 +43,9 @@
     },
     {
       "id": "D6",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D7",
@@ -2785,6 +2786,86 @@
       "type": "doc-drift",
       "title": "勘误 #208：本机 ImageIO 读不了 TIFF 的说法不成立——TIFF→JPEG 预览分支实测端到端可用",
       "detail": "D6 的 L2 片独立实测推翻了 #208 的一半诊断：把真 TIFF 经框架 OSS 上传后，preview_oss_id ≠ oss_id 且下载确认是 JPEG；2400px 的 PNG 也真的走了缩放分支。也就是说 **JDK 17 的 ImageIO 自带 TIFF reader**，「本机 ImageIO 读不了 TIFF，需 imageio-tiff 插件」这条不成立。#208 里仍然成立的那一半是：**seed 的 sys_oss 是 https://seed.invalid 假地址取不到字节**，所以「预览转换」在**确定性 seed 数据上**跑不到——要验它必须自备真图上传。影响：若 D7/后续票按 #208 的错前提去装 imageio-tiff 或做别的预案，会白做。纠正后的结论：①预览分支本身可用（L2 已端到端验）；②缺的是「seed 里没有可真取的图」，属测试数据问题不是实现问题；③DOC-PROOF-001 若要出样张、以及 D6 L2 的 TIFF 预览断言，都应自备真图而不是依赖 seed。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 239,
+      "ticket": "QC-WEB-002",
+      "severity": "S2",
+      "type": "ux",
+      "title": "三个页签共用一个「保存草稿」：点一次只存当前页签，toast 恒说「草稿已保存」且页签上没有脏标记",
+      "detail": "复现（D6 L2 真浏览器）：在页签1改字段 → 切到页签2改字段 → 点底部「保存草稿」→ 只有页签2落库；实测 clinical_diagnosis 仍「测试诊断」、growth_state 仍「良好」，刷新回旧值。我复核了代码：handleSaveDraft 只调 activeTabRef.value.save()，且 index.vue 第 276 行注释明写「只保存当前页签」= 有意设计；同时 dirtyTabs 按页签各记一份、dirty 被 onBeforeRouteLeave 与 beforeUnloadHandler 同时使用 → 刷新/关标签**会弹浏览器原生未保存提示**，所以不是无声丢稿。真正的问题是**误导**：按钮只写「保存草稿」、toast 恒为「草稿已保存」、页签上无脏标记。定级依据：主流程能走且有兜底提示，属本票范围内 UX 而非数据丢失 → S2（与独立 QA 判定一致，我核实后未改判）。方案 a) 按钮文案改「保存当前页签」+ 脏页签加圆点/星号；b) 一键保存所有脏页签（toast 按实际存了几个措辞）。改动很小，但会作废已跑的 L2/L3 证据，故按纪律进 all_done 清账。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 240,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "编辑页页头「性别」显示字典 raw value「male」，与样本总表的字典标签「男」、渲染出的 Word「男」三处不一致",
+      "detail": "复现（D6 L2）：编辑页页头带出的只读字段里，性别一栏渲染的是 male；样本总表同一字段走 dict-tag 显示「男」；DOC-RENDER-001 渲染出的 Word 里也是「男」。三处不一致。影响：老师在同一份文档的两个界面看到两种写法。方案：编辑页页头改用字典标签渲染（与总表同源）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 241,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "确定性 seed 下编辑页 4 个图片位全是「图片加载失败」；「要自备真图才能做视觉验收」这个前置没写进任何票面或文档",
+      "detail": "复现：seed 的 sys_oss 行是 https://seed.invalid 假地址（service=seed）→ 编辑页四个图片位全显示破图。影响：任何按票面走「视觉验收」的人都会先看到四个破图，误以为实现坏了；L2 片因此不得不自备真图上传才验成「TIFF 预览/点图放大/传满 3 张按钮消失」。方案 a) 给 seed 加几张可真取的图（放 MinIO 或本地 fixture）；b) 至少在票面/README 的「本栈已知的坑」里写明这条前置。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 242,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "QC-WEB-001 acc2 的「只读字段没进表单」是字面 grep，form[internalNo] 括号绑定可绕过",
+      "detail": "复现（D6 L2 证伪 F4/F5）：把只读字段写成 v-model=form.internalNo 时 acc2 的 grep 命中 → 红（断言生效）；改成 v-model=form[internalNo]（方括号绑定）则 acc2 仍绿（断言盲）。影响：断言挡不住「用方括号绑定把只读带出字段接进表单」这一种写法。方案：acc2 改成对提交体做断言（如保存请求的 payload 里不得出现 internalNo 等带出字段的键），而不是对源码 grep —— 与 QC-WEB-002 acc1 的同类问题（见 #236 与本次新增）是同一个根因：**源码 grep 型断言对等价写法无力**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 243,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "复核并扩大 #236：把评分分值硬编码进页面后，QC-WEB-002 acc1+acc2 与 QC-MODEL-001 acc2 三处全绿",
+      "detail": "复现（D6 L2 证伪 F3）：把分值写死在页面（不走 useDict 也不读字典 remark）→ QC-WEB-002 acc1（vitest fixture）与 acc2（grep useDict）以及 QC-MODEL-001 acc2（后端对账）**全部仍绿**，唯一有效的护栏是 QC-MODEL-001 里的后端反射测试（钉住 QcScoreSaveBo 没有 *Score 字段）。影响：票面 counterfeit 想防的「前端夹带/硬编码分值」在**前端侧**没有任何机器断言拦得住。本票实现者自己补了 counterfeit-probe.mjs（改字典 8→88 页面三处跟着变），但探针只留在报告里、没进 accept/回归包。方案：把该探针固化进 D6 回归包或 accept（这是 D6 唯一能挡这条的端到端断言）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 244,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "DOC-RENDER-001 acc2 的指纹覆盖只测文本字段：换图 / 升模板版本两条不在 accept 里",
+      "detail": "复现（D6 L2 证伪 F9）：acc2 只改文本字段来验「改了任一处都重出」；换一张图、升 template_version 这两条**不在 accept 覆盖内**。产品行为本身是对的（D6 L3 独立验过：改一个字/加一张图/只倒换图序都重出；升模板版本真改源码重打包重启后重出、还原后 hash 逐字回到原值）。影响：断言覆盖窄于产品语义，未来若有人把这两个输入漏出指纹，accept 不会红。方案：把「只换一张图」「只升 template_version」两条加进 acc2（L3 的取证脚本可直接复用）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 245,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "DOC-PDF-001 acc2 的 counterfeit 那句「图片地址取不到时整份文档 failed」与 #217 的裁定不一致，建议改口径",
+      "detail": "复现（D6 L3）：1001/sample_qc 三张图全是 seed 假地址 → render=done、errorMsg=null、下载 docx --max-images 0 = 0 张图，日志每张图 2 条 WARN 点名 ossId 与原因；真图对照组上传 1 张真图 → 产物恰好 1 张图；把真图对象键改成不存在 → 0 张图、仍 done、WARN 带 NoSuchKeyException 404。即实测符合 #217 裁定的 ① 侧（docx 阶段个别图取不到 = 跳过 + WARN、文档仍 done），而不是 counterfeit 字面的「整份 failed」。L3 同时排查掉了两种真缺陷形态：不存在「无 WARN 的静默 done」（DocxRenderer 对每次取图失败必打 WARN），也不存在「流水线失败仍 done」。方案：把 acc2 的 counterfeit 那句改成与裁定同口径（例如改成「**所有**图片位都取不到时可以出一份缺图文档但必须逐张 WARN；而**流水线步骤**失败必须整份 failed」）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 246,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "reseed 不清运行期上传到 sys_oss 的行 → 各轮测试的上传物在开发库里累计（L2/L3 交接时已积 341 行）",
+      "detail": "复现：D6 L3 收工交接里如实报「我自己那 41 行非 seed sys_oss 已删，剩余 341 行是 L2/更早各轮留下的」。reseed.sh 会 TRUNCATE t_lqg_* 与删 seed 段账号，但**不动 sys_oss**（上传物是运行期产物、service 不是 seed）。影响：①开发库里 sys_oss 单调增长；②任何按 count(sys_oss) 写的断言会随轮次漂移（D5 的 OCR accept 就有一条「识别前后 sys_oss 行数不变」的断言——它比的是差值所以没事，但别的计数型断言会中招）；③视觉验收时会看到一堆别人的上传物。方案 a) reseed 时连带清 sys_oss 里非 seed 行（要谨慎：sys_oss_config 与 seed 行要留）；b) 至少给测试上传加个标记列便于清理；c) 把这条写进 README 已知坑表。",
       "status": "open",
       "decision": ""
     }
