@@ -3,7 +3,7 @@
  "status": "running",
  "task": {
   "current": "D3",
-  "status": "qa_failed",
+  "status": "qa_running",
   "qa_rounds": 1,
   "progress": "ticket 18/43 done, 任务 2/8 通过 QA 门",
   "branch_model": "integration 集成分支 + 每任务一条 task/D<N>；不 push、不合 main（push 与部署留给 Kevin）"
@@ -62,10 +62,10 @@
  },
  "exception": null,
  "open_issues": {
-  "total": 150,
+  "total": 151,
   "by_severity": {
    "S2": 55,
-   "S3": 86,
+   "S3": 87,
    "S1": 5,
    "S0": 4
   },
@@ -77,7 +77,7 @@
   ],
   "note": "S0/S1 会在 qa_gate 的 pending_issues 里被拦；S2/S3 推到 all_done 一起清（载体是 doc/waves/state.json 的 open_issues，勿另建台账）"
  },
- "summary": "ticket 18/43 done；已通过 QA 门的任务：D1,D2。当前 D3（qa_failed，QA 第 1 轮）。未决台账 150 条（S0/S1 3 条）。",
+ "summary": "ticket 18/43 done；已通过 QA 门的任务：D1,D2。当前 D3（qa_running，QA 第 1 轮）。未决台账 151 条（S0/S1 3 条）。",
  "needs_human": {
   "route": "kevin",
   "why": "①需求拆解阶段留给 Kevin 的待办仍未决；zhixing 这边当前无需人介入（未决台账见 open_issues）",
