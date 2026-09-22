@@ -200,12 +200,12 @@
       "note": "迁移 V202609231100（gen_ddl_pg 逐字节 = t_lqg_embed + t_lqg_embed_marker + 菜单 5300(C)+5301-5307(F) 授 101/102）；后端 18 类在 embed/**（实体/VO/BO/mapper/3 个纯函数 guard/5 service/controller）；单测新增 22（总 86 绿）。accept 4/4 绿（DDL/STATE/API/STATE）。★定时炸弹按口径拆掉：EmbedChildrenChecker 只把『未删且已核验有效』的石蜡块算 children（SQL: del_flag='0' AND sample_id=? AND verify_status='valid'），三条探针钉死——1004 有 valid 块→改判被拒、1008 只有软删块→放行、1002 只有 pending 的 2006→放行；D2 的 SAMPLE-VERIFY-001 accept 1/2 复跑仍绿、D1 回归包只剩既有的 flyway 写死总数那条假红。坑：① @SaCheckPermission 缺 sys_menu 权限行是 403 不是 500；② MP 的 apply(sql,args) 惰性登记参数，不先 getTargetSql() 渲染一次则 getParamNameValuePairs() 是空 map（单测假红）；③『补逗号 LIKE』整元素匹配的通配符不能少——第一版写 LIKE ',IHC,'（少两侧 %）实测 total:0，正确是 '%,IHC,%'；④ @TableLogic 只保证 del_flag='0'，children 判据必须显式叠 verify_status='valid'；⑤ update(null, LambdaUpdateWrapper) 不填 update_by（第三次命中）→ 三处写侧都显式 .set。交接：EMBED-WEB-001 必须把菜单 5300-5307 搬到 5310-5317（否则它的 getRouters==1 拿不到）；EMBED-MP-001/AUTH-EXT-002 可直接复用 EmbedQueryService.list(sort/mine/handlerName) 与 EmbedExternalService 签名；SAMPLE-HINT-001 与本 checker 同一份计数口径。"
     },
     "EMBED-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "EMBED",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序：pages/embed/form（染色五按钮多选+无染色互斥，与工作台共用 fixture 口径；保存不要求填完；日期两侧转格式；外部只渲染选择样本+样本类型+类器官来源类型，选样本只列本人未判无效的、显示送检单号+掩码供体姓名、不出现内部编号）+ 组件放 src/components/lqg/（4 个，避免被 uni-pages 注册成垃圾路由）+ pages/ledger/sheets.ts 注册 embed + pages/history/sources.ts 注册 embed（sort=recent，不写死 mine）+ api/embed.ts；后端注册 /mp/int/embed/**（类级 @SaCheckRole('lqg_internal')），复用 EmbedQueryService.list + EmbedService.update(patch)。accept 3/3：产物 form.js+ledger/index.js 在、7 段 grep、vitest 19、/mp/int/embed/list 五条、extA→403（把 AUTH-EXT-002 遗留的 404 收口了）、sort=recent 五条+2006 打头+handlerName 无 null+2001→[李工,true]/2004→[测试管理员,false]、mine=true→{2001,2003} 且与直连库同集合；改管理员录的 2002→200 且仍 2 块没新增行、update_by 记人、排最前；撞号/待核验被拒且库内不变。回归全绿（EMBED-MODEL 4、EMBED-WEB 2、AUTH-EXT-002 3、SAMPLE-MP-001 2、SAMPLE-MP-002 3、SAMPLE-HINT 2 全 EXIT=0）；后端 Tests run 120；小程序 vitest 115（本票 +36）；D1 回归包 41 绿/1 红（既有 flyway 假红）。越界：EmbedQueryBo/EmbedQueryService/其契约测试（+keyword＝石蜡块编号模糊 OR 所辖样本内部编号等值，OR 包成一组，3 参重载保留）、pages/ledger/index.vue、api/ledger.ts（多筛选组）、types/components.d.ts（生成产物）。"
     },
     "EMBED-WEB-001": {
       "status": "done",
@@ -264,20 +264,20 @@
       "note": ""
     },
     "SAMPLE-EXPORT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "新增 ruoyi-lqg/.../sample/export/{SampleExportController,SampleExportService,SampleTissueExportVo,SampleOrganoidExportVo} + SampleExportContractTest 5 例（含与甲方模板原件逐字对账）；SampleQueryService 加 exportRows（与 list 同一份 wrapper/装配）；迁移 V202609231000（只 INSERT 5217 + 两条 role_menu）；前端 plus-ui/api/lqg/sample/export.ts + views/lqg/sample/index.vue（两个按钮 + buildExportQuery 带当前筛选含日期区间）+ 两本 i18n。accept 1：tissue 表头 14 列逐字同序 / 8 行；T-hli01 十格逐字（性别=男、有无固定=有、质控表=有、细胞活率报告=有、操作人=李工、供体姓名=测试供体甲=已解密）；organoid 7 列/1 行/T-oco01 三格；?sourceUnitId=9000009002 行数==列表 total；extA 403。accept 2：5217:lqg:sample:export:5210 + 授 101/102 + getRouters 恰 1 条 + getInfo 含该权限 + 两份前端文件命中。counterfeit 探针 PASS；UI 取证不读 PNG。Java 103 绿。★踩坑：touches 没列 db/migration/**，但 accept 2 强制 5217 出自本票迁移 → 必须补 V202609231000，而 1000 < 已应用的 1110 → 又撞 out-of-order，按先例重建 dev 库后 14 支按序跑完。★跨票冲突（issue #129）：与 SAMPLE-WEB-001 accept 2 段 4『perms 精确等于六个』不可同时满足，主会话裁定按需求归属解（导出权限归本票所有，对方断言过紧），实现不动、待①放宽。"
     },
     "SAMPLE-HINT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "sample/hint/** 一条 GROUP BY（e.del_flag='0' AND e.verify_status='valid'，与 EmbedChildrenChecker 同源）算出每行 hint:{blockCount,sectioned,stains}；/lqg/sample/list 与 /mp/int/sample/list 每行都挂（无包埋记录给零值不给 null）；stains 拆开后去 NONE 按字典序。工作台 HintBadges.vue（悬停再查石蜡块编号+切片时间、点击带 sampleId 跳包埋页、无记录显示 —）+ 接进 index.vue；小程序 sheets.ts 最后一列「切片染色」。无新增 Flyway。accept 1：1001=[2,true,[HE,IHC]]、1004=[1,true,[]]、1006=[1,true,[OTHER]]、1008=[0,false,[]]、1002=[0,false,[]]，整页无 hint==null，db=4 sum=4，mp 端点同样带 hint。accept 2：ddl_vs_ssot 逐列相符（样本表零冗余列）+ HintBadges 在盘 + SampleHint*Test 9 例（含『传 20 个样本 id 只触发 1 次查询』用 mapper spy 数调用次数）。7 条 counterfeit 探针全排掉（不加 del_flag→1008 数出 1；不加 verify_status→1002 数出 1；不拆 NONE；两条读路径零 null；真日志证明一页只 1 条聚合 SQL；information_schema 冗余列=0；两条读路径逐行 hint 相等）。Java 112 绿。★越出 touches 5 处（全为新增、无签名变更）：SampleVo 加 hint、SampleQueryService 加依赖+fillHints、SampleRecentFilterContractTest 构造器补第 5 个 null（不补编译不过）、plus-ui api 加类型、miniapp sheets.spec.ts。"
     },
     "SAMPLE-MODEL-001": {
       "status": "done",
@@ -1692,6 +1692,116 @@
       "type": "doc-drift",
       "title": "【需求层冲突】SAMPLE-WEB-001 accept 2 段 4 与 SAMPLE-EXPORT-001 accept 2 段 1 不可同时满足",
       "detail": "前者断 sys_menu 里 parent_id=5210 且 menu_type='F' 的 perms **精确等于六个**（lqg:sample:list,query,add,edit,remove,verify）；后者强制 5217/perms='lqg:sample:export'/parent_id=5210 且授 101,102。任何满足后者的实现都必然打红前者（实测 [FAIL] 集合不相等：多出 ['lqg:sample:export']）。★裁定：冲突由**需求归属**解决——导出权限是 REQ-SAMPLE-011/012 的要求、归 SAMPLE-EXPORT-001 所有，SAMPLE-WEB-001 那句「精确等于六个」是写早了、过紧的断言。故正确现状是「六个 + lqg:sample:export 一条」。方案（属①的资产，主会话不改）：把 SAMPLE-WEB-001 accept 2 段 4 改成「包含六个」或加 AND perms <> 'lqg:sample:export'。D3 QA 门已被告知这是已知规格冲突、不得据此判产品红。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 130,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 未列 db/migration/**，但 accept 2 强制 5217 权限出自本票迁移（连带必然撞 out-of-order）",
+      "detail": "ticket touches 只有 sample/export/** + 前端两文件；实际必须新增 V202609231000（5201 段的 5217 按钮权限）。而 1000 < 已应用最大值 1110 → 必须重建 dev 库。方案：把 db/migration/** 划进本票 touches，并在 ticket §0 写明「本票迁移号小于同任务已应用的最大号时需重建 dev 库」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 131,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "exportRows 落在 sample/service/SampleQueryService.java（不在 touches）",
+      "detail": "为了与列表共用同一份 wrapper/装配（这是 accept 1 的『行数==列表 total』所要求的），新增方法落在既有文件上。全为新增方法、无签名变更。方案：把该文件划进 touches，或把导出查询与列表查询抽到一个共享类里。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 132,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "导出格式细节未写死：处理时间 yyyy-MM-dd HH:mm:ss、性别 unknown→未知（按字典 label）",
+      "detail": "accept 未钉这两处，实现按字典 label 与本地时间格式导。建议写进契约或导出说明，免得后续模板核对时口径漂移。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 133,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "越出 touches 5 处（全为新增、无签名变更）：SampleVo / SampleQueryService / 既有契约测试构造器 / plus-ui api / miniapp spec",
+      "detail": "touches 只列了 sample/hint/** + 三个前端文件，但「往 list 每行挂 hint」必然要动列表装配方（SampleVo + SampleQueryService）、而给 SampleQueryService 加 @RequiredArgsConstructor 依赖会打断不启 Spring 的既有单测（SampleRecentFilterContractTest 构造器得补第 5 个 null 实参，不补编译不过）。方案：把 sample/domain/vo/SampleVo.java、sample/service/SampleQueryService.java 与 plus-ui api 类型划进本票 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 134,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "悬停浮层只列已核验有效的块（与徽标块数同源）；要不要列待核验送样待定",
+      "detail": "去掉 verifyStatus='valid' 一个参数即可改。口径要与 EMBED-MODEL-001 的 children 判据保持一致（那边也只看 valid）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 135,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "hint 只在 list 行上：详情与两张导出都不带（契约也只写在 list 上）",
+      "detail": "hintOf(Long) 已备好，若详情/导出要带，一行即可接。建议写进契约明确边界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 136,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "小程序「切片染色」列是纯文本小字（LedgerTable.vue 的 cells 是字符串矩阵），要徽标需另开小票",
+      "detail": "与 SAMPLE-MP-002 的哑组件设计有关（props 全是可序列化纯数据）。若甲方要求与工作台一致的徽标，需扩展 LedgerTable 的单元格类型。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 137,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【需求层冲突】EMBED 的 sort=recent 只排序不收窄到「内部人员经手」，与权威 UI:mp.history 及 SAMPLE 域行为不一致",
+      "detail": "权威 UI:mp.history 内部视角明写『**中心全部内部人员**新增或修改过的记录』；SAMPLE 域已按此收窄（D2 的直连库对账钉过：create_by/update_by ∈ sys_user.user_type='sys_user'），EMBED 域只排序 → 历史页签出现 extA 建的待核验送样、经手人显示外部姓名『王医生』。而 EMBED-MP-001 的 accept 1 明文要『sort=recent → 五条全在』，按权威收窄就必然打红它 → 票面与权威互斥。★裁定留 Kevin：① 按权威与 SAMPLE 对齐（收窄），同时放宽该 accept；② 维持票面（记已知偏差）。主会话不改需求层文件。D3 QA 门已被告知这是规格层冲突、不得据此判实现缺陷。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 138,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "src/pages/** 下的 .vue 会被 uni-pages 自动注册成页面路由（实测多 4 条垃圾路由）——建议进栈包 gotchas",
+      "detail": "4 个组件因此放 src/components/lqg/（pages.json / uni-pages.d.ts 回到 HEAD 零 diff）。代价：accept 3 最后一段『! grep internalNo src/pages/embed/SamplePickerExt.vue』因路径不存在而恒真（命令仍 EXIT=0）——实施方已用 layout.fixture.spec.ts 里按真实 import 路径 readFileSync 的更强等价断言补上（文件不存在即红 + 反向断它确实读了 fetchExtMySamples/donorNameMasked）。方案：把该 accept 的路径改成真实路径，并在栈包 gotchas 里加一行『组件别放 src/pages/**』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 139,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "SAMPLE-MP-002 报告里端侧 04 屏（?sheet=embed 回落到第一个已注册）在 EMBED-MP-001 落地后失效",
+      "detail": "它的 accept 不测这一屏（所以不红），坏的是报告证据。D2 的 L2 资产若要复跑该屏，改用 ?sheet=cryo（仍未注册）或 ?sheet=<未知>。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 140,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "columns.ts 里 embed 的「样本编号」key 是 sampleSubmitNo 而实际字段是 internalNo（实施方在 api/embed.ts 对齐）",
+      "detail": "列 key 与字段名不一致，容易在下一个消费方（导出/小程序其它页）踩。方案：把 columns.ts 的 key 改成 internalNo，或加映射注释。",
       "status": "open",
       "decision": ""
     }
