@@ -1,0 +1,184 @@
+{
+  "base": "http://127.0.0.1:9204",
+  "image": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/verify/fixtures/ocr-sample.png",
+  "calls": [
+    {
+      "url": "http://127.0.0.1:9204/lqg-api/mp/ocr/recognize",
+      "status": 200,
+      "requestHeaders": {
+        "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+        "x-ocr-stub-case": "01",
+        "authorization": "Bearer eyJhbGciO…"
+      },
+      "body": {
+        "code": 200,
+        "msg": "操作成功",
+        "data": {
+          "rawLines": [
+            "A 医院",
+            "姓名：测试供体甲",
+            "性别：男  年龄：56岁",
+            "住院号：ZY0000001",
+            "标本：肝组织"
+          ],
+          "fields": {
+            "donorName": "测试供体甲",
+            "gender": "male",
+            "age": "56",
+            "hospitalNo": "ZY0000001",
+            "tissueType": "肝组织",
+            "sourceUnitName": "A 医院"
+          }
+        }
+      }
+    },
+    {
+      "url": "http://127.0.0.1:9204/lqg-api/mp/ocr/recognize",
+      "status": 200,
+      "requestHeaders": {
+        "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+        "x-ocr-stub-case": "01",
+        "authorization": "Bearer eyJhbGciO…"
+      },
+      "body": {
+        "code": 200,
+        "msg": "操作成功",
+        "data": {
+          "rawLines": [
+            "A 医院",
+            "姓名：测试供体甲",
+            "性别：男  年龄：56岁",
+            "住院号：ZY0000001",
+            "标本：肝组织"
+          ],
+          "fields": {
+            "donorName": "测试供体甲",
+            "gender": "male",
+            "age": "56",
+            "hospitalNo": "ZY0000001",
+            "tissueType": "肝组织",
+            "sourceUnitName": "A 医院"
+          }
+        }
+      }
+    },
+    {
+      "url": "http://127.0.0.1:9204/lqg-api/mp/ocr/recognize",
+      "status": 200,
+      "requestHeaders": {
+        "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+        "x-ocr-stub-case": "03",
+        "authorization": "Bearer eyJhbGciO…"
+      },
+      "body": {
+        "code": 200,
+        "msg": "操作成功",
+        "data": {
+          "rawLines": [
+            "保持 2-8℃ 低温运输",
+            "易碎品 轻拿轻放",
+            "2026-09-17 10:30"
+          ],
+          "fields": {}
+        }
+      }
+    },
+    {
+      "url": "http://127.0.0.1:9204/lqg-api/mp/ocr/recognize",
+      "status": 200,
+      "requestHeaders": {
+        "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+        "x-ocr-stub-case": "04",
+        "authorization": "Bearer eyJhbGciO…"
+      },
+      "body": {
+        "code": 200,
+        "msg": "操作成功",
+        "data": {
+          "rawLines": [
+            "住院号:ZY0000002 床号:12",
+            "性别:女"
+          ],
+          "fields": {
+            "gender": "female",
+            "hospitalNo": "ZY0000002"
+          }
+        }
+      }
+    },
+    {
+      "url": "http://127.0.0.1:9204/lqg-api/mp/ocr/recognize",
+      "status": 200,
+      "requestHeaders": {
+        "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+        "x-ocr-stub-case": "01",
+        "authorization": "Bearer eyJhbGciO…"
+      },
+      "body": {
+        "code": 200,
+        "msg": "操作成功",
+        "data": {
+          "rawLines": [
+            "A 医院",
+            "姓名：测试供体甲",
+            "性别：男  年龄：56岁",
+            "住院号：ZY0000001",
+            "标本：肝组织"
+          ],
+          "fields": {
+            "donorName": "测试供体甲",
+            "gender": "male",
+            "age": "56",
+            "hospitalNo": "ZY0000001",
+            "tissueType": "肝组织",
+            "sourceUnitName": "A 医院"
+          }
+        }
+      }
+    }
+  ],
+  "db": {
+    "before": {
+      "sample": 10,
+      "oss": 0
+    },
+    "after": {
+      "sample": 10,
+      "oss": 0
+    }
+  },
+  "finalRows": {
+    "case07": {
+      "来源单位": {
+        "value": "A 医院",
+        "mark": false,
+        "markText": ""
+      },
+      "供体姓名": {
+        "value": "",
+        "mark": false,
+        "markText": ""
+      },
+      "性别": {
+        "value": "女",
+        "mark": true,
+        "markText": "识别 · 请核对"
+      },
+      "年龄": {
+        "value": "",
+        "mark": false,
+        "markText": ""
+      },
+      "住院号": {
+        "value": "ZY0000002",
+        "mark": true,
+        "markText": "识别 · 请核对"
+      },
+      "组织类型": {
+        "value": "",
+        "mark": false,
+        "markText": ""
+      }
+    }
+  }
+}

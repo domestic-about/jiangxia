@@ -1,0 +1,6 @@
+# D5：已登记的「非产品缺陷造成的 accept 红」——通过 gate 时标 known-red（不拦门），逐条记 S3。
+# 格式：TICKET|accN|issue|理由      每条必须挂真实 issue 号（gate-audit 会核对台账），不许无号登记。
+# ★ 登记 = 「这条红的原因不是产品行为不符」，**不是**「这条已经修好了」——断言本身仍然红。
+
+SYS-STAGING-001|1|#191,#198|票面 URL 漏 &sort=recent（#191；补参后等价断言 [9000001008,9000001009] 已绿）+ buildCommit 戳落后本地 HEAD（#198：部署早于后续 doc-only 提交，jar 与 application-test.yml 与 HEAD 逐字节相同、**git diff 9f1b008..HEAD -- code/ 为空**（9f1b008=部署那次提交，此后只动过文档/工具），下次部署自然消解）。注意：gate 时（head=9f1b008）该段就已红，首版 known-red 只归因了 #191，属漏登，已补
+SYS-STAGING-001|2|#192,#181|BSD sed 不支持 BRE \? → HOST 恒空（#192）；本机 nc 被透明代理劫持、连 1.1.1.1:59999 都「可达」（#181）。三件套等价取证已落盘，其余 4/5 段全绿

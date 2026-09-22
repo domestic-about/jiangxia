@@ -1,0 +1,25 @@
+[2026-09-22 16:17:19] ===== 1) 准备 psql 入口 =====
+[2026-09-22 16:17:19]   宿主没有 psql → 放 shim /opt/lqg-test/bin/psql（转发进 postgres 容器）
+[2026-09-22 16:17:19]   psql -> /opt/lqg-test/bin/psql
+  psql (PostgreSQL) 16.15
+[2026-09-22 16:17:19] ===== 2) verify.env（只给 reseed.sh 用；库名必须含 test —— 它的护栏）=====
+[2026-09-22 16:17:19] ===== 3) 等 postgres 真正能收连接 =====
+[wait-for] 127.0.0.1:15432 ... ok
+[2026-09-22 16:17:20]   库 lqg_test 可连（第 1 次）
+[2026-09-22 16:17:20] ===== 4) Flyway 表是否已建（表建到哪，seed 灌到哪）=====
+  t_lqg_* 表数：9
+  最新成功迁移：202609241210
+[2026-09-22 16:17:20] ===== 5) 跑 reseed（原样调用同步过来的 reseed.sh，未做任何改动）=====
+  已灌 01-accounts.sql
+  已灌 02-wx-bind-ext-profile.sql
+  已灌 03-unit-group.sql
+  已灌 04-sample.sql
+  已灌 05-embed.sql
+  已灌 06-cryo.sql
+  跳过 07-qc-docs.sql：表还没建 → t_lqg_qc_sample t_lqg_qc_organoid t_lqg_qc_score t_lqg_doc_image t_lqg_doc_attachment
+reseed 完成
+[2026-09-22 16:17:21] ===== 6) 灌完复核（期望：样本 10 行 / extA 可见 4 / staff 历史 2）=====
+  sample_rows=10
+  seed_users=8
+  donor_name_密文=true len=24
+[2026-09-22 16:17:21] 3) reseed 完成

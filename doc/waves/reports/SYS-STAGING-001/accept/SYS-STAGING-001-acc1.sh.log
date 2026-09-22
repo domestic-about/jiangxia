@@ -1,0 +1,7 @@
+# SYS-STAGING-001 accept[1] 测试环境跑的就是当前这份代码（提交号对得上）、库是 PostgreSQL、走 test 配置、测试数据已灌、外部隔离在远程环境同样成立
+# LQG_VERIFY_ENV_FILE=(未设)
+
+true
+true
+true
+false

@@ -1,0 +1,18 @@
+# ── 宿主 nginx（宝塔）反代片段：工作台 + 小程序/验收直连接口 —— SYS-STAGING-001 ──
+# 渲染后的实际文件：code/deploy/test/nginx/proxy-headers.inc
+#   → 测试机上 /opt/lqg-test/nginx/proxy-headers.inc
+#   → 挂进 nginx 容器 /etc/nginx/conf.d/lqg-proxy-headers.inc
+# 被 workspace-site.conf 的两个 proxy 段 include。
+proxy_set_header Host              $host;
+proxy_set_header X-Real-IP         $remote_addr;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_http_version 1.1;
+# 后端有 SSE（plus-ui 的 VITE_APP_SSE=true），长连接别被 60s 掐掉
+proxy_set_header Connection        "";
+proxy_read_timeout 300s;
+proxy_send_timeout 300s;
+proxy_connect_timeout 15s;
+
+# 文件上传/导出：交给上层 server 块的 client_max_body_size，这里不再覆盖
+proxy_buffering off;

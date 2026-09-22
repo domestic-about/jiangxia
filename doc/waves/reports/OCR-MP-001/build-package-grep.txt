@@ -1,0 +1,32 @@
+# OCR-MP-001 · 小程序生产包取证（accept 2 的产物那一半）
+# 时间: 2026-09-22 15:49:58
+# 命令: 在 code/miniapp 下 grep -rnEi '<词表>' src dist/build/mp-weixin
+
+$ grep -rnEi 'aliyuncs\.com|dashscope|api\.weixin\.qq\.com/cv|baidubce|tencentcloudapi|secret[_-]?key|api[_-]?key' src dist/build/mp-weixin
+(无命中 —— 绿)
+
+$ grep -rn 'mp/ocr/recognize' dist/build/mp-weixin | head -2
+dist/build/mp-weixin/api/ocr.js:1:"use strict";const l=require("../common/vendor.js"),d=require("../utils/request.js"),b=require("../utils/auth.js"),g="file",C="/mp/ocr/recognize";function p(t,e={}){const o={clientid:"22b2aecd0710671691ec1c07f2542b9d"},c=b.getToken();c&&(o.Authorization=`Bearer ${c}`),e.stubCase&&(o["X-Ocr-Stub-Case"]=e.stubCase);const a={};e.stubCase&&(a.stubCase=e.stubCase);let r={abort:()=>{}};const i=new Promise((f,u)=>{r=l.index.uploadFile({url:`${d.resolveBaseUrl()}${C}`,filePath:t,name:g,header:o,formData:a,success:s=>{const n=m(s.data);if(!n){u(new Error("识别结果看不懂"));return}if(n.code!==200){u(new Error(n.msg||"识别失败"));return}f(n.data||{})},fail:s=>{u(new Error((s==null?void 0:s.errMsg)||"网络连接失败，请检查网络"))}}),e.onProgress&&r&&typeof r.onProgressUpdate=="function"&&r.onProgressUpdate(e.onProgress)});return{task:r,done:i}}function m(t){if(t&&typeof t=="object")return t;if(typeof t=="string")try{const e=JSON.parse(t);return e&&typeof e=="object"?e:null}catch(e){return null}return null}exports.startOcrUpload=p;
+
+$ ls dist/build/mp-weixin
+api
+app.js
+app.json
+App.ku.json
+App.ku.wxml
+app.wxss
+common
+components
+L1VzZXJzL3drdWkvUHJvamVjdC9wcm9maWxlL3Byb2plY3QvZnJlZWxhbmNlL3Byb2plY3RzL2ppYW5neGlhLW9yZ2Fub2lkL2NvZGUvbWluaWFwcC9zcmMvQXBwLmt1LnZ1ZQ.js
+node-modules
+pages
+project.config.json
+router
+static
+store
+types
+utils
+wd-popup.js
+
+$ grep -rn '识别 · 请核对' dist/build/mp-weixin | head -1
+dist/build/mp-weixin/components/lqg/FieldRow.wxml:1:<wd-cell wx:if="{{a}}" class="data-v-49e36e1b" u-s="{{['d']}}" bindclick="{{g}}" u-i="49e36e1b-0" bind:__l="__l" u-p="{{h}}"><block wx:if="{{b}}"><view class="fr__val data-v-49e36e1b"><slot/><text wx:if="{{c}}" class="lqg-tag lqg-tag--ocr fr__mark data-v-49e36e1b">识别 · 请核对</text></view></block><block wx:else><view class="fr__val data-v-49e36e1b"><text class="fr__text data-v-49e36e1b">{{d}}</text><text wx:if="{{e}}" class="lqg-tag lqg-tag--ocr fr__mark data-v-49e36e1b">识别 · 请核对</text></view><text wx:if="{{f}}" class="fr__arrow data-v-49e36e1b">›</text></block></wd-cell><wd-cell wx:elif="{{i}}" class="data-v-49e36e1b" u-s="{{['d']}}" u-i="49e36e1b-1" bind:__l="__l" u-p="{{l}}"><wd-textarea wx:if="{{k}}" class="data-v-49e36e1b" bindupdateModelValue="{{j}}" u-i="49e36e1b-2,49e36e1b-1" bind:__l="__l" u-p="{{k}}"/></wd-cell><wd-input wx:else class="data-v-49e36e1b" u-s="{{['suffix']}}" bindupdateModelValue="{{n}}" bindclick="{{o}}" u-i="49e36e1b-3" bind:__l="__l" u-p="{{p||''}}"><text wx:if="{{m}}" class="lqg-tag lqg-tag--ocr fr__mark data-v-49e36e1b" slot="suffix">识别 · 请核对</text></wd-input>

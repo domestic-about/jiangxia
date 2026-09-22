@@ -1,0 +1,40 @@
+# OCR-IMPL-001 限流取证（后端 8094，dev + lqg.ocr.provider=stub）
+#
+# 复现口径（下面两段实测都按它跑）：
+#   1) 清空本票的 Redisson 令牌桶：
+#      redis-cli -p 6380 -a <pwd> --scan --pattern 'global:rate_limit:/mp/ocr/*' \
+#        | xargs -n1 redis-cli -p 6380 -a <pwd> del
+#   2) 立刻依次发 8 次（不再等）—— 期望「前 6 次 200、第 7/8 次 500」。
+#
+# 实测 A（清桶后紧接着发 8 次；桶在清之前已被别的用例用掉了额度）：
+#   1..8 全部 500「识别太频繁了，请稍后再试（每分钟最多 6 次）」
+#   —— 说明桶里没额度时确实拦住了，但这一跑不能当「6 次放行」的证据。
+#
+# 实测 B（清桶 → sleep 70 → 发 8 次）：
+$ redis-cli -p 6380 -a *** --scan --pattern 'global:rate_limit:/mp/ocr/*' | xargs -n1 redis-cli -p 6380 -a *** del
+$ sleep 70
+$ for i in 1..8: api.sh --bizcode --as extB --header 'X-Ocr-Stub-Case: 04' --form file=@… POST /mp/ocr/recognize
+1. 200	操作成功
+2. 200	操作成功
+3. 200	操作成功
+4. 200	操作成功
+5. 200	操作成功
+6. 200	操作成功
+7. 500	识别太频繁了，请稍后再试（每分钟最多 6 次）
+8. 500	识别太频繁了，请稍后再试（每分钟最多 6 次）
+#
+# 实测 C（紧接着 B、同一时刻查别的用户的桶）：extB 已被限流，extA 仍放行
+$ bash doc/verify/api.sh --bizcode --as extA --header 'X-Ocr-Stub-Case: 01' --form file=@… POST /mp/ocr/recognize
+200	操作成功
+$ redis-cli -p 6380 -a *** --scan --pattern 'global:rate_limit:/mp/ocr/*'
+global:rate_limit:/mp/ocr/recognize:9000000111
+global:rate_limit:/mp/ocr/recognize:9000000112
+#
+# ★ 结论：
+#   · 限流真的生效（超 6 次/分钟 → 500 + 明确中文 msg，不是放行）；
+#   · key 带用户维度（extA 与 extB 各自一条桶 key，互不影响）。
+# ★ 坑（见报告 WARN-3）：Redisson 的令牌桶状态在 Redis 里存活 24h（框架 timeout 缺省），
+#   而且「删 key」之后**同一个 JVM 里的 RateLimiter 实例**还会拿旧状态继续判（实测 A），
+#   所以要拿到「6 次放行」的干净证据，得清桶 + 等过一个完整窗口（实测 B，>60s）。
+#   票面 accept 2 最后那段（8 次里 ≥2 次非 200）依赖 extB 桶里还有额度，
+#   连跑两遍 accept 会互相干扰 —— 复现顺序见完工报告 §4。

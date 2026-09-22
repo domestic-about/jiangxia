@@ -1,0 +1,26 @@
+
+> lqg-miniapp@1.0.1 upload:mp /Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/miniapp
+> node scripts/upload-mp.mjs --mode\=test
+
+[upload:mp] mode=test  appid=wx0000000000000000
+[upload:mp] serverBaseUrl=https://songjian.tianda.studio  mockLogin=1
+[upload:mp] 构建 → dist/build/mp-weixin-test
+Compiling...
+已忽略静态资源目录：static/app/。详见：https://uniapp.dcloud.net.cn/tutorial/platform.html#static
+
+uni-app 有新版本发布，请执行 `npx @dcloudio/uvm@latest` 更新，更新日志详见：https://download1.dcloud.net.cn/hbuilderx/changelog/5.26.2026091802.html
+​Browserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme​
+DONE  Build complete.
+Run method: open Weixin Mini Program Devtools, import dist/build/mp-weixin-test run.
+
+[upload:mp] ✗ 缺小程序 appid：设置 LQG_WX_APPID（或在 env/.env 里改 VITE_WX_APPID）。
+  当前是占位值 "wx0000000000000000"，用占位 appid 上传一定被微信拒。
+  需要 Kevin 做：① 给出测试用 appid（乙方测试号或甲方主体号）；
+                ② 在「微信公众平台 → 开发管理 → 开发设置」生成**上传密钥**并下载 private.<appid>.key；
+                ③ 把 songjian.tianda.studio 加进「服务器域名 → request 合法域名」（必须 https 且已备案）。
+  构建产物已就位：dist/build/mp-weixin-test（拿到凭据后重跑本命令即可）
+
+ ELIFECYCLE  Command failed with exit code 2.
+EXIT=2

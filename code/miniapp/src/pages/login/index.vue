@@ -27,13 +27,23 @@ const store = useUserStore()
 const agreed = ref(false)
 const submitting = ref(false)
 
-// 只有 dev 构建 + VITE_MOCK_LOGIN=1 才挂调试入口。生产构建里 .env.production
+// 只有 dev / test 构建 + VITE_MOCK_LOGIN=1 才挂调试入口。生产构建里 .env.production
 // 没有 VITE_MOCK_LOGIN → 常量替换成 false，调试面板整块不渲染。
+//
+// ★ SYS-STAGING-001 起 test 也算：测试环境的体验版就是给甲方试用 seed 数据的，
+//   而甲方主体的 appid 还没拿到（SYS-RELEASE-001），真实微信登录换不出 seed 里绑定的 openid
+//   → 登进去是个空系统。ADR-0008 本来就允许 test profile 开 mock（后端 application-test.yml
+//   的 mock-login=true）。生产构建（mode=production）不在此列，`MODE === 'production'` 这个
+//   比较在打包时同样被静态折叠成 false，`mock:ext` 字面量照样被摇掉（SYS-MP-001 accept 第 1 条）。
 //
 // 注意：模板里**不要**写 `<!-- #ifdef/#ifndef -->` 条件编译注释——uni 的 html
 // 预处理器会和 @uni-ku/root 的根节点注入打架，构建报
 // `Cannot destructure property 'tabBar' of 'this.meta'`（本票踩过，已实测）。
-const mockEnabled = computed(() => import.meta.env.MODE === 'development' && import.meta.env.VITE_MOCK_LOGIN === '1')
+const mockEnabled = computed(
+  () =>
+    (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'test') &&
+    import.meta.env.VITE_MOCK_LOGIN === '1'
+)
 
 function toast(title: string) {
   uni.showToast({ title, icon: 'none' })

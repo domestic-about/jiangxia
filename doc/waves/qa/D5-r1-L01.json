@@ -1,0 +1,37 @@
+{
+ "phase": "D5",
+ "round": 1,
+ "auditor": "independent",
+ "generated_by": "doc/waves/tools/gate.sh + gate-audit.py（模式 B：L0+L1 脚本化，非 LLM 审计）",
+ "levels": {
+  "L0": {
+   "status": "pass",
+   "evidence": "【L0 编译/单测/前端 build｜gate.sh 机械产出，非 LLM 审计】head=9f1b008 后端=(见 gate 日志) 日志根=.tmp/gate/D5\npass L0.0 后端监听 — 后端在 http://127.0.0.1:8091 监听（pid 49422）\npass L0.0 产物新鲜度 — L0.0 产物新鲜：lqg/admin 源码没有比 jar 新的文件\npass L0.0 进程持 jar — L0.0 进程 49422 持有该 jar（inode 同一）\npass L0.1 单测 — L0.1 BUILD SUCCESS，Tests run: 197, Failures: 0, Errors: 0, Skipped: 0\npass L0.2 miniapp build:mp-weixin — L0.2 miniapp build:mp-weixin 通过，产物 dist/build/mp-weixin/app.json 已重建（283 个文件）\n（NF1 归一化：2 条 accept 去掉了 --fresh-module，新鲜度由 L0.0 承担；逐条写过 .tmp/gate/D5/accept.json）\n⚠️ 本任务有未实现项（escalated，accept 重放按状态跳过、**不**算产品缺陷）：OCR-SPIKE-001"
+  },
+  "L1": {
+   "status": "pass",
+   "evidence": "【L1 reseed/ddl_vs_ssot/accept 重放/D1 回归/收尾｜gate.sh 机械产出，非 LLM 审计】head=9f1b008 后端=(见 gate 日志) 日志根=.tmp/gate/D5\npass L1.0 reseed — reseed 完成（6 段 seed）\npass L1.0 清孤儿账号 — 孤儿账号已清（非 seed 段 wx_*/lqg_*）\nknown L1.2 accept 重放 — L1.2 票面 accept 通过 4/6；另 2 条红是**已登记的非产品缺陷**（SYS-STAGING-001 acc1(issue #191); SYS-STAGING-001 acc2(issue #192,#181)）——不拦门，逐条记 S3\npass L1.3 D1 回归包 — L1.3 D1 回归包全绿（42✓）\npass L1.4 收尾 reseed — 收尾 reseed 完成\n（NF1 归一化：2 条 accept 去掉了 --fresh-module，新鲜度由 L0.0 承担；逐条写过 .tmp/gate/D5/accept.json）\n⚠️ 本任务有未实现项（escalated，accept 重放按状态跳过、**不**算产品缺陷）：OCR-SPIKE-001"
+  }
+ },
+ "escalated_noted": [
+  "OCR-SPIKE-001"
+ ],
+ "issues": [
+  {
+   "severity": "S3",
+   "level": "L1",
+   "type": "harness",
+   "ticket": "SYS-STAGING-001",
+   "title": "[模式 B gate] SYS-STAGING-001 acc1 红，但已登记为非产品缺陷（issue #191）：票面 URL 漏 &sort=recent（mine 只在 sort=recent 支收窄，与 api-contract 第 49 行一致）；补参后等价断言 [",
+   "detail": "gate.sh 步骤 L1.2 accept 重放 报 known-red：L1.2 票面 accept 通过 4/6；另 2 条红是**已登记的非产品缺陷**（SYS-STAGING-001 acc1(issue #191); SYS-STAGING-001 acc2(issue #192,#181)）——不拦门，逐条记 S3。该 accept 的失败原因已登记在 issue #191（票面/环境/harness 缺陷），不是产品行为不符 → 封顶 S3，不拦门；但**断言本身仍然红**，不是已修。逐条日志 .tmp/gate/D5/accept-logs/SYS-STAGING-001-acc1.sh.log。定级依据：与 qa merge 对 type=harness 的处理一致（长在检查工具/票面/环境上的问题不许拉返工）。"
+  },
+  {
+   "severity": "S3",
+   "level": "L1",
+   "type": "harness",
+   "ticket": "SYS-STAGING-001",
+   "title": "[模式 B gate] SYS-STAGING-001 acc2 红，但已登记为非产品缺陷（issue #192,#181）：BSD sed 不支持 BRE \\? → HOST 恒空（#192）；本机 nc 被透明代理劫持、连 1.1.1.1:59999 都「可达」（#181）。三件套",
+   "detail": "gate.sh 步骤 L1.2 accept 重放 报 known-red：L1.2 票面 accept 通过 4/6；另 2 条红是**已登记的非产品缺陷**（SYS-STAGING-001 acc1(issue #191); SYS-STAGING-001 acc2(issue #192,#181)）——不拦门，逐条记 S3。该 accept 的失败原因已登记在 issue #192,#181（票面/环境/harness 缺陷），不是产品行为不符 → 封顶 S3，不拦门；但**断言本身仍然红**，不是已修。逐条日志 .tmp/gate/D5/accept-logs/SYS-STAGING-001-acc2.sh.log。定级依据：与 qa merge 对 type=harness 的处理一致（长在检查工具/票面/环境上的问题不许拉返工）。"
+  }
+ ]
+}

@@ -1,0 +1,34 @@
+# accept[2] 逐段单独重放 + 本机工具为什么让前两段红
+# 生成时间：2026-09-22 16:29:20 +0800
+
+### 段1 HOST 解析（BSD sed 不支持 BRE 的 \?）
+BSD sed  \?  → []
+BSD sed 去掉\? → [songjian.tianda.studio]   ← 同一模式在 GNU sed 上就是这个结果
+perl 交叉验证   → [songjian.tianda.studio]
+
+### 段2 nc（本机被透明代理劫持，恒报可达）
+  nc -z songjian.tianda.studio:5432 → 可达（不可信）
+  nc -z songjian.tianda.studio:6379 → 可达（不可信）
+  nc -z songjian.tianda.studio:9000 → 可达（不可信）
+  nc -z 1.1.1.1:59999 → 可达（不可信）
+  nc -z 118.178.109.11:34567 → 可达（不可信）
+  ↑ 连 1.1.1.1:59999（绝不可能开）都「可达」→ 本机 nc 的结论一律不可用，见 acc2-port-proof.txt 的三件套
+
+### 段3 三个文件
+  ✅ code/deploy/test/docker-compose.yml
+  ✅ code/deploy/test/deploy.sh
+  ✅ code/deploy/test/.env.example
+
+### 段4 .env 不在 git
+  ✅ 未被跟踪
+.gitignore:9:code/deploy/**/.env	code/deploy/test/.env
+
+### 段5 compose 里没有 5432/6379 的公网映射（grep 应为空）
+  ✅ 无命中
+  --- compose 里真实的端口行 ---
+37:      - "127.0.0.1:${LQG_DB_PORT:-15432}:5432"
+58:      - "127.0.0.1:${LQG_REDIS_PORT:-16379}:6379"
+81:      - "127.0.0.1:${LQG_MINIO_PORT:-19000}:9000"
+82:      - "127.0.0.1:${LQG_MINIO_CONSOLE_PORT:-19001}:9001"
+128:      - "127.0.0.1:${LQG_API_PORT:-8082}:8080"
+150:      - "127.0.0.1:${LQG_WEB_PORT:-8083}:80"

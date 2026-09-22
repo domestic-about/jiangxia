@@ -1,0 +1,77 @@
+[login] ok: staff, extA
+[db] 识别前 t_lqg_sample = 10  sys_oss = 0
+[case 01] 识别条数量 = 1 （新增态应 1）
+[case 01] 提示语 = "识别结果仅作预填，请核对后提交"
+[shot] 01-ocr-idle.png
+[pick] case01 已选夹具 ocr-sample.png
+[case 01] 各行的值 / 小标 = {"来源单位":{"value":"A 医院","mark":false,"markText":""},"供体姓名":{"value":"测试供体甲","mark":true,"markText":"识别 · 请核对"},"性别":{"value":"男","mark":true,"markText":"识别 · 请核对"},"年龄":{"value":"56","mark":true,"markText":"识别 · 请核对"},"住院号":{"value":"ZY0000001","mark":true,"markText":"识别 · 请核对"},"组织类型":{"value":"肝组织","mark":true,"markText":"识别 · 请核对"}}
+[assert] 01 来源单位 值="A 医院" 期望="A 医院" OK
+[assert] 01 供体姓名 值="测试供体甲" 期望="测试供体甲" OK
+[assert] 01 住院号 值="ZY0000001" 期望="ZY0000001" OK
+[assert] 01 组织类型 值="肝组织" 期望="肝组织" OK
+[assert] 01 年龄 值="56" 期望="56" OK
+[assert] 01 来源单位（档案默认值，不是识别读出来的） 小标=false 期望=false OK
+[assert] 01 供体姓名 小标 小标=true 期望=true OK
+[assert] 01 性别 小标 小标=true 期望=true OK
+[assert] 01 年龄 小标 小标=true 期望=true OK
+[assert] 01 住院号 小标 小标=true 期望=true OK
+[assert] 01 组织类型 小标 小标=true 期望=true OK
+[assert] 01 计数与 DOM 小标数 计数文案="已识别 5 项" DOM 小标数=5 期望=5 OK
+[case 01] 说明文案 = "识别结果已填入下面的空项，请逐项核对后再提交"
+[case 01] 展开的原文行 = ["A 医院","姓名：测试供体甲","性别：男 年龄：56岁","住院号：ZY0000001","标本：肝组织"]
+[shot] 02-ocr-success-marks.png
+[assert] 03 改动后的供体姓名 值="医生改过的名字" 期望="医生改过的名字" OK
+[assert] 03 供体姓名小标已摘 小标=false 期望=false OK
+[assert] 03 住院号小标仍在 小标=true 期望=true OK
+[case 03] 改动后各行小标 = {"来源单位":false,"供体姓名":false,"性别":true,"年龄":true,"住院号":true,"组织类型":true}
+[shot] 03-ocr-mark-cleared-after-edit.png
+[shot] 04-ocr-manual-first.png
+[pick] case04 已选夹具 ocr-sample.png
+[assert] 04 手填姓名不被覆盖 值="手填姓名" 期望="手填姓名" OK
+[assert] 04 手填住院号不被覆盖 值="HAND0001" 期望="HAND0001" OK
+[assert] 04 空项被填 值="56" 期望="56" OK
+[assert] 04 手填项不该有识别小标 小标=false 期望=false OK
+[assert] 04 手填项不该有识别小标 小标=false 期望=false OK
+[assert] 04 预填项有小标 小标=true 期望=true OK
+[shot] 05-ocr-prefill-only-blank.png
+[pick] case05 已选夹具 ocr-sample.png
+[case 05] 失败提示 = "没识别出来，请手动填写"
+[assert] 05 来源单位（档案默认值） 值="A 医院" 期望="A 医院" OK
+[assert] 05 供体姓名 未被填 值="" 期望="" OK
+[assert] 05 性别 未被填 值="" 期望="" OK
+[assert] 05 年龄 未被填 值="" 期望="" OK
+[assert] 05 住院号 未被填 值="" 期望="" OK
+[assert] 05 组织类型 未被填 值="" 期望="" OK
+[assert] 05 失败态 DOM 小标数 = 0 （应 0）
+[case 05] 失败后提交按钮存在 = 1 （应 1）
+[assert] 05 失败后仍能手填 值="失败后手填" 期望="失败后手填" OK
+[case 05] 失败态可见原文行 = ["保持 2-8℃ 低温运输","易碎品 轻拿轻放","2026-09-17 10:30"]
+[shot] 06-ocr-failed-manual-ok.png
+[case 06] 编辑态识别条数量 = 0 （应 0）
+[shot] 07-ocr-edit-hidden.png
+[case 06] 只读态识别条数量 = 0 （应 0）
+[shot] 08-ocr-view-hidden.png
+[assert] 07 相册入口 · 住院号 值="ZY0000002" 期望="ZY0000002" OK
+[assert] 07 相册入口 · 性别 值="女" 期望="女" OK
+[assert] 07 夹具 04 只给两格 → 只标两格 计数文案="已识别 2 项" DOM 小标数=2 期望=2 OK
+[assert] 07 夹具 04 没给姓名 → 不该有标 小标=false 期望=false OK
+[assert] 07 夹具 04 没给年龄 → 不该有标 小标=false 期望=false OK
+[shot] 09-ocr-album-entry.png
+[case 08] 识别中 DOM = {"bar":1,"pBtnDisabled":true,"sBtnDisabled":true} （bar 应 1，两个按钮都应 disabled）
+[assert] 08 识别中态（进度条 + 按钮置灰）OK
+[case 08] 放行后提示 = "识别结果已填入下面的空项，请逐项核对后再提交"
+[db] 识别前后 t_lqg_sample = 10 → 10  sys_oss = 0 → 0
+[assert] 识别不落库、不存图 OK（行数识别前后不变）
+[net] /mp/ocr/recognize 调用次数 = 5
+[net 1] url=http://127.0.0.1:9204/lqg-api/mp/ocr/recognize status=200 stubCase=01 clientid=ok auth=Bearer eyJhbGciO…
+[net 1] body.code=200 rawLines=["A 医院","姓名：测试供体甲","性别：男  年龄：56岁","住院号：ZY0000001","标本：肝组织"] fields={"donorName":"测试供体甲","gender":"male","age":"56","hospitalNo":"ZY0000001","tissueType":"肝组织","sourceUnitName":"A 医院"}
+[net 2] url=http://127.0.0.1:9204/lqg-api/mp/ocr/recognize status=200 stubCase=01 clientid=ok auth=Bearer eyJhbGciO…
+[net 2] body.code=200 rawLines=["A 医院","姓名：测试供体甲","性别：男  年龄：56岁","住院号：ZY0000001","标本：肝组织"] fields={"donorName":"测试供体甲","gender":"male","age":"56","hospitalNo":"ZY0000001","tissueType":"肝组织","sourceUnitName":"A 医院"}
+[net 3] url=http://127.0.0.1:9204/lqg-api/mp/ocr/recognize status=200 stubCase=03 clientid=ok auth=Bearer eyJhbGciO…
+[net 3] body.code=200 rawLines=["保持 2-8℃ 低温运输","易碎品 轻拿轻放","2026-09-17 10:30"] fields={}
+[net 4] url=http://127.0.0.1:9204/lqg-api/mp/ocr/recognize status=200 stubCase=04 clientid=ok auth=Bearer eyJhbGciO…
+[net 4] body.code=200 rawLines=["住院号:ZY0000002 床号:12","性别:女"] fields={"gender":"female","hospitalNo":"ZY0000002"}
+[net 5] url=http://127.0.0.1:9204/lqg-api/mp/ocr/recognize status=200 stubCase=01 clientid=ok auth=Bearer eyJhbGciO…
+[net 5] body.code=200 rawLines=["A 医院","姓名：测试供体甲","性别：男  年龄：56岁","住院号：ZY0000001","标本：肝组织"] fields={"donorName":"测试供体甲","gender":"male","age":"56","hospitalNo":"ZY0000001","tissueType":"肝组织","sourceUnitName":"A 医院"}
+[net] 非本机 / 非代理的识别请求 = 0 （应 0）
+[done] exitCode = 0

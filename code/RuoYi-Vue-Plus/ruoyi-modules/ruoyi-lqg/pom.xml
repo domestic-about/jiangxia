@@ -85,6 +85,17 @@
             <artifactId>ruoyi-common-redis</artifactId>
         </dependency>
 
+        <!--
+          OCR-IMPL-001：@RateLimiter 注解（org.dromara.common.ratelimiter.annotation.RateLimiter）
+          与它的切面。此前只有 ruoyi-admin 直接依赖它 —— ruoyi-lqg 的类路径上没有这个注解，
+          写了编不过。**必须显式声明**：依赖传递方向是 admin → lqg，不是 lqg → admin。
+          切面本身由 ruoyi-common-ratelimiter 的 AutoConfiguration.imports 注册（redis 已在上一行）。
+        -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-ratelimiter</artifactId>
+        </dependency>
+
         <!-- 微信小程序 SDK（code2session 换 openid + 手机号快速验证换手机号） -->
         <dependency>
             <groupId>com.github.binarywang</groupId>
@@ -116,6 +127,27 @@
     </dependencies>
 
     <build>
+        <!--
+          OCR-IMPL-001：把 doc/verify/fixtures/ocr-cases.json（**权威夹具**，只读区不许复制进仓库）
+          在构建时放进 classpath。放的是 **main** 资源而不是 test 资源 —— dev 环境跑的
+          StubOcrProvider 是**运行期 bean**（打进 jar 的就是它），只拷进 test-classes
+          会「单测绿、接口空」（实测：rawLines 一直是 []，日志报找不到夹具）。
+          解析器单测（OcrFieldParserFixtureTest）读的是同一份文件，两边不会漂。
+          ${project.basedir} = 本模块目录，往上四级是仓库根
+          （ruoyi-lqg → ruoyi-modules → RuoYi-Vue-Plus → code → 仓库根）。
+          路径落空时单测直接红、dev 里 StubOcrProvider 打 ERROR，都不会静默。
+        -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../../../../doc/verify/fixtures</directory>
+                <includes>
+                    <include>ocr-cases.json</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <!--
               需求层给的契约测试 MockLoginGuardContractTest 没有 @Tag，而根 pom 的 surefire 配了

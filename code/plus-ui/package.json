@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite serve --mode development",
     "build:prod": "vite build --mode production",
+    "build:test": "vite build --mode test",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint:eslint": "eslint",
