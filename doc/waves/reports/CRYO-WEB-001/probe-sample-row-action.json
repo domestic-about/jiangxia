@@ -1,0 +1,25 @@
+{
+  "firstRowActions": [
+    {
+      "text": "核验",
+      "disabled": false
+    },
+    {
+      "text": "质控文档",
+      "disabled": true
+    },
+    {
+      "text": "石蜡包埋",
+      "disabled": false
+    },
+    {
+      "text": "冻存",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    }
+  ],
+  "cryoButtonDisabled": false
+}

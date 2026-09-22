@@ -1,0 +1,34 @@
+########## ACCEPT-1 ##########
+true
+9000003001
+9000003005
+true
+true
+12:22:37.759 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数（lqg.cryo.overdue-days）缺行，回落默认值 14
+12:22:37.760 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数（lqg.cryo.overdue-days）缺行，回落默认值 14
+12:22:37.760 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数解析不了（abc），回落默认值 14
+12:22:37.760 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数不是正整数（0），回落默认值 14
+12:22:37.760 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数不是正整数（-3），回落默认值 14
+12:22:37.761 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数读取失败，回落默认值 14：缓存不可用
+ACCEPT-1 EXIT=0
+########## ACCEPT-2 ##########
+true
+true
+true
+true
+true
+true
+true
+ACCEPT-2 EXIT=0
+########## ACCEPT-3 ##########
+true
+true
+true
+true
+9000003001
+9000003005
+9000003006
+true
+true
+14
+ACCEPT-3 EXIT=0

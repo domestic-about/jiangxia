@@ -259,7 +259,15 @@
             >
               {{ t('lqg.sample.rowAction.embed') }}
             </el-button>
-            <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.cryo') }}</el-button>
+            <!-- ★ 冻存入口（CRYO-WEB-001 点亮）：带 sampleId 跳到工作台「冻存管理」页并自动过滤 -->
+            <el-button
+              v-hasPermi="['lqg:cryo:list']"
+              link
+              type="primary"
+              @click="handleCryo(scope.row)"
+            >
+              {{ t('lqg.sample.rowAction.cryo') }}
+            </el-button>
             <el-button v-hasPermi="['lqg:sample:remove']" link type="danger" icon="Delete" @click="handleDelete(scope.row)"></el-button>
           </template>
         </el-table-column>
@@ -442,6 +450,17 @@ const exportOrganoid = () =>
 const handleEmbed = (row: SampleVO) => {
   // 路径就是菜单 5310 的 path（'embed'，顶级 = /embed），不是 /lqg/embed
   router.push({ path: '/embed', query: { sampleId: String(row.id) } });
+};
+
+/**
+ * 「冻存」行操作：带 sampleId 跳到工作台「-80 冻存管理」页（CRYO-WEB-001）。
+ *
+ * ★ 同样用 **sampleId**（后端 `CryoQueryBo.sampleId` 的既有筛选），不是内部编号 ——
+ *   待核验样本还没有内部编号，用编号跳会筛出空页（SAMPLE-WEB-001 立的口径）。
+ * ★ 路径是菜单 5410 的 path（'cryo'，顶级 = /cryo）。
+ */
+const handleCryo = (row: SampleVO) => {
+  router.push({ path: '/cryo', query: { sampleId: String(row.id) } });
 };
 
 const handleDelete = async (row: SampleVO) => {

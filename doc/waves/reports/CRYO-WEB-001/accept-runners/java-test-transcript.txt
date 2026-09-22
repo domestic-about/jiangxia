@@ -1,0 +1,32 @@
+### Java 单测（ruoyi-lqg 全量）
+
+$ mvn -s .mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome -pl ruoyi-modules/ruoyi-lqg -am test
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.068 s -- in org.dromara.lqg.embed.mp.MpEmbedContractTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s -- in org.dromara.lqg.embed.export.EmbedExportContractTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 s -- in org.dromara.lqg.embed.service.EmbedQueryContractTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.embed.guard.EmbedRulesContractTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in org.dromara.lqg.embed.guard.EmbedChildrenCheckerContractTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.embed.domain.EmbedShapeContractTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in org.dromara.lqg.auth.group.guard.ExtBindStateMachineContractTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.auth.staff.guard.StaffGrantRulesContractTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.auth.guard.MockLoginGuardContractTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.ext.ExtEmbedShapeContractTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.097 s -- in org.dromara.lqg.ext.ExtChokepointContractTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in org.dromara.lqg.cryo.batch.CryoBalanceCheckerTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.dromara.lqg.cryo.batch.service.CryoQueryContractTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.cryo.batch.guard.CryoChildrenCheckerContractTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.cryo.batch.domain.CryoShapeContractTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.dromara.lqg.cryo.remind.service.CryoOverdueServiceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.cryo.export.CryoExportContractTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.cryo.flow.controller.CryoFlowEndpointContractTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in org.dromara.lqg.cryo.flow.service.CryoFlowConcurrencyTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.cryo.flow.service.CryoFlowRulesContractTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in org.dromara.lqg.sample.hint.SampleHintContractTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.sample.verify.VerifyTransitionsContractTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.sample.mp.MpSampleContractTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in org.dromara.lqg.sample.export.SampleExportContractTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.sample.service.SampleRecentFilterContractTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.dromara.lqg.sample.guard.SampleKindRulesContractTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in org.dromara.lqg.sample.query.SampleTableQueryContractTest
+[INFO] Tests run: 174, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS

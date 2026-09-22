@@ -1,0 +1,26 @@
+########## CRYO-MP-001 · accept 1 ##########
+true
+7|2
+true
+true
+true
+5|王工|2
+true
+true
+9000003001
+9000003003
+9000003004
+ACCEPT-1 EXIT=0
+########## CRYO-MP-001 · accept 2 ##########
+true
+5|-2|-
+ACCEPT-2 EXIT=0
+########## CRYO-MP-001 · accept 3 ##########
+true
+true
+true
+true
+true
+ACCEPT-3 EXIT=0
+########## CRYO-MP-001 · accept 4 ##########
+ACCEPT-4 EXIT=0

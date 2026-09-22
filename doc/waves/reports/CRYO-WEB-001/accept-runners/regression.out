@@ -1,0 +1,85 @@
+=== CRYO-WEB-001 回归自查（每步前先 reseed + clean-orphan）===
+== CRYO-MODEL-001 accept 1 : EXIT=0
+     ✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+     1
+     ACCEPT-1 EXIT=0
+== CRYO-MODEL-001 accept 2 : EXIT=0
+     0
+     true
+     10|yes
+     10
+     0
+     ACCEPT-2 EXIT=0
+== CRYO-MODEL-001 accept 3 : EXIT=0
+     9000003005:2
+     9000003004:0
+     9000003006:5
+     9000003002:4
+     true
+     ACCEPT-3 EXIT=0
+== CRYO-FLOW-001 accept 1 : EXIT=0
+     take:-1:ln2
+     adjust:-1:minus80
+     true
+     9000003002:2
+     9000003003:3
+     ACCEPT-1 EXIT=0
+== CRYO-FLOW-001 accept 2 : EXIT=0
+     2
+     true
+     9000003001:7
+     9000003003:2
+     9000003006:0
+     ACCEPT-2 EXIT=0
+== CRYO-FLOW-001 accept 3 : EXIT=0
+     0
+     true
+     true
+     ACCEPT-3 EXIT=0
+== CRYO-REMIND-001 accept 1 : EXIT=0
+     12:41:59.025 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数（lqg.cryo.overdue-days）缺行，回落默认值 14
+     12:41:59.025 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数解析不了（abc），回落默认值 14
+     12:41:59.025 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数不是正整数（0），回落默认值 14
+     12:41:59.025 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数不是正整数（-3），回落默认值 14
+     12:41:59.026 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数读取失败，回落默认值 14：缓存不可用
+     ACCEPT-1 EXIT=0
+== CRYO-REMIND-001 accept 2 : EXIT=0
+     true
+     true
+     true
+     true
+     true
+     ACCEPT-2 EXIT=0
+== CRYO-REMIND-001 accept 3 : EXIT=0
+     9000003005
+     9000003006
+     true
+     true
+     14
+     ACCEPT-3 EXIT=0
+== EMBED-WEB-001 accept 1（导出） : EXIT=0
+       warn("Workbook contains no default style, apply openpyxl's default")
+     ✓ 表头 16 列与模板逐字一致；数据 2 行
+     /Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+       warn("Workbook contains no default style, apply openpyxl's default")
+     ✓ 表头 16 列与模板逐字一致；数据 4 行
+     ACCEPT-1 EXIT=0
+== EMBED-WEB-001 accept 2（菜单） : EXIT=0
+     lqg:embed:remove
+     lqg:embed:export
+     lqg:embed:verify
+     true
+     true
+     ACCEPT-2 EXIT=0
+== SAMPLE-WEB-001 accept 1 : EXIT=0
+     ["9000001001","9000001002","9000001003","9000001004","9000001005","9000001006","9000001007","9000001008","9000001009"]
+     ---- 9) 待核验置顶（pageSize=2）
+     true
+     ---- 10) 待核验行浅黄底之外的表形状抽样（submitterName / groupName 读时带出）
+     true
+     ACCEPT-1 GREEN (exit 0)
+== ExtChokepointContractTest
+== D1 回归包（bash doc/waves/regression/D1/verify.sh --skip-build）
+D1_VERIFY_RC=1
+  - L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001） → [FAIL] 期望 '7'，实际 '17' 17
+=== 回归自查结束（原始输出：accept-runners/regression.out、/tmp/cw001-d1.log）===

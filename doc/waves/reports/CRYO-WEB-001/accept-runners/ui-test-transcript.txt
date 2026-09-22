@@ -1,0 +1,20 @@
+### 前端 vitest（流水弹窗纯判据）
+
+$ node node_modules/vitest/vitest.mjs run src/views/lqg/cryo/flow.spec.ts --reporter=json --outputFile=/tmp/lqg-cryo-flow.json
+JSON report written to /tmp/lqg-cryo-flow.json
+numPassedTests 11 numFailedTests 0
+  passed | isFlowKind 只认 take / add / adjust
+  passed | editableQtyOf：修改弹窗里支数输入框的初值 take 存的是负 delta，要填绝对值
+  passed | editableQtyOf：修改弹窗里支数输入框的初值 add 存的是正 delta，原样
+  passed | editableQtyOf：修改弹窗里支数输入框的初值 adjust 可正可负、原样（0 也如实带出来让人自己改）
+  passed | editableQtyOf：修改弹窗里支数输入框的初值 没有这一笔时是 0，不抛异常
+  passed | qtyProblem：支数判据 take / add 必须是正整数
+  passed | qtyProblem：支数判据 ★ 取走的上限 = 当前剩余
+  passed | qtyProblem：支数判据 ★ 盘点调整不为 0、可正可负
+  passed | qtyProblem：支数判据 小数一律不合法（后端要 Integer）
+  passed | purposeProblem：调整必填原因 只有 adjust 必填
+  passed | failText：被拒时的文案来源 优先用后端原话；拿不到才退回通用话术
+
+### 生产构建
+$ rm -rf dist && npm_config_store_dir=<ws>/.pnpm-store pnpm build:prod
+EXIT=0（见 /tmp/cryoweb-ui-build.log 末行）

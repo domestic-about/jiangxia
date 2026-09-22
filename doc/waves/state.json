@@ -31,8 +31,9 @@
     },
     {
       "id": "D4",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D5",
@@ -105,44 +106,44 @@
       "note": "后端 /lqg/auth/staff（list/grant/edit/resetPwd/revoke，权限串 lqg:auth:staff:* 只授 101）+ 迁移 V202609210920（目录 5100 人员与单位 / 菜单 5110 component=lqg/auth/staff/index / 按钮 5111-5115，父目录一起授）+ 工作台拒外部登录（@AfterReturning 装饰，msg 含『无权』）+ plus-ui 授权页（弹窗含 check 预检提示升级）。口径：授权=找到就改角色、删 103 加目标角色、返回 upgraded:true，不新建账号不动 wx_bind；撤销=角色改回只剩 103 + 补 unbound 档案 + 踢 token，不能撤自己、不能撤到没有管理员。★真问题（上一任落盘的代码，接手时修掉）：① 上游 roleService.cleanOnlineUser → PlusSaTokenDao.searchData 把 Redis 扫描结果缓存进 Caffeine(expireAfterWrite=5s)，撤销前 5 秒内刚签发的 token 不在快照里 → 漏踢，被撤销的人拿旧 token 继续 200；ticket accept 的顺序恰好让快照新鲜所以那段断言对旧实现恒绿 —— 改为 StpUtil.logout(userType+':'+userId)，并写 5 秒窗口负对照探针实测旧实现红、修复后绿；② reset-pwd/revoke 上多余的 response.setStatus(500) 会让 axios 落 error 分支，上游约定是 HTTP 200 + code:500，已删。坑：api.sh 的 token 缓存只按 mtime 判新鲜，陈旧 token 会造成假 401，跑 accept 前建议清 $TMPDIR/lqg-verify-token-*。"
     },
     "CRYO-FLOW-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D4",
       "track": "CRYO",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "新包 org.dromara.lqg.cryo.flow（touches 内、越界 0）：CryoFlowController（POST/PUT/DELETE …/{id}/flow、PUT …/{id}/to-ln2、GET …/{id}/flows）+ CryoFlowService + 3 个 BO + CryoFlowRecordVo；测试 +15（总 159，含 10 线程各取 1 支/初始 3 → 恰好 3 成功的真实并发用例）。口径：写/改/删流水前一律 selectByIdForUpdate(FOR UPDATE) → 复用上游 CryoBalanceChecker 逐笔重算、任一步<0 即拒；被拒库不变；删=软删；类型不可改；from_location 保持登记值；写接口只在 /lqg/cryo/**（POST /mp/int/cryo/…/flow 实测 404 No endpoint）。无新增迁移（5407 lqg:cryo:flow 上游已落）。回归：CRYO-MODEL-001 acc1/2/3、SAMPLE-VERIFY-001 acc1、ExtChokepoint 4、D1 回归包 41 绿/1 红（既有 flyway 假红）。★给下游：CRYO-WEB-001 直接用这 5 个端点与已带的 balanceAfter/edited/updateByName；CRYO-MP-001 只可读 …/flows、别把写操作转发到 /mp/int/cryo/**；CRYO-REMIND-001 的阈值面本票一字未碰（\\b14\\b|OVERDUE_DAYS 探针 0 命中）。"
     },
     "CRYO-MODEL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D4",
       "track": "CRYO",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609241200（生成器逐字节：t_lqg_cryo_batch + t_lqg_cryo_flow + 菜单 5401-5407）；后端 ruoyi-lqg/.../cryo/batch/** 14 个类；单测 4 类 24 例（总 144）。accept 3/3：① DDL——两表与 SSOT 逐列相符、flyway 恰 1 行、information_schema 里 %remain%/%current%/%stock% = 0（批次表没有剩余类列）；② STATE——5 次 T-BAD 全拒且 count=0（代数格式/initQty=0/直接液氮缺位置/挂未核验样本/toLn2Time 早于 freezeTime）、正向 200、initQty 改得动且记 update_by、改成 1 得 400『已取走 2 支，冻存数量不能少于 2』且库内仍 10、有流水的批次 DELETE 被拒且 del_flag=0；③ DATA——接口 7 批剩余 = {6,4,4,0,2,5,5} 与 db.py 独立 SQL 逐批一致、location=ln2={3003,3007}、3001 带 internalNo=T-hli01。★cryo children checker 判据：SELECT COUNT(*) FROM t_lqg_cryo_batch WHERE sample_id=? AND del_flag='0'（该表没有核验状态列，建出即生效——与 EmbedChildrenChecker 的唯一差异是逐表照『生效』定义写）；三条探针：1009 改判无效 500 / 1002（无冻存批次）valid→invalid 200 / 1005 建批后拒、软删该批后放行。回归全绿：SAMPLE-VERIFY-001 acc1（1002 仍放行）+acc2、EMBED-MODEL-001 acc2、SAMPLE-WEB-001 acc1、ExtChokepoint、D1 回归包只剩既有 flyway 假红（现 15）。★交接：CRYO-REMIND-001 必须动 cryo/batch/** 的 CryoBatchVo/CryoQueryBo/CryoQueryService（不在它 touches）；5407 lqg:cryo:flow 权限行已由本票落好供 CRYO-FLOW-001 用（它的 touches 无迁移）；CRYO-WEB-001 不需要搬菜单。"
     },
     "CRYO-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D4",
       "track": "CRYO",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序：pages/cryo/form（新增/修改/只读三模式）+ pages/ledger/sheets.ts & pages/history/sources.ts 注册 cryo + CryoBatchSheet.vue（显式 .vue 路径导入 + 带「修改」跳 pages/cryo/form?id=&mode=edit）+ api/cryo.ts；后端 /mp/int/cryo/** 只注册读接口 + 批次 POST/PUT（没有任何流水写接口）。accept 4/4：① tabCounts=={7,2,2}、7 行、3001 格 [6,6,'minus80']、直连库 7|2、sort=recent 7 条且 3002→[测试管理员,false]/3001→[李工,true]、mine=true→[3001,3003]、把 3004 冻存数量改 2→400/500 库不变、改 5→200 且库 5|王工|2 且排第 1 进 mine、extA 403；② 3003 flows [3104,3103,3102] + [4,7,5]；/mp/int/cryo 上 POST/PUT/DELETE flow 与 PUT to-ln2 **四段全 404 No endpoint** 且库不变；extA flows 403；两段禁字 grep 0 命中；③ 工作台转液氮 3001 → 当场 {7,1,3}、3001 行 [false,'ln2']、超期页签只剩 3005；④ form.js/ledger index.js 产物在、cryo 已注册、显式 .vue 导入、index.vue 无冻存列名、adjust|盘点调整 0 命中。后端 181 单测、小程序 vitest 128（+13）。回归（每步先 reseed+clean-orphan）：CRYO-MODEL/FLOW/REMIND/WEB 全部、EMBED-MP acc1、SAMPLE-MP-002 acc2、ExtChokepoint、D1 41 绿/1 红（既有 flyway 假红，仍 17 支）。★越界 2 处：src/api/ledger.ts +cryoView（三个页签专有筛选键，与 EMBED-MP-001 加 stain 同处）、src/style/components.scss +1 行 --overdue 红字。"
     },
     "CRYO-REMIND-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D4",
       "track": "CRYO",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "唯一判定函数：Java 纯函数 CryoOverdueService.isOverdue(batch, remaining, today, overdueDays)（① in_minus80='Y' ② to_ln2_time==null ③ remaining>0 ④ today−freeze_time >= overdueDays，当天即算）+ overdueDaysOf(未超期→null) + countOverdue() + listOverdue()；SQL 侧唯一一份在 cryo/remind/sql/CryoOverdueSqlProvider 的 WHERE 常量，清单/计数/overdueOnly/默认置顶键都拼同一段、阈值永远参数绑定无字面量。迁移 V202609241205（lqg.cryo.overdue-days 幂等兜底——该行早由 SYS-WEB-001 的 V202609210830 插好，故写成 WHERE NOT EXISTS 绝不覆盖）。accept 3/3：① 清单 [3001:6, 3005:0] 与 db.py 独立 SQL 同集合、tabCounts={all:7,overdue:2,ln2:2}、overdueOnly 2 行；② to-ln2 3001 → 清单只剩 3005、计数 2→1、3001 overdue=false；3005 取空 → 清单 [] 计数 0；extA 403；grep 探针命中 0（包内也没有 14/OVERDUE_DAYS）；③ 阈值 14→13 → 清单 [3001:7,3005:1,3006:0]、tabCounts.overdue==3，改回复原。单测 169 绿。回归（先 reseed+clean-orphan）：CRYO-MODEL/FLOW 全部、SAMPLE-HINT acc1、ExtChokepoint、D1 42 绿/1 红（既有 flyway 假红，现 16）。★两个全项目级的坑：① PaginationInnerInterceptor 保留带绑定参数的 ORDER BY → count SQL 在 PG 上『聚合 + ORDER BY 非分组列』直接 500（单测全绿拦不住），处置 page.setOptimizeCountSql(false)；② @Scheduled 在本项目原本永远不跑（唯一的 @EnableScheduling 挂在被条件关掉的上游 SnailJobConfig 上），已在 cryo/remind/config/CryoOverdueScheduleConfig 自己开一次。★越界 7 个文件（授权）：cryo/batch 的 CryoBatchVo/CryoQueryBo/CryoQueryService/CryoBatchController + 新增 CryoBatchPageVo（TableDataInfo 子类，刻意不改全仓共用的 TableDataInfo）+ 两个上游测试断言随口径更新（CryoShapeContractTest 的『不许有 overdueOnly』前提消失、CryoQueryContractTest 的默认排序档）。"
     },
     "CRYO-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D4",
       "track": "CRYO",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609241210：5410（C，path=cryo，component=lqg/cryo/index）+ 5411-5417 七个 F，授 101/102（不用搬号——上游刻意只建 5401-5407 的 F 行、把 5410 留空，迁移前该 component 0 条路由）；后端新增 cryo/export/{CryoExportVo,CryoExportService} + CryoExportContractTest 5 例（用 JDK zip+DOM 读甲方模板原件两侧对账）+ POST /export；前端 views/lqg/cryo/{index.vue,CryoDrawer,CryoFlowDrawer,CryoFlowDialog,CryoToLn2Dialog,flow.ts,flow.spec.ts} + api + lang，样本总表冻存入口点亮带 sampleId 跳 /cryo。accept 2/2：① 表头 11 列与模板逐字同序（模板 9 列 + 代数 + 当前剩余/支）、7 行=未删批次 JOIN 未删样本、3001 行冻存数量=8（初始）与当前剩余=6 分居第 3/11 列、3007=否+液氮位置、3004=3→0；② 5410 一行 + getRouters 恰 1 条 + staff perms 含 lqg:cryo:flow/export + index.vue 有 tabCounts + api 有 updateFlow/deleteFlow + views 里 el-switch 命中 0。Java 174、vitest 11、build:prod EXIT=0、vue-tsc 零 error。回归（每步先 reseed+clean-orphan）：CRYO-MODEL/FLOW/REMIND 全部、EMBED-WEB acc1/2、SAMPLE-WEB acc1、ExtChokepoint、D1 41 绿/1 红（既有 flyway 假红，现 17）。端侧：页签 7/2/2 与同次 tabCounts 两侧不同源、超期行 rgb(251,228,225)+徽标+置顶、流水抽屉真跑 PUT/DELETE flow（balanceAfter/已改标记当场更新）、pageerror 与 HTTP≥400 均为 0。★越界 2 个文件（授权）：cryo/batch 的 CryoQueryService(+exportRows+missingSampleIds，与列表共用 buildBucket 的 buildWrapper) 与 CryoBatchController(+POST /export)。★如实报备：中途 8081 被 SIGKILL(exit 137，同机同时跑 headless Chrome+vite+JVM)、按 PID 重启后重新取证。"
     },
     "DOC-MP-001": {
       "status": "pending",
@@ -1363,8 +1364,8 @@
       "type": "arch",
       "title": "【S1】工作台「来源单位」筛选筛不出内部录的样本（会传染 D3 导出）",
       "detail": "纯 seed 即可复现：按内部编号 T-oco01 筛出 SJ90000009，行内来源单位列写『B 大学』；把筛选选成来源单位=B 大学后它消失（total=1 只剩 SJ90000006）。根因：SampleQueryService.list 把『组别/来源单位』一律走 t_lqg_ext_profile（提交人外部档案）取 user_id 集合再 submitter_id IN (...)；注释给的理由『样本行上没有 group_id』只对组别成立——来源单位在样本行上有 source_unit_id/source_unit_name → 内部账号提交的行永远筛不出来。影响：老师按来源单位筛会拿不到界面标着该单位的样本；FLOW:F-SAMPLE-02.step5 的导出范围 = 当前筛选结果 → D3 的样本/类器官导出会静默漏掉内部样本（影响另一个 ticket 的实现路径）。修法：来源单位按样本行自己的 source_unit_id 筛；组别仍走外部档案（或一并按提交人的档案 JOIN，但两条口径要分开写清）。旧 accept 只测 A 医院（其下无内部样本）所以 r1 没暴露。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：D2 r2 返工项，已在 b8b160fe 修复（来源单位筛选改为按样本行自己的 source_unit_id，不再走提交人的外部档案）；D2 QA r4 L0+L1 片对四组缺陷逐条独立复验通过（含本条），r4 L2 片 78/78 全绿。D3 导出侧同源已被同一修法覆盖（SAMPLE-EXPORT-001 的 sourceUnitId 筛选 accept 绿）。"
     },
     {
       "id": 97,
@@ -1453,8 +1454,8 @@
       "type": "arch",
       "title": "【S1】SampleQueryService 顶层 .or() 未加括号 → sort=recent 与其它筛选串味，mine=true 失效",
       "detail": "SampleQueryService.java:136-142 用顶层 .or() 拼「create_by 是内部 OR update_by 是内部」，MyBatis-Plus 不给它加括号 → SQL 退化为 (其它筛选 AND create_by IN 内部) OR update_by IN 内部。实测（reseed + staff 改 1001）：/mp/int/sample/list?sampleKind=organoid&sort=recent = [1001(tissue!),9000001009]；sourceUnitId=9000009002&sort=recent、internalNo=T-oco01&sort=recent、mine=true&… 同样串味。第二形态：admin 建一行（staff 从没碰过），staff sort=recent&mine=true 仍返回它 → 「只看我提交的」开关根本没生效。小程序 history/sources.ts 内部两个页签固定发 sampleKind+sort=recent(+mine)，即「我的→历史编辑记录」的类器官页签会出现组织样本、点进去还进 organoid 表单；违背 CR-20260918-07 与剧本 7，并落到 SAMPLE-MP-002 的取数路径。修法：用 .and(w -> w.in(create_by,…).or().in(update_by,…)) 把 OR 包成一组；mine 同理 .and(w -> w.eq(create_by,me).or().eq(update_by,me))。p6spy 原始 SQL 在 D2-r3-L01.json 的 evidence 里。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：D2 r3 拦门项，已在 c6c6371a 修复（SampleQueryService 顶层裸 .or() 改成 .and(w -> w.a().or().b())；全仓 .or() 扫描只此一处；并补「类目身份不可越类改」）。D2 QA r4 L0+L1 与 L2 两片独立复验通过（r4 L2 78/78），含历史页签/mine=true/类器官表单不再把组织样本静默改判。残留：给下游的静态闸缺失已另记 issue #110。"
     },
     {
       "id": 106,
@@ -1913,6 +1914,286 @@
       "type": "clarify",
       "title": "update_time 为空的 seed 记录，编辑抽屉显示「最后修改：从未修改」",
       "detail": "D3 r2 L2 片发现。语义正确（与 D2 起的 updateTime==null 口径一致），只是文案在 seed 行上略怪。可接受，记账。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 152,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 装不下实现：overdue/overdueDays/tabCounts/overdueOnly/默认排序 落在 cryo/batch/** 的 CryoBatchVo/CryoQueryBo/CryoQueryService",
+      "detail": "CRYO-MODEL-001 故意不预置这些（声明了没实现会变成静默全表），所以 CRYO-REMIND-001 必须动三个不在自己 touches 里的文件。派单已授权并要求记 WARN。方案：把 cryo/batch/domain/vo/CryoBatchVo.java、domain/bo/CryoQueryBo.java、service/CryoQueryService.java 划进 CRYO-REMIND-001 的 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 153,
+      "ticket": "CRYO-FLOW-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 无迁移，但它的 accept 要 POST …/flow 返 200（缺 lqg:cryo:flow 权限行是 403）",
+      "detail": "CRYO-MODEL-001 已代为落 5407 lqg:cryo:flow（票面只点名 6 个 perms）。CRYO-WEB-001 的 5411-5417 会重复建同串（无害）。方案：给 CRYO-FLOW-001 的 touches 补 db/migration/**，或把权限行归属写清。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 154,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "实现注释/代码里别出现会被 accept grep 命中的字面量（CRYO-MODEL-001 差点因注释里的 14 打红 REMIND 的 accept 2）",
+      "detail": "CRYO-MODEL-001 第一轮自己注释里写了字面量 14，会命中 CRYO-REMIND-001 accept 2 最后一段的 grep（要求命中文件数=0）；已改词并复跑确认。方案：把这条写进涉及 grep 型 accept 的票的 §0 必读。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 155,
+      "ticket": "CRYO-FLOW-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 里 grep -qE '^200' 不配 --bizcode 恒不成立（api.sh 默认吐原始 JSON，首字符是 {）",
+      "detail": "CRYO-FLOW-001 照抄 ticket accept 1 原文第一段就红；同类形态在 CRYO-MODEL-001 acc3、EMBED-MODEL-001 acc2/acc4 的 runner 里也存在。方案（①侧）：生成器要求『断业务码必须配 --bizcode 或 jq -e .code==200』。D3/D4 的 QA 门已被告知这是断言写法缺陷、不是产品红。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 156,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "MyBatis 类型别名按短名去重：同名 VO 会让整个后端启动即 TypeException，而 159 条单测全绿",
+      "detail": "CRYO-FLOW-001 第一版把 VO 命名成 CryoFlowVo（与上游 cryo/batch 同名）→ 启动即 TypeException；改名 CryoFlowRecordVo 解决。单测不带 Spring 上下文所以拦不住。方案：把『后端真能起来』列为 QA 独立断言（L0 或 L1 必须有一次成功启动 + /lqg/sys/ping 200），并建议 lint 检查跨包 VI 短名冲突。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 157,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "跑过 accept 再跑 D1 回归包会假红 5 条（运行时账号残留）——回归前必须先 reseed + clean-orphan",
+      "detail": "CRYO-FLOW-001 实测：先跑 accept、后跑 D1 verify.sh，会因 accept 留下的运行时账号让 D1 的 L1.2/L1.3c 假红 5 条，多花了一轮。方案：写进 QA 门与回归包的执行顺序约定（每次重放回归包前先 reseed + clean-orphan）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 158,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "create 与 update 的余额判据口径不同（前者=那一刻的余额、后者=整条序列逐笔重算），两条都被 accept 钉死",
+      "detail": "CRYO-FLOW-001 实测：create 用最小初始支数判会误拒 accept 2 第 12 段；update 只看最终剩余会放过第 6 段。两条都对，但口径不同，建议在契约补一句说明。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 159,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "MyBatis-Plus 分页：ORDER BY 带绑定参数时 count SQL 会保留它 → PG 上『聚合 + ORDER BY 非分组列』直接 500",
+      "detail": "CRYO-REMIND-001 实测：默认排序的置顶键带绑定阈值（>= ?），PaginationInnerInterceptor 源码里『order by 里带参数则不去除 order by』→ count SQL 保留 ORDER BY CASE WHEN…，PostgreSQL 报错 500；单测全绿拦不住，实跑才红。处置：page.setOptimizeCountSql(false)（count 走 SELECT COUNT(*) FROM (原 SQL) TOTAL，阈值仍是绑定参数）。影响后面所有『分页 + 带参数排序键』的票（D5-D8）。方案：写进栈包 gotchas。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 160,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "@Scheduled 在本项目原本永远不跑（唯一的 @EnableScheduling 挂在上游 SnailJobConfig 上、被条件关掉）",
+      "detail": "CRYO-REMIND-001 发现：dev/prod 的 snail-job.enabled=false 把上游 SnailJobConfig 整个条件关掉，于是 @EnableScheduling 从未生效。它在 cryo/remind/config/CryoOverdueScheduleConfig 里自己开了一次（重复打开无害）。方案：写进 ADR-0001 的落地说明；后续要定时任务的票都自己开或统一开一处。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 161,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "tabCounts 作用域（整表 vs 跟筛选收窄）契约没写；本票取整表口径",
+      "detail": "取整表口径是因为它必须与超期清单长度/首页计数恒等（同一个 countOverdue()）。CRYO-WEB-001 若要求页签跟着筛选收窄，需先在契约补一句。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 162,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "overdueDays 未超期时是 null 而不是 0（要把『没超期』与『阈值当天=已超 0 天』分开）",
+      "detail": "前端『已超 N 天』列要判 null；CRYO-WEB-001 / CRYO-MP-001 都用得到这条。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 163,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "票面要求迁移插 lqg.cryo.overdue-days，但该行早由 SYS-WEB-001 的 V202609210830 插好（config_type 与名都不同）",
+      "detail": "本票写成 WHERE NOT EXISTS 幂等兜底（dev 库 0 行空操作、绝不覆盖甲方改过的值）。accept 3 原样读回整行只改 configValue，两种类型都不红。建议改票面措辞或把配置行归属写清。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 164,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 装不下实现：必须动 cryo/batch 的 CryoQueryService 与 CryoBatchController（导出要走同一份 wrapper）",
+      "detail": "touches 只列了 cryo/export/**；但导出必须与列表共用同一份筛选 wrapper（否则『行数=同条件列表 total』对不上）。两处均为纯新增方法、无签名变更。方案：把 cryo/batch/service/CryoQueryService.java 与 cryo/batch/controller/CryoBatchController.java 划进本票 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 165,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "计数格子按既有约定导成文本（Excel 绿三角），与「导出为数值」的直觉相反",
+      "detail": "CRYO-WEB-001 实测：FastExcel 对 Integer 的写法令 accept 的 str(cell)=='8' 成立（即文本），这是四个导出的既有约定；副作用是 Excel 显示绿三角。方案：在契约或导出说明里写明『计数列导出为文本』，免得后续票按数值写断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 166,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "三个页签与「位置/只看超期」筛选是两套控件做同一件事（本票做成同一真相源 + 互斥）",
+      "detail": "已实现为同一真相源 + 互斥（不允许出现「液氮 ∧ 超期」的空集）。方案：把这个口径写进 UI:admin.cryo.* 或契约。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 167,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "/mp/int/export/cryo 无运行时证据（端点属 SYS-EXPORT-001）",
+      "detail": "CRYO-WEB-001 只落了可复用的 CryoExportService#rowsOf + 形状断言。到 SYS-EXPORT-001 落地时要补端到端。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 168,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 的禁字 grep 会扫到注释：CRYO-MP-001 在 sheets.ts 注释里写 mode=edit 打红了 SAMPLE-MP-002 acc2",
+      "detail": "CRYO-MP-001 第一版在 src/pages/ledger/sheets.ts 的注释里写了 mode=edit，命中 SAMPLE-MP-002 acc2 的『! grep -q mode=edit src/pages/ledger/sheets.ts』→ 打红别人的 accept；改注释后复跑全绿并重跑整套回归。这是与 issue #154 同族的反方向形态（那条是『别写字面量去撞别人 grep』，这条是『注释也会被 grep 到』）。方案（①侧）：禁字类断言收窄到代码而非注释（例如先剥注释再 grep），或生成器给『禁字 grep』加上『排除注释行』的约定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 169,
+      "ticket": "CRYO-MP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 装不下实现：src/api/ledger.ts 与 src/style/components.scss 两个文件",
+      "detail": "ledger.ts 加 cryoView（三个页签的专有筛选键，与 EMBED-MP-001 加 stain 同处）；components.scss 加 1 行 --overdue 的 .lqg_fz-sub 红字（ticket 要求『超期红字』）。方案：把这两个跨票共用文件写进相关 MP 票的 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 170,
+      "ticket": "CRYO-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "DELETE /mp/int/cryo/batch/{id} 是 405 不是 404（路径被 GET /{id} 占着）",
+      "detail": "下游（D5-D8 的分片与断言）若写 ^404 会假红。方案：路径存在但方法不支持时按 405 断言，或把断言写成 ^(404|405)。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 171,
+      "ticket": "CRYO-MP-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "取用登记类型文案表被两段禁字 grep 逼到 api/cryo.ts（CRYO_FLOW_TEXT）",
+      "detail": "业务文案放在 api 层略怪（为了让页面文件不出现被禁的字面量）。方案：与『禁字 grep 扫注释』那条一起收（收窄断言而不是搬文案）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 172,
+      "ticket": "CRYO-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "冻存工作表按 UI:mp.cryo.list 没有搜索框；超期行冻结格第二行整行变红",
+      "detail": "两条都是与哑组件（LedgerTable 的 cells 是字符串矩阵）的形状有关：要只红后半句需扩展单元格类型。方案：若要与工作台一致的红字粒度，另开小票扩展 LedgerTable。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 173,
+      "ticket": "CRYO-FLOW-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "CryoFlowConcurrencyTest 用自己的 withLock 把 10 线程串行化了：删掉写方法的 @Transactional 它仍 7/7 全绿",
+      "detail": "复现：删掉 CryoFlowService.create 的 @Transactional → mvn -pl ruoyi-modules/ruoyi-lqg test 该单测 7/7 全绿；而真库 5 并发 take 2 抢 3005 剩 2 时全 200、剩余 -8。根因：测试用 fake.withLock(...) 包住每次 service 调用，withLock 拿的就是那把模拟 SELECT…FOR UPDATE 的 ReentrantLock → 线程本来就被测试串行化，它只钉住『调用了 selectByIdForUpdate』，钉不住『加锁发生在事务里』。影响：并发正确性的单测是假绿，只有真库并发 accept 抓得住（D4 L3 已真跑并抓过一次）。建议 a) 测试改成真并发（真 DataSource + 多线程库连接）；b) 或加一条『service 方法带 @Transactional』的反射/ArchUnit 断言，成本更低。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 174,
+      "ticket": "CRYO-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "CRYO-MP-001 accept#5「填写页在产物里」只是 test -f：把 pages/cryo/form.vue 掏成 3 行空壳后六段全过",
+      "detail": "复现：把 code/miniapp/src/pages/cryo/form.vue 换成 3 行空壳 → pnpm build:mp-weixin → accept#5 六段 checks 全过、exit 0。影响：『小程序填写页是空白页』这一形态在机器验收里假绿（本轮靠 L2 截图/DOM 兜住）。建议 accept#5 补一条产物级结构断言（如产物 JS 里出现表单必填字段名的集合、或 fixture 驱动的 DOM 用例）而不是只看文件存在。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 175,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "（#163 同根补充）阈值行的 V202609241205 迁移是永久空操作，那条 config_type='Y' 分支是死代码",
+      "detail": "复现：V202609241205 用 INSERT … WHERE NOT EXISTS 想插 config_type='Y'、名『-80 冻存超期天数』，但该 config_key 早由 SYS-WEB-001 的 V202609210830 以 config_type='N'、名『-80 冻存超期提醒天数』插好 → 每次都命中 NOT EXISTS，迁移永不生效。影响：功能无影响（参数可改可生效，删行会回落 14 + WARN），但 'N' 允许在参数设置页被删，删了之后行为只剩回落；且 ticket §2 与库里实际不符属权威漂移。建议回写 ticket §2，或删掉这段死 SQL。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 176,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S2",
+      "type": "ux",
+      "title": "工作台流水抽屉抬头「当前剩余：N 支」是打开时的行快照，改/删登记后不刷新 batch",
+      "detail": "复现：打开 3001 流水抽屉（抬头『当前剩余 6 支』）→ 改一笔 take 2→1 → 抽屉明细里该行显示『操作后剩余 7』，而抬头仍写 6；删光该批次全部流水后抬头仍 6、抽屉外列表已回到 8。根因：抽屉只重取 rows，不重取 batch。影响：同一屏内两个相反的数字，老师会怀疑自己改错了；无数据损坏，关抽屉即恢复。建议 a) 抽屉内改/删成功后一并 re-fetch batch；b) 或抬头改成从 rows 的末笔 balanceAfter 现算。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 177,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "overdueDays=0 时工作台写「今天到期」、小程序写「已超 0 天」，且与权威锚「已超 N 天」措辞不符",
+      "detail": "复现：3005 恰好第 14 天 → 工作台行徽标『今天到期』，小程序同行小字『已超 0 天』；权威 doc/authority/ui-index.yaml 的冻存超期措辞是『已超 N 天』。影响：同一事实两端两种说法，且都没跟权威对齐。建议统一成『今天到期』作为 N=0 的特例并在权威里补一句，或两端都写『已超 0 天』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 178,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "冻存登记被拒时同时弹后端原话 Notification 与通用「保存失败，请重试」",
+      "detail": "复现：把 3003 一笔 take 改成 8 → 界面同时出现后端原话『已取走 7 支，冻存数量不能少于 7』与通用『保存失败，请重试』两条。核心要求（原样显示后端提示）已满足，属冗余提示。#148 是这个形态的同类（核验抽屉业务码 500 时两条同文案 el-message）。建议全局拦截器在已有业务 msg 时不再补通用兜底。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 179,
+      "ticket": "CRYO-FLOW-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "改流水被拒时后端复用「冻存数量」话术，没指出是哪一笔流水",
+      "detail": "复现：改 3003/3104 那笔 take 的 qty 8（挪早+加量让中途为负）→ 400『已取走 7 支，冻存数量不能少于 7』——这句是改初始支数的判据话术，用在改流水上语义错位，也没说清是哪一笔（时间/类型）导致中途为负。影响：老师知道被拒但不知道改哪笔能过。建议 msg 带上目标流水的 freeze_time/类型与冲突点。",
       "status": "open",
       "decision": ""
     }

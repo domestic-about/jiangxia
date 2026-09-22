@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    CryoBatchSheet: typeof import('./../components/lqg/CryoBatchSheet.vue')['default']
     EmbedCard: typeof import('./../components/lqg/EmbedCard.vue')['default']
     EmptyState: typeof import('./../components/lqg/EmptyState.vue')['default']
     EntryGrid: typeof import('./../components/biz/EntryGrid.vue')['default']

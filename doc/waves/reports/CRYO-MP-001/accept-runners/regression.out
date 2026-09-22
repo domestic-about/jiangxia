@@ -1,0 +1,66 @@
+[CRYO-MODEL-001 acc1] EXIT=0
+    ✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+    1
+    ACCEPT-1 EXIT=0
+[CRYO-MODEL-001 acc2] EXIT=0
+    10
+    0
+    ACCEPT-2 EXIT=0
+[CRYO-MODEL-001 acc3] EXIT=0
+    9000003002:4
+    true
+    ACCEPT-3 EXIT=0
+[CRYO-FLOW-001 acc1] EXIT=0
+    9000003002:2
+    9000003003:3
+    ACCEPT-1 EXIT=0
+[CRYO-FLOW-001 acc2] EXIT=0
+    9000003003:2
+    9000003006:0
+    ACCEPT-2 EXIT=0
+[CRYO-FLOW-001 acc3] EXIT=0
+    true
+    true
+    ACCEPT-3 EXIT=0
+[CRYO-REMIND-001 acc1] EXIT=0
+    13:03:51.691 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数不是正整数（-3），回落默认值 14
+    13:03:51.692 [main] WARN org.dromara.lqg.cryo.remind.service.CryoOverdueProperties -- 冻存超期天数参数读取失败，回落默认值 14：缓存不可用
+    ACCEPT-1 EXIT=0
+[CRYO-REMIND-001 acc2] EXIT=0
+    true
+    true
+    ACCEPT-2 EXIT=0
+[CRYO-REMIND-001 acc3] EXIT=0
+    true
+    14
+    ACCEPT-3 EXIT=0
+[CRYO-WEB-001 acc1] EXIT=0
+      warn("Workbook contains no default style, apply openpyxl's default")
+    ✓ 表头 11 列与模板逐字一致；数据 7 行
+    ACCEPT-1 EXIT=0
+[CRYO-WEB-001 acc2] EXIT=0
+    true
+    true
+    ACCEPT-2 EXIT=0
+[EMBED-MP-001 acc1] EXIT=0
+    9000002001
+    9000002003
+    ACCEPT-1 EXIT=0
+[SAMPLE-MP-002 acc2] EXIT=0
+    true
+    true
+    ACCEPT-2 EXIT=0
+── ExtChokepointContractTest（D1 的外部咽喉门，四条不变量）
+[ExtChokepointContractTest] EXIT=0
+── D1 回归包（--skip-build）
+      [32m✓[0m L1.3d 授权 + 首登后同手机号仍 1 行
+    
+    [1m═══ 汇总 ═══[0m
+    [31m失败 1 条：[0m
+      - L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001） → [FAIL] 期望 '7'，实际 '17' 17
+    
+    [1m收尾[0m
+      已 reseed + 清孤儿账号（含回归手机号 13800000097 / 13800000098）+ 清 token 缓存
+[D1 verify.sh] EXIT=1
+REGRESSION DONE
+REGRESSION_EXIT=0

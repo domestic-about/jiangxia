@@ -127,6 +127,7 @@ page {
 .lqg-ledger__row--pending .lqg-ledger__td { background: var(--lqg-warn-row); }
 .lqg-ledger__row--pending .lqg-ledger__fz-sub { color: var(--lqg-warn); font-weight: var(--lqg-fw-semibold); }
 .lqg-ledger__row--overdue .lqg-ledger__td { background: var(--lqg-danger-row); }
+.lqg-ledger__row--overdue .lqg-ledger__fz-sub { color: var(--lqg-danger); font-weight: var(--lqg-fw-semibold); }
 
 /* —— 底部弹层内容（wd-popup 里用）—— */
 .lqg-sheet { padding: var(--lqg-sp-7) var(--lqg-gutter) calc(var(--lqg-sp-7) + env(safe-area-inset-bottom)); }
