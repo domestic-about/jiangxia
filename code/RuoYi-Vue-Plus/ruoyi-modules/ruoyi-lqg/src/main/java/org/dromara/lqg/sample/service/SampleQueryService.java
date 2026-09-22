@@ -12,12 +12,15 @@ import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleQueryBo;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
+import org.dromara.lqg.sample.hint.SampleHintService;
+import org.dromara.lqg.sample.hint.vo.SampleHintVo;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.query.SampleSubmitterProfileQuery;
 import org.dromara.lqg.sample.query.SampleSubmitterProfileVo;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 样本读侧（doc/api-contract.md 的 {@code GET /lqg/sample/list} / {@code GET /lqg/sample/{id}}）。
@@ -58,6 +61,13 @@ public class SampleQueryService {
     private final SampleFieldCipher fieldCipher;
     private final SampleNameResolver nameResolver;
     private final SampleSubmitterProfileQuery submitterProfileQuery;
+    /**
+     * 切片染色提示（SAMPLE-HINT-001）：读时计算，整页一条 GROUP BY。
+     *
+     * <p>放在这一层而不是各 controller：{@code /lqg/sample/list} 与 {@code /mp/int/sample/list}
+     * 走的是<b>同一个</b> {@link #list(SampleQueryBo)}，挂在这里两侧同时生效、口径只有一份。
+     */
+    private final SampleHintService sampleHintService;
 
     /**
      * 样本列表。
@@ -110,9 +120,40 @@ public class SampleQueryService {
             List<SampleVo> rows = result.getRecords().stream().map(this::toVo).toList();
             // 每行带出提交人姓名 / 组别名（读时 join 外部档案；内部人员与自填单位的行是 null）
             submitterProfileQuery.fill(rows);
+            fillHints(rows);
             return TableDataInfo.build(new Page<SampleVo>(result.getCurrent(), result.getSize(), result.getTotal())
                 .setRecords(rows));
         });
+    }
+
+    /**
+     * 给一页行挂「切片染色提示」（SAMPLE-HINT-001）。
+     *
+     * <p>★ 三条不变量都在这里收口：
+     * <ol>
+     *   <li><b>一页只发一次聚合查询</b>：入参是整页的 id 集合
+     *       （{@code SampleHintService.hintsOf} 内部一条 GROUP BY / 一个 IN）；
+     *       逐行 {@code for} 里查一次是最自然也最错的形态；</li>
+     *   <li><b>每一行都有 hint</b>：没有（有效）石蜡块的行补零值 —— 尤其是
+     *       {@code submit_source='internal'} 录进来、还没做包埋的样本；前端读
+     *       {@code row.hint.blockCount}，null 会当场炸；</li>
+     *   <li><b>列表里不出现 null</b>：{@code getOrDefault} 是第二道保险（正常走不到，
+     *       {@code hintsOf} 已经给每个请求的 id 铺了零值）。</li>
+     * </ol>
+     *
+     * <p>详情（{@link #detail(Long)}）与导出（{@link #exportRows(SampleQueryBo)}）<b>不挂</b>：
+     * 契约第 45 行只把 {@code hint} 写在 list 的行上，导出用的是各域自己的
+     * {@code *ExportVo}（多一个键会多一列）。
+     */
+    private void fillHints(List<SampleVo> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        Map<Long, SampleHintVo> hints = sampleHintService.hintsOf(
+            rows.stream().map(SampleVo::getId).toList());
+        for (SampleVo vo : rows) {
+            vo.setHint(hints.getOrDefault(vo.getId(), SampleHintVo.empty()));
+        }
     }
 
     /**

@@ -77,9 +77,24 @@ export default {
     submitterName: '提交人',
     groupName: '组别',
     operatorName: '操作人',
+    hint: '切片染色',
     updateTime: '最后修改',
     remark: '备注',
     action: '操作'
+  },
+
+  // ── 切片染色提示（SAMPLE-HINT-001 / UI:admin.sample.list.hint） ────────────
+  // 读时计算、不可编辑；没有包埋记录显示「—」；悬停列出各石蜡块编号与切片时间。
+  hint: {
+    block: '石蜡块 {n}',
+    sectioned: '已切片',
+    none: '—',
+    blockNo: '石蜡块编号',
+    sectionTime: '切片时间',
+    empty: '还没有石蜡块明细',
+    loading: '加载中…',
+    loadFailed: '石蜡块明细没能加载',
+    open: '点击查看石蜡包埋页'
   },
 
   // ── 状态与行操作 ──────────────────────────────────────────────────────────

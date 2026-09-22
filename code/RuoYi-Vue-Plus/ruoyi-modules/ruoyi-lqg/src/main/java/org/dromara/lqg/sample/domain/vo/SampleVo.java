@@ -3,6 +3,7 @@ package org.dromara.lqg.sample.domain.vo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.dromara.lqg.sample.hint.vo.SampleHintVo;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -182,5 +183,20 @@ public class SampleVo implements Serializable {
      */
     @Schema(description = "小程序内部接口上是否可改（valid 才可改）")
     private Boolean editable;
+
+    /**
+     * 切片染色提示（SAMPLE-HINT-001 / UI:admin.sample.list.hint / UI:mp.ledger 的最后一列）。
+     *
+     * <p>★ <b>读时计算、不落库</b>：由 {@code SampleQueryService.list} 拿本页全部样本 id
+     * 一条 GROUP BY 查出来再挂上（{@code SampleHintService.hintsOf}）。在样本表上加
+     * {@code block_count} / {@code has_section} 会让 SAMPLE-HINT-001 的 accept 2 红。
+     *
+     * <p>★ <b>列表的每一行都有这个对象</b>（没有包埋记录的是零值
+     * {@code {blockCount:0, sectioned:false, stains:[]}}），**不是 null**。
+     * 只有详情（{@code GET /lqg/sample/{id}}）与导出不带它 —— 契约第 45 行只把 {@code hint}
+     * 写在 list 的行上。
+     */
+    @Schema(description = "切片染色提示（读时计算；没有包埋记录也是零值，不是 null）")
+    private SampleHintVo hint;
 
 }

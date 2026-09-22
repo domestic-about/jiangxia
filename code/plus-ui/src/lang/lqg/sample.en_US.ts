@@ -70,9 +70,23 @@ export default {
     submitterName: 'Submitter',
     groupName: 'Group',
     operatorName: 'Operator',
+    hint: 'Slicing / staining',
     updateTime: 'Last modified',
     remark: 'Remark',
     action: 'Actions'
+  },
+
+  // ── Slicing / staining hint (SAMPLE-HINT-001 / UI:admin.sample.list.hint) ──
+  hint: {
+    block: 'Blocks {n}',
+    sectioned: 'Sectioned',
+    none: '—',
+    blockNo: 'Block no.',
+    sectionTime: 'Section time',
+    empty: 'No block details yet',
+    loading: 'Loading…',
+    loadFailed: 'Block details failed to load',
+    open: 'Open the paraffin embedding page'
   },
 
   status: {

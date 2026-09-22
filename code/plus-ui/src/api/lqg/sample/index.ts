@@ -16,6 +16,25 @@ import { AxiosPromise } from 'axios';
 //      列表「最后修改」列与抽屉顶部小字都要显式处理 null，别当空字符串渲染成「0」或「Invalid Date」。
 // ============================================================================
 
+/**
+ * 切片染色提示（SAMPLE-HINT-001 / UI:admin.sample.list.hint）。
+ *
+ * ★ <b>读时计算</b>：后端 `SampleHintService` 拿本页样本 id 一条 GROUP BY 查出来再挂到行上，
+ *   `t_lqg_sample` 上**没有** `block_count` / `has_section` 这类列（DDL 与 SSOT 逐列相符）。
+ * ★ <b>列表每一行都有这个对象</b>，没有包埋记录的行是零值（`0 / false / []`），**不是 null**
+ *   —— 渲染时不要写 `hint &&`，直接读（后端已保证）。
+ * ★ 计数口径 = 已核验有效、未软删的石蜡块（与 `EmbedChildrenChecker` 同源）：
+ *   待核验的外部送样、软删的块都不算；`NONE` 不算一种染色（后端已去掉）。
+ */
+export interface SampleHintVO {
+  /** 已核验有效的石蜡块数 */
+  blockCount: number;
+  /** 有没有已切片（任一有效石蜡块的切片时间非空） */
+  sectioned: boolean;
+  /** 做过的染色种类并集（去 NONE、按字典顺序），如 `["HE","IHC"]` */
+  stains: string[];
+}
+
 /** 样本行（GET /lqg/sample/list 的 rows[]） */
 export interface SampleVO {
   id: string | number;
@@ -57,6 +76,8 @@ export interface SampleVO {
   handlerName?: string | null;
   mine?: boolean;
   editable?: boolean;
+  /** ★ 切片染色提示（SAMPLE-HINT-001）：列表每行都有，没有包埋记录也是零值 */
+  hint?: SampleHintVO | null;
 }
 
 /** 总表筛选（字段名与 doc/api-contract.md 第 45 行的参数逐字一致） */

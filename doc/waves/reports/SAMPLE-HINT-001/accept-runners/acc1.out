@@ -1,0 +1,21 @@
+########## SAMPLE-HINT-001 · accept 1（DATA）##########
+（差异：去掉 --fresh-module ruoyi-lqg）
+---- 1) 1001 两块、一块已切片 HE+IHC
+[2,true,["HE","IHC"]]
+---- 2) 1004 一块已切片、无染色（NONE 不是一种染色）
+[1,true,[]]
+---- 3) 1006 一块已切片、OTHER
+[1,true,["OTHER"]]
+---- 4) 1008 名下唯一那块是软删 → 零值
+[0,false,[]]
+---- 5) 1002 名下只有待核验的外部送样 → 零值
+[0,false,[]]
+---- 6) 没有包埋记录的行 hint 也不许是 null（整页扫一遍）
+true
+---- 7) 各行块数之和 == 直连库的独立 count（两侧不同源）
+db=4 sum=4
+4
+---- 8) /mp/int/sample/list 同样带 hint
+true
+---- 9) 收尾 reseed
+ACCEPT-1 EXIT=0

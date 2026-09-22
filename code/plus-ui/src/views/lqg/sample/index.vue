@@ -220,6 +220,14 @@
           <template #default="scope">{{ scope.row.groupName || '—' }}</template>
         </el-table-column>
         <el-table-column :label="t('lqg.sample.col.operatorName')" prop="operatorName" width="100" :show-overflow-tooltip="true" />
+        <!-- ★ 切片染色提示（SAMPLE-HINT-001 / UI:admin.sample.list.hint）：读时计算、不可编辑；
+             挂在「操作人」之后（权威的列序里它就在操作人与备注之间）；
+             悬停再查石蜡块明细、点击带 sampleId 跳石蜡包埋页 —— 都在组件里 -->
+        <el-table-column :label="t('lqg.sample.col.hint')" width="200">
+          <template #default="scope">
+            <HintBadges :hint="scope.row.hint" :sample-id="scope.row.id" />
+          </template>
+        </el-table-column>
         <!-- ★ 最后修改：updateTime 为 null = 从没改过（SAMPLE-MP-001 的跨票行为变更），显式渲染 -->
         <el-table-column :label="t('lqg.sample.col.updateTime')" prop="updateTime" width="170" :show-overflow-tooltip="true">
           <template #default="scope">
@@ -278,6 +286,8 @@ import { exportOrganoidSamples, exportTissueSamples } from '@/api/lqg/sample/exp
 import { listGroups, listUnits } from '@/api/lqg/auth/group';
 import type { SourceUnitVO, UnitGroupVO } from '@/api/lqg/auth/group';
 import SampleDrawer from './SampleDrawer.vue';
+// ★ 切片染色提示（SAMPLE-HINT-001）：徽标组 + 悬停明细 + 点击跳石蜡包埋页
+import HintBadges from './HintBadges.vue';
 import { useI18n } from 'vue-i18n';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;

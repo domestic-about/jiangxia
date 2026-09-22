@@ -1,0 +1,73 @@
+{
+  "headerCount": 24,
+  "hintIndex": 20,
+  "hintHeader": "切片染色",
+  "rows": [
+    {
+      "internalNo": "—",
+      "hintText": "—",
+      "badges": [],
+      "sectionedBadgeBg": null
+    },
+    {
+      "internalNo": "—",
+      "hintText": "—",
+      "badges": [],
+      "sectionedBadgeBg": null
+    },
+    {
+      "internalNo": "—",
+      "hintText": "—",
+      "badges": [],
+      "sectionedBadgeBg": null
+    },
+    {
+      "internalNo": "T-hco04",
+      "hintText": "石蜡块 1 已切片 其他",
+      "badges": [
+        "石蜡块 1",
+        "已切片",
+        "其他"
+      ],
+      "sectionedBadgeBg": "rgb(223, 241, 230)"
+    },
+    {
+      "internalNo": "T-hga03",
+      "hintText": "—",
+      "badges": [],
+      "sectionedBadgeBg": null
+    },
+    {
+      "internalNo": "T-hli02",
+      "hintText": "石蜡块 1 已切片",
+      "badges": [
+        "石蜡块 1",
+        "已切片"
+      ],
+      "sectionedBadgeBg": "rgb(223, 241, 230)"
+    },
+    {
+      "internalNo": "T-hli01",
+      "hintText": "石蜡块 2 已切片 HE IHC",
+      "badges": [
+        "石蜡块 2",
+        "已切片",
+        "HE",
+        "IHC"
+      ],
+      "sectionedBadgeBg": "rgb(223, 241, 230)"
+    },
+    {
+      "internalNo": "T-hli05",
+      "hintText": "—",
+      "badges": [],
+      "sectionedBadgeBg": null
+    },
+    {
+      "internalNo": "T-oco01",
+      "hintText": "—",
+      "badges": [],
+      "sectionedBadgeBg": null
+    }
+  ]
+}

@@ -116,14 +116,58 @@ export function toTableRows(rows: LedgerRow[]): LedgerTableRow[] {
   }
   return rows.map((row) => {
     const cols = ledgerColumns(row.sampleKind) ?? frozen
+    // ★ 最后一列「切片染色」的文案在本文件里算好再交给 `ledgerCellText`（SAMPLE-HINT-001）：
+    //   列名 / 列序仍只从 `columns.ts` 来，`api/ledger.ts` 一个字不用改。
+    const rowWithHint: LedgerRow = { ...row, stainHint: stainHintText(row) }
     return {
       id: String(row.id),
       tone: ledgerRowTone(row),
       frozen: ledgerFrozenText(row),
       sub: ledgerFrozenSub(row),
-      cells: cols.columns.map(col => ledgerCellText(row, col.key)),
+      cells: cols.columns.map(col => ledgerCellText(rowWithHint, col.key)),
     }
   })
+}
+
+// ── 切片染色提示（SAMPLE-HINT-001 / UI:mp.ledger 的最后一列「切片染色」）────────────
+//
+// 数据来自 `/mp/int/sample/list` 行上的 `hint`（后端**读时计算**：一条 GROUP BY 算出本页
+// 每行名下「已核验有效、未软删的石蜡块数 / 有没有切片 / 染色并集」）。小程序这一列是**纯文本**
+// 单元格（哑组件只渲染字符串），所以把徽标拍成一行小字：「石蜡块 2 · 已切片 · HE / IHC」；
+// 没有包埋记录显示「—」（与工作台 `HintBadges.vue` 同一口径）。
+
+/** 行上的 `hint` 形状（与后端 `SampleHintVo` 逐字段同形） */
+interface SampleHintLike {
+  blockCount?: number | null
+  sectioned?: boolean | null
+  stains?: string[] | null
+}
+
+/** 染色值 → 缩写（值域 = 字典 `lqg_stain_type`；`NONE` 由后端在并集里去掉，到不了这里） */
+const STAIN_ABBR: Record<string, string> = { HE: 'HE', IF: 'IF', IHC: 'IHC', OTHER: '其他' }
+
+/**
+ * 一行 → 「切片染色」列的文案。
+ *
+ * 与工作台徽标同一口径：`blockCount === 0`（没有包埋记录、或有记录但都不算块）显示「—」；
+ * `sectioned` 才追加「已切片」；染色是并集（后端已去 `NONE`、已按字典序）。
+ * 后端保证每行都有 `hint` 对象（零值不是 null）。
+ */
+export function stainHintText(row: LedgerRow): string {
+  const hint = row.hint as SampleHintLike | null | undefined
+  const blockCount = hint?.blockCount ?? 0
+  if (blockCount <= 0) {
+    return '—'
+  }
+  const parts = [`石蜡块 ${blockCount}`]
+  if (hint?.sectioned) {
+    parts.push('已切片')
+  }
+  const stains = (hint?.stains ?? []).map(kind => STAIN_ABBR[kind] ?? kind)
+  if (stains.length > 0) {
+    parts.push(stains.join(' / '))
+  }
+  return parts.join(' · ')
 }
 
 /**
