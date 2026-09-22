@@ -62,21 +62,22 @@
  },
  "exception": null,
  "open_issues": {
-  "total": 144,
+  "total": 145,
   "by_severity": {
    "S2": 54,
    "S3": 82,
    "S1": 5,
-   "S0": 3
+   "S0": 4
   },
   "escalated_tickets": [],
   "s0_s1_unresolved": [
    "【S1】工作台「来源单位」筛选筛不出内部录的样本（会传染 D3 导出）",
-   "【S1】SampleQueryService 顶层 .or() 未加括号 → sort=recent 与其它筛选串味，mine=true 失效"
+   "【S1】SampleQueryService 顶层 .or() 未加括号 → sort=recent 与其它筛选串味，mine=true 失效",
+   "【S0】工作台核验抽屉「判为有效并保存」点不动：前端先 PUT /lqg/embed 被 400 拒，verify 端点一次都没发"
   ],
   "note": "S0/S1 会在 qa_gate 的 pending_issues 里被拦；S2/S3 推到 all_done 一起清（载体是 doc/waves/state.json 的 open_issues，勿另建台账）"
  },
- "summary": "ticket 18/43 done；已通过 QA 门的任务：D1,D2。当前 D3（qa_running，QA 第 0 轮）。未决台账 144 条（S0/S1 2 条）。",
+ "summary": "ticket 18/43 done；已通过 QA 门的任务：D1,D2。当前 D3（qa_running，QA 第 0 轮）。未决台账 145 条（S0/S1 3 条）。",
  "needs_human": {
   "route": "kevin",
   "why": "①需求拆解阶段留给 Kevin 的待办仍未决；zhixing 这边当前无需人介入（未决台账见 open_issues）",
