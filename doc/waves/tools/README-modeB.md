@@ -93,6 +93,9 @@ bash doc/waves/tools/qa-up.sh --down --backend-port 8092 --web-port 8093 --mp-po
 - **只有一级**：分片名 `L2` 或 `L3`，`levels` 只写自己那级，**不写 `verdict`**，`auditor: "independent"`。
 - **禁读**：`doc/waves/reports/**`（实现方报告）与**同伴分片的 audit**。
 - **绝对不要把 PNG 读进上下文**（截图只落盘、报告里写路径；历史上多任 agent 因此整轮报废）。
+- **Playwright 的 require 锚点用 `code/miniapp/package.json`**（`createRequire(path.join(WS,'code/miniapp/package.json'))` 再 `require('playwright')`）。
+  用 `code/plus-ui/package.json` 作锚点会 `MODULE_NOT_FOUND`（plus-ui 的 package.json 里没声明 playwright 依赖；
+  QC-WEB-001 实测踩到并改用小程序那份，见 issue #228）。浏览器已在 `~/Library/Caches/ms-playwright`，**别下载**。
 - **环境已起好**：给它 `export LQG_VERIFY_ENV_FILE="$PWD/.tmp/qa-env/8092/verify.env"`、
   后端端口、两端 dev 端口；告诉它**不要重建环境**，只在需要时 `reseed.sh --yes`。
 - **串行**：明确告知「同一时刻只有你一个在碰 PG 5433」，不要并发 reseed。

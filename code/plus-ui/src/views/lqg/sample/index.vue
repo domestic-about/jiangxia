@@ -249,7 +249,18 @@
             >
               {{ scope.row.verifyStatus === 'pending' ? t('lqg.sample.rowAction.verify') : t('lqg.sample.rowAction.edit') }}
             </el-button>
-            <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.qcDoc') }}</el-button>
+            <!-- ★ 质控文档入口（QC-WEB-001 点亮）：只对已核验有效的样本可点
+                 （后端 GET /lqg/qc/{sampleId} 对非 valid 样本直接 400） -->
+            <el-button
+              v-hasPermi="['lqg:qc:query']"
+              link
+              type="primary"
+              :disabled="scope.row.verifyStatus !== 'valid'"
+              :title="scope.row.verifyStatus !== 'valid' ? t('lqg.sample.rowAction.qcDocInvalid') : ''"
+              @click="handleQcDoc(scope.row)"
+            >
+              {{ t('lqg.sample.rowAction.qcDoc') }}
+            </el-button>
             <!-- ★ 石蜡包埋入口（EMBED-WEB-001 点亮）：带 sampleId 跳到工作台「石蜡包埋」页并自动过滤 -->
             <el-button
               v-hasPermi="['lqg:embed:list']"
@@ -461,6 +472,21 @@ const handleEmbed = (row: SampleVO) => {
  */
 const handleCryo = (row: SampleVO) => {
   router.push({ path: '/cryo', query: { sampleId: String(row.id) } });
+};
+
+/**
+ * 「质控文档」行操作：带 sampleId 跳到工作台质控文档编辑页（QC-WEB-001）。
+ *
+ * ★ 路径是隐藏菜单 5510 的**完整路由**：父目录 5500 的 path 'qc-console' 会做前缀
+ *   （菜单 5510 自己的 path 仍是票面要求的 'qc-editor'）→ 实际路由 `/qc-console/qc-editor`。
+ * ★ 只对已核验有效的样本可点：后端 `GET /lqg/qc/{sampleId}` 对非 valid 样本直接 400
+ *   （待核验样本还没有内部编号，也没有可编辑的质控文档）。
+ */
+const handleQcDoc = (row: SampleVO) => {
+  if (row.verifyStatus !== 'valid') {
+    return;
+  }
+  router.push({ path: '/qc-console/qc-editor', query: { sampleId: String(row.id) } });
 };
 
 const handleDelete = async (row: SampleVO) => {

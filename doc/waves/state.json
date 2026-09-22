@@ -251,12 +251,12 @@
       "note": "质控文档数据模型（五表两支迁移 V202609261300/V202609261310）+ 评分由后端按字典 remark 回填 + 图片/附件规则 + QcChildrenChecker。accept 3/3 绿（票面逐字重放，仅 NF1）；上游回归 SAMPLE-VERIFY-001 2/2、EMBED-MODEL-001 4/4 仍绿；模块全套单测 217/0；git status 25 条全是本票新增、零越界。★五条给下游的硬坑：①**并发幂等不能裹事务**——GET /lqg/qc/{sampleId} 缺哪份建哪份，撞 sample_id 部分唯一索引时 PG 会把整个事务标 aborted，「抓住冲突再查一遍」就废了 → 这些方法刻意不加 @Transactional，逐条语句提交 + 捕 DataIntegrityViolationException 后重查。②**@EncryptField 过不了 accept 3 末段**：框架拦截器写 ENC_+Base64，而 accept 要裸 Base64 → 复用 SampleFieldCipher 手工加解密（SAMPLE-MODEL-001 先例），实测落库 WGk4sblY1e3HTyYUeNdt2g== 与 openssl 逐字相等。③**0 分档 vs 未选**：全链路用 Integer（null=没选、0=选了 0 分档），四项都非 null 才求和；分值唯一来源是 sys_dict_data.remark（不缓存）。④**前端假分值无处落脚**：QcScoreSaveBo 只要四个 *Level（反射测试钉住「一个 *Score 字段都没有」），Jackson 忽略未知键 → preCultureScore:99/totalScore:100 一个字不生效。⑤**菜单号**：accept 1 断「本票 Flyway 恰 2 行」→ 菜单并进第一支迁移；只落 F 权限 5501-5503，C 页面菜单 5510 留给 QC-WEB-*。"
     },
     "QC-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "QC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "工作台质控文档编辑页（三页签 + 图片位 + 附件 + 评分）落成在 plus-ui 的 views/lqg/qc/editor/** 与 components/**；后端 Java 一行未改。accept 2/2 绿；另做 27/27 人眼验收（真 Playwright + 真 OSS 上传 + 真库）：三个图片位各传图、真 TIFF 触发预览转换（preview_oss_id≠oss_id，.tif→.jpg）、点图放大、拖拽排序落库（用 issue #210 的 {ids:[全部 id]} 形状）、活率附件用 viabilityOssId=0 摘掉（#212）、通用附件 fileSize 可选（#209）、总表入口只对有效样本可点、离开拦截。★按我给的两条照做：①取号改 V202609261430（票面 V20260926132* 已被 202609261420 越过，照写会 FlywayValidateException），依据写进迁移头注释；②隐藏菜单选**方案 a**（新建隐藏 M 目录 5500，把 5520 与 5510 都挂进去）→ 实测 getRouters 外层与两个子路由**都** hidden=true，不再依赖 isMenuFrame() 外壳分支。★代价（已记 WARN）：真实路由变成 /qc-console/qc-editor?sampleId=…（票面写的 /qc-editor 不再成立）、5520 变 /qc-console/doc-console；5520 用**新迁移 UPDATE parent_id**（没碰已应用的 V202609261420），并回归验证 /qc-console/doc-console 仍可路由。★越界 2 处：lang/lqg/sample.{zh_CN,en_US}.ts 各 +1 key（置灰入口 title，i18n 约定无别的落点）、迁移里 UPDATE sys_menu SET parent_id=5500 WHERE menu_id=5520。★它还抓到我一处派单模板错误：Playwright 的 require 锚点用 code/plus-ui/package.json 会 MODULE_NOT_FOUND（plus-ui 没声明 playwright，pnpm install 会把它剪掉），实际装在小程序前端 —— 我早先的核查被一个残留目录骗了，已把 README-modeB 的模板改成 code/miniapp/package.json。"
     },
     "QC-WEB-002": {
       "status": "pending",
@@ -2675,6 +2675,56 @@
       "type": "harness",
       "title": "勘误：#221 的 detail 里被 shell 吃掉了判定式（我写 issue 时用了反引号）",
       "detail": "补上缺失的那一句：isMenuFrame() 的判定是「parentId == TOP_PARENT_ID(0) 且 menuType == TYPE_MENU(C) 且 isFrame == NO_FRAME(常量值 1)」，三者同时成立才走专用分支。常量出处：ruoyi-common-core 的 SystemConstants（NO_FRAME=\"1\"、TYPE_MENU=\"C\"）。其余内容见 #221。教训：#221/#222 这类含判定式与代码片段的 issue，正文别用反引号（会被 bash 当命令替换），用「」或直角引号。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 228,
+      "ticket": "QC-WEB-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "「published 后再保存是否回到 draft」口径冲突：DDL 注释说会回、类注释说本票一个字不动",
+      "detail": "冲突两处：V202609261300__QC-MODEL-001-qc-docs.sql 的 DDL 注释写「published 后再保存 → 回到 draft」；而 QcDocService 类注释写「本票一个字都不动 doc_status（归 DOC-PUBLISH-001）」。QC-WEB-001 按实现（不动）写断言。影响：DOC-PUBLISH-001 落地时要拍死这条语义——「已完成的文档被再次编辑，是自动退回草稿（需要重新发布）还是保持 published 并只改内容」；两者对老师体验与下游（DOC-PROOF-001 的甲方签字基线）都不同。方案 a) 采 DDL 注释（保存即回 draft，更安全，避免已发布文档被静默改内容）；b) 采类注释（保持 published）。**属规格层，要 Kevin 或 ① 侧定**，我在派 DOC-PUBLISH-001 时会带上。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 229,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "派单模板的 Playwright 锚点写错（plus-ui）→ MODULE_NOT_FOUND；实际装在小程序前端",
+      "detail": "复现：QC-WEB-001 按派单写 createRequire(path.join(WS,'code/plus-ui/package.json')) 再 require('playwright') → MODULE_NOT_FOUND；核对：code/plus-ui/package.json **没有声明 playwright**（node_modules 里即使曾出现过也是残留，pnpm install 会剪掉），而 code/miniapp/package.json 声明 playwright ^1.63.0 且 node_modules 里在。修法：已把 doc/waves/tools/README-modeB.md 的模板改成以 code/miniapp/package.json 为锚点（D3–D5 的 QA 分片一直这么用、从未出问题）。教训：我早先的核查被 plus-ui 里一个残留的 playwright 目录骗了 —— **判依赖在不在，要看 package.json 声明，不要只看 node_modules 有没有目录**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 230,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "隐藏菜单改方案 a 后真实路由变成 /qc-console/qc-editor（票面与权威写的 /qc-editor 不再成立）",
+      "detail": "方案 a（隐藏 M 目录 5500 + 子菜单）让路由天然带一层目录前缀：实测 getRouters 里外层 /qc-console(hidden=true) + 子路由 qc-editor / doc-console 都 hidden=true；因此真实 URL 是 /qc-console/qc-editor?sampleId=…，而票面与权威锚 UI:admin.qc.editor 附近写的是 /qc-editor。影响：深链、书签、以及任何按路径匹配的断言/文档都要跟着改；若甲方或运维按文档敲 /qc-editor 会 404。方案 a) 把权威与契约里的路径同步成 /qc-console/qc-editor（推荐，与实现一致）；b) 改成不要目录前缀（那就回到 isMenuFrame 外壳分支，hidden 又落不到子路由上）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 231,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "菜单 5511-5513 与既有 5501-5503 是同一批 perm 的第二份（票面字面要求，perms 走 HashSet 去重）",
+      "detail": "票面字面要求为编辑页再建三个按钮菜单 5511/5512/5513，perm 与 QC-MODEL-001 已建的 5501/5502/5503（lqg:qc:query/edit/publish）完全相同。因为权限集合走 HashSet 去重，accept 与授权行为都不受影响，只是 sys_menu 菜单树里多三行同名按钮。影响：菜单管理页会出现重复项，长期易混淆。方案：①侧拆票时让按钮菜单归属唯一（要么 QC-MODEL-001 只建表不建按钮、要么 QC-WEB-001 只挂已有按钮）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 232,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "越界 2 处（i18n key + UPDATE 5520 parent_id）",
+      "detail": "①code/plus-ui/src/lang/lqg/sample.{zh_CN,en_US}.ts 各 +1 key（rowAction.qcDocInvalid，给置灰入口的 title 用；i18n 约定下没有别的落点）；②迁移 V202609261430 里 UPDATE sys_menu SET parent_id=5500 WHERE menu_id=5520（把 DOC-PDF-001 的隐藏页一并挂进隐藏目录，是方案 a 的一部分；**没改已应用的 V202609261420**，并回归验证 /qc-console/doc-console 仍可路由）。两处都属合理越界。",
       "status": "open",
       "decision": ""
     }
