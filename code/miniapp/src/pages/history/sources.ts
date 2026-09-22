@@ -22,6 +22,14 @@ import {
   fetchExtEmbedList,
   fetchIntEmbedList,
 } from '@/api/embed'
+import type { CryoBatchRow } from '@/api/cryo'
+import {
+  cryoHistoryAction,
+  cryoHistoryCode,
+  cryoHistoryDate,
+  cryoHistorySummary,
+  fetchIntCryoList,
+} from '@/api/cryo'
 import type { SampleRow } from '@/api/sample'
 import {
   fetchExtSampleList,
@@ -35,8 +43,8 @@ import {
 import type { EntryKey } from '@/pages/index/entries'
 import type { ResolvedIdentity } from '@/types/identity'
 
-/** 一行背后的原始对象（每个域一个 VO：样本行 / 石蜡包埋行） */
-export type HistoryRaw = SampleRow | EmbedDetail
+/** 一行背后的原始对象（每个域一个 VO：样本行 / 石蜡包埋行 / 冻存批次行） */
+export type HistoryRaw = SampleRow | EmbedDetail | CryoBatchRow
 
 /** 一行在页面上的样子（页面只认这几个字符串，不认识业务字段） */
 export interface HistoryRow {
@@ -278,11 +286,54 @@ const embedSource: HistorySource = {
   },
 }
 
-/** 页签 key → 数据源（样本记录 / 类器官收样 / 石蜡包埋三档；-80 冻存归 CRYO-MP-001） */
+// -80 冻存记录这一档（CRYO-MP-001）。
+//
+// ★ 内部取数口 = `GET /mp/int/cryo/batch/list?sort=recent`（**不带 mine**）：默认是
+//   「中心全部内部人员新增或修改过的冻存记录」（CR-20260918-07，甲方原话
+//   「我们内部人员也有多个哦，江夏实验室所有的工作人员」）；顶部「只看我提交的」开关
+//   （默认关）打开才**另外**带 `mine=true`。`sort=recent` 只管排序
+//   （按最后修改、没有则创建时间倒序），**不拿 mine 兼当排序**。
+// ★ 行 = 冻存样品（等宽）·「剩 N / 初始 M 支」· 经手人（本人显示「我」）·「新增 / 修改」· 日期。
+// ★ 点行一律进**修改模式**（别人录的也能改，CR-20260918-07）；
+//   这一档外部没有页签（`entriesFor` 已管住），接口也 403。
+function toCryoHistoryRow(row: CryoBatchRow): HistoryRow {
+  return {
+    id: String(row.id),
+    code: cryoHistoryCode(row),
+    summary: cryoHistorySummary(row),
+    owner: handlerLabel(row),
+    action: cryoHistoryAction(row),
+    date: cryoHistoryDate(row),
+    status: '',
+    statusText: '',
+    reason: '',
+    raw: row,
+  }
+}
+
+const cryoSource: HistorySource = {
+  emptyText: '你填过的冻存记录会出现在这里',
+
+  async fetch(_identity, onlyMine) {
+    // ★ 默认中心全员（`sort=recent` **不带** mine）；开关打开才另外带 mine=true。
+    const page = await fetchIntCryoList({ sort: 'recent', mine: onlyMine, pageSize: 100 })
+    return page.rows ?? []
+  },
+
+  toRow: toCryoHistoryRow,
+
+  target(_identity, row) {
+    // 内部：一律进修改模式（谁录的都能改）；冻存这一档没有只读详情页
+    return `/pages/cryo/form?id=${row.id}&mode=edit`
+  },
+}
+
+/** 页签 key → 数据源（样本记录 / 类器官收样 / 石蜡包埋 / -80 冻存四档） */
 export const HISTORY_SOURCES: Partial<Record<EntryKey, HistorySource>> = {
   sample: sampleSource,
   organoid: organoidSource,
   embed: embedSource,
+  cryo: cryoSource,
 }
 
 export function sourceOf(key: EntryKey): HistorySource | null {

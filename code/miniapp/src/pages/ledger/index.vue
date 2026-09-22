@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
 import { emptyFilters } from '@/api/ledger'
+import CryoBatchSheet from '@/components/lqg/CryoBatchSheet.vue'
 import EmptyState from '@/components/lqg/EmptyState.vue'
 import ErrorState from '@/components/lqg/ErrorState.vue'
 import LedgerTable from '@/components/lqg/LedgerTable.vue'
@@ -9,10 +10,10 @@ import LoadingState from '@/components/lqg/LoadingState.vue'
 import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
-import type { LedgerSheet, LedgerTableRow } from './sheets'
+import type { LedgerFilterKey, LedgerFilterSpec, LedgerSheet, LedgerTableRow } from './sheets'
 import { columnsOf, ledgerTableWidth, sheetOf, sheetsFor, toTableRows } from './sheets'
 
-// 内部管理 · 表格页（UI:mp.ledger / UI:mp.sample.list）· SAMPLE-MP-002。
+// 内部管理 · 表格页（UI:mp.ledger / UI:mp.sample.list）· SAMPLE-MP-002（工作表注册随各域票增长）。
 //
 // 三条口径（ticket §0 的复述 2 / 3）：
 //   1. **表格本身只读**：这里没有「＋ 一行」、没有行内编辑、没有状态流转；底部只有
@@ -21,6 +22,10 @@ import { columnsOf, ledgerTableWidth, sheetOf, sheetsFor, toTableRows } from './
 //      本文件一个列名都不写 —— 表头文案从 `columnsOf(sheet)` 拿。
 //   3. **点一行进该表填写页的只读模式**（`mode=view`，在 `sheets.ts` 的 `target` 里）；
 //      「修改」在只读页右上角、由那一页自己切（CR-20260918-07）。
+//      ★ 例外：**-80 冻存那一档点一行打开只读的批次详情弹层**（`CryoBatchSheet`，
+//      UI:mp.cryo.flow），要改记录走弹层右上角「修改」→ `pages/cryo/form?id=&mode=edit`。
+//   4. **页签 / 筛选项上的数字只认接口给的 `tabCounts`**：不拿当前页 rows 去数
+//      （冻存那三个页签切到「超期」只剩 2 行时，数字仍是整表的 7 / 2 / 2）。
 //
 // 页底小字逐字照 UI:mp.ledger —— 表格页已有修改入口，这行里**没有「修改」二字**。
 const INTERNAL_ADMIN_NOTE = '核验、冻存取用请到网页工作台'
@@ -37,8 +42,12 @@ const sheet = ref<LedgerSheet>(sheetOf(undefined))
 const filters = ref<LedgerFilters>(emptyFilters())
 const rows = ref<LedgerRow[]>([])
 const total = ref(0)
+/** 接口顶层的页签计数（整表口径）；只有冻存那张会给，别的表保持 null */
+const tabCounts = ref<Record<string, number> | null>(null)
 const loading = ref(false)
 const failed = ref(false)
+/** 冻存那一档点一行打开的只读批次详情弹层（其它表点一行直接进只读填写页） */
+const cryoSheetRef = ref<{ open: (row: LedgerRow) => void } | null>(null)
 
 const tabs = computed(() => sheetsFor())
 const cols = computed(() => columnsOf(sheet.value))
@@ -67,16 +76,21 @@ async function load() {
     if (normalizeIdentity(store.identity) !== 'internal') {
       rows.value = []
       total.value = 0
+      tabCounts.value = null
       return
     }
     const page = await sheet.value.fetch(filters.value, 100)
     rows.value = page.rows ?? []
     total.value = page.total ?? rows.value.length
+    // ★ 页签数字只认接口顶层的 `tabCounts`（整表口径）；这张表不给就清成 null，
+    //   绝不退回 `rows.length`（那正是 ticket 的 counterfeit 抓的形态）
+    tabCounts.value = page.tabCounts ?? null
   }
   catch {
     failed.value = true
     rows.value = []
     total.value = 0
+    tabCounts.value = null
   }
   finally {
     loading.value = false
@@ -93,7 +107,7 @@ function pickSheet(item: LedgerSheet) {
   load()
 }
 
-function pickFilter(key: 'verifyStatus' | 'stain', value: string) {
+function pickFilter(key: LedgerFilterKey, value: string) {
   if (filters.value[key] === value) {
     return
   }
@@ -102,8 +116,19 @@ function pickFilter(key: 'verifyStatus' | 'stain', value: string) {
 }
 
 /** 该筛选组当前选中的值（模板里读 `filters[x]` 不便，收一个函数） */
-function activeFilter(key: 'verifyStatus' | 'stain'): string {
+function activeFilter(key: LedgerFilterKey): string {
   return filters.value[key]
+}
+
+/**
+ * 筛选项 / 页签的文案：该表给了 `chipsText` 就用它把数字补上（冻存那三个页签），
+ * 否则原样显示注册表里的 label。数字来自接口的 `tabCounts`，不是页面上的行数。
+ */
+function chipText(group: LedgerFilterSpec, value: string, label: string): string {
+  if (!sheet.value.chipsText) {
+    return label
+  }
+  return sheet.value.chipsText(tabCounts.value)[value] ?? label
 }
 
 function onKeyword(value: string) {
@@ -122,9 +147,16 @@ function onKeywordConfirm() {
 
 function onRowTap(row: LedgerTableRow) {
   const raw = rowById.value.get(row.id)
-  if (raw) {
-    goPage(sheet.value.target(raw))
+  if (!raw) {
+    return
   }
+  // ★ 冻存这一档点一行开的是**只读的批次详情弹层**（UI:mp.cryo.flow），
+  //   不是填写页；要改记录走弹层右上角「修改」（CR-20260918-07）。
+  if (sheet.value.key === 'cryo') {
+    cryoSheetRef.value?.open(raw)
+    return
+  }
+  goPage(sheet.value.target(raw))
 }
 
 /** 「导出 Excel」：本张置灰，SYS-EXPORT-001 点亮（按当前筛选导出） */
@@ -170,7 +202,8 @@ onShow(start)
     </view>
 
     <!-- ② 筛选行：搜索框 + 该表自己的筛选项（核验状态 / 染色，由 sheets.ts 给） -->
-    <view class="lqg-filter">
+    <!-- ② 筛选行：搜索框（该表有搜索才渲染）+ 该表自己的筛选项（由 sheets.ts 给） -->
+    <view v-if="sheet.searchPlaceholder" class="lqg-filter">
       <view class="lqg-filter__chip ledger-page__search">
         <input
           class="ledger-page__input"
@@ -191,7 +224,7 @@ onShow(start)
         class="lqg-filter__chip ledger-page__chip"
         :class="{ 'ledger-page__chip--on': activeFilter(group.key) === opt.value }"
         @click="pickFilter(group.key, opt.value)"
-      >{{ opt.label }}</text>
+      >{{ chipText(group, opt.value, opt.label) }}</text>
     </view>
 
     <view class="lqg-count">共 {{ total }} 条 · 左右滑动看全部 {{ (cols?.columns.length ?? 0) + 1 }} 列</view>
@@ -222,6 +255,9 @@ onShow(start)
       </button>
       <text class="ledger-page__note">{{ INTERNAL_ADMIN_NOTE }}</text>
     </view>
+
+    <!-- 冻存那一档点一行打开的只读批次详情弹层（唯一动作 = 右上角「修改」） -->
+    <CryoBatchSheet ref="cryoSheetRef" />
   </view>
 </template>
 

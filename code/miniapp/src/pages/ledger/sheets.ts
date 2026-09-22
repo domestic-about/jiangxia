@@ -4,10 +4,10 @@
 // 顶部切换条只读这里：**没注册的工作表不显示**；`?sheet=` 传了没注册的键 →
 // 落到第一个已注册的工作表（ticket §2）。
 //
-// ★ 本张注册 `tissue` / `organoid`（SAMPLE-MP-002）与 **`embed`**（EMBED-MP-001）；
-//   `cryo` 的列已在 `columns.ts` 里定完，注册票是 CRYO-MP-001。
-// ★ 点行动作只有一种：**该表填写页的只读模式**（`mode=view`）。
-//   「修改」在只读页右上角、由填写页自己切成修改模式（CR-20260918-07）；
+// ★ 本张注册 `tissue` / `organoid`（SAMPLE-MP-002）、**`embed`**（EMBED-MP-001）
+//   与 **`cryo`**（CRYO-MP-001）；四张表在 `columns.ts` 里都已定完列。
+// ★ 点行动作只有两种：该表填写页的**只读模式**（`mode=view`），或（冻存）**只读的批次详情弹层**。
+//   「修改」在只读页 / 弹层右上角、由那一处自己切成修改模式（CR-20260918-07）；
 //   表格页这里没有、也不许有「直接进修改模式」那种目标串（accept 第 2 条的两段 grep 断的就是它）。
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
 import {
@@ -24,12 +24,23 @@ import {
   embedLedgerTone,
   fetchEmbedLedgerRows,
 } from '@/api/embed'
+import {
+  cryoLedgerCell,
+  cryoLedgerFrozen,
+  cryoLedgerSub,
+  cryoLedgerTone,
+  cryoTabText,
+  fetchCryoLedgerRows,
+} from '@/api/cryo'
 import type { SheetKey } from './columns'
 import { ledgerColumns } from './columns'
 
+/** 筛选条件的键（每张表用其中一部分；`cryoView` 是冻存那三个页签专有的） */
+export type LedgerFilterKey = 'verifyStatus' | 'stain' | 'cryoView'
+
 /** 一个筛选项：chips 组（空串 = 不筛） */
 export interface LedgerFilterSpec {
-  key: 'verifyStatus' | 'stain'
+  key: LedgerFilterKey
   label: string
   options: { value: string, label: string }[]
 }
@@ -41,12 +52,16 @@ export interface LedgerSheet {
   short: string
   /** 导航栏标题 = 当前表全称 */
   title: string
-  /** 搜索框的占位提示（**放在这里**，页面不写死任何一张表的列名 / 字段名） */
+  /** 搜索框的占位提示（**放在这里**，页面不写死任何一张表的列名 / 字段名）；空串 = 这张表没有搜索框 */
   searchPlaceholder: string
   /** 该表的筛选项（搜索框各表共用，见页面） */
   filters: LedgerFilterSpec[]
-  /** 取数 */
-  fetch(filters: LedgerFilters, pageSize?: number): Promise<{ rows: LedgerRow[], total: number }>
+  /** 取数；冻存那张会另外把响应顶层的 `tabCounts` 带回来（页签数字只认它） */
+  fetch(filters: LedgerFilters, pageSize?: number): Promise<{
+    rows: LedgerRow[]
+    total: number
+    tabCounts?: Record<string, number> | null
+  }>
   /** 冻结格第二行小字 */
   frozenSub(row: LedgerRow): string
   /** 行底色 */
@@ -57,10 +72,17 @@ export interface LedgerSheet {
    * 这张表的行 → 表格矩阵（可选）。
    *
    * 样本两张表走页面默认那条（`toTableRows` 的通用路径，列名只从 `columns.ts` 来）；
-   * 石蜡包埋表的行是另一个域的 VO（字段名不同、还有数组列），由 `api/embed.ts` 收口。
+   * 石蜡包埋 / 冻存两张表的行是另一个域的 VO（字段名不同、还有数组列），由各自的 `api/*.ts` 收口。
    * 列名 / 列序仍然只从 `columns.ts` 来 —— 这里只回答「某一列取哪个字段、怎么显示」。
    */
   toRows?(rows: LedgerRow[]): LedgerTableRow[]
+  /**
+   * 筛选项文案的动态覆盖（可选）：`接口给的 tabCounts → { 选项值: 文案 }`。
+   *
+   * ★ 冻存那张用它把**页签数字**拼上去（数字来自响应顶层 `tabCounts`，
+   *   **不是**当前页 rows 的长度）—— ticket 的 counterfeit 点名「前端按 rows 自己数」。
+   */
+  chipsText?(tabCounts: Record<string, number> | null | undefined): Record<string, string>
 }
 
 /** 样本两张表共用的核验状态筛选 */
@@ -142,11 +164,61 @@ const embedSheet: LedgerSheet = {
   },
 }
 
+/**
+ * -80 冻存这张表（CRYO-MP-001 / UI:mp.cryo.list）。
+ *
+ * ★ 筛选行**只有三个页签**（没有搜索框）：全部 / -80 超期（`overdueOnly=true`）/
+ *   液氮（`location=ln2`）—— 三个值走后端参数，前端不自己筛。
+ * ★ 页签上的数字来自响应顶层的 `tabCounts`（`chipsText` 把文案补全），**不数当前页 rows**：
+ *   切到「-80 超期」只剩 2 行时，数字仍然是 `全部 7 / -80 超期 2 / 液氮 2`（整表口径）。
+ * ★ 冻结格 = 冻存样品；第二行小字 =「剩 N / 初始 M 支」（超期再加「已超 N 天」）。
+ * ★ **点一行打开的是只读的批次详情弹层**（`CryoBatchSheet`，在页面里挂），不是填写页：
+ *   要改这条记录走弹层右上角「修改」→ 填写页的修改模式（CR-20260918-07）。
+ *   这里的 `target` 仍然只给「只读」这条路（`mode=view`），页面在冻存这一档改走弹层。
+ */
+const CRYO_VIEW_FILTER: LedgerFilterSpec = {
+  key: 'cryoView',
+  label: '视图',
+  options: [
+    { value: '', label: '全部' },
+    { value: 'overdue', label: '-80 超期' },
+    { value: 'ln2', label: '液氮' },
+  ],
+}
+
+const cryoSheet: LedgerSheet = {
+  key: 'cryo',
+  short: '-80 冻存',
+  title: '-80 冻存记录',
+  // 空串 = 这张表没有搜索框（UI:mp.cryo.list 的筛选行只有三个页签）
+  searchPlaceholder: '',
+  filters: [CRYO_VIEW_FILTER],
+  fetch: (filters, pageSize) => fetchCryoLedgerRows(filters, pageSize),
+  frozenSub: row => cryoLedgerSub(row),
+  rowTone: row => cryoLedgerTone(row),
+  target: row => `/pages/cryo/form?id=${row.id}&mode=view`,
+  chipsText: counts => cryoTabText(counts),
+  toRows: (rows) => {
+    const cols = ledgerColumns('cryo')
+    if (!cols) {
+      return []
+    }
+    return rows.map(row => ({
+      id: String(row.id),
+      tone: cryoLedgerTone(row),
+      frozen: cryoLedgerFrozen(row),
+      sub: cryoLedgerSub(row),
+      cells: cols.columns.map(col => cryoLedgerCell(row, col.key)),
+    }))
+  },
+}
+
 /** 本张注册的工作表（顺序 = 顶部切换条顺序 = 甲方模板顺序） */
 export const LEDGER_SHEETS: LedgerSheet[] = [
   sampleSheet('tissue', '样本记录', '样本记录信息表', '/pages/sample/form', '搜编号或单位'),
   sampleSheet('organoid', '类器官收样', '类器官收样记录', '/pages/organoid/form', '搜编号或单位'),
   embedSheet,
+  cryoSheet,
 ]
 
 /** 切换条要渲染的工作表 */

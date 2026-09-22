@@ -46,11 +46,19 @@ export interface LedgerFilters {
   verifyStatus: string
   /** 染色（只有石蜡包埋这张表有这一档；值域 = 字典 `lqg_stain_type`） */
   stain: string
+  /**
+   * -80 冻存这张表的三个页签（CRYO-MP-001）：`''` 全部 / `overdue` -80 超期 / `ln2` 液氮。
+   *
+   * ★ 它是**冻存专有**的一档，别的表不读它 —— 页签是「整表的三个视图」，与
+   *   `verifyStatus`（核验状态）不是一回事，所以另起一个键（不拿 `verifyStatus` 兼职，
+   *   否则切到样本表时会把它当成一个不存在的核验状态发出去 → 空页）。
+   */
+  cryoView: string
 }
 
 /** 空筛选 */
 export function emptyFilters(): LedgerFilters {
-  return { keyword: '', verifyStatus: '', stain: '' }
+  return { keyword: '', verifyStatus: '', stain: '', cryoView: '' }
 }
 
 /**

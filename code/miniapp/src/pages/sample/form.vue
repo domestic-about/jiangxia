@@ -351,9 +351,12 @@ function addEmbed() {
   goPage(`/pages/embed/form?mode=new&sampleId=${sampleId.value}`)
 }
 
-/** 「加冻存」：先置灰，CRYO-MP-001 接（ticket §2） */
-function notYet() {
-  uni.showToast({ title: '这一项在后续版本开放', icon: 'none' })
+/** 「加冻存」：带上 `sampleId` 进冻存填写页（CRYO-MP-001 点亮这条链接） */
+function addCryo() {
+  if (!sampleId.value) {
+    return
+  }
+  goPage(`/pages/cryo/form?mode=new&sampleId=${sampleId.value}`)
 }
 </script>
 
@@ -453,7 +456,7 @@ function notYet() {
       </button>
       <view class="form__links">
         <text class="form__link" @click="addEmbed">给这个样本加石蜡块</text>
-        <text class="form__link" @click="notYet">加冻存</text>
+        <text class="form__link" @click="addCryo">加冻存</text>
       </view>
     </view>
 
