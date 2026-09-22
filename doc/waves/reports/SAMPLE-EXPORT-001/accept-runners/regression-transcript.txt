@@ -1,0 +1,84 @@
+========== EMBED-WEB-001 accept 1 ==========
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 2 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 4 行
+ACCEPT-1 EXIT=0
+---- EMBED-WEB-001 accept 1 rc=0
+========== EMBED-WEB-001 accept 2 ==========
+5310:embed:lqg/embed/index
+lqg:embed:list
+lqg:embed:query
+lqg:embed:add
+lqg:embed:edit
+lqg:embed:remove
+lqg:embed:export
+lqg:embed:verify
+true
+true
+ACCEPT-2 EXIT=0
+---- EMBED-WEB-001 accept 2 rc=0
+========== SAMPLE-WEB-001 accept 1 ==========
+---- 3) sampleKind=organoid
+["9000001009"]
+---- 4) submitSource=internal
+["9000001008","9000001009"]
+---- 5) verifyStatus=pending
+["9000001002","9000001007"]
+---- 6) receiveDate 区间
+B=2026-08-27 E=2026-09-03
+["9000001004","9000001005"]
+---- 7) 三条件 AND
+["9000001001","9000001004","9000001005"]
+---- 8) 全量（软删 1010 不出现）
+["9000001001","9000001002","9000001003","9000001004","9000001005","9000001006","9000001007","9000001008","9000001009"]
+---- 9) 待核验置顶（pageSize=2）
+true
+---- 10) 待核验行浅黄底之外的表形状抽样（submitterName / groupName 读时带出）
+true
+ACCEPT-1 GREEN (exit 0)
+---- SAMPLE-WEB-001 accept 1 rc=0
+========== SAMPLE-WEB-001 accept 2 ==========
+ROOT=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid
+---- 1) 菜单 5210 落在 5200 段（C，path/component 逐字）
+5210:sample:lqg/sample/index
+---- 2) 授给 101 与 102
+101
+102
+---- 3) getRouters（--as staff）里 lqg/sample/index 恰好 1 条
+true
+---- 4) 5210 下的按钮权限串集合
+[FAIL] 集合不相等：多出 ['lqg:sample:export']，缺少 []
+lqg:sample:list
+lqg:sample:query
+lqg:sample:add
+lqg:sample:edit
+lqg:sample:remove
+lqg:sample:verify
+lqg:sample:export
+ACCEPT-2 RED (exit 1)
+---- SAMPLE-WEB-001 accept 2 rc=1
+========== SAMPLE-MP-002 accept 2 ==========
+########## SAMPLE-MP-002 · accept 2（DATA）##########
+（差异：pnpm 前加 npm_config_store_dir；其余字面逐字）
+true
+true
+ACCEPT-2 EXIT=0
+---- SAMPLE-MP-002 accept 2 rc=0
+========== ExtChokepointContractTest（D2 的 L0 咽喉门；本票新代码不在 ext 包）==========
+Test set: org.dromara.lqg.ext.ExtChokepointContractTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.084 s -- in org.dromara.lqg.ext.ExtChokepointContractTest
+REGRESSION rc=1（1 = 有红，逐条见上）

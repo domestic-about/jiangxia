@@ -1684,6 +1684,16 @@
       "detail": "本票只落了导出视图供复用，小程序导出端点由 SYS-EXPORT-001 落。到那时要补端到端断言。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 129,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【需求层冲突】SAMPLE-WEB-001 accept 2 段 4 与 SAMPLE-EXPORT-001 accept 2 段 1 不可同时满足",
+      "detail": "前者断 sys_menu 里 parent_id=5210 且 menu_type='F' 的 perms **精确等于六个**（lqg:sample:list,query,add,edit,remove,verify）；后者强制 5217/perms='lqg:sample:export'/parent_id=5210 且授 101,102。任何满足后者的实现都必然打红前者（实测 [FAIL] 集合不相等：多出 ['lqg:sample:export']）。★裁定：冲突由**需求归属**解决——导出权限是 REQ-SAMPLE-011/012 的要求、归 SAMPLE-EXPORT-001 所有，SAMPLE-WEB-001 那句「精确等于六个」是写早了、过紧的断言。故正确现状是「六个 + lqg:sample:export 一条」。方案（属①的资产，主会话不改）：把 SAMPLE-WEB-001 accept 2 段 4 改成「包含六个」或加 AND perms <> 'lqg:sample:export'。D3 QA 门已被告知这是已知规格冲突、不得据此判产品红。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

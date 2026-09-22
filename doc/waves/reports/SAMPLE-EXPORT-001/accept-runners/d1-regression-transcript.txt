@@ -1,0 +1,65 @@
+
+[1mL0.0 环境前置[0m
+  [32m✓[0m 后端在 http://127.0.0.1:8081 监听（pid 53332，lsof 取）
+  [32m✓[0m L0.2 新鲜度：源码不新于 jar；pid 53332 持有该 jar；进程启动 2026-09-22 09:22:08 ≥ jar 2026-09-22 09:22:04
+
+[1mL0.1 后端 mvn -pl ruoyi-modules/ruoyi-lqg -am install[0m
+  --skip-build：跳过
+
+[1mL0.3/L0.4 前端生产构建[0m
+  --skip-build：跳过
+
+[1mL1 前置：reseed 到确定性快照[0m
+  [32m✓[0m reseed 完成（5 段 seed 灌入）
+
+[1mL1.1 Flyway 历史 · 26 个字典 · 评分分值在 remark · 角色 role_key[0m
+  [32m✓[0m L1.1 flyway 无失败行（success IS NOT TRUE 的行 = 0）
+  [31m✗[0m L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001） → [FAIL] 期望 '7'，实际 '14' 14
+  [32m✓[0m L1.1 flyway 有 V202609210800
+  [32m✓[0m L1.1 flyway 有 V202609210810
+  [32m✓[0m L1.1 flyway 有 V202609210820
+  [32m✓[0m L1.1 flyway 有 V202609210830
+  [32m✓[0m L1.1 flyway 有 V202609210910
+  [32m✓[0m L1.1 flyway 有 V202609210920
+  [32m✓[0m L1.1 flyway 有 V202609210930
+  [32m✓[0m L1.1 26 个 lqg_ 字典逐个点名（集合精确相等）
+  [32m✓[0m L1.1 评分四字典的分值都在 remark（培养前）
+  [32m✓[0m L1.1 评分四字典的分值都在 remark（培养天数）
+  [32m✓[0m L1.1 评分四字典的分值都在 remark（类器官数量）
+  [32m✓[0m L1.1 评分四字典的分值都在 remark（类器官直径）
+  [32m✓[0m L1.1 角色 101/102/103 的 role_key 精确
+  [32m✓[0m L1.1 迁移在源码树：V202609210800__SYS-BASE-001-ruoyi-postgres-baseline.sql
+  [32m✓[0m L1.1 迁移在源码树：V202609210810__SYS-BASE-001-lqg-dicts.sql
+  [32m✓[0m L1.1 迁移在源码树：V202609210820__SYS-BASE-001-lqg-roles.sql
+  [32m✓[0m L1.1 迁移在源码树：V202609210830__SYS-WEB-001-admin-dict-menu.sql
+  [32m✓[0m L1.1 迁移在源码树：V202609210910__AUTH-LOGIN-001-wx-bind-ext-profile.sql
+  [32m✓[0m L1.1 迁移在源码树：V202609210920__AUTH-STAFF-001-menu.sql
+  [32m✓[0m L1.1 迁移在源码树：V202609210930__AUTH-GROUP-001-unit-group.sql
+
+[1mL1.2 reseed 后 8 个测试账号与角色（README 身份表）· 单位组别 · 四张表 ddl_vs_ssot[0m
+  [32m✓[0m L1.2 8 个 seed 账号的手机号|user_type|角色 逐一对上
+  [32m✓[0m L1.2 6 个外部档案的单位 / 组别 / 核验状态逐一对上（A 同组、C 同单位异组、D 异单位、E 待核验、F 自填）
+  [32m✓[0m L1.2 extF 的自填单位 / 组别原样保留（未核验不许落 unit_id）
+  [32m✓[0m L1.2 t_lqg_wx_bind / t_lqg_ext_profile / t_lqg_source_unit / t_lqg_unit_group ddl_vs_ssot 全过
+  [32m✓[0m L1.2 没有任何手机号在 sys_user 里有两行（活跃行）
+
+[1mL1.3 同一手机号在 sys_user 里恒为 1 行（首登自动建 / 换微信号再登 / 按手机号授权升级）[0m
+  [32m✓[0m L1.3a 首登自动建：identity=external、bind_status=unbound、手机号打码
+  [32m✓[0m L1.3a 首登后同手机号 1 行
+  [32m✓[0m L1.3b 换微信号再登：还是同一个人（external）
+  [32m✓[0m L1.3b 换微信号再登后同手机号仍 1 行
+  [32m✓[0m L1.3b 是同一 user_id 上挂了 2 个 openid（不是建了第二个账号）
+  [32m✓[0m L1.3c 按手机号授权升级：upgraded=true
+  [32m✓[0m L1.3c 授权升级后同手机号仍 1 行
+  [32m✓[0m L1.3c 角色换成内部、微信绑定原样（2 行）
+  [32m✓[0m L1.3c 升级后同一微信号再登：identity=internal
+  [32m✓[0m L1.3d 先授权后首登：授权建号 upgraded=false
+  [32m✓[0m L1.3d 该手机号首次微信登录：identity=internal（认到授权建出的账号）
+  [32m✓[0m L1.3d 授权 + 首登后同手机号仍 1 行
+
+[1m═══ 汇总 ═══[0m
+[31m失败 1 条：[0m
+  - L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001） → [FAIL] 期望 '7'，实际 '14' 14
+
+[1m收尾[0m
+  已 reseed + 清孤儿账号（含回归手机号 13800000097 / 13800000098）+ 清 token 缓存

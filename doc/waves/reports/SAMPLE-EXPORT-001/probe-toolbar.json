@@ -1,0 +1,14 @@
+{
+  "url": "/sample",
+  "title": "样本总表",
+  "toolbarButtons": [
+    "新增样本记录",
+    "导出样本记录信息表",
+    "导出类器官收样记录"
+  ],
+  "hasExportTissue": true,
+  "hasExportOrganoid": true,
+  "exportTissueDisabled": false,
+  "exportOrganoidDisabled": false,
+  "switchCount": 0
+}

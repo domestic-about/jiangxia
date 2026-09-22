@@ -1,0 +1,11 @@
+[sampleexp001] toolbar {"url":"/sample","title":"样本总表","toolbarButtons":["新增样本记录","导出样本记录信息表","导出类器官收样记录"],"hasExportTissue":true,"hasExportOrganoid":true,"exportTissueDisabled":false,"exportOrganoidDisabled":false,"switchCount":0}
+[sampleexp001] filtered {"rowCount":1,"firstInternalNo":"T-hli01","total":"共 1 条"}
+[sampleexp001] export requests [{"method":"POST","url":"http://127.0.0.1:8082/dev-api/lqg/sample/export/tissue?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"},{"method":"POST","url":"http://127.0.0.1:8082/dev-api/lqg/sample/export/organoid?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"}]
+[sampleexp001] export responses [{"status":200,"contentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8","bytes":4087,"url":"http://127.0.0.1:8082/dev-api/lqg/sample/export/tissue?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"},{"status":200,"contentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8","bytes":3804,"url":"http://127.0.0.1:8082/dev-api/lqg/sample/export/organoid?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"}]
+[sampleexp001] ✓ 页面上两个导出按钮都在
+[sampleexp001] ✓ 点「导出样本记录信息表」发出 POST /lqg/sample/export/tissue
+[sampleexp001] ✓ 点「导出类器官收样记录」发出 POST /lqg/sample/export/organoid
+[sampleexp001] ✓ tissue 导出带着当前筛选 internalNo=T-hli01
+[sampleexp001] ✓ tissue 导出带着当前筛选 operatorName=李
+[sampleexp001] ✓ organoid 导出带着当前筛选 internalNo=T-hli01
+[sampleexp001] ✓ 两个导出各拿到一个非空 xlsx（HTTP 200）

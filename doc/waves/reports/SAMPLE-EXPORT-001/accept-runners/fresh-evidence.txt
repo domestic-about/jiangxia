@@ -1,0 +1,18 @@
+jar                     : /Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar
+jar mtime               : 2026-09-22 09:22:04
+jar epoch               : 1790040124
+lqg src newer than jar  : 0 个文件
+admin src newer than jar: 0 个文件
+8081 PID                : 53332
+该 PID 持有 jar 的行数  : 2
+进程启动 epoch          : 1790040128
+    启动时间            : 2026-09-22 09:22:08
+进程启动 ≥ jar          : True
+后端日志 mtime          : 2026-09-22 09:23:14
+--- 日志关键行 ---
+ - Successfully validated 14 migrations (execution time 00:00.011s)
+ - Successfully applied 14 migrations to schema "public", now at version v202609231110 (execution time 00:00.462s)
+ - Started DromaraApplication in 6.583 seconds (process running for 6.887)
+--- 嵌套 jar 里本票的 class ---
+   538461  09-22-2026 09:21   BOOT-INF/lib/ruoyi-lqg-5.5.3.jar
+嵌套 jar 里 sample/export/ 的条目数: 9
