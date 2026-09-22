@@ -64,12 +64,12 @@
       "note": "/mp/ext/** 咽喉落成：可见集合只在 ExtScopeServiceImpl（ext 包唯一持 Mapper 的类）算，其余 ext 类只拼装转发；ExtInternalNoSwitch 读 sys_config lqg.ext.show-internal-no（注入 ConfigService 不持 mapper）；ExtSampleAssemblyService 无 mapper；ExtSampleController/ExtOrganoidController 类级 @SaCheckRole('lqg_external')；业务写侧 ExtSampleSubmitService 放 sample 包（遵 ADR-0004 i4）；越出 touches 一处：SampleQueryService 加 selectExtPage(Page, LambdaQueryWrapper)（i4 逼出来的，ext 包不能注 mapper）；无迁移（外部接口无菜单，lqg.ext.show-internal-no 那行由 V202609210830 插）。四条不变量由 ExtChokepointContractTest（逐字节未改 + Tests run: 4）守住；27 条对抗性探针全 PASS。★accept 2 有 1/15 段未绿：--as extA GET /mp/int/sample/list 期望 ^403 实测 404，因为该端点由后置的 SAMPLE-MP-001 注册 —— 是 accept 跨票引用造成的瞬态，不是缺陷；不动 accept（需求层资产），由 D2 QA 门在 SAMPLE-MP-001 落地后用同一条断言收口。★给下游的硬坑：① MP 3.5.16 的 LambdaQueryWrapper 没有按列名排序的重载，表达式排序只能 wrapper.last('ORDER BY …')；② donorName/hospitalNo 是密文，给外部看必须先 SampleFieldCipher.decrypt 再掩码（第一版对密文打码得到 T**）；③ @SaCheckRole 不挡方法不匹配的请求（内部打 GET /mp/ext/organoid 返 405，角色切面没跑），角色断言只能打在真实存在的 METHOD+PATH 上。"
     },
     "AUTH-EXT-002": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "新增 /mp/ext/embed {list,{id},POST,PUT}（类级 @SaCheckRole('lqg_external')）+ ExtEmbedAssemblyService（零 *Mapper 字段，i4 绿）：可见集合走 ExtScopeService、记录走 EMBED-MODEL-001 留的读口 EmbedQueryService.{pageByWrapper,detail,listBySampleId}，本票一个 SQL 都没写。ExtEmbedVo 满配 24 键白名单（含 embedBy/operatorName，无 internalNo/remark/verifyBy/冻存）；ExtEmbedMarkerVo 只带名称+表达；onlyMine/mine/editable 按**本条记录自己的 submitter_id**（不是所挂样本的提交人）；ExtSampleDetailVo.embeds 接上数据（含待核验送样）；ExtEmbedSubmitBo 只有 3 键。小程序新增 components/lqg/EmbedCard.vue + detail-ext.vue 第②段。迁移 V202609230902（幂等兜底 sys_config 那行）。accept 3/3 + 26 条探针 PASS；回归：EMBED-MODEL-001 acc1/2、SAMPLE-MP-001 acc1/2、ExtChokepointContractTest 4/4 且 cmp 逐字节未改、全模块 Tests run 93（本票 +7）、D1 回归包只剩既有 flyway 写死总数那条假红（现 12 支）。★踩坑与处置：迁移号 0902 < 已应用的 1100 撞 out-of-order（启动即 FlywayValidateException），按 issue #12/SYS-WEB-001 先例重建 dev 库让全量按序重跑解决（没改 out-of-order、没改 lint-profile）。越界仅两处（生成产物 components.d.ts、本票自加的 ExtEmbedShapeContractTest）。"
     },
     "AUTH-EXT-003": {
       "status": "pending",
@@ -192,12 +192,12 @@
       "note": ""
     },
     "EMBED-MODEL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "EMBED",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609231100（gen_ddl_pg 逐字节 = t_lqg_embed + t_lqg_embed_marker + 菜单 5300(C)+5301-5307(F) 授 101/102）；后端 18 类在 embed/**（实体/VO/BO/mapper/3 个纯函数 guard/5 service/controller）；单测新增 22（总 86 绿）。accept 4/4 绿（DDL/STATE/API/STATE）。★定时炸弹按口径拆掉：EmbedChildrenChecker 只把『未删且已核验有效』的石蜡块算 children（SQL: del_flag='0' AND sample_id=? AND verify_status='valid'），三条探针钉死——1004 有 valid 块→改判被拒、1008 只有软删块→放行、1002 只有 pending 的 2006→放行；D2 的 SAMPLE-VERIFY-001 accept 1/2 复跑仍绿、D1 回归包只剩既有的 flyway 写死总数那条假红。坑：① @SaCheckPermission 缺 sys_menu 权限行是 403 不是 500；② MP 的 apply(sql,args) 惰性登记参数，不先 getTargetSql() 渲染一次则 getParamNameValuePairs() 是空 map（单测假红）；③『补逗号 LIKE』整元素匹配的通配符不能少——第一版写 LIKE ',IHC,'（少两侧 %）实测 total:0，正确是 '%,IHC,%'；④ @TableLogic 只保证 del_flag='0'，children 判据必须显式叠 verify_status='valid'；⑤ update(null, LambdaUpdateWrapper) 不填 update_by（第三次命中）→ 三处写侧都显式 .set。交接：EMBED-WEB-001 必须把菜单 5300-5307 搬到 5310-5317（否则它的 getRouters==1 拿不到）；EMBED-MP-001/AUTH-EXT-002 可直接复用 EmbedQueryService.list(sort/mine/handlerName) 与 EmbedExternalService 签名；SAMPLE-HINT-001 与本 checker 同一份计数口径。"
     },
     "EMBED-MP-001": {
       "status": "pending",
@@ -1542,6 +1542,96 @@
       "type": "debt",
       "title": "外部 PUT 重提会把既有 source_unit_id 清成 null（source_unit_name 仍在）",
       "detail": "D2 r4 L3 片发现：#100（外部重提）会把 seed 里既有行的 source_unit_id（1002=9000009001）清空。根因与 #112 同族（没有『单位名→id』解析）。影响仅『来源单位+组别』组合筛选少一行。权威 field-ssot.yaml:144 明写该列 nullable「自填单位名时为空」→ 按本轮口径不判 S0/S1，建议与 #112 合并处理。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 115,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S2",
+      "type": "arch",
+      "title": "跨票交接：EMBED-WEB-001 必须把石蜡包埋菜单 5300-5307 搬到 5310-5317",
+      "detail": "EMBED-MODEL-001 落了 5300(C)+5301-5307(F)；EMBED-WEB-001 的票面是 5310-5317 且它的 accept 要 menu_id=5310 + getRouters 里 component='lqg/embed/index' 恰 1 条。照 SAMPLE-WEB-001 的先例：在 EMBED-WEB-001 的迁移里 DELETE 5300-5307 段再重建到 5310 段，否则 getRouters 会出现两条路由或拿不到。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 116,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "『补逗号 LIKE』做整元素匹配时通配符不能少：LIKE ',IHC,' 静默 0 行，正确 '%,IHC,%'",
+      "detail": "EMBED-MODEL-001 第一版就踩了：LIKE ',IHC,'（少两侧 %）实测 total:0，被它的 accept 3 抓到。SAMPLE-HINT-001 若也用这招按染色/工序筛，务必照 '%,IHC,%' 写，且单测要断言**完整模式串**（别只断言结果数）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 117,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT /lqg/embed 语义 = patch（markers 传了才整组替换），票面未写",
+      "detail": "票面只说『待核验/无效的送样不能被普通保存改掉』，没写清其它字段是 patch 还是全量覆盖。后续 EMBED-MP-001 / EMBED-WEB-001 复用同一写口，需知道是 patch 语义。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 118,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "paraffinBlockNo 筛选取模糊（票面/契约未写）",
+      "detail": "读写口径需写进契约或 authority，免得 EMBED-WEB-001 / EMBED-MP-001 各自实现成不同语义。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 119,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "EMBED-MODEL-001 为本票/AUTH-EXT-002 预置的读口（sort/mine/handlerName/pageByWrapper）本票无端到端 accept",
+      "detail": "这些读口在 EMBED-MODEL-001 里只被单测覆盖，端到端行为要靠 EMBED-MP-001 与 AUTH-EXT-002 的票面去打。派单时已把这些签名传下去。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 120,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "契约第 51 行 ExtSampleDetailVo 清单缺 sampleKind；ticket §4.6 说「第 51/64 行还是 CR 之前的写法」不准确（第 64 行已是 CR 后写法）",
+      "detail": "契约只读，实施方未改。方案：① 核对第 51 行是否缺 sampleKind 并补齐（AUTH-EXT-001 的 accept 里 /mp/ext/sample/{id} 的 keys 差集是含 sampleKind 的）；② 修 ticket §4.6 的指路。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 121,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT /mp/ext/embed/{id} 是覆盖两个字段（不是 patch）；ExtEmbedVo.submitterName 对实验室录入的送样恒 null",
+      "detail": "EMBED-MP-001 的填写页重提时必须两个字段都带（sampleType / organoidSourceType）。另：submitterName 只查外部档案，实验室录入的送样该键恒 null —— 小程序展示时别假设它有值。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 122,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "外部打 /mp/int/embed/list 现为 404（端点未注册），EMBED-MP-001 落完自动变 403",
+      "detail": "与 AUTH-EXT-001 的同类 WARN 同源。D3 QA 门跑 AUTH-EXT-002 的 accept 时要注意这段在 EMBED-MP-001 落地前是 404；落地后由 D3 QA 用同一条断言收口。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 123,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "「AUTH-EXT-003 会再撞一次迁移段位交叉」的前提不成立（它是 D7 的票，日期段 20260927）",
+      "detail": "实施方 WARN-1 的提醒有价值（段位交叉这件事本身成立），但指错了票：AUTH-EXT-003 的 phase 是 D7，迁移号会是 V2026092709xx，远大于当时的 max applied，不会 out-of-order。D3 里已无 AUTH 域票。方案（长期）：ticket 生成器禁止跨域补号，或 dev 显式 out-of-order（prod 保持 false）。",
       "status": "open",
       "decision": ""
     }
