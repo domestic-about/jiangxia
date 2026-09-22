@@ -1,0 +1,349 @@
+{
+ "which": "internal",
+ "results": [
+  {
+   "name": "login.internal:登录后离开登录页",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/"
+  },
+  {
+   "name": "login.internal:/mp/me 身份=internal",
+   "ok": true,
+   "detail": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"userId\":9000000101,\"name\":\"李工\",\"phoneMasked\":\"138****0001\",\"identity\":\"internal\",\"ext\":null}}"
+  },
+  {
+   "name": "tab:进入文档页签",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/pages/doc/index"
+  },
+  {
+   "name": "A1 内部:组标题=内部编号",
+   "ok": true,
+   "detail": "[\"T-hli01\",\"T-hco04\",\"T-hli02\"]"
+  },
+  {
+   "name": "A1 内部:组副标题=来源单位",
+   "ok": true,
+   "detail": "[\"A 医院\",\"B 大学\",\"A 医院\"]"
+  },
+  {
+   "name": "A1:组间按最新完成时间倒序(T-hli01 最先)",
+   "ok": true,
+   "detail": "[\"T-hli01\",\"T-hco04\",\"T-hli02\"]"
+  },
+  {
+   "name": "A1:组内固定顺序 样本质控表→类器官质控表→评分表",
+   "ok": true,
+   "detail": "[\"样本质控表\",\"类器官质控表\",\"类器官质量评分表\"]"
+  },
+  {
+   "name": "A1:每份一行右侧有「下载」",
+   "ok": true,
+   "detail": "[\"下载\",\"下载\",\"下载\"]"
+  },
+  {
+   "name": "A1:组底有「合并预览」「合并下载」",
+   "ok": true,
+   "detail": "[\"合并预览\",\"合并下载\"]"
+  },
+  {
+   "name": "A1:仅 ≥2 份的组出合并入口(1 个组)",
+   "ok": true,
+   "detail": "mergeGroups=1"
+  },
+  {
+   "name": "A3:合并下载弹层标题=质控文档（合并）",
+   "ok": true,
+   "detail": "质控文档（合并）"
+  },
+  {
+   "name": "A3:弹层内是 DownloadBar（.db 组件）",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "A3:默认格式 = Word",
+   "ok": true,
+   "detail": "lqg-seg__item db__fmt-item lqg-seg__item--on"
+  },
+  {
+   "name": "A3:合并件 Word 下载接口 code=200",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/merged/download?format=docx"
+  },
+  {
+   "name": "A3:合并件文件名=质控文档（合并）-<编号>",
+   "ok": true,
+   "detail": "质控文档（合并）-T-hli01.docx"
+  },
+  {
+   "name": "A3:合并件 Word 真的取到字节（OSS 200）",
+   "ok": false,
+   "detail": "oss=[{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/a1ebfb57b79a.docx\",\"status\":400,\"ct\":\"application/xml\"}] hint=[\"暂时下不了，请稍后再试\"] toast=[]"
+  },
+  {
+   "name": "A3:H5 无 shareFileMessage → 给一句人话（真机转发不可验）",
+   "ok": false,
+   "detail": "{\"toastText\":[],\"hintText\":[\"暂时下不了，请稍后再试\"],\"toasts\":[]}"
+  },
+  {
+   "name": "A2:列表「下载」打开弹层",
+   "ok": true,
+   "detail": "样本质控表"
+  },
+  {
+   "name": "A2:PDF 下载接口被调且 code=200",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=pdf"
+  },
+  {
+   "name": "A2:返回的是 OSS 签名链接 + 文件名",
+   "ok": true,
+   "detail": "{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6.pdf?X-Amz-A\",\"fileName\":\"样本质控表-T-hli01.pdf\"}"
+  },
+  {
+   "name": "A2:H5 兜底真的把文件取下来了(OSS 200)",
+   "ok": false,
+   "detail": "oss=[{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6.pdf\",\"status\":400,\"ct\":\"application/xml\"}] hint=[\"暂时下不了，请稍后再试\"]"
+  },
+  {
+   "name": "A2:H5「打开」= window.open(blob)（真机走 wx.openDocument{showMenu:true}，H5 不可验）",
+   "ok": false,
+   "detail": "no popup（可能被浏览器 popup 拦截）"
+  },
+  {
+   "name": "A4:进入预览页",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/pages/doc/preview?sampleId=9000001001&docKind=sample_qc"
+  },
+  {
+   "name": "A4:顶部切换条=三份+合并",
+   "ok": true,
+   "detail": "[\"样本质控表\",\"类器官质控表\",\"类器官质量评分表\",\"合并\"]"
+  },
+  {
+   "name": "A4:进了预览就取 pages 接口",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/pages"
+  },
+  {
+   "name": "A4:样本质控表 页面图数=接口 pages 数=2",
+   "ok": false,
+   "detail": "dom=2 api=-1"
+  },
+  {
+   "name": "A4:切到「类器官质控表」→ 重新取 organoid_qc 的 pages",
+   "ok": true,
+   "detail": "hit=true"
+  },
+  {
+   "name": "A4:「类器官质控表」页面图数 dom=1 == 1",
+   "ok": true,
+   "detail": "dom=1 api=1"
+  },
+  {
+   "name": "A4:切到「类器官质量评分表」→ 重新取 organoid_score 的 pages",
+   "ok": true,
+   "detail": "hit=true"
+  },
+  {
+   "name": "A4:「类器官质量评分表」页面图数 dom=2 == 2",
+   "ok": true,
+   "detail": "dom=2 api=2"
+  },
+  {
+   "name": "A4:切到「合并」→ 重新取 merged 的 pages",
+   "ok": true,
+   "detail": "hit=true"
+  },
+  {
+   "name": "A4:「合并」页面图数 dom=5 == 5",
+   "ok": false,
+   "detail": "dom=5 api=-1"
+  },
+  {
+   "name": "A5:点页面图 → H5 图片预览覆盖层出现（对应真机 wx.previewImage 全屏缩放）",
+   "ok": true,
+   "detail": "{\"pivBefore\":0,\"pivAfter\":1,\"overlayVisible\":{\"cls\":\"\",\"display\":\"block\",\"visibility\":\"visible\",\"opacity\":\"1\",\"imgs\":[\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T143621Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=82f4fcf62e1719e6cf375a8204b220d5ef4da771f0fd7df2547ddb8866ee10f8\",\"http://127.0.0.1:9000/ruoyi/lqg/doc/900000"
+  },
+  {
+   "name": "A6:缩略图数=可用的真图数(seed 假地址被跳过)",
+   "ok": true,
+   "detail": "thumbs=2"
+  },
+  {
+   "name": "A6:点缩略图打开的是**原图** url(.png)，不是 previewUrl(.jpg)",
+   "ok": true,
+   "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/22/98a0faed83a144df805fc7abcff2476d.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T143621Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=8e652c786259bffd9ca26fc54a037983e187bf65547aa8654109f8ed413c4239\",\"http://127.0.0.1:9000/ruoyi/2026/09/22/4f83bd630afe41b58e703e3d4f7dda"
+  },
+  {
+   "name": "A6:附件列表只列可取到链接的那条（seed 假地址跳过）",
+   "ok": true,
+   "detail": "[\"L2探针-活率报告.pdf\"]"
+  },
+  {
+   "name": "X:无未捕获 JS 异常（排除资源加载）",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "api": [
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/auth/login",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/me",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/list?pageSize=100",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/list?sampleId=9000001001&pageSize=100",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/merged/download?format=docx",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=pdf",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/list?sampleId=9000001001&pageSize=100",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/pages",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/organoid_qc/pages",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/organoid_score/pages",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/merged/pages",
+   "status": 200
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/pages",
+   "status": 200
+  }
+ ],
+ "oss": [
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/a1ebfb57b79a.docx",
+   "status": 400,
+   "ct": "application/xml"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6.pdf",
+   "status": 400,
+   "ct": "application/xml"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/98a0faed83a144df805fc7abcff2476d.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/9d590e7a234543eb8c4f4824bf9f771a.jpg",
+   "status": 200,
+   "ct": "image/jpeg"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/organoid_qc/internal/42461804346f-p1.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/organoid_score/internal/fa9054c94f6a-p2.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/organoid_score/internal/fa9054c94f6a-p1.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/a1ebfb57b79a-p1.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/a1ebfb57b79a-p3.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/a1ebfb57b79a-p4.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/a1ebfb57b79a-p2.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/internal/a1ebfb57b79a-p5.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/98a0faed83a144df805fc7abcff2476d.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/9d590e7a234543eb8c4f4824bf9f771a.jpg",
+   "status": 200,
+   "ct": "image/jpeg"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/9d590e7a234543eb8c4f4824bf9f771a.jpg",
+   "status": 200,
+   "ct": "image/jpeg"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/98a0faed83a144df805fc7abcff2476d.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png",
+   "status": 200,
+   "ct": "image/png"
+  },
+  {
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/4f83bd630afe41b58e703e3d4f7dda70.png",
+   "status": 200,
+   "ct": "image/png"
+  }
+ ],
+ "jsErrors": [],
+ "toasts": []
+}

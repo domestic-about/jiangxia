@@ -3188,6 +3188,66 @@
       "detail": "缘由：uni-h5 的 downloadFile 不认相对路径，公共段必须先算绝对地址；而根地址判据原本长在 utils/request.ts 里（含 clientid 等 env 拼装）。做法是把它原样搬到零依赖的 utils/baseUrl.ts，request.ts 改为 re-export → 调用面零变化（已由 doc-mp-002 的 download.fixture 17/17 回归证明）。两处都在 touches 之外但属合理搬迁。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 279,
+      "ticket": "DOC-MP-002",
+      "severity": "S1",
+      "type": "arch",
+      "title": "★ S1：小程序文档下载把 API 鉴权头带到了 OSS 预签名直链上 → MinIO 400 多重认证 → H5 单份/合并下载 0/4 全失败",
+      "detail": "复现（D7 r1 L2 独立 QA，逐头隔离）：小程序文档页签的单份「下载」（Word/PDF）与「合并下载」在 H5（owner 指定的本轮验收面）**0/4 全失败**，页面只显示「暂时下不了，请稍后再试」。逐头实测：不带任何头 → 200；只 clientid → 200；**只 Authorization → 400**；两个都带（= 产品代码现状 authHeader()）→ **400**，MinIO 回 `400 InvalidRequest: request has multiple authentication types`。**同环境对照**：工作台预览面板的四个下载按钮走 window.open(res.data.url) 不带任何头 → OSS 全 200（pdf/word 内容类型都对）⇒ 签名链接本身可用，只有小程序这条链路多带了头。根因：utils/fileHandoff.ts 的 downloadToTemp 把「必须带 Authorization」写成**所有调用方**的硬前提（缺头还 throw），而两个调用方的目标不是一类东西——文档下载的 URL 是**后端签发的 OSS 预签名直链**（不该带头），表格导出的 URL 是**后端域名上的鉴权端点**（必须带 Authorization+clientid）。影响：**主路径**（CR-20260917-04 明确要求「列表上直接能下」）在验收面上完全不可用；小程序分支把同一个 authHeader() 塞进 uni.downloadFile({url: 同一条预签名链接})，机理相同（真机未覆盖，缺 appid，已如实标注）。定级依据：主流程「拿不到东西」，S1。处置：D7 门 r1 判定后即刻派返工单修复（鉴权头只跟后端端点走，共享段保留一份实现、把差异做成参数）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 280,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ accept 2 的 grep 是文件级、问的是「文件里有没有这两个词」——调用点不传头仍全绿（正是 S1 的同源盲区）",
+      "detail": "复现（D7 r1 L2 证伪 F3）：acc2 用 `grep -E Authorization|clientid export.ts fileHandoff.ts`，只问这两个文件里有没有这两个词。把**导出的调用点**改成不传 header，整条 acc2 仍绿（含两条 vitest 10/0、17/0）。影响：**这条断言放跑了一条真 S1**（issue 上一条）——它给了「鉴权头这件事已被验过」的假信心，而实际上「哪个调用方该带头」从未被验。这也解释了为什么 #275（我先前记的那条「文件级 grep 抓不到调用点漏传 header」）值得从 S3 上调到 S2：它不是理论风险，是真的漏过了一条 S1。方案：把断言换成**行为断言**——分别抓两条链路的真实请求头：导出请求必须带 Authorization+clientid；文档下载请求必须**不带** Authorization（且响应 200）。这正是本项目的 L2 片已经会做的事，把它固化进 accept。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 281,
+      "ticket": "SYS-HOME-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 2 把卡片数字写死成错的数（7/9）仍全绿：acc1 只打后端接口、不看页面",
+      "detail": "复现（D7 r1 L2 证伪 F4 / 场景 D 对照）：acc2 里把 `:value=\"todo.pendingSamples\"` / `todo.pendingEmbeds` 改成写死的 7 / 9（与真实待办数 2 / 1 都不对），**整张票的 accept 仍全绿**（acc1 只断 /lqg/home/todo 的返回值与库里数一致，完全不看页面）；而 L2 片自己的场景 D 实测红（19/21）。影响：票面 accept 1+2 合起来也挡不住「页面显示错数字」——票面那份 counterfeit 想防的正是这个。方案：把「页面上的数字 == 接口返回的数字」做成**端侧行为断言**（真 DOM 里读卡片数字并与接口值比对），这才是打不穿的。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 282,
+      "ticket": "DOC-MP-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 1 对「showMenu / 看原图」只有 grep：真代码整行删掉、只在注释留字面量仍绿；把「看原图」改成看预览图也绿",
+      "detail": "复现（D7 r1 L2 证伪 F1/F2）：①把真代码里的 showMenu: true 整行删掉、只在注释里留同样字面量 → accept 绿（本项目的 grep 会扫注释，同族第 5 次：见 #236/#242/#264/#275）；②把「点缩略图看原图」改成打开 previewUrl（需求当场落空：老师看到的是缩略图放大而不是原图）→ accept 绿（对 ThumbStrip 只有一句 `grep previewImage`）。影响：这两条恰好是「下载能不能用」「原图能不能看」的核心体验，却只有字面 grep 守着。方案：换成行为断言（真 DOM 里读打开层的 src 是否 == 原图 URL，L2 片已经这么验过：自备真图让 url≠previewUrl，这才是判别式证据）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 283,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 2 把「四个下载入口」删掉一个仍全绿",
+      "detail": "复现（D7 r1 L2 证伪 F6）：删掉整个「下载合并 PDF」按钮（四个入口只剩三个）→ DOC-PUBLISH-001 的 accept 仍绿。影响：票面点名的「四个下载入口」没有真正的计数断言。方案：在端侧断言渲染出的下载入口**恰好四个**（且各自的 format 参数正确），而不是 grep 组件名。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 284,
+      "ticket": "DOC-MP-002",
+      "severity": "S3",
+      "type": "ux",
+      "title": "同一张卡的「下载」与「合并下载」共用一个 DownloadBar 实例 → 格式选择会从上一次带过来",
+      "detail": "复现（D7 r1 L2 场景 A）：在一张卡上先选 PDF 触发「下载」，再点「合并下载」，实际下到的是 **PDF** 而不是默认的 Word（首次打开默认 Word 是对的）。根因：两个入口共用一个 DownloadBar 实例，格式选择状态没按入口重置。影响：老师会拿到与预期不符的格式（且文件名里写着 .docx 还是 .pdf 才看得出来）。方案：打开弹层时按入口重置格式选择（或每个入口给独立的默认值）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

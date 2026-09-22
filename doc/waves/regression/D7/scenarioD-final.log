@@ -1,0 +1,156 @@
+PASS  D1:首页五张待办卡片  :: cards=5
+CARDS [
+ {
+  "cls": "lqg-todo-card",
+  "title": "待核验样本",
+  "value": "2",
+  "text": "待核验样本|2|条|组织与类器官收样记录都在里面|去样本总表核验 →"
+ },
+ {
+  "cls": "lqg-todo-card",
+  "title": "待核验石蜡包埋送样",
+  "value": "1",
+  "text": "待核验石蜡包埋送样|1|条|外部提交的石蜡包埋送样等待核验|去石蜡包埋核验 →"
+ },
+ {
+  "cls": "lqg-todo-card",
+  "title": "-80 超期批次",
+  "value": "2",
+  "text": "-80 超期批次|2|条|冻存超过阈值天数、还没转液氮|去冻存管理（超期页签）→"
+ },
+ {
+  "cls": "lqg-todo-card",
+  "title": "待核验外部用户",
+  "value": "2",
+  "text": "待核验外部用户|2|条|外部人员提交的单位与组别等待归口|去人员与单位核验 →"
+ },
+ {
+  "cls": "lqg-todo-card is-zero",
+  "title": "文档渲染失败",
+  "value": "0",
+  "text": "文档渲染失败|0|条|没有渲染失败的文档|去质控文档查看 →"
+ }
+]
+PASS  D1:卡片「样本」数字=2（与 /lqg/home/todo 一致）  :: {"cls":"lqg-todo-card","title":"待核验样本","value":"2","text":"待核验样本|2|条|组织与类器官收样记录都在里面|去样本总表核验 →"}
+PASS  D1:卡片「石蜡」数字=1（与 /lqg/home/todo 一致）  :: {"cls":"lqg-todo-card","title":"待核验石蜡包埋送样","value":"1","text":"待核验石蜡包埋送样|1|条|外部提交的石蜡包埋送样等待核验|去石蜡包埋核验 →"}
+PASS  D1:卡片「超期」数字=2（与 /lqg/home/todo 一致）  :: {"cls":"lqg-todo-card","title":"-80 超期批次","value":"2","text":"-80 超期批次|2|条|冻存超过阈值天数、还没转液氮|去冻存管理（超期页签）→"}
+PASS  D1:卡片「外部」数字=2（与 /lqg/home/todo 一致）  :: {"cls":"lqg-todo-card","title":"待核验外部用户","value":"2","text":"待核验外部用户|2|条|外部人员提交的单位与组别等待归口|去人员与单位核验 →"}
+PASS  D1:卡片「渲染」数字=0（与 /lqg/home/todo 一致）  :: {"cls":"lqg-todo-card is-zero","title":"文档渲染失败","value":"0","text":"文档渲染失败|0|条|没有渲染失败的文档|去质控文档查看 →"}
+PASS  D1:渲染失败=0 的卡片仍显示（不是 v-if 隐藏）  :: {"cls":"lqg-todo-card is-zero","title":"文档渲染失败","value":"0","text":"文档渲染失败|0|条|没有渲染失败的文档|去质控文档查看 →"}
+PASS  D1:渲染失败=0 的卡片带「变灰」样式类  :: lqg-todo-card is-zero
+PASS  D1:为 0 的卡片有专属于 0 的说明文案  :: 文档渲染失败|0|条|没有渲染失败的文档|去质控文档查看 →
+PASS  D1:非 0 卡片不带变灰类  :: lqg-todo-card
+PASS  D2:卡片「样本」直达 /\/sample/ + /verifyStatus=pending/  :: /sample?verifyStatus=pending
+PASS  D2:卡片「石蜡」直达 /\/embed/ + /verifyStatus=pending/  :: /embed?verifyStatus=pending
+PASS  D2:卡片「超期」直达 /\/cryo/ + /overdueOnly=true/  :: /cryo?overdueOnly=true
+PASS  D2:卡片「外部」直达 /\/auth/ + /bindStatus=pending/  :: /auth/extuser?bindStatus=pending
+PASS  D2:卡片「渲染」直达 /doc-console/  :: /qc-console/doc-console
+BADGES [
+ {
+  "text": "首页",
+  "hidden": false,
+  "content": {
+   "disp": "none",
+   "text": "0"
+  },
+  "parent": "首页"
+ },
+ {
+  "text": "系统管理",
+  "hidden": false,
+  "content": {
+   "disp": "none",
+   "text": "0"
+  },
+  "parent": "系统管理"
+ },
+ {
+  "text": "字典管理0",
+  "hidden": false,
+  "content": {
+   "disp": "none",
+   "text": "0"
+  },
+  "parent": "字典管理0"
+ },
+ {
+  "text": "参数设置0",
+  "hidden": false,
+  "content": {
+   "disp": "none",
+   "text": "0"
+  },
+  "parent": "参数设置0"
+ },
+ {
+  "text": "样本总表\n2",
+  "hidden": false,
+  "content": {
+   "disp": "flex",
+   "text": "2"
+  },
+  "parent": "样本总表|2"
+ },
+ {
+  "text": "石蜡包埋\n1",
+  "hidden": false,
+  "content": {
+   "disp": "flex",
+   "text": "1"
+  },
+  "parent": "石蜡包埋|1"
+ },
+ {
+  "text": "人员与单位\n2",
+  "hidden": false,
+  "content": {
+   "disp": "flex",
+   "text": "2"
+  },
+  "parent": "人员与单位|2"
+ },
+ {
+  "text": "内部人员授权0",
+  "hidden": false,
+  "content": {
+   "disp": "none",
+   "text": "0"
+  },
+  "parent": "内部人员授权0"
+ },
+ {
+  "text": "来源单位与组别0",
+  "hidden": false,
+  "content": {
+   "disp": "none",
+   "text": "0"
+  },
+  "parent": "来源单位与组别0"
+ },
+ {
+  "text": "外部用户0",
+  "hidden": false,
+  "content": {
+   "disp": "none",
+   "text": "0"
+  },
+  "parent": "外部用户0"
+ },
+ {
+  "text": "冻存管理\n2",
+  "hidden": false,
+  "content": {
+   "disp": "flex",
+   "text": "2"
+  },
+  "parent": "冻存管理|2"
+ }
+]
+PASS  D3:样本总表角标=2 与卡片一致  :: {"text":"样本总表\n2","hidden":false,"content":{"disp":"flex","text":"2"},"parent":"样本总表|2"}
+PASS  D3:★石蜡包埋角标=1 与卡片一致（含石蜡包埋）  :: {"text":"石蜡包埋\n1","hidden":false,"content":{"disp":"flex","text":"1"},"parent":"石蜡包埋|1"}
+PASS  D3:冻存管理角标=2 与卡片一致  :: {"text":"冻存管理\n2","hidden":false,"content":{"disp":"flex","text":"2"},"parent":"冻存管理|2"}
+PASS  D3:人员与单位角标=2 与卡片一致  :: [{"text":"人员与单位\n2","hidden":false,"content":{"disp":"flex","text":"2"},"parent":"人员与单位|2"},{"text":"内部人员授权0","hidden":false,"content":{"disp":"none","text":"0"},"parent":"内部人员授权0"},{"text":"来源单位与组别0","hidden":false,"content":{"disp":"none","text":"0"},"parent":"来源单位与组别0"}]
+PASS  D3:没有可见的「0」角标（为 0 不显示）  :: []
+PASS  D3:进首页后 /lqg/home/todo 只被请求一次（角标与卡片同源）  :: ["http://127.0.0.1:8093/dev-api/lqg/home/todo"]
+
+==== scenario D: 21/21 PASS ====
