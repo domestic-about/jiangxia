@@ -137,12 +137,12 @@
       "note": "唯一判定函数：Java 纯函数 CryoOverdueService.isOverdue(batch, remaining, today, overdueDays)（① in_minus80='Y' ② to_ln2_time==null ③ remaining>0 ④ today−freeze_time >= overdueDays，当天即算）+ overdueDaysOf(未超期→null) + countOverdue() + listOverdue()；SQL 侧唯一一份在 cryo/remind/sql/CryoOverdueSqlProvider 的 WHERE 常量，清单/计数/overdueOnly/默认置顶键都拼同一段、阈值永远参数绑定无字面量。迁移 V202609241205（lqg.cryo.overdue-days 幂等兜底——该行早由 SYS-WEB-001 的 V202609210830 插好，故写成 WHERE NOT EXISTS 绝不覆盖）。accept 3/3：① 清单 [3001:6, 3005:0] 与 db.py 独立 SQL 同集合、tabCounts={all:7,overdue:2,ln2:2}、overdueOnly 2 行；② to-ln2 3001 → 清单只剩 3005、计数 2→1、3001 overdue=false；3005 取空 → 清单 [] 计数 0；extA 403；grep 探针命中 0（包内也没有 14/OVERDUE_DAYS）；③ 阈值 14→13 → 清单 [3001:7,3005:1,3006:0]、tabCounts.overdue==3，改回复原。单测 169 绿。回归（先 reseed+clean-orphan）：CRYO-MODEL/FLOW 全部、SAMPLE-HINT acc1、ExtChokepoint、D1 42 绿/1 红（既有 flyway 假红，现 16）。★两个全项目级的坑：① PaginationInnerInterceptor 保留带绑定参数的 ORDER BY → count SQL 在 PG 上『聚合 + ORDER BY 非分组列』直接 500（单测全绿拦不住），处置 page.setOptimizeCountSql(false)；② @Scheduled 在本项目原本永远不跑（唯一的 @EnableScheduling 挂在被条件关掉的上游 SnailJobConfig 上），已在 cryo/remind/config/CryoOverdueScheduleConfig 自己开一次。★越界 7 个文件（授权）：cryo/batch 的 CryoBatchVo/CryoQueryBo/CryoQueryService/CryoBatchController + 新增 CryoBatchPageVo（TableDataInfo 子类，刻意不改全仓共用的 TableDataInfo）+ 两个上游测试断言随口径更新（CryoShapeContractTest 的『不许有 overdueOnly』前提消失、CryoQueryContractTest 的默认排序档）。"
     },
     "CRYO-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D4",
       "track": "CRYO",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609241210：5410（C，path=cryo，component=lqg/cryo/index）+ 5411-5417 七个 F，授 101/102（不用搬号——上游刻意只建 5401-5407 的 F 行、把 5410 留空，迁移前该 component 0 条路由）；后端新增 cryo/export/{CryoExportVo,CryoExportService} + CryoExportContractTest 5 例（用 JDK zip+DOM 读甲方模板原件两侧对账）+ POST /export；前端 views/lqg/cryo/{index.vue,CryoDrawer,CryoFlowDrawer,CryoFlowDialog,CryoToLn2Dialog,flow.ts,flow.spec.ts} + api + lang，样本总表冻存入口点亮带 sampleId 跳 /cryo。accept 2/2：① 表头 11 列与模板逐字同序（模板 9 列 + 代数 + 当前剩余/支）、7 行=未删批次 JOIN 未删样本、3001 行冻存数量=8（初始）与当前剩余=6 分居第 3/11 列、3007=否+液氮位置、3004=3→0；② 5410 一行 + getRouters 恰 1 条 + staff perms 含 lqg:cryo:flow/export + index.vue 有 tabCounts + api 有 updateFlow/deleteFlow + views 里 el-switch 命中 0。Java 174、vitest 11、build:prod EXIT=0、vue-tsc 零 error。回归（每步先 reseed+clean-orphan）：CRYO-MODEL/FLOW/REMIND 全部、EMBED-WEB acc1/2、SAMPLE-WEB acc1、ExtChokepoint、D1 41 绿/1 红（既有 flyway 假红，现 17）。端侧：页签 7/2/2 与同次 tabCounts 两侧不同源、超期行 rgb(251,228,225)+徽标+置顶、流水抽屉真跑 PUT/DELETE flow（balanceAfter/已改标记当场更新）、pageerror 与 HTTP≥400 均为 0。★越界 2 个文件（授权）：cryo/batch 的 CryoQueryService(+exportRows+missingSampleIds，与列表共用 buildBucket 的 buildWrapper) 与 CryoBatchController(+POST /export)。★如实报备：中途 8081 被 SIGKILL(exit 137，同机同时跑 headless Chrome+vite+JVM)、按 PID 重启后重新取证。"
     },
     "DOC-MP-001": {
       "status": "pending",
@@ -2033,6 +2033,46 @@
       "type": "doc-drift",
       "title": "票面要求迁移插 lqg.cryo.overdue-days，但该行早由 SYS-WEB-001 的 V202609210830 插好（config_type 与名都不同）",
       "detail": "本票写成 WHERE NOT EXISTS 幂等兜底（dev 库 0 行空操作、绝不覆盖甲方改过的值）。accept 3 原样读回整行只改 configValue，两种类型都不红。建议改票面措辞或把配置行归属写清。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 164,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 装不下实现：必须动 cryo/batch 的 CryoQueryService 与 CryoBatchController（导出要走同一份 wrapper）",
+      "detail": "touches 只列了 cryo/export/**；但导出必须与列表共用同一份筛选 wrapper（否则『行数=同条件列表 total』对不上）。两处均为纯新增方法、无签名变更。方案：把 cryo/batch/service/CryoQueryService.java 与 cryo/batch/controller/CryoBatchController.java 划进本票 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 165,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "计数格子按既有约定导成文本（Excel 绿三角），与「导出为数值」的直觉相反",
+      "detail": "CRYO-WEB-001 实测：FastExcel 对 Integer 的写法令 accept 的 str(cell)=='8' 成立（即文本），这是四个导出的既有约定；副作用是 Excel 显示绿三角。方案：在契约或导出说明里写明『计数列导出为文本』，免得后续票按数值写断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 166,
+      "ticket": "CRYO-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "三个页签与「位置/只看超期」筛选是两套控件做同一件事（本票做成同一真相源 + 互斥）",
+      "detail": "已实现为同一真相源 + 互斥（不允许出现「液氮 ∧ 超期」的空集）。方案：把这个口径写进 UI:admin.cryo.* 或契约。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 167,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "/mp/int/export/cryo 无运行时证据（端点属 SYS-EXPORT-001）",
+      "detail": "CRYO-WEB-001 只落了可复用的 CryoExportService#rowsOf + 形状断言。到 SYS-EXPORT-001 落地时要补端到端。",
       "status": "open",
       "decision": ""
     }
