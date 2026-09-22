@@ -3296,6 +3296,26 @@
       "detail": "复现：探针脚本一度把 /opt/homebrew/bin 前置到 PATH（为了拿某工具）→ `python3 doc/verify/db.py --quiet --sql …` 里的 python3 变成 homebrew 的（没有 psycopg2），db.py 把 ImportError 只打 stderr，而夹具用 `$( … )` 捕获 stdout 得到空串 → 断言里「期望 X 实际空串」→ 看起来像产品没落库，其实是工具链被顶掉。影响：与 issue #1 同类（工具故障伪装成产品红），但这次是 PATH 污染导致。方案：①探针脚本里一律用绝对解释器路径或在脚本头固定 PATH；②`db.py` 在缺依赖时**退出码明确非 0 且在 stdout 也给一行可判别文本**（现在只打 stderr），这样夹具的 `$(…)` 至少能拿到线索。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 289,
+      "ticket": "CRYO-REMIND-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ 时间炸弹：CryoOverdueServiceTest 写死 TODAY=2026-09-22 而 listOverdue() 用 LocalDate.now() → 跨午夜必红（已修）",
+      "detail": "复现（D7 门重跑时 L0.1 抓到，2026-09-23 07:2x）：`CryoOverdueServiceTest.countEqualsListSize` 失败「3001：冻存 20 天前 − 阈值 14 = 已超 6 天 ==> expected: <6> but was: <7>」，整模块 Tests run: 274, Failures: 1。根因**不是** seed 漂移（seed 写的是 CURRENT_DATE - 20，reseed 那一刻求值，所以 reseed 后恒为 20 天），而是**两套时钟**：①测试类里 `TODAY = LocalDate.of(2026, 9, 22)` 是写死的；②夹具 seedLikeCandidates() 用它构造「20 天前」；③假 mapper 的过滤也用 TODAY；④**而被测的 CryoOverdueService.listOverdue() 内部取 LocalDate.now()**（CryoOverdueService.java:155）。于是「哪些行进清单」按 09-22 判、「已超几天」按今天判 → 只在 09-22 当天一致，跨过午夜就 6→7。影响：**该测试类只在 2026-09-22 当天能过**；因为 gate 的 L0.1 跑全模块测试，它会让**此后每天的 L0 门都无法通过**（并且会被我的 gate 误标成 env-broken，见下一条）。修复：把夹具与假 mapper 都改成锚在 LocalDate.now()（与生产同一个时钟），TODAY 只保留给「显式传 today 入参」的纯函数用例并加注释警告；修后该测试类 8/8 绿。★同类风险提示：票面 accept 里也有硬编码天数的（如 CRYO-REMIND-001 acc1 的 [\"9000003001:6\",\"9000003005:0\"]）——它们**因为 run 的第一步就是 reseed 所以是安全的**；但任何「先读库再断天数」而不先 reseed 的断言都会同样腐烂，建议在 README 的已知坑表里写明这条时效性。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 290,
+      "ticket": "SYS-ACCEPT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ gate.sh 两处缺陷：①mvn 非 0 一律记 env-broken（把测试失败伪装成工具故障）②reseed 排在单测之后（库耦合单测读到跨午夜的旧行）",
+      "detail": "两处都在 D7 门重跑时暴露（它们让一条真红看起来像环境问题、并让 exit code 变成 2）：①**分类错**：L0.1 对 mvn 非 0 一律调 envb()，而 mvn 非 0 也可能是**测试失败**——日志里明明有 `<<< FAILURE!` 与 `Tests run: 274, Failures: 1`，却被标成「环境/工具问题」，于是 gate exit=2（环境坏）而不是 1（断言不成立），qa 审计里也只留一条 S2/harness 而没有 S1 级别的产品红。修法：先 grep 日志判「是不是测试失败」（`Tests run:.*(Failures: [1-9]|Errors: [1-9])|<<< FAILURE!|<<< ERROR!`）→ 是则 bad()（红），否则才 envb()。②**顺序错**：reseed 原本排在 L0.1 单测**之后**（原 L1.0），而 seed 里的日期是**以 reseed 时刻为基准**的相对表达式（freeze_time = CURRENT_DATE - 20）→ 库耦合的单测读到上一轮遗留的行，跨午夜就漂一天。修法：把 reseed+清孤儿账号提到 L0.1 **之前**（新步骤 L0.0b），L0 从此跑在确定性快照上。影响面：这两个缺陷**对所有任务的每个门都生效**——①让任何测试失败都被误报成环境问题（浪费排查时间、可能漏掉真红）；②让任何依赖库日期的单测在跨午夜后失败。修复后 D7 门重跑：L0.1 274/274 绿。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

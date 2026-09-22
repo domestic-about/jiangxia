@@ -1,6 +1,6 @@
 {
  "ticket": "SYS-ACCEPT-001",
- "generated_at": "2026-09-22T23:16:03.513276+00:00",
+ "generated_at": "2026-09-22T23:25:12.507897+00:00",
  "mode": "verify-only",
  "scope": [
   "H1a",
@@ -22,7 +22,7 @@
    "mutation": "去掉 src/pages/ledger/index.vue 里 downloadToTemp 的 `header: authHeader(), requireAuth: true`",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-22T23:15:25.669Z",
+   "checked_at": "2026-09-22T23:24:33.689Z",
    "observed": {
     "export_url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
     "export_request_headers": {
@@ -86,12 +86,12 @@
    "mutation": "给 src/components/lqg/DownloadBar.vue 的 downloadToTemp 传回 authHeader()",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-22T23:15:42.769Z",
+   "checked_at": "2026-09-22T23:24:50.747Z",
    "observed": {
-    "backend_signed_url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/013bee40bb69.docx?X-Amz-…",
+    "backend_signed_url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/6418f17b4498.docx?X-Amz-…",
     "oss_request_headers": [
      {
-      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/013bee40bb69.docx",
+      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/6418f17b4498.docx",
       "header_keys": [
        "sec-ch-ua-platform",
        "referer",
@@ -105,7 +105,7 @@
     ],
     "oss_response": [
      {
-      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/013bee40bb69.docx",
+      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/6418f17b4498.docx",
       "status": 200,
       "ct": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
      }
@@ -131,12 +131,12 @@
     {
      "name": "H1b:后端签发 OSS 预签名直链（code=200 + url 指向 127.0.0.1:9000）",
      "ok": true,
-     "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/013bee40bb69.docx?X-Amz-Algorithm=AWS4-HMAC-\"}"
+     "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/6418f17b4498.docx?X-Amz-Algorithm=AWS4-HMAC-\"}"
     },
     {
      "name": "H1b:★ OSS 直链请求真的发出（真点一次单份下载）",
      "ok": true,
-     "detail": "[\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/013bee40bb69.docx\"]"
+     "detail": "[\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/6418f17b4498.docx\"]"
     },
     {
      "name": "H1b:★ OSS 直链请求头**没有 Authorization**（API 鉴权头不能塞到预签名直链上）",
@@ -146,7 +146,7 @@
     {
      "name": "H1b:★ OSS 响应码 = 200（MinIO 没判「multiple authentication types」）",
      "ok": true,
-     "detail": "[{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/013bee40bb69.docx\",\"status\":200,\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
+     "detail": "[{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/6418f17b4498.docx\",\"status\":200,\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
     },
     {
      "name": "H1b:页面没有进失败态（.db__hint 里没有「暂时下不了」）",
@@ -163,7 +163,7 @@
    "mutation": "把卡片 :value=\"todo.pendingSamples\" → 写死 7、:value=\"todo.pendingEmbeds\" → 写死 9（真值 2 / 1）",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-22T23:15:47.435Z",
+   "checked_at": "2026-09-22T23:24:55.735Z",
    "observed": {
     "api_get_lqg_home_todo": {
      "url": "http://127.0.0.1:8093/dev-api/lqg/home/todo",
@@ -283,7 +283,7 @@
    "behavioral": false,
    "behavioral_note": "showMenu 是**平台参数**，H5（本轮验收面，owner 已把真机换成 H5+mock）上 uni.openDocument 不存在、如实退化成 window.open，没有可在 H5 施加的行为变异。按 ticket §2 的显式例外用「剥注释后的真代码位置」判，并证明它与注释无关（本变异即该证明）。",
    "result": "green",
-   "checked_at": "2026-09-22T23:15:47.497658+00:00",
+   "checked_at": "2026-09-22T23:24:55.801166+00:00",
    "observed": {
     "source_file": "code/miniapp/src/utils/fileHandoff.ts",
     "occurrences_in_raw_file": 1,
@@ -326,25 +326,25 @@
    "mutation": "把 ThumbStrip.vue#open 的 urls 从「原图 url」换成 usable 的 previewUrl",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-22T23:15:56.404Z",
+   "checked_at": "2026-09-22T23:25:04.721Z",
    "observed": {
     "pages_api_images": [
      {
-      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
-      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg"
+      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png",
+      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/28270e5bf7b3428abfe5ab28fb176bf7.jpg"
      },
      {
-      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png",
-      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/fa4fc2075b1a48e89fa2d1415bd25a17.jpg"
+      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png",
+      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/e1c2fdf4884b4522a8d0fe9f9d35ad2e.jpg"
      }
     ],
     "thumb_click_expected": {
-     "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
-     "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg"
+     "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png",
+     "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/28270e5bf7b3428abfe5ab28fb176bf7.jpg"
     },
     "thumb_click_opened_src": [
-     "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
-     "http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png"
+     "http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png",
+     "http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png"
     ]
    },
    "assertions": [
@@ -366,17 +366,17 @@
     {
      "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
      "ok": true,
-     "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"]"
+     "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png\"]"
     },
     {
      "name": "H3b:★ 打开层拿到的 src == 原图 url",
      "ok": true,
-     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"],\"want\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\"}"
+     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png\"],\"want\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\"}"
     },
     {
      "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
      "ok": true,
-     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"],\"preview\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg\"}"
+     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png\"],\"preview\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/28270e5bf7b3428abfe5ab28fb176bf7.jpg\"}"
     }
    ]
   },
@@ -388,7 +388,7 @@
    "mutation": "删掉 PreviewPane.vue 里「下载合并 PDF」整个 el-button",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-22T23:16:03.442Z",
+   "checked_at": "2026-09-22T23:25:12.439Z",
    "observed": {
     "dom_download_buttons": [
      "下载 Word",
@@ -478,8 +478,8 @@
  "tree_after": "",
  "env": {},
  "previous_mutation_run": {
-  "generated_at": "2026-09-22T23:14:55.177197+00:00",
-  "tree_after": "git diff -- code/ = [] sha=e3b0c44298fc（起点 e3b0c44298fc）; git stash list=空",
+  "generated_at": "2026-09-22T23:24:04.044996+00:00",
+  "tree_after": "git diff -- code/ = [code/miniapp/src/pages.json ] sha=8b7d9a9ab73b（起点 8b7d9a9ab73b）; git stash list=空",
   "mutations": {
    "H1a": {
     "applied": true,
@@ -544,10 +544,10 @@
     "criterion_green_after_restore": true,
     "green_probe_exit": 0,
     "observed_when_mutated": {
-     "backend_signed_url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx?X-Amz-…",
+     "backend_signed_url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/1c720054cb46.docx?X-Amz-…",
      "oss_request_headers": [
       {
-       "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx",
+       "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/1c720054cb46.docx",
        "header_keys": [
         "sec-ch-ua-platform",
         "authorization",
@@ -563,7 +563,7 @@
      ],
      "oss_response": [
       {
-       "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx",
+       "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/1c720054cb46.docx",
        "status": 400,
        "ct": "application/xml"
       }
@@ -719,21 +719,21 @@
     "observed_when_mutated": {
      "pages_api_images": [
       {
-       "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png",
-       "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg"
+       "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/3fbcac75be0f416eb7e28c85a43ba890.png",
+       "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/1cd8368fbda7418ebdfbb2ac74733ae2.jpg"
       },
       {
-       "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/58fda86a867a4e6b985780549779adc2.png",
-       "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/dfc359ca91f54ba2a2131b78ce313a07.jpg"
+       "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/5eb3ae48155a4664af9e7543c7e1cd2e.png",
+       "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/bdca1ff6c7ae4713bf00ba673096ede2.jpg"
       }
      ],
      "thumb_click_expected": {
-      "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png",
-      "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg"
+      "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/3fbcac75be0f416eb7e28c85a43ba890.png",
+      "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/1cd8368fbda7418ebdfbb2ac74733ae2.jpg"
      },
      "thumb_click_opened_src": [
-      "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg",
-      "http://127.0.0.1:9000/ruoyi/2026/09/23/dfc359ca91f54ba2a2131b78ce313a07.jpg"
+      "http://127.0.0.1:9000/ruoyi/2026/09/23/1cd8368fbda7418ebdfbb2ac74733ae2.jpg",
+      "http://127.0.0.1:9000/ruoyi/2026/09/23/bdca1ff6c7ae4713bf00ba673096ede2.jpg"
      ]
     }
    },

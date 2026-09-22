@@ -12,7 +12,7 @@
 #   L0.0 环境前置：后端在端口上监听 + **新鲜度**（源码不得新于 jar、进程必须持有该 jar）
 #   L0.1 后端编译 + 单测（mvn -pl ruoyi-modules/ruoyi-lqg -am install，逐条读 surefire 汇总）
 #   L0.2 前端生产构建（按票面 touches 决定要不要跑 plus-ui / miniapp）
-#   L1.0 reseed 到确定性快照 + 清孤儿账号
+#   L0.0b reseed 到确定性快照（必须在单测之前——seed 的日期以 reseed 时刻为基准）
 #   L1.1 该任务涉及的表 ddl_vs_ssot 逐列对账
 #   L1.2 **逐字重放票面的 accept 断言**（doc/waves/tools/accept-run.py）
 #   L1.3 D1 回归包全量重放（EXPECT_REV 注入；含 #82 已修）
@@ -120,6 +120,24 @@ if [ "${ENV_BROKEN}" = 1 ]; then
   exit 2
 fi
 
+# ── L0.0b reseed：必须在单测**之前** ───────────────────────────────────────
+# ★ 2026-09-23 加的：seed 里的日期是**以 reseed 时刻为基准**的相对表达式（如 freeze_time = CURRENT_DATE - 20），
+#   所以「已超 6 天」这类期望只在 reseed 之后成立；跨过午夜后上一轮遗留的行会变成 7 天。
+#   库耦合的单测（CryoOverdueServiceTest 那类）读到旧行就会红——那是**测试环境漂移**，不是产品缺陷。
+#   把 reseed 提到单测之前，L0 也就跑在确定性快照上了。
+head1 "L0.0b reseed 到确定性快照（单测可能依赖库状态，必须先做）"
+clear_tokens
+if bash doc/verify/reseed.sh --yes > "${LOGDIR}/reseed.log" 2>&1; then
+  ok "reseed 完成（$(grep -c '已灌' "${LOGDIR}/reseed.log" || echo '?') 段 seed）" "L0.0b reseed"
+else
+  envb "reseed 失败 → ${LOGDIR}/reseed.log" "L0.0b reseed"; tail -10 "${LOGDIR}/reseed.log" | sed 's/^/      /'
+fi
+if [ -x doc/waves/tools/clean-orphan-accounts.sh ]; then
+  bash doc/waves/tools/clean-orphan-accounts.sh --yes >> "${LOGDIR}/reseed.log" 2>&1 \
+    && ok "孤儿账号已清（非 seed 段 wx_*/lqg_*）" "L0.0b 清孤儿账号" \
+    || envb "clean-orphan-accounts.sh 非 0 → ${LOGDIR}/reseed.log" "L0.0b 清孤儿账号"
+fi
+
 # ── L0.1 后端编译 + 单测 ────────────────────────────────────────────────────
 head1 "L0.1 后端 mvn -pl ruoyi-modules/ruoyi-lqg -am install"
 if [ "${SKIP_BUILD}" = 1 ]; then
@@ -132,8 +150,15 @@ else
       -Duser.home="${ROOT}/.buildhome" ) > "${MVNLOG}" 2>&1
   rc=$?
   if [ "${rc}" -ne 0 ]; then
-    envb "mvn install exit ${rc}（工具/依赖问题，不是断言）→ tail ${MVNLOG}" "L0.1 mvn"
-    tail -12 "${MVNLOG}" | sed 's/^/      /'
+    # ★ 2026-09-23 修分类缺陷：mvn 非 0 **不等于环境坏**——测试失败也是非 0，而那是「产品/断言不成立」。
+    #   之前一律记 env-broken，会把一条真红伪装成工具故障（D7 重跑时 CryoOverdueServiceTest 就是这么被误标的）。
+    if grep -qE 'Tests run:.*(Failures: [1-9]|Errors: [1-9])|<<< FAILURE!|<<< ERROR!' "${MVNLOG}"; then
+      bad "L0.1 mvn 测试失败（**这是断言/产品问题，不是环境**）：$(grep -oE 'Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+' "${MVNLOG}" | tail -1)" "L0.1 mvn"
+      grep -E '<<< FAILURE!|<<< ERROR!|^\[ERROR\].*Tests run' "${MVNLOG}" | head -6 | sed 's/^/      /'
+    else
+      envb "mvn install exit ${rc}（编译/依赖问题，不是断言）→ tail ${MVNLOG}" "L0.1 mvn"
+      tail -12 "${MVNLOG}" | sed 's/^/      /'
+    fi
   elif ! grep -q 'BUILD SUCCESS' "${MVNLOG}"; then
     bad "L0.1 BUILD SUCCESS 缺失 → ${MVNLOG}" "L0.1 BUILD SUCCESS"
   else
@@ -172,20 +197,6 @@ else
   [ "${NEEDS_PLUSUI}" = True ]  && build_front "L0.2 plus-ui build:prod"       "code/plus-ui" "dist/index.html"              "build:prod"
   [ "${NEEDS_MINIAPP}" = True ] && build_front "L0.2 miniapp build:mp-weixin" "code/miniapp" "dist/build/mp-weixin/app.json" "build:mp-weixin"
   [ "${NEEDS_PLUSUI}" = True ] || [ "${NEEDS_MINIAPP}" = True ] || echo "  票面 touches 不含前端 → 两个 build 都免跑"
-fi
-
-# ── L1.0 reseed 到确定性快照 ───────────────────────────────────────────────
-head1 "L1.0 reseed 到确定性快照 + 清孤儿账号"
-clear_tokens
-if bash doc/verify/reseed.sh --yes > "${LOGDIR}/reseed.log" 2>&1; then
-  ok "reseed 完成（$(grep -c '已灌' "${LOGDIR}/reseed.log" || echo '?') 段 seed）" "L1.0 reseed"
-else
-  envb "reseed 失败 → ${LOGDIR}/reseed.log" "L1.0 reseed"; tail -10 "${LOGDIR}/reseed.log" | sed 's/^/      /'
-fi
-if [ -x doc/waves/tools/clean-orphan-accounts.sh ]; then
-  bash doc/waves/tools/clean-orphan-accounts.sh --yes >> "${LOGDIR}/reseed.log" 2>&1 \
-    && ok "孤儿账号已清（非 seed 段 wx_*/lqg_*）" "L1.0 清孤儿账号" \
-    || envb "clean-orphan-accounts.sh 非 0 → ${LOGDIR}/reseed.log" "L1.0 清孤儿账号"
 fi
 
 # ── L1.1 该任务涉及的表 ddl_vs_ssot ────────────────────────────────────────

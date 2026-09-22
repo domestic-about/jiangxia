@@ -1,7 +1,7 @@
 {
  "hotspot": "H3b",
  "green": true,
- "ran_at": "2026-09-22T23:15:56.404Z",
+ "ran_at": "2026-09-22T23:25:04.721Z",
  "results": [
   {
    "name": "H3b:内部人员 mock 登录 H5(9204)",
@@ -21,37 +21,37 @@
   {
    "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
    "ok": true,
-   "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"]"
+   "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png\"]"
   },
   {
    "name": "H3b:★ 打开层拿到的 src == 原图 url",
    "ok": true,
-   "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"],\"want\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\"}"
+   "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png\"],\"want\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\"}"
   },
   {
    "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
    "ok": true,
-   "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"],\"preview\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg\"}"
+   "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png\"],\"preview\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/28270e5bf7b3428abfe5ab28fb176bf7.jpg\"}"
   }
  ],
  "observed": {
   "pages_api_images": [
    {
-    "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
-    "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg"
+    "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png",
+    "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/28270e5bf7b3428abfe5ab28fb176bf7.jpg"
    },
    {
-    "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png",
-    "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/fa4fc2075b1a48e89fa2d1415bd25a17.jpg"
+    "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png",
+    "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/e1c2fdf4884b4522a8d0fe9f9d35ad2e.jpg"
    }
   ],
   "thumb_click_expected": {
-   "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
-   "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg"
+   "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png",
+   "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/28270e5bf7b3428abfe5ab28fb176bf7.jpg"
   },
   "thumb_click_opened_src": [
-   "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
-   "http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png"
+   "http://127.0.0.1:9000/ruoyi/2026/09/23/6a1de28df72241d580b59168d9fb7f9a.png",
+   "http://127.0.0.1:9000/ruoyi/2026/09/23/9c160109ff714b86a8f723ef7e316993.png"
   ]
  }
 }

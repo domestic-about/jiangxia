@@ -48,6 +48,9 @@ class CryoOverdueServiceTest {
     /** 探针阈值：默认口径那一档（accept 里由系统参数给，这里是入参）。 */
     private static final int DAYS_DEFAULT = 14;
 
+    /** 只给**显式传 today 入参**的纯函数用例（isOverdue / overdueDaysOf 等）用的固定日期。
+     *  ★ 不要拿它去造「走 listOverdue() 的夹具」——那条路内部用 LocalDate.now()，两套时钟跨午夜就会错位
+     *    （2026-09-23 实测的 expected 6 but was 7 就是这么来的）。见 seedLikeCandidates() 里的注释。 */
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 22);
 
     // ── 边界四例 ──────────────────────────────────────────────────────────────
@@ -182,13 +185,19 @@ class CryoOverdueServiceTest {
      */
     private static List<CryoBatch> seedLikeCandidates() {
         List<CryoBatch> rows = new ArrayList<>();
-        rows.add(candidate(3001L, "Y", null, TODAY.minusDays(20), 8, null));
-        rows.add(candidate(3002L, "Y", null, TODAY.minusDays(5), 4, null));
-        rows.add(candidate(3003L, "Y", TODAY.minusDays(30), TODAY.minusDays(40), 6, null));
-        rows.add(candidate(3004L, "Y", null, TODAY.minusDays(14), 3, null));
-        rows.add(candidate(3005L, "Y", null, TODAY.minusDays(14), 2, null));
-        rows.add(candidate(3006L, "Y", null, TODAY.minusDays(13), 5, null));
-        rows.add(candidate(3007L, "N", null, TODAY.minusDays(60), 5, null));
+        // ★ 2026-09-23 修时间炸弹：这里必须锚在**真实时钟**（LocalDate.now()），不能用下面的常量 TODAY。
+        //   因为被测的 CryoOverdueService.listOverdue() 内部取的就是 LocalDate.now()（第 155 行）；
+        //   夹具若锚在写死的 TODAY，「20 天前」就固定成某一天，跨过午夜后期望的「已超 6 天」会变成 7
+        //   ——本测试因此只在 2026-09-22 当天能过（实测 09-23 红：expected 6 but was 7）。
+        //   锚在 now() 之后，所有字面期望（6 / 0 / 2 条 / 阈值 13 → 3 条）都**按构造成立**，且与日期无关。
+        LocalDate clock = LocalDate.now();
+        rows.add(candidate(3001L, "Y", null, clock.minusDays(20), 8, null));
+        rows.add(candidate(3002L, "Y", null, clock.minusDays(5), 4, null));
+        rows.add(candidate(3003L, "Y", clock.minusDays(30), clock.minusDays(40), 6, null));
+        rows.add(candidate(3004L, "Y", null, clock.minusDays(14), 3, null));
+        rows.add(candidate(3005L, "Y", null, clock.minusDays(14), 2, null));
+        rows.add(candidate(3006L, "Y", null, clock.minusDays(13), 5, null));
+        rows.add(candidate(3007L, "N", null, clock.minusDays(60), 5, null));
         return rows;
     }
 
@@ -222,10 +231,10 @@ class CryoOverdueServiceTest {
                 return switch (method.getName()) {
                     // SELECT 侧：与 SQL 同口径地按四条件挑（测试自己独立实现，别调被测代码）
                     case "selectOverdueList" -> candidates.stream()
-                        .filter(row -> independentOverdue(row, remainingOf(row, deltas), TODAY, days))
+                        .filter(row -> independentOverdue(row, remainingOf(row, deltas), LocalDate.now(), days))
                         .toList();
                     case "selectOverdueCount" -> candidates.stream()
-                        .filter(row -> independentOverdue(row, remainingOf(row, deltas), TODAY, days))
+                        .filter(row -> independentOverdue(row, remainingOf(row, deltas), LocalDate.now(), days))
                         .count();
                     default -> defaultValue(method.getReturnType());
                 };
