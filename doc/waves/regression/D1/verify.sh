@@ -109,9 +109,17 @@ preflight() {
   local newer
   newer="$(find "${ROOT}/code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src" -type f -newer "${jar}" 2>/dev/null | head -1)"
   if [ -n "${newer}" ]; then bad "L0.2 stale：${newer#${ROOT}/} 比 jar 新——改了源码没重新打包"; return 1; fi
-  if ! lsof -p "${pid}" 2>/dev/null | grep -q 'ruoyi-admin.jar'; then
+  # ★ 别写成 `lsof -p … | grep -q …`：grep -q 命中即退出 → lsof 收 SIGPIPE(141) →
+  #   在 `set -uo pipefail` 下整条管道被判失败 → 这里**恒假红**（EMBED-WEB-001 实测：
+  #   同 PID `grep -c` = 2 行，逐字重放是 HELD）。落盘再 grep 就没这个问题。
+  local lsof_out
+  lsof_out="$(mktemp)"
+  lsof -p "${pid}" > "${lsof_out}" 2>/dev/null || true
+  if ! grep -q 'ruoyi-admin.jar' "${lsof_out}"; then
+    rm -f "${lsof_out}"
     bad "L0.2 stale：pid ${pid} 没持有 ${jar}（跑的不是这个 jar）"; return 1
   fi
+  rm -f "${lsof_out}"
   local jar_epoch start_epoch
   jar_epoch="$(stat -f %m "${jar}" 2>/dev/null || stat -c %Y "${jar}")"
   start_epoch="$(proc_start_epoch "${pid}")"

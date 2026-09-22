@@ -208,12 +208,12 @@
       "note": ""
     },
     "EMBED-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "EMBED",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609231110：把 EMBED-MODEL-001 落的菜单 5300-5307 整体 DELETE 后重建到 5310-5317（不做则 getRouters 会有两条 lqg/embed/index）；后端 embed/export/{EmbedExportVo,EmbedExportService}（导出视图放 service 层供 SYS-EXPORT-001 复用）+ EmbedExportContractTest 5 例（一例用 JDK zip+DOM 读甲方模板原件做两侧对账）+ POST /lqg/embed/export + EmbedDictService.labels() + EmbedQueryService.exportRows()；前端 views/lqg/embed/{index.vue,EmbedDrawer.vue,stain.ts,stain.fixture.spec.ts} + api + lang；样本总表『石蜡包埋』入口点亮 + 带 sampleId 跳 /embed 自动过滤。accept 2/2（导出 6 段：表头 16 列逐字同序/全量 5 行/T-E01-1 样本编号=T-hli01+HE染色、IHC染色+Ki67：强表达；CK19：阴性+包埋人李工/T-E04-1=其他（Masson）+弱表达/T-E02-1=无染色+空/两个筛选段；菜单段 5310+perms 精确集合+getRouters 恰 1 条+vitest 19/19）。核验抽屉按 sampleVerifyStatus 置灰并写明原因，且做了反向对照（样本核验有效后按钮变可点）。回归：EMBED-MODEL-001 4/4、AUTH-EXT-002 3/3、SAMPLE-WEB-001 2/2、SAMPLE-MP-002 acc2、ExtChokepointContractTest 4/4、Java 98/98。★新识别 harness 缺陷（我已修）：D1 回归包 lsof -p | grep -q 在 set -uo pipefail 下因 SIGPIPE(141) 恒假红 → 改成落盘再 grep。"
     },
     "OCR-IMPL-001": {
       "status": "pending",
@@ -1632,6 +1632,56 @@
       "type": "harness",
       "title": "「AUTH-EXT-003 会再撞一次迁移段位交叉」的前提不成立（它是 D7 的票，日期段 20260927）",
       "detail": "实施方 WARN-1 的提醒有价值（段位交叉这件事本身成立），但指错了票：AUTH-EXT-003 的 phase 是 D7，迁移号会是 V2026092709xx，远大于当时的 max applied，不会 out-of-order。D3 里已无 AUTH 域票。方案（长期）：ticket 生成器禁止跨域补号，或 dev 显式 out-of-order（prod 保持 false）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 124,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "【已修】D1 回归包 lsof -p | grep -q 在 pipefail 下因 SIGPIPE 恒假红（新鲜度检查一直报假红）",
+      "detail": "doc/waves/regression/D1/verify.sh 原第 112 行：grep -q 命中即退出 → lsof 收 SIGPIPE(141) → set -uo pipefail 下整条管道判失败。EMBED-WEB-001 给了等价取证（同 PID grep -c = 2 行、逐字重放 HELD）。主会话已改成『lsof 先落临时文件再 grep』并 bash -n 过。这条是 D1 回归包现在两条红之一（另一条是 flyway 写死总数 7）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 125,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 与实现不符：必须动 EmbedDictService / EmbedQueryService / EmbedController 三个不在 touches 的文件",
+      "detail": "三处全是新增方法、无签名变更（EmbedDictService.labels() 字典中文标签、EmbedQueryService.exportRows() 同一份 wrapper+装配、EmbedController 加端点）。ticket touches 只列了 embed/export/**。方案：把这三个文件划进 EMBED-WEB-001 的 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 126,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "核验档「先保存再核验」是两次请求、非原子",
+      "detail": "抽屉里点『判为有效并保存』= 先 PUT 保存再 PUT verify，中间失败会留下已保存未核验的状态。方案：合成一个接口，或前端在第二次失败时明确提示。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 127,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "石蜡包埋列表加了「最后修改」列（authority 的列清单里没有）",
+      "detail": "按 D2 起的 updateTime==null 语义加的。方案：把该列写进 UI:admin.embed.list 的列清单，或去掉。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 128,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "/mp/int/export/embed 无运行时证据（端点属 SYS-EXPORT-001）",
+      "detail": "本票只落了导出视图供复用，小程序导出端点由 SYS-EXPORT-001 落。到那时要补端到端断言。",
       "status": "open",
       "decision": ""
     }
