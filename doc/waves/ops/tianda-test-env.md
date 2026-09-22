@@ -91,9 +91,40 @@ postgres/redis/minio 一律 **只绑 127.0.0.1** 且用非默认宿主端口，�
 同类断言受害者还有 `SYS-PROD-001`（也用 `nc`）。已记 issue（`type: harness`）。
 **不要**为了让 accept 变绿去改 ① 侧票面。
 
+## 4.5 🔴🔴 架构不匹配：本机是 arm64，服务器是 x86_64（部署方案的决定性约束）
+
+| | 架构 | docker |
+|---|---|---|
+| 本开发机（Mac） | **linux/aarch64**（Apple Silicon） | 24.0.2 |
+| 测试服务器 | **x86_64**（`uname -m` 实测） | 26.1.3 + compose v2.27 |
+
+→ **本地 `docker build` 出来的镜像是 arm64，在服务器上跑不起来**（`exec format error`）。
+→ 也**不能**用 `docker save | ssh | docker load` 那条「本地构建→推到测试机」的捷径（除非 `--platform linux/amd64`，
+   而多阶段 maven 构建走 qemu 模拟会慢到不可接受）。
+
+**可行的三条路，按推荐排序：**
+
+1. **★ 推荐：jar 本地构建（jar 与架构无关）+ 服务器原生建镜像。**
+   本机 maven 打 jar（已是既有流程）→ rsync jar + `Dockerfile`（多阶段那份保留给 CI/amd64）→
+   在服务器 `docker build`（原生 amd64，只 COPY jar，秒级）。基础镜像 `eclipse-temurin:21-jre-jammy`
+   **已在服务器就位**（286MB）。
+2. **源码上机 + 服务器原生多阶段构建**：rsync 源码 → 服务器 `docker build`（多阶段 maven）。
+   最贴票面字面（票面 §2 要求「多阶段：maven 构建 → JRE 运行」），但要在服务器拉
+   `maven:3.9-eclipse-temurin-21`（~500MB）并下全量 maven 依赖（首次 5–20 min）。
+   `.mvn-settings.xml` 已指向 `https://maven.aliyun.com/repository/public`（国内可达）。
+3. **本地跨架构构建**：`docker buildx build --platform linux/amd64`（qemu）——慢，仅在前两条都不通时用。
+
+**已在服务器预拉就位的基础镜像**（2026-09-22）：`eclipse-temurin:21-jre-jammy` 286MB、
+`postgres:16-alpine` 294MB、`redis:7-alpine` 39MB、`minio/minio:latest` 175MB。
+
+> MinIO 镜像的坑：`docker.1ms.run` 这个加速源**拉不到 `minio/minio`**（会回落到 `registry-1.docker.io` 然后超时）。
+> 实测可用的是 `docker.1panel.live/minio/minio:latest` → 拉下来后 `docker tag` 回 `minio/minio:latest`。
+> 备选源：`docker.m.daocloud.io` / `dockerpull.org` 都失败。**别再用镜像站的 library 前缀规律去猜**。
+
 ## 5. 本项目在测试机上的约定（SYS-STAGING-001 落地时遵守）
 
-- 后端**只在容器里跑**（JRE 21），宿主不装 JDK 21；宿主 8080/8081 已被别人占，别用。
+- 后端**只在容器里跑**（JRE 21，宿主机只有 JDK 17）；宿主 8080/8081 已被别人占，别用。
+- **镜像必须在服务器上构建**（宿主 arch = x86_64，本机 = arm64，见 §4.5）。
 - 宿主 nginx（宝塔）终止 TLS：`songjian.tianda.studio` → 反代到 compose 里那个 nginx 或后端的
   **127.0.0.1 端口**。宿主 80/443 不能给容器抢占。
 - postgres（库 `lqg_test`）/ redis / minio 一律**只发布到 127.0.0.1**，且宿主端口避开
@@ -102,3 +133,53 @@ postgres/redis/minio 一律 **只绑 127.0.0.1** 且用非默认宿主端口，�
 - 测试数据：只灌 `doc/verify/seed/`（`reseed.sh` 拒绝非 dev/test 库名，所以库名必须含 `test`）。
 - 不在测试机放任何真实数据；mock 登录开着（ADR-0008 允许 test）。
 - 收尾：不留长进程；`docker compose down` 或明示留给谁；磁盘别撑爆（先 prune 悬空镜像）。
+
+## 6. 部署方案（SYS-STAGING-001 照此落地；已核过的前提）
+
+### 6.1 已就位的前提
+
+| 前提 | 状态 |
+|---|---|
+| DNS `songjian.tianda.studio` → 118.178.109.11 | ✅ 已建，**从 box 查已生效** |
+| 备案（`tianda.studio` 已备案，guzi/admin 在 80 实测 200） | ✅ |
+| 宿主 nginx/宝塔可建站 + 签 LE 证书 | ✅ 面板端口 23127、入口路径见 `~/.tianda-secrets/bt-panel.env`；`/www/server/panel/vhost/cert/<域名>` 是既有证书目录 |
+| 基础镜像 | ✅ temurin 21-jre / postgres 16-alpine / redis 7-alpine / minio（见 §4.5） |
+| SSH 免密 | ✅ `root@118.178.109.11` |
+| 仓库远端 | ❌ 没有 → 代码/产物只能 rsync/scp |
+
+### 6.2 分层与端口（宿主 80/443 归宝塔，容器不许抢）
+
+```
+浏览器/小程序 ──HTTPS 443──> 宿主 nginx(宝塔, songjian.tianda.studio)
+                                 ├── /            → 静态: plus-ui dist（SPA 回退 try_files → /index.html）
+                                 └── /prod-api/   → 127.0.0.1:<BACKEND>  （后端只在容器里，不发布公网）
+compose（全部只绑 127.0.0.1）:
+  postgres:16-alpine  127.0.0.1:15432 → 5432   库名必须含 test（reseed.sh 护栏）
+  redis:7-alpine      127.0.0.1:16379 → 6379
+  minio/minio         127.0.0.1:19000 → 9000   控制台 19001 → 9001
+  backend(JRE21)      127.0.0.1:<BACKEND> → 8080  --spring.profiles.active=test
+```
+`<BACKEND>` 取宿主空闲端口（`8082 / 8083 / 8090` 均空；**不要**用 8080/8081 —— 别人占着）。
+
+### 6.3 部署目录与「不要在宝塔站根目录里跑 git」
+
+- **compose/Dockerfile/.env 放 `/opt/lqg-test/`**（自建，root 所有）——别放 `/www/wwwroot/<域名>/`：
+  宝塔 AddSite 会把站根 chown 成 `www`，root 在那里跑 git/docker 会撞 dirty-ownership（skill gotchas #7）。
+- 站根只放 **plus-ui 的 dist**（`build:prod` 产物，rsync 上去即可）。
+- `.env` 由本地 secrets 生成后 `scp`（chmod 600），**绝不进 git**；仓库里只留 `.env.example`。
+
+### 6.4 长操作必须分离执行（本机 SSH 长连接会被掐）
+
+本机走透明代理，**长 SSH 命令会被 "Connection closed by remote host" 掐断**（已踩两次：
+`docker pull` 轮询、前面的 maven 拉取）。规矩：
+```bash
+# 在 box 上分离跑，输出落文件；然后用短命令轮询
+ssh root@HOST 'nohup bash /opt/lqg-test/step.sh > /opt/lqg-test/step.log 2>&1 & echo started'
+ssh root@HOST 'tail -5 /opt/lqg-test/step.log; ls /opt/lqg-test/step.done 2>/dev/null'
+```
+（`docker build` / `docker pull` / maven 下载 / 证书签发 都属长操作。）
+
+### 6.5 accept 第 2 条的替代证据（本机 `nc` 不可用，见 §4）
+
+按 §4 的三件套取证并**在报告里如实标注替换**：box 侧发夹探针 + 阳性对照、安全组入方向清单、`ss -lntp` bind 地址。
+**不要**为了让断言变绿去改 ① 侧票面。
