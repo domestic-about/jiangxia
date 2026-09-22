@@ -1514,6 +1514,16 @@
       "detail": "D2 r4 L0+L1 片真 UI 复现：新外部号（未绑定）点首页『样本记录信息表』→ 填供体姓名+组织类型 → 提交，请求体 sourceUnitName:\"\"，响应 code 500 + 裸 PostgreSQL 报错串（null value in column \"source_unit_name\" … Failing row contains (…)），前端把该 msg 原样 toast。API 同样：--as staff POST /mp/int/sample 不带/空 sourceUnitName → 500；--as extA POST /mp/ext/sample、--as extC POST /mp/ext/organoid 不带 → 500。三个入参 BO 都无 @NotBlank，SampleKindRules 也不查它，前端表单也没给该字段挂必填星号。库里不多出行（回滚）。定 S2 不 S1 的依据：所有 ticket 的 accept 载荷都带 sourceUnitName，没有下游 ticket 因此跑不通；按剧本 1 的『先填单位组别再提交』流程也能避开。方案：三个 BO 补 @NotBlank + 前端挂必填星号 + 新外部号进表单时给『先去我的→单位与组别』的引导；并让 500 不再回吐库内部细节（与 #88 同族）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 112,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "ux",
+      "title": "外部新增样本不落 source_unit_id → 工作台「来源单位+组别」组合筛选带不出（权威允许为空，属设计后果）",
+      "detail": "D2 r4 L2 片发现：小程序外部新增样本实测 source_unit_id 为空，于是工作台『来源单位=A 医院 + 组别』组合筛选带不出这条（单一『组别』带得出，因为组别走提交人档案）。★主会话取证：权威 FIELD:t_lqg_sample.source_unit_id 明写「FK→t_lqg_source_unit.id；**自填单位名时为空**」且 nullable:true —— 外部提交走的是单位名入参，所以 id 为空是权威允许的设计，不是产品缺陷，故维持 S2 不上调。要改的话是口径问题：要么让外部提交时按名字解析出 id（当名字命中已有单位），要么让工作台筛来源单位时同时按 name 匹配。请在 all_done 时定。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

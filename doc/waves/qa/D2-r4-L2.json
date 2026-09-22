@@ -1,0 +1,22 @@
+{
+  "phase": "D2",
+  "round": 4,
+  "auditor": "independent",
+  "levels": {
+    "L2": {
+      "status": "pass",
+      "evidence": "本片三组全部自写脚本、独立复跑（不引用 doc/waves/regression/D2 既有脚本的结论——r1 返工改过那里的 G3-20 / WEB-L2-06b 探针期望值）。一次干净 reseed 连跑五段：g1a 9/9、g2 19/19、g1b 13/13、g3a 23/23、g3b 14/14 = 78/78 绿 0 FAIL（日志 .tmp/logs/r4-g{1a,2,1b,3a,3b}.log）。截图：doc/waves/regression/D2/shots/L2r4-mp-g1a（外部新增+我的+历史待核验）、L2r4-web-g2（总表置顶浅黄+九种筛选逐张+核验抽屉两出口+判无效原因弹窗）、L2r4-mp-g1b（无效原因行+edit 重提+有效后详情只读+extB 只看我提交的开关前后）、L2r4-mp-g3a（内部首页四格+历史两页签+表格页列序/冻结/横滑/只读）、L2r4-mp-g3b（类器官七列新增+修改+extC 提交）。断言值（关键几条）：外部首页正文数字 0 个、点表 URL=/#/pages/sample/form?mode=new、新交行库内=pending|external|tissue 且 donor_name 密文而接口读回明文『R4供体甲』、工作台判无效后库内 invalid|D2 r4 L2 判无效：缺住院号 且外部历史出现『无效原因：』原文、重提后库内 pending|已补住院号后重提|-、核验有效后库内 valid|T-l2r4ext01 且外部详情 inputs=0 save=0；九种筛选每条同一时刻用 api.sh --as staff 独立取 id 集合再与 UI 页内 /lqg/sample/list 响应比对一致（全量 10 行、A 医院 6、A 医院+肝胆外科组 5、类器官 1、内部 2、待核验 3、收样日期区间 2、A 医院+有效+外部 3、供体姓名精确 1），软删 1010 任何筛选不出现；待核验置顶 = 库内 pending 的 (verify_status='pending') DESC, create_time DESC, id DESC 顺序，行 class lqg-sample__row-pending、计算底色 rgb(252,241,218)=#fcf1da；表格页表头用 openpyxl 真读 _input/templates/样本记录信息表模板.xlsx（14 列）与类器官收样记录模板.xlsx（7 列）第 1 行后逐字逐序比对，UI 给 15/8 列（冻结列提到最前 + 追加『切片染色』）全等，首列 sticky/left:0px，横滑容器 scrollWidth 1798 > clientWidth 430 且能滚到最右，页面按钮只有『导出 Excel』（无新增/保存），点行进 mode=view 且输入控件 0、保存按钮 0；★硬断言：内部历史样本页签逐行 sample_kind=tissue、类器官页签逐行 organoid、两页签行集合不相交、点类器官行进 pages/organoid/form、点样本行进 pages/sample/form；类器官新增落库 organoid|internal|valid 且来源单位是点开底部弹层真选出的『A 医院』，extC 三项提交落库 organoid|external|pending。反 stale 本片自核实：ruoyi-admin.jar mtime 2026-09-22 07:03:37、find ruoyi-modules/ruoyi-lqg/src -newer jar 为空、后端 8081 PID 60476 启动于 07:33（晚于 jar mtime）、lsof -p 60476 持有该 jar（禁用 api.sh --fresh-module：本沙箱 ps 被禁）。微信开发者工具/真机未覆盖：本沙箱 EPERM + 需扫码跑不通，miniapp 侧一律用 H5(9200, VITE_MOCK_LOGIN=1) + Playwright 等价覆盖；extB/extC 两个 seed 身份在调试面板里没有按钮，用真后端 mock 登录取 token 后注入 lqg_mp_token 顶掉会话（仍连真后端真库）。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S2",
+      "level": "L2",
+      "type": "ux",
+      "ticket": "SAMPLE-MP-002",
+      "title": "小程序外部新增样本不落 source_unit_id，导致工作台「来源单位+组别」组合筛选带不出这条",
+      "detail": "复现：reseed 后用 extA（13800000011，档案 unit_id=9000009001 / group_id=9000009101）走小程序外部新增提交一条（POST /mp/ext/sample，body 只带 sourceUnitName='A 医院'）。库里新行 submitter_id=9000000111、source_unit_id 为空、verify_status=pending。随后同一时刻：GET /lqg/sample/list?groupId=9000009101 带得出这条（6 行），GET /lqg/sample/list?sourceUnitId=9000009001&groupId=9000009101 带不出（5 行，accept SAMPLE-WEB-001 第 1 条钉死的集合就是这 5 个）。工作台页面同时点『来源单位=A 医院』+『组别=肝胆外科组』时 UI 与接口一致（都是 5 行），所以不是页面与接口不一致，是样本行缺 source_unit_id 这个快照。影响：老师按来源单位+组别组合筛时，外部刚交的那条看不到（换单一条件『组别』能看到），不阻塞主流程，故 S2。核对过不是本片时序假象：新行是 curl 同步提交、随后立刻查库确认 submitter_id/source_unit_id 落定，再调两次列表。注：本片最初把它当成 S1 误红过两次（头一次是 extA 新行的 submitter_id 被后续 extC 探针行顶掉认错行），最终用『extA 同步提交 + 立刻查库 + 立刻两次列表』干净复现，才定成这条 S2。"
+    }
+  ]
+}
