@@ -37,8 +37,9 @@
     },
     {
       "id": "D5",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D6",
@@ -2394,6 +2395,86 @@
       "type": "harness",
       "title": "勘误：#198 里引用的自证基线写错了（用了 01dd4e3 而不是 9f1b008）",
       "detail": "我在 #198 的 detail 里写了『git diff --stat 01dd4e3..HEAD -- code/ 为空』——**这是错的**：01dd4e3 是部署**之前**的提交，SYS-STAGING-001 自己的产物（code/deploy/**、application-test.yml、Dockerfile、.env.test、upload-mp.mjs 等 25 个文件）正在这个区间里，所以该 diff 不空。**正确基线是 9f1b008**（SYS-STAGING-001 的提交）：git diff --stat 9f1b008..HEAD -- code/ **为空**，git diff --name-only 9f1b008..HEAD 只有 doc/waves/{plan-D5-D8.md,qa/D5-r1-L01.json,regression/D5/known-red.txt,tools/{accept-run.py,gate-audit.py,gate.sh}} —— 全是文档/工具，没动 code/。结论不变（部署产物 == 9f1b008 的代码 == 当前代码；buildCommit 戳 01dd4e388a41 是部署时工作树未提交、取到的上一提交号），但 #198 的推理链要按本条修正后引用。教训：**别在台账里写自己没跑过的 diff 基线**——第一次就该用部署提交做基线。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 200,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "真机/体验版录屏做不了：缺 appid + 上传密钥 + request 合法域名（外部输入，非产品缺陷）",
+      "detail": "复现：pnpm upload:mp --mode=test 实测 exit=2，脚本自带守卫输出「缺小程序 appid：当前是占位值 wx0000000000000000」，并列出三样外部输入：①测试用 appid；②微信公众平台生成并下载的上传密钥 private.<appid>.key（LQG_WX_PRIVATE_KEY 未设、文件不存在）；③把 songjian.tianda.studio 加进「服务器域名 → request 合法域名」（须 https 且已备案）。影响：D5 qa_scope L2 第 1 条「真机（体验版）录屏」无法完成；已用 H5 + Playwright 真 DOM 在真后端上做等价覆盖（场景 A–D 全绿）。**Kevin 2026-09-22 明确「上线相关的事先放一放」→ 本轮不追，推迟到上线一轮。**",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 201,
+      "ticket": "OCR-IMPL-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 的限流段只测单用户连打 8 次，覆盖不到票面「每用户每分钟 6 次」的 per-user 语义",
+      "detail": "票面 accept 只验证「同一身份第 7 次被限流」，不验证「另一用户不受影响」，所以「把限流键做成全局桶」这种退化它抓不到（本票实现是对的：D5 L3 与 L2 两片各自独立验过 extA 打满后 extC 仍 200）。未做动手证伪的原因：需重建共享 jar 且 8091 上有进程持有该 jar，按 Kevin「先不上线」的口径放弃。方案：accept 补一段「extA 打满 → extC 仍 200」的断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 202,
+      "ticket": "OCR-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "Playwright isDisabled() 对本项目 uni-h5 的 <uni-button> 恒为 false → 用它写「按钮仍可点」类断言会恒绿",
+      "detail": "复现：D5 L2 片第一版 m3（限流）用 locator.isDisabled() 判按钮可点，恒 false，看起来「按钮没被禁用」；改读 disabled 属性（应为 null）后重跑才真绿。注意这与 <uni-button> 是自定义元素、disabled 是属性而非原生 button 属性有关。影响：后续任何分片若用 isDisabled() 写 uni-h5 按钮断言都是假绿。方案：写进 doc/verify/README.md 的小程序侧坑表，或统一改用 disabled 属性/getAttribute。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 203,
+      "ticket": "OCR-IMPL-001",
+      "severity": "S2",
+      "type": "ux",
+      "title": "★解析器把行内「未知冒号标签」吃进姓名值：姓名:张三 床号:12 → donorName=张三床号（开启真 provider 前必修）",
+      "detail": "复现：把生产源码 OcrFieldParser 编译出来直跑（.tmp/qa-d5-L3/probe/）：raw=[姓名:张三 床号:12] → fields={donorName=张三床号}，期望 donorName=张三。根因：值遇到中文不停、「张三」跨过空格把后面未知标签「床号」也吃了（既有规则只规定「字母数字值遇中文即停」，中文值没有终止条件）。为什么夹具全绿：fixture 04 的形状是 住院号:ZY0000002 床号:12（值以 ASCII 开头 → 遇中文即停），正好绕开这个形状（典型「验收数据不带病灶」）。影响：当前 provider=stub（读夹具）所以**老师今天打不到**；真 provider 一落地就会往供体姓名（密文列）写脏数据。**已定为 S2 不拦 D5 门，但必须在开启真 provider（OCR-SPIKE 有结论）之前修掉。**方案 a) 值终止条件补「空格 + 已知/未知 label: 模式」；b) 白名单式：值只允许到下一个 label 或行尾。改完必须补 fixture： 与 。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 204,
+      "ticket": "OCR-IMPL-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "一行以词表外冒号标签开头时，整行剩余字段全丢：临床诊断:肝占位 性别:男 → 一个字段都解析不出",
+      "detail": "复现（同上探针）：raw=[临床诊断:肝占位 性别:男] → fields={}；raw=[门诊号:12345 年龄:56岁] → fields={}。即行首未知标签会吞掉整行。影响：只丢不错（有手填兜底），但会让整行可识别信息作废（标签上常一行多字段）。方案：解析器不因行首未知标签放弃整行——按「扫描已知标签出现位置」切分，而不是从行首贪心匹配。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 205,
+      "ticket": "OCR-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "prefill 的键白名单实际是「调用方 form 的键集」：真实页面 form 含 internalNo/isFixed ⇒ 后端若返回这俩键就会进表单并挂标",
+      "detail": "复现（D5 L3 片独立发现）：prefill.fixture.spec.ts 只用 5 键的精简 form，所以「表单里没有的键忽略」恒绿；而真实页面传的是 emptyForm()（15 键，含 internalNo/isFixed）→ 这两个键**会进表单并挂标**。现状不可达：后端 OcrFieldParser 的 FIELD_ORDER 白名单产不出这两个键。但真 provider 一落地就直通，且 form.vue 的 payload() 会把 internalNo/isFixed 发给后端。影响：这是「靠后端白名单兜底、前端自身没有白名单」的纵深缺口。方案 a) 前端显式定义 PREFILLABLE_KEYS 并只用它过滤（不依赖调用方 form 的键集）；b) fixture 换成真实 emptyForm() 的形状，让断言带病灶。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 206,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "（known-red 入账）D5 gate acc1 的 2 处红为已登记的票面/环境缺陷：#191 + #198",
+      "detail": "gate.sh 的 L1.2 把 SYS-STAGING-001 acc1 判为 known-red（不拦门）。归因：#191（票面 URL 漏 &sort=recent，实现与契约第 49 行一致；补参后等价断言 [9000001008,9000001009] 已绿）+ #198（buildCommit 戳落后本地 HEAD；jar 与 application-test.yml 与 HEAD 逐字节相同，git diff 9f1b008..HEAD -- code/ 为空，下次部署自然消解）。**断言本身仍然红，不是已修**——登记的意义是「红的原因不是产品行为不符」。详见 doc/waves/regression/D5/known-red.txt。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 207,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "（known-red 入账）D5 gate acc2 的 2 处红为已登记的环境缺陷：#192 + #181",
+      "detail": "gate.sh 的 L1.2 把 SYS-STAGING-001 acc2 判为 known-red（不拦门）。归因：#192（票面 sed 用 BRE \\?，本机 BSD sed 不支持 → HOST 恒空）+ #181（本机 nc 被透明代理劫持，连 1.1.1.1:59999 都「可达」）。已按三件套给等价取证（box 发夹探针 + 阳/阴性对照、ss -lntp 全 127.0.0.1、安全组入方向清单）。**断言本身仍然红，不是已修**。",
       "status": "open",
       "decision": ""
     }
