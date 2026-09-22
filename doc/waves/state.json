@@ -1865,6 +1865,46 @@
       "detail": "它写『外部详情的 embeds 里没有 embedBy / operatorName / internalNo 键』，与 CR-20260918-07 + ExtChokepointContractTest.java:47-51 的精确豁免互斥——按 scope 旧文会把正确实现判成 S0。D3 r1 的 L0+L1 与 L3 两片都按 CR 修正后判过。方案：把该条改成『没有 internalNo（除非开关打开）/ verifyBy / remark / 冻存键；embedBy 与 operatorName 必须可见』。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 147,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S2",
+      "type": "ux",
+      "title": "核验抽屉在 verify 模式下可填的工序/染色/marker 不随 verify 落库（EmbedVerifyBo 只收 3 键）",
+      "detail": "D3 #145 返工方自记 W3：契约的 EmbedVerifyBo 只收 action/paraffinBlockNo/reason，核验时若抽屉里还能改工序时间/染色/marker，那些输入会被静默丢弃（设计意图是核验后再点编辑补填）。需核：① 抽屉在 verify 模式下到底展示了哪些可填项；② 若展示了却丢弃 → 数据静默丢失，按产品影响定级（可能 S1）；③ 若只展示 3 项 → 记 clarify 即可。已要求 D3 r2 的 L2 片在走查核验抽屉时把这条当显式检查项。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 148,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "业务码 500 时全局拦截器与抽屉 catch 各弹一条同文案 el-message（msgNodes=2）",
+      "detail": "D3 #145 返工方自记 W1。实测可见性优先、用户只看到一条，保留双弹。方案：抽屉 catch 里对已由全局拦截器提示过的情况做去重（或统一由一处提示）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 149,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "缺 catch 导致未捕获 promise rejection 的同类症状散在多个抽屉/页面",
+      "detail": "D3 #145 返工方全仓扫描：SampleDrawer(4) / extuser(2) / staff(3) / unit(4) / embed index(2) 与 EmbedDrawer.searchSamples，均不属本次 S0（不阻塞主流程），但同一形态会随面积扩大。方案：统一给这些提交/查询入口补 catch + toast（与 EmbedDrawer 修法同形）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 150,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "QA 的 L2-g3-mp-ext.mjs 有三条断言需随 #145 修复更新（否则 r2 会误判成未修）",
+      "detail": "① G3B-06 把核验人写死 9000000101，而探针自己用 lqgadmin(=9000000100) 登录 → 库里实测 valid|T-r1l2-E1|9000000100 值是对的；② G3B-08 的断言内容就是『缺陷必须存在』→ 修后按定义必红；③ G3B-09 的『API 兜底』在 UI 已核验后变成 valid→valid 的 no-op、被转移表拒。另 L2-g1-web.mjs 自己不 reseed，必须 reseed 后单独跑（串跑会被 g3 遗留的第三个石蜡块带红一条，单跑 24/24）。已要求 D3 r2 的分片独立重跑并自行更正这些期望，不得直接复读旧断言。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
