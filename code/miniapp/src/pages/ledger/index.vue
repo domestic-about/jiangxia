@@ -180,8 +180,10 @@ function exportFailed() {
 /**
  * 「导出 Excel」：下载当前筛选的 xlsx，再让用户选「打开 / 发送到微信」。
  *
- * ★ 下载**必须带鉴权头**（`authHeader()`：Authorization + clientid）—— 导出是鉴权接口，
- *   不像文档那样是 OSS 签名链接（Accept 2 第 5 段）。
+ * ★ 下载**必须带鉴权头**（`authHeader()`：Authorization + clientid）—— 导出是**后端域名上的
+ *   鉴权端点**（`/mp/int/export/{sheet}`），不像文档下载那样是 OSS 预签名直链。
+ *   ★ 「要不要头」在调用点**显式声明**（`requireAuth: true`）：公共段 `downloadToTemp` 不再
+ *     把「必须带 Authorization」当成所有调用方的前提（D7 返工单 r1-S1）。
  */
 async function exportExcel() {
   if (exporting.value || !isExportSheet(sheet.value.key)) {
@@ -190,7 +192,10 @@ async function exportExcel() {
   exporting.value = true
   uni.showLoading({ title: '正在导出…', mask: true })
   try {
-    const path = await downloadToTemp(exportUrl(sheet.value.key, filters.value), authHeader())
+    const path = await downloadToTemp(exportUrl(sheet.value.key, filters.value), {
+      header: authHeader(),
+      requireAuth: true,
+    })
     uni.hideLoading()
     exporting.value = false
     if (!path) {

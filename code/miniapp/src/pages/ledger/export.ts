@@ -3,7 +3,7 @@
 // ★ 这一层只做两件事，**不 import 网络层、不 import `uni`**（`export.spec.ts` 在 node 环境
 //   直接 import 它跑单测）：
 //   ① `exportUrl(sheet, filters)` —— 把「当前工作表 + 当前筛选」拼成导出端点地址；
-//   ② `authHeader()` —— 下载要带的头（导出是**鉴权接口**，不是 OSS 签名链接）。
+//   ② `authHeader()` —— **导出**要带的头（导出端点是后端鉴权接口；文档下载是 OSS 签名链接，不带头）。
 //
 // ★★ **同一个导出视图**（ticket §0 口径 1）：地址指向 `/mp/int/export/{sheet}`，后端把参数
 //   交给**工作台那三个域已有的导出 service**。所以「列序 / 表头」在这里**一个字都不写** ——
@@ -86,11 +86,14 @@ export function exportUrl(sheet: ExportSheet, filters?: Partial<LedgerFilters> |
 }
 
 /**
- * 导出 / 文档下载要带的请求头：**必须带鉴权**（Accept 2 第 5 段）。
+ * **导出**要带的请求头：**必须带鉴权**（Accept 2 第 5 段）。
  *
- * ★ 导出端点是鉴权接口（`/mp/int/**` 是 `lqg_internal` 角色面），不像文档那样拿 OSS
+ * ★ 导出端点是鉴权接口（`/mp/int/**` 是 `lqg_internal` 角色面），不像**文档下载**那样拿 OSS
  *   签名链接 —— 所以 `wx.downloadFile` 不带这个头，真机上拿到的会是一段 401 的 JSON，
  *   当成 xlsx 打开就报「文件已损坏」。
+ *   ★ 反过来说：这个头**只跟导出走**。文档下载（OSS 预签名直链）一个头都不带 —— 带了会被
+ *     对象存储判「多重认证」400（D7 返工单 r1-S1）。调用点用 `downloadToTemp` 的
+ *     `requireAuth: true` 显式声明「这条链路要鉴权」。
  *
  * ★ `clientid` 也要带：后端按它取租户 / 客户端上下文（`utils/request.ts` 的普通请求
  *   也是这两个头）。

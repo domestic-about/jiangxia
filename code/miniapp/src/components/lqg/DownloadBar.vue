@@ -26,11 +26,12 @@
 // ★ 视觉按方向 A §5.8：主操作实底 + `--lqg-shadow-brand`，次操作描边/soft；零色值字面量。
 import type { DocFormat } from '@/pages/doc/download'
 import { fetchDocDownload, fetchSampleDocs } from '@/api/doc'
-import { authHeader } from '@/pages/ledger/export'
 import { downloadFileName, hasMergedRow, normalizeFormat, openDocumentType, waitForMerged } from '@/pages/doc/download'
 // ★★ 「临时文件 → 打开 / 发送到微信」这一段是**公共段**（SYS-EXPORT-001 抽到
 //   `utils/fileHandoff.ts`）：文档下载（本组件）与表格导出（`pages/ledger/index.vue`）
-//   共用同一份平台实现 —— 两份就会漂（一处带菜单、一处不带，或一处漏带鉴权头）。
+//   共用同一份平台实现 —— 两份就会漂（一处带菜单、一处不带）。
+//   ★ 但公共段不等于公共请求头：文档下载下的是 OSS 预签名直链，**不带任何头**；
+//     导出下的是后端鉴权端点，由那边显式传 `requireAuth` + `authHeader()`（D7 r1-S1）。
 import { downloadToTemp, openFile, shareFile } from '@/utils/fileHandoff'
 import { computed, ref } from 'vue'
 
@@ -145,8 +146,10 @@ async function run(mode: 'open' | 'share') {
     // 文件名优先用服务端给的（同一个规则）；没有再按 ticket §0 口径 5 在本地拼
     const fileName = String(info?.fileName ?? '').trim() || downloadFileName(props.docKind, props.no, format.value)
 
-    // ★ 公共段：带鉴权头下到临时目录（`authHeader()` 给 Authorization + clientid）
-    const filePath = await downloadToTemp(url, authHeader())
+    // ★ 公共段：文档下载下的是**后端签发的 OSS 预签名直链**（鉴权在 query 串里）
+    //   → 一个请求头都不带。多带 `Authorization` 会被 MinIO/S3 判「多重认证」→ 400
+    //   （D7 返工单 r1-S1：调用方显式声明，这条链路不碰鉴权头）。
+    const filePath = await downloadToTemp(url)
     if (!filePath) {
       // 平台没有下载能力：退化成浏览器打开 / 一句提示
       if (mode === 'open') {

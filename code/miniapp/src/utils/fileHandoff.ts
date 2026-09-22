@@ -4,15 +4,21 @@
 //   ① **文档下载**（DOC-MP-002）：`components/lqg/DownloadBar.vue` → Word / PDF；
 //   ② **表格导出**（本票）：`pages/ledger/index.vue` → 四张工作表 xlsx。
 //   原先这段交互长在 `DownloadBar.vue` 里（`uni.downloadFile` → `openDocument` / 转发文件），
-//   导出再抄一份就是**两份平台实现** —— 一处带右上角菜单、一处不带，或一处忘带鉴权头，
+//   导出再抄一份就是**两份平台实现** —— 一处带右上角菜单、一处不带（或一处 showMenu 忘了传），
 //   用户拿到的东西就悄悄不一样了。所以抽到这里，两边都调它。
 //
-// ★ **下载必须带鉴权头**（ticket §0 口径 3 / Accept 2 第 5 段）：导出与文档下载都是
-//   **鉴权接口**（不是 OSS 签名链接），所以 `downloadToTemp` 收一个 header 参数，里面
-//   必须带 `Authorization`（框架的 `downloadFile` 也吃它）。
-//   头从哪儿来由调用方给（`authHeader()` 在 `pages/ledger/export.ts` / `DownloadBar` 里），
-//   本文件不 import 请求层 / 不 import `import.meta.env` —— 它要被 node 环境的单测直接
-//   import（`export.spec.ts` 用 vitest，environment=node）。
+// ★★ **两个调用方的 URL 不是一类东西，请求头也就不一样**（D7 返工单 r1-S1 改正 —— 原文
+//   写「导出与文档下载都是鉴权接口（不是 OSS 签名链接）」，正是把实现带偏的那句话）：
+//   · **文档下载**（`DownloadBar.vue`）：后端签发的是 **OSS 预签名直链**
+//     （`http://<oss>/ruoyi/lqg/doc/…?X-Amz-…`），鉴权已经写在 query 串里 → **一个请求头都不带**。
+//     多带 `Authorization` 会被 S3/MinIO 判「request has multiple authentication types」
+//     → **400 InvalidRequest**（D7 r1 L2 在 H5 上实测 0/4 全失败，逐头隔离：只带 Authorization → 400）。
+//   · **表格导出**（`pages/ledger/index.vue`）：地址是**后端域名上的鉴权端点**
+//     （`/mp/int/export/{sheet}`，`lqg_internal` 角色面）→ **必须带** `Authorization` + `clientid`；
+//     不带就是一段 401 的 JSON，当成 xlsx 打开报「文件已损坏」。
+//   所以「要不要头」由**调用方显式声明**（`DownloadOptions.requireAuth`），**不是本函数的全局前提**。
+//   ★ 头从哪儿来由调用方给（`authHeader()` 在 `pages/ledger/export.ts`）；本文件不 import 请求层 /
+//     不 import `import.meta.env` —— 它要被 node 环境的单测直接 import（`export.spec.ts`，environment=node）。
 //
 // ★ 平台差异**如实退化**，不假装成功：
 //   · `shareFileMessage` 只有小程序端有（H5 上 `typeof uni.shareFileMessage === "undefined"`，
@@ -25,15 +31,23 @@ import { resolveBaseUrl } from '@/utils/baseUrl'
 /** 追加在 URL 后面的查询串（空串 = 不追加），由调用方拼好 */
 export type FileUrl = string
 
-/** `downloadToTemp` 的入参：要下的地址 + 要带的请求头 */
+/** `downloadToTemp` 的入参：要下的地址 + **由调用方声明**「这个地址要不要鉴权」 */
 export interface DownloadOptions {
   /**
-   * 请求头。**必须带 `Authorization`**（导出 / 文档下载都是鉴权接口）。
+   * 请求头。**只在 `requireAuth: true`（后端鉴权端点）时需要有 `Authorization`**；
+   * OSS 预签名直链不传 / 传空对象（多带一个头就会被对象存储判「多重认证」400）。
    *
    * ★ `wx.downloadFile` 的 header 里 `Authorization` 与 `clientid` 两个都要
    *   （缺 clientid 时后端拿不到租户上下文）。
    */
   header?: Record<string, string>
+  /**
+   * 这个地址是不是**后端鉴权端点**（默认 `false` = 直链 / 签名链接，一个头都不带）。
+   *
+   * ★ 只有 `true` 时才要求 `header.Authorization`：导出（`/mp/int/export/{sheet}`）传 `true`，
+   *   文档下载（OSS 预签名直链）不传。把这条守卫强加给不鉴权的调用方，就是 400 的来源。
+   */
+  requireAuth?: boolean
 }
 
 /** 小数坑：H5 上没有 `uni.downloadFile` 时，下载退化成浏览器直接打开链接 */
@@ -76,17 +90,20 @@ export { openDocumentType } from '@/pages/doc/download'
  *   `downloadFile` / `fetch` 不会（H5 上相对路径会被 dev server 当成前端路由，
  *   拿回来一页 517 字节的 HTML）。所以这里统一先拼一次。
  *
- * @param url    文件地址（相对 / 绝对都收）
- * @param header 请求头；**必须带 `Authorization`**（鉴权接口，不是签名链接）。
- *               ★ 两个调用方都要传：`pages/ledger/index.vue`（导出）与
- *               `components/lqg/DownloadBar.vue`（文档下载）—— 后者漏了就是
- *               「文档下载在真机上 401」的静默回归（Accept 2 第 5 段）。
+ * ★ **要不要鉴权头由调用方显式声明**（`opts.requireAuth`）：
+ *   · 文档下载（OSS 预签名直链）→ **什么都不传**（带了 `Authorization` 就被对象存储判 400）；
+ *   · 表格导出（`/mp/int/export/{sheet}`，后端鉴权端点）→ `{ header: authHeader(), requireAuth: true }`。
+ *   `requireAuth: true` 但缺 `Authorization` 时**仍然 throw** —— 这条护栏是给导出留的，别删。
+ *
+ * @param url  文件地址（相对 / 绝对都收）
+ * @param opts 请求头 + 是不是鉴权端点；**不鉴权的调用方什么都不用传**
  * @returns 本地路径 / blob 地址；取不到时 reject（调用方给「重试」）
  */
-export async function downloadToTemp(url: FileUrl, header?: Record<string, string>): Promise<string> {
-  // 鉴权接口：没带头就下不动（真机上拿到的是一段 401 的 JSON，当成 xlsx 打开失败）
-  if (!header || !header.Authorization) {
-    throw new Error('下载缺少鉴权头（导出 / 文档下载都要带 Authorization）')
+export async function downloadToTemp(url: FileUrl, opts?: DownloadOptions): Promise<string> {
+  const header = opts?.header
+  // 鉴权接口：调用方声明了要鉴权却没带头就下不动（真机上拿到的是一段 401 的 JSON，当成 xlsx 打开失败）
+  if (opts?.requireAuth && !header?.Authorization) {
+    throw new Error('下载缺少鉴权头（调用方声明了 requireAuth，就必须带 Authorization）')
   }
   const target = absoluteUrl(url)
   const api = (uni as any).downloadFile
@@ -107,7 +124,7 @@ export async function downloadToTemp(url: FileUrl, header?: Record<string, strin
       })
     })
   }
-  // H5：uni-h5 的 downloadFile 不吃鉴权头 / 不认相对路径 → fetch + blob
+  // H5：uni-h5 的 downloadFile 不认相对路径 → fetch + blob（头按调用方给的原样带；不鉴权就是空）
   return downloadToBlob(target, header)
 }
 

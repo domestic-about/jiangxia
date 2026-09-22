@@ -37,7 +37,7 @@
     },
     {
       "id": "D5",
-      "status": "qa_passed",
+      "status": "pending",
       "qa_rounds": 1,
       "qa_seq": 1
     },
@@ -402,6 +402,14 @@
       "system": "",
       "fix_attempts": 0,
       "note": "code/plus-ui 按 v5.5.3-v2.5.3（commit 5c9c940，与后端 5.5.3 精确配套）干净落盘；品牌『类器官样本管理』、登录页去租户/注册/演示第三方登录、lqg-tokens.scss 主色 #0E7C7B（运行期 getComputedStyle 实测 rgb(14,124,123)）；i18n 按域拆分用 src/lang/index.ts 的 import.meta.glob('./lqg/*.zh_CN.ts',{eager:true}) 合并到 lqg.<域>.*，不碰上游两个大文件。迁移 V202609210830 按上游真实 menu_id 给 101 授系统管理父目录+字典管理/参数设置及按钮（13 行），102 一行不授，插 lqg.ext.show-internal-no=false 与 lqg.cryo.overdue-days=14。坑：① 上游 getChildPerms 建树必须先授父目录，否则子菜单不出现；② 指定的 0830 落在已应用的 0910 之前 + out-of-order=false → FlywayValidateException，本票重建 dev 库解决（D1 后续 0920/0930 都大于已有版本，不再撞）。"
+    },
+    "SYS-ACCEPT-001": {
+      "status": "pending",
+      "phase": "D7",
+      "track": "SYS",
+      "system": "",
+      "fix_attempts": 0,
+      "note": ""
     }
   },
   "open_issues": [
@@ -3391,7 +3399,7 @@
         ],
         "L1": [
           "发布后 doc_file 里内外部版 × (docx, pdf, png) 六种产物齐；改内容 / 加图片 / 改评分任何一种之后 doc_status 回到 draft",
-          "外部文档清单（extB）= {1001:organoid_score, 1004:sample_qc}：1004 的类器官质控表是草稿不给、1001 的两份因图片是假地址外部版渲染失败不给",
+          "外部文档清单（extB）= {1001:sample_qc, 1001:organoid_qc, 1001:organoid_score, 1004:sample_qc}：1004 的类器官质控表是草稿不给；1001 三份都已发布且外部版渲染 done 所以都给（★2026-09-22 更正：原写「1001 的两份因图片是假地址外部版渲染失败不给」，该前提已被 issue #217 裁定推翻——docx 阶段个别图取不到是跳过+WARN、文档照出 done，实测三份全 done；要造「渲染失败不给」的病灶须让流水线步骤失败，即停 gotenberg）",
           "工作台首页五个数 = 待核验样本 2、待核验送样 1、超期 2、待核验外部用户 2、渲染失败 0，且与 db.py 独立数的一致；外部新交一条类器官收样与一条送样后两个待核验数各加一；故意渲染失败一份后 renderFailed 跟着变；超期数与超期清单同源",
           "小程序导出的四个 xlsx 表头与甲方模板原件逐字一致、行数与库内计数一致；同一筛选下与工作台导出的文件逐列一致"
         ],
