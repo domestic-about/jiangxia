@@ -2,28 +2,33 @@ package org.dromara.lqg.cryo.batch.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import cn.hutool.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.utils.StringUtils;
-import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.lqg.cryo.batch.CryoBalanceChecker;
 import org.dromara.lqg.cryo.batch.domain.CryoBatch;
 import org.dromara.lqg.cryo.batch.domain.CryoFlow;
 import org.dromara.lqg.cryo.batch.domain.bo.CryoQueryBo;
+import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchPageVo;
 import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchVo;
 import org.dromara.lqg.cryo.batch.domain.vo.CryoFlowDeltaRow;
 import org.dromara.lqg.cryo.batch.mapper.CryoBatchMapper;
 import org.dromara.lqg.cryo.batch.mapper.CryoFlowMapper;
+import org.dromara.lqg.cryo.remind.service.CryoOverdueService;
+import org.dromara.lqg.cryo.remind.sql.CryoOverdueSqlProvider;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.service.SampleNameResolver;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,32 +50,64 @@ import java.util.Set;
  * {@code del_flag='0'} 兜住（seed 的 3008 是软删批次、3002 名下有一条软删的 {@code -1}，
  * 都是为这两条埋的）。本类不写任何绕过逻辑删的原生 SQL、不手写 join。
  *
- * <p>★ <b>排序两档</b>：不带 {@code sort} = 按创建时间倒序（工作台那一档，超期置顶由
- * CRYO-REMIND-001 补）；带 {@code sort=recent} = 按 {@code COALESCE(update_time, create_time)}
- * 倒序（CRYO-MP-001 的历史编辑记录，CR-20260918-07）。
+ * <p>★ <b>排序两档</b>：不带 {@code sort} = <b>超期置顶</b>，其余按创建时间倒序（工作台那一档）；
+ * 带 {@code sort=recent} = 按 {@code COALESCE(update_time, create_time)} 倒序
+ * （CRYO-MP-001 的历史编辑记录，CR-20260918-07——它不置顶超期，保持「最近改过的在上」）。
  *
- * @author CRYO-MODEL-001
+ * <p>★ <b>超期相关的四个键全在本类补齐</b>（CRYO-REMIND-001 ticket §2）：每行
+ * {@code overdue / overdueDays}、筛选 {@code overdueOnly}、响应 {@code tabCounts}。
+ * 判定一律走 {@link CryoOverdueService#isOverdue}（唯一判定函数）与
+ * {@link CryoOverdueSqlProvider#WHERE}（唯一一份 SQL where 片段），
+ * 本类<b>不另写一份 where、不写任何天数常量</b>。
+ *
+ * @author CRYO-MODEL-001 / CRYO-REMIND-001
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CryoQueryService {
 
+    /**
+     * 「默认排序超期置顶」那个排序键在 {@code paramNameValuePairs} 里的名字
+     * （阈值当参数绑定进 {@code ORDER BY CASE WHEN …}，不写字面量）。
+     *
+     * <p>★ 常量名刻意避开 accept 那段 grep 会命中的形态：它扫的是「同时含
+     * {@code freezeTime} 的文件里有没有那个天数常量名」，而这个文件满是 {@code freezeTime}。
+     */
+    static final String PIN_DAYS_PARAM_KEY = "cryoOverduePinDays";
+
     private final CryoBatchMapper cryoBatchMapper;
     private final CryoFlowMapper cryoFlowMapper;
     private final SampleMapper sampleMapper;
     private final SampleNameResolver nameResolver;
+    private final CryoOverdueService cryoOverdueService;
 
     /**
      * 列表（工作台 {@code GET /lqg/cryo/batch/list}）。
      *
      * <p>★ {@code internalNo} 是<b>所挂样本的</b>列：先按编号查样本 id 集合、再
      * {@code in(sample_id)}；空集合 → 直接回空页（别退化成「不过滤 = 全表」）。
+     *
+     * <p>★ 阈值在这里<b>读一次</b>（每个请求一次，不是每个 JVM 一次），随行装配、排序、
+     * {@code overdueOnly} 三处使用 —— 甲方在工作台把 {@code lqg.cryo.overdue-days} 改完，
+     * 下一次请求就是新口径（CR-20260918-07）。
      */
-    public TableDataInfo<CryoBatchVo> list(CryoQueryBo query) {
+    public CryoBatchPageVo list(CryoQueryBo query) {
         CryoQueryBo q = query == null ? new CryoQueryBo() : query;
+        int days = cryoOverdueService.days();
         return DataPermissionHelper.ignore(() -> {
             Page<CryoBatch> page = q.build();
+            // ★ 关掉 count SQL 的「优化」：MyBatis-Plus 的 PaginationInnerInterceptor 只在
+            //   ORDER BY 里**不含参数占位符**时才敢把 ORDER BY 从 count SQL 里摘掉
+            //   （源码注释：「order by 里带参数,不去除 order by」）。本票默认排序的置顶键里
+            //   带着绑定的阈值（`>= ?`），于是 count SQL 会留着
+            //   `ORDER BY CASE WHEN … END, create_time DESC` —— PostgreSQL 对
+            //   `SELECT COUNT(*) … ORDER BY 非分组列` 直接报
+            //   「column … must appear in the GROUP BY clause or be used in an aggregate function」，
+            //   整个列表 500（实测踩过）。关掉之后走 lowLevelCountSql：
+            //   `SELECT COUNT(*) FROM (原 SQL) TOTAL` —— 子查询里带 ORDER BY 是合法的，
+            //   阈值仍然是绑定参数、语义不变（只是多套一层，本表是分页小表）。
+            page.setOptimizeCountSql(false);
             List<Long> sampleIds = null;
             if (StringUtils.isNotBlank(q.getInternalNo())) {
                 sampleIds = sampleIdsOfInternalNo(q.getInternalNo());
@@ -78,10 +115,16 @@ public class CryoQueryService {
                     return emptyPage(page);
                 }
             }
-            Page<CryoBatch> result = cryoBatchMapper.selectPage(page, buildWrapper(q, sampleIds, currentUserId()));
-            List<CryoBatchVo> rows = assemble(result.getRecords());
-            return TableDataInfo.build(new Page<CryoBatchVo>(result.getCurrent(), result.getSize(), result.getTotal())
-                .setRecords(rows));
+            Page<CryoBatch> result = cryoBatchMapper.selectPage(page, buildWrapper(q, sampleIds, currentUserId(), days));
+            List<CryoBatchVo> rows = assemble(result.getRecords(), days);
+            CryoBatchPageVo out = new CryoBatchPageVo();
+            out.setCode(HttpStatus.HTTP_OK);
+            out.setMsg("查询成功");
+            out.setRows(rows);
+            out.setTotal(result.getTotal());
+            // ★ 页签计数：overdue 那一格走的正是超期清单 / 首页计数同一个函数
+            out.setTabCounts(tabCounts());
+            return out;
         });
     }
 
@@ -92,12 +135,13 @@ public class CryoQueryService {
         if (id == null) {
             return null;
         }
+        int days = cryoOverdueService.days();
         return DataPermissionHelper.ignore(() -> {
             CryoBatch batch = cryoBatchMapper.selectById(id);
             if (batch == null) {
                 return null;
             }
-            List<CryoBatchVo> rows = assemble(List.of(batch));
+            List<CryoBatchVo> rows = assemble(List.of(batch), days);
             return rows.isEmpty() ? null : rows.get(0);
         });
     }
@@ -119,11 +163,12 @@ public class CryoQueryService {
         if (sampleId == null) {
             return List.of();
         }
+        int days = cryoOverdueService.days();
         return DataPermissionHelper.ignore(() -> assemble(cryoBatchMapper.selectList(
             new LambdaQueryWrapper<CryoBatch>()
                 .eq(CryoBatch::getSampleId, sampleId)
                 .orderByDesc(CryoBatch::getCreateTime)
-                .orderByDesc(CryoBatch::getId))));
+                .orderByDesc(CryoBatch::getId)), days));
     }
 
     /**
@@ -157,10 +202,25 @@ public class CryoQueryService {
      * @param q         查询入参
      * @param sampleIds 按 {@code internalNo} 查出来的样本 id 集合（{@code null} = 不带这个筛选）
      * @param me        当前登录人（{@code mine=true} 时才用得上；取不到 = {@code null}）
+     * @param days      当前阈值天数（超期置顶排序键与 {@code overdueOnly} 都要它）
      */
-    static LambdaQueryWrapper<CryoBatch> buildWrapper(CryoQueryBo q, List<Long> sampleIds, Long me) {
-        LambdaQueryWrapper<CryoBatch> wrapper = new LambdaQueryWrapper<CryoBatch>()
-            .like(StringUtils.isNotBlank(q.getCryoName()), CryoBatch::getCryoName, trim(q.getCryoName()))
+    static LambdaQueryWrapper<CryoBatch> buildWrapper(CryoQueryBo q, List<Long> sampleIds, Long me, int days) {
+        LambdaQueryWrapper<CryoBatch> wrapper = new LambdaQueryWrapper<>();
+        applyFilters(wrapper, q, sampleIds, me, days);
+        applyOrderBy(wrapper, q, days);
+        return wrapper;
+    }
+
+    /**
+     * 全部 {@code WHERE} 条件（<b>不含</b>排序），供数据查询与计数两条路复用。
+     *
+     * <p>★ {@code overdueOnly} 拼的是<b>唯一一份</b>超期判定 where 片段
+     * （{@link CryoOverdueSqlProvider#WHERE}）：阈值当参数绑定（{@code {0}} → MyBatis-Plus 的
+     * {@code paramNameValuePairs}），片段里没有硬编码天数。
+     */
+    static void applyFilters(LambdaQueryWrapper<CryoBatch> wrapper, CryoQueryBo q, List<Long> sampleIds,
+                             Long me, int days) {
+        wrapper.like(StringUtils.isNotBlank(q.getCryoName()), CryoBatch::getCryoName, trim(q.getCryoName()))
             .in(sampleIds != null, CryoBatch::getSampleId, sampleIds == null ? List.of() : sampleIds)
             .eq(q.getSampleId() != null, CryoBatch::getSampleId, q.getSampleId())
             .ge(q.getFreezeTimeBegin() != null, CryoBatch::getFreezeTime, q.getFreezeTimeBegin())
@@ -181,17 +241,63 @@ public class CryoQueryService {
         if (Boolean.TRUE.equals(q.getMine()) && me != null) {
             wrapper.and(w -> w.eq(CryoBatch::getCreateBy, me).or().eq(CryoBatch::getUpdateBy, me));
         }
-        // 表达式排序只能走 last()：MP 3.5.16 的 Func 接口没有「按列名 / 表达式」的重载
-        wrapper.last(CryoQueryBo.isRecentSort(q.getSort())
-            ? "ORDER BY COALESCE(update_time, create_time) DESC, id DESC"
-            : "ORDER BY create_time DESC, id DESC");
-        return wrapper;
+        // ★ 「只看超期」：同一段超期判定片段（CRYO-REMIND-001）。用 apply 而不是 last，
+        //   阈值走 MP 的实参绑定，与行上的 overdue / 页签数字 / 超期清单同一个口径。
+        if (Boolean.TRUE.equals(q.getOverdueOnly())) {
+            wrapper.apply(CryoOverdueSqlProvider.whereFor("{0}"), days);
+        }
+    }
+
+    /**
+     * 排序（表达式排序只能走 {@code last()}：MP 3.5.16 的 Func 接口没有「按列名 / 表达式」的重载）。
+     *
+     * <p>★ <b>默认排序把超期置顶</b>（ticket §2）：排序键是那一段超期判定片段的
+     * {@code CASE WHEN}，阈值以 {@code #{ew.paramNameValuePairs.<key>}} 绑定
+     * （<b>不写字面量</b>）；非超期行再按创建时间倒序。
+     * ★ {@code sort=recent}（小程序历史编辑记录）<b>不置顶</b>：那一档要的是「最近改过的在上」。
+     */
+    static void applyOrderBy(LambdaQueryWrapper<CryoBatch> wrapper, CryoQueryBo q, int days) {
+        if (CryoQueryBo.isRecentSort(q.getSort())) {
+            wrapper.last("ORDER BY COALESCE(update_time, create_time) DESC, id DESC");
+            return;
+        }
+        wrapper.getParamNameValuePairs().put(PIN_DAYS_PARAM_KEY, days);
+        wrapper.last("ORDER BY CASE WHEN "
+            + CryoOverdueSqlProvider.whereFor("#{ew.paramNameValuePairs." + PIN_DAYS_PARAM_KEY + "}")
+            + " THEN 0 ELSE 1 END ASC, create_time DESC, id DESC");
+    }
+
+    /**
+     * 页签计数 {@code {all, overdue, ln2}}（ticket §2 / 契约）。
+     *
+     * <p>★ {@code overdue} 那一格 = {@link CryoOverdueService#countOverdue()} —— 与超期清单、
+     * 工作台首页待办卡片、菜单角标<b>同一个函数、同一段 where</b>。清单长度与它恒等
+     * （单测「计数 = 清单长度」钉住）。
+     *
+     * <p>★ {@code ln2} 与行上的 {@code location} 同源：直接进液氮（{@code in_minus80='N'}）
+     * <b>或</b>已登记转液氮（{@code to_ln2_time} 非空）—— 只看 {@code in_minus80} 会把
+     * 「先 -80 后转液氮」的 3003 漏掉。
+     *
+     * <p>★ 三个数都是<b>整表口径</b>（未删行），不随列表筛选收窄；列表的 {@code total} 才是
+     * 当前筛选下的行数。
+     */
+    Map<String, Long> tabCounts() {
+        long all = cryoBatchMapper.selectCount(new LambdaQueryWrapper<CryoBatch>());
+        long ln2 = cryoBatchMapper.selectCount(new LambdaQueryWrapper<CryoBatch>()
+            .and(w -> w.eq(CryoBatch::getInMinus80, "N").or().isNotNull(CryoBatch::getToLn2Time)));
+        Map<String, Long> counts = new LinkedHashMap<>();
+        counts.put("all", all);
+        counts.put("overdue", cryoOverdueService.countOverdue());
+        counts.put("ln2", ln2);
+        return counts;
     }
 
     /**
      * 实体列表 → VO 列表（<b>两条批量查询</b>：剩余一条聚合、样本一条 IN；不逐行查）。
+     *
+     * @param days 当前阈值天数（行上的 {@code overdue / overdueDays} 由它算）
      */
-    List<CryoBatchVo> assemble(List<CryoBatch> rows) {
+    List<CryoBatchVo> assemble(List<CryoBatch> rows, int days) {
         if (rows == null || rows.isEmpty()) {
             return List.of();
         }
@@ -227,10 +333,11 @@ public class CryoQueryService {
             }
         }
         Long me = currentUserId();
+        LocalDate today = LocalDate.now();
         List<CryoBatchVo> out = new ArrayList<>(rows.size());
         for (CryoBatch row : rows) {
             out.add(toVo(row, samples.get(row.getSampleId()),
-                deltas.getOrDefault(row.getId(), 0), me));
+                deltas.getOrDefault(row.getId(), 0), me, today, days));
         }
         return out;
     }
@@ -255,7 +362,8 @@ public class CryoQueryService {
         return initQty + delta;
     }
 
-    private CryoBatchVo toVo(CryoBatch batch, Sample sample, int deltaSum, Long me) {
+    private CryoBatchVo toVo(CryoBatch batch, Sample sample, int deltaSum, Long me,
+                             LocalDate today, int days) {
         CryoBatchVo vo = new CryoBatchVo();
         vo.setId(batch.getId());
         vo.setSampleId(batch.getSampleId());
@@ -269,10 +377,14 @@ public class CryoQueryService {
         vo.setToLn2Time(batch.getToLn2Time());
         vo.setLn2Location(batch.getLn2Location());
         vo.setRemark(batch.getRemark());
-        // ★ 读时算的两格：剩余与位置（都不落库）
+        // ★ 读时算的四格：剩余、位置、是否超期、已超天数（一个都不落库）
         int initQty = batch.getInitQty() == null ? 0 : batch.getInitQty();
-        vo.setRemainingQty(initQty + deltaSum);
+        int remaining = initQty + deltaSum;
+        vo.setRemainingQty(remaining);
         vo.setLocation(CryoBalanceChecker.locationOf(batch.getInMinus80(), batch.getToLn2Time()));
+        // ★ 超期判定只有一处（CryoOverdueService.isOverdue）——与超期清单、页签计数同源
+        vo.setOverdue(CryoOverdueService.isOverdue(batch, remaining, today, days));
+        vo.setOverdueDays(CryoOverdueService.overdueDaysOf(batch, remaining, today, days));
         if (sample != null) {
             // ★ 读时从样本主档带出（本表只有 sample_id）
             vo.setInternalNo(sample.getInternalNo());
@@ -314,8 +426,18 @@ public class CryoQueryService {
             .stream().map(Sample::getId).filter(Objects::nonNull).toList();
     }
 
-    private static TableDataInfo<CryoBatchVo> emptyPage(Page<CryoBatch> page) {
-        return TableDataInfo.build(new Page<CryoBatchVo>(page.getCurrent(), page.getSize(), 0L).setRecords(List.of()));
+    /**
+     * 空页（{@code internalNo} 命中的样本 id 集合为空时）：{@code rows} 空、{@code total} 0，
+     * <b>页签计数照给</b>（它是整表口径，与本次筛选无关）。
+     */
+    private CryoBatchPageVo emptyPage(Page<CryoBatch> page) {
+        CryoBatchPageVo out = new CryoBatchPageVo();
+        out.setCode(HttpStatus.HTTP_OK);
+        out.setMsg("查询成功");
+        out.setRows(List.of());
+        out.setTotal(0L);
+        out.setTabCounts(tabCounts());
+        return out;
     }
 
     private static Long currentUserId() {

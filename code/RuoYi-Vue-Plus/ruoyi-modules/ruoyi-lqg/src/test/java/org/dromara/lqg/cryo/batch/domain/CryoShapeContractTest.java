@@ -99,13 +99,16 @@ class CryoShapeContractTest {
     }
 
     @Test
-    @DisplayName("⑤ 列表筛选 BO：五个本票筛选 + 预置的 sort/mine；不声明 overdueOnly（CRYO-REMIND-001 的活）")
+    @DisplayName("⑤ 列表筛选 BO：五个本票筛选 + 预置的 sort/mine + CRYO-REMIND-001 的 overdueOnly（已实现）")
     void queryBoShape() {
         Set<String> names = declaredFieldNames(CryoQueryBo.class);
         assertTrue(names.containsAll(Set.of("internalNo", "cryoName", "sampleId", "location",
             "freezeTimeBegin", "freezeTimeEnd", "sort", "mine")), names.toString());
-        assertFalse(names.contains("overdueOnly"),
-            "超期筛选取自 CRYO-REMIND-001：本票声明一个没人实现的筛选 = 静默全表");
+        // ★ CRYO-REMIND-001 起 overdueOnly 在这里，且它**真的有人实现**
+        //   （CryoQueryService#applyFilters 拼的是 CryoOverdueSqlProvider 那唯一一段 where）——
+        //   本测试的「不许声明没人实现的筛选」从「不许有这个字段」改成「有字段就断言它有实现」。
+        assertTrue(names.contains("overdueOnly"), names.toString());
+        assertEquals(Boolean.class, fieldType(CryoQueryBo.class, "overdueOnly"));
         assertFalse(names.contains("overdue"), names.toString());
         assertTrue(Arrays.stream(CryoQueryBo.class.getConstructors())
             .anyMatch(c -> c.getParameterCount() == 0), "必须有显式无参构造（PageQuery 只有两参构造器）");

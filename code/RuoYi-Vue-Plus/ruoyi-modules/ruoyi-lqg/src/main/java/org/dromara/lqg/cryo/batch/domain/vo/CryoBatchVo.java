@@ -23,9 +23,10 @@ import java.util.Date;
  *   <li>{@code sourceUnitName} = 所挂样本的来源单位名称快照，同样读时带出。</li>
  * </ul>
  *
- * <p>★ {@code overdue / overdueDays / tabCounts} 三个键<b>不在本票</b>（ticket §2 末句）：
- * 超期判定是 CRYO-REMIND-001 的活，它在本 VO 与列表响应上补。本票一个字都不写阈值常量 ——
- * CRYO-REMIND-001 的 accept 2 有一段 grep 就断「阈值口径不许散落在 cryo/remind 包之外」。
+ * <p>★ {@code overdue / overdueDays} 是 <b>CRYO-REMIND-001</b> 在本 VO 上补的两个键
+ * （{@code tabCounts} 补在响应体上，见 {@code CryoBatchPageVo}）：超期判定是<b>读时算</b>的，
+ * 判据只有一处（{@code CryoOverdueService.isOverdue}），阈值每次判定现读系统参数
+ * {@code lqg.cryo.overdue-days}。本 VO 里没有任何天数常量。
  *
  * <p>★ {@code handlerName} / {@code mine} 是<b>预置给 CRYO-MP-001</b> 的两个键（口径同 SAMPLE /
  * EMBED 域，CR-20260918-07）：{@code handlerName} = 经手人 = <b>最后修改人</b>，从没改过就是
@@ -137,5 +138,21 @@ public class CryoBatchVo implements Serializable {
      */
     @Schema(description = "是否当前登录人经手")
     private Boolean mine;
+
+    /**
+     * ★ <b>是否超期</b>（CRYO-REMIND-001，读时算，<b>不落库</b>）。
+     *
+     * <p>判据只有一处：{@code CryoOverdueService.isOverdue} —— 暂存 -80 为是
+     * <b>且</b> 没登记转液氮 <b>且</b> 剩余 &gt; 0 <b>且</b> 冻存满阈值天数（阈值当天即算）。
+     * 所以登记转液氮或支数被取空之后，这一格<b>当场</b>变 false（不必等定时任务）。
+     */
+    @Schema(description = "是否超期（读时算：暂存 -80 且未转液氮且剩余>0且冻存满阈值天数）")
+    private Boolean overdue;
+
+    /**
+     * ★ <b>已超天数</b>（读时算）：{@code 今天 − 冻存日 − 阈值天数}；阈值当天是 <b>0</b>，未超期是 null。
+     */
+    @Schema(description = "已超天数（读时算：今天 − 冻存日 − 阈值天数；阈值当天为 0，未超期为 null）")
+    private Integer overdueDays;
 
 }

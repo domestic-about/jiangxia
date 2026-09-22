@@ -16,9 +16,10 @@ import java.time.LocalDate;
  * {@code location}（{@code minus80} / {@code ln2}，判据与行上的 {@code location} <b>同源</b>）、
  * {@code freezeTimeBegin/End}（冻存时间区间）、{@code sampleId}（从样本总表带 sampleId 跳入）。
  *
- * <p>★ {@code overdueOnly} / {@code overdue} / {@code tabCounts} 三个键<b>刻意不在这里</b>
- * （ticket §2 末句：超期判定在 CRYO-REMIND-001）：声明一个没人实现的筛选 = 静默全表，
- * 那正是「空转断言」的温床（SAMPLE-VERIFY-001 的 WARN-2）。CRYO-REMIND-001 会来补。
+ * <p>★ {@code overdueOnly} 是 <b>CRYO-REMIND-001</b> 补的（ticket §2：{@code /lqg/cryo/batch/list}
+ * 支持 {@code overdueOnly=true}）：它拼的是<b>同一段</b>超期判定 where 片段
+ * （{@code CryoOverdueSqlProvider.WHERE}，阈值用参数绑定），不是另写一份 where。
+ * {@code overdue} / {@code overdueDays} / {@code tabCounts} 三个键在 VO 与响应体上。
  *
  * <p>★ {@code sort=recent} / {@code mine=true} 是<b>预置给 CRYO-MP-001</b> 的两个参数
  * （口径同 SAMPLE / EMBED 域，CR-20260918-07）：{@code sort=recent} → 按
@@ -71,6 +72,16 @@ public class CryoQueryBo extends PageQuery {
 
     @Schema(description = "true = 只要当前用户经手的（「只看我提交的」开关打开时才带）")
     private Boolean mine;
+
+    /**
+     * ★ 只看超期批次（CRYO-REMIND-001）：超期「页签」点进去时带。
+     *
+     * <p>拼的是 {@code CryoOverdueSqlProvider.WHERE}（唯一一份超期判定 where 片段），
+     * 阈值由 {@code CryoQueryService} 现读系统参数后当参数绑定 —— 所以这一格与行上的
+     * {@code overdue}、页签数字 {@code tabCounts.overdue}、超期清单三处恒等。
+     */
+    @Schema(description = "true = 只看超期批次（判据与行上的 overdue 同源）")
+    private Boolean overdueOnly;
 
     /**
      * 是不是「历史编辑记录」那一档排序（CRYO-MP-001）。

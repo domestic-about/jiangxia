@@ -5,9 +5,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.core.exception.ServiceException;
-import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.lqg.cryo.batch.domain.bo.CryoBatchSubmitBo;
 import org.dromara.lqg.cryo.batch.domain.bo.CryoQueryBo;
+import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchPageVo;
 import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchVo;
 import org.dromara.lqg.cryo.batch.service.CryoBatchService;
 import org.dromara.lqg.cryo.batch.service.CryoQueryService;
@@ -40,8 +40,9 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>★ <b>本票不做</b>（ticket §3 边界，逐条核过）：
  * <ul>
  *   <li>写流水 / 转液氮（{@code POST|PUT|DELETE …/{id}/flow}、{@code PUT …/{id}/to-ln2}）→ CRYO-FLOW-001；</li>
- *   <li>超期判定与 {@code GET /lqg/cryo/overdue}、列表上的 {@code overdue / overdueDays / tabCounts}
- *       → CRYO-REMIND-001；</li>
+ *   <li><b>超期判定</b>与 {@code GET /lqg/cryo/overdue} → CRYO-REMIND-001（列表上的
+ *       {@code overdue / overdueDays / tabCounts / overdueOnly} 与「默认排序超期置顶」
+ *       由它在本控制器的响应体 {@link CryoBatchPageVo} 上补齐）；</li>
  *   <li>导出（{@code POST /lqg/cryo/batch/export}）→ CRYO-WEB-001（本票只落了权限行
  *       {@code lqg:cryo:export}；{@code lqg:cryo:flow} 同理是给 CRYO-FLOW-001 落的权限行）；</li>
  *   <li>页面（工作台 / 小程序）→ CRYO-WEB-001 / CRYO-MP-001。</li>
@@ -59,10 +60,14 @@ public class CryoBatchController {
 
     /**
      * 列表（分页）。
+     *
+     * <p>★ 响应体是 {@link CryoBatchPageVo}（{@code TableDataInfo} 的子类）：在
+     * {@code total / rows} 之上多带 {@code tabCounts:{all, overdue, ln2}}（CRYO-REMIND-001）。
+     * 返回类型必须写成子类，Jackson 才会把这个键序列化出来。
      */
     @SaCheckPermission("lqg:cryo:list")
     @GetMapping("/list")
-    public TableDataInfo<CryoBatchVo> list(CryoQueryBo query) {
+    public CryoBatchPageVo list(CryoQueryBo query) {
         return cryoQueryService.list(query);
     }
 
