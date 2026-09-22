@@ -15,6 +15,7 @@ import ErrorState from '@/components/lqg/ErrorState.vue'
 import FieldRow from '@/components/lqg/FieldRow.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
+import OcrBar from '@/components/lqg/OcrBar.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { goPage } from '@/router/config'
@@ -62,6 +63,14 @@ const saving = ref(false)
 const serverEditable = ref<boolean | null>(null)
 const detail = ref<SampleDetail | null>(null)
 const form = ref<SampleFormValue>(emptyForm())
+/** 被**这次识别**预填的字段（`mergeOcrPrefill` 的 `marks`）：右侧出「识别 · 请核对」小标 */
+const ocrMarks = ref<Set<string>>(new Set())
+/**
+ * 识别夹具用例（OCR-MP-001）：`?stubCase=01` 带进页面 → 透给 `OcrBar` → 上传请求带
+ * `X-Ocr-Stub-Case`，让 dev / test 的 `StubOcrProvider` 返回那一组 `rawLines`。
+ * **只有端侧截图脚本会带这个参数**；生产构建里 `StubOcrProvider` 根本不存在，带了也没人读。
+ */
+const stubCase = ref('')
 const tissueHints = ref<string[]>([])
 /** 日期 / 时间控件的 `wd-datetime-picker`：目标字段、回填用的毫秒值、组件实例 */
 const pickerField = ref<FormFieldKey>('receiveDate')
@@ -75,6 +84,7 @@ const pickerRef = ref<{ open: () => void } | null>(null)
 onLoad((options) => {
   sampleId.value = String(options?.id ?? '')
   mode.value = normalizeMode(options?.mode)
+  stubCase.value = String(options?.stubCase ?? '')
   load()
 })
 
@@ -216,7 +226,60 @@ function fieldValue(key: FormFieldKey): string {
 }
 
 function setField(key: FormFieldKey, value: string) {
+  const before = fieldValue(key)
   ;(form.value as unknown as Record<string, string>)[key] = value
+  // 用户动了这一项 → 「识别 · 请核对」小标消失（`FLOW:F-OCR-01.step4`）。
+  // ★ 判据是「值**变了**」而不是「控件被点过」：点一下输入框又把原值留下时，小标不该无故消失。
+  if (before === value) {
+    return
+  }
+  dropOcrMark(key)
+}
+
+/** 摘掉某一项的识别小标（幂等；识别预填本身不摘） */
+function dropOcrMark(key: FormFieldKey | string) {
+  if (!ocrMarks.value.has(key)) {
+    return
+  }
+  const next = new Set(ocrMarks.value)
+  next.delete(key)
+  ocrMarks.value = next
+}
+
+/**
+ * 识别预填回来的那一刻（`OcrBar` 已把值原地写进 `form`）：决定哪些格挂「识别 · 请核对」。
+ *
+ * ★ 口径：小标说明的是「**这一格的值是识别写的**」，不是「识别这一次认得它」。
+ *   两条容易做反的：
+ *   1. 识别**认出**了来源单位，但外部新增时那一格在识别前就带了登录人档案里的单位名
+ *      （`load()` 的既有逻辑）→ 值不是识别写的，**不挂标**。判据是「点识别那一刻这格是不是空的」
+ *      （`onBeforeRecognize` 拍的快照），不是「识别结果里有没有这个键」。
+ *   2. 连着识别第二次时，第一次填的值**不该掉标** —— 它仍然是识别写的。所以只对
+ *      「这一格现在有值 ∧（原来有标 ∨ 原来为空）」的格挂标，而不是无脑取本次 `marks`。
+ *   提交的永远是表单当前值（`FLOW:F-OCR-01.step5`）—— 本函数不碰提交体。
+ */
+function onPrefilled(marks: string[]) {
+  const next = new Set<string>()
+  Object.keys(preRecognizeMarked).forEach((key) => {
+    const stillFilled = !!fieldValue(key as FormFieldKey)
+    const wasRecognized = marks.includes(key) || preRecognizeMarked[key]
+    if (stillFilled && wasRecognized) {
+      next.add(key)
+    }
+  })
+  ocrMarks.value = next
+}
+
+/** 点识别那一刻每格有没有识别小标（用来让「上一次识别填的格」不掉标） */
+let preRecognizeMarked: Record<string, boolean> = {}
+
+/** 识别条要开始识别了：先记下这一刻哪些格已经有识别小标（见 `onPrefilled`） */
+function onBeforeRecognize() {
+  const marked: Record<string, boolean> = {}
+  Object.keys(form.value as unknown as Record<string, string>).forEach((key) => {
+    marked[key] = ocrMarks.value.has(key)
+  })
+  preRecognizeMarked = marked
 }
 
 function optionsFor(key: FormFieldKey) {
@@ -378,18 +441,14 @@ function addCryo() {
         <text v-if="canEditFromView" class="form__edit" @click="toEdit">修改</text>
       </view>
 
-      <!-- 识别条插槽（内容在 OCR-MP-001，本张只留位置） -->
-      <view v-if="layout.showOcr" class="lqg-ocr">
-        <view class="lqg-ocr__row">
-          <button class="lqg-ocr__btn lqg-ocr__btn--p">
-            拍照识别
-          </button>
-          <button class="lqg-ocr__btn lqg-ocr__btn--s">
-            从相册选
-          </button>
-        </view>
-        <text class="lqg-ocr__tip">按纸质表拍照可自动填表；识别结果请核对后再提交</text>
-      </view>
+      <!-- 识别条（OCR-MP-001）：只在新增那一次出现（`layout.showOcr`，编辑已提交样本时为 false） -->
+      <OcrBar
+        v-if="layout.showOcr"
+        :form="form"
+        :stub-case="stubCase"
+        @recognizing="onBeforeRecognize"
+        @prefilled="(_f: SampleFormValue, marks: string[]) => onPrefilled(marks)"
+      />
 
       <text v-if="lastModified" class="form__meta">{{ lastModified }}</text>
       <!-- 无效原因红条：外部改后重提要看得见「为什么被判无效」（S1-2） -->
@@ -408,6 +467,7 @@ function addCryo() {
           :required="spec.key === 'donorName' || spec.key === 'tissueType'"
           :model-value="fieldValue(spec.key)"
           :placeholder="spec.key === 'tissueType' && tissueHints.length ? `${tissueHints[0]} 等` : '请填写'"
+          :ocr-mark="ocrMarks.has(spec.key)"
           @update:model-value="(v: string) => setField(spec.key, v)"
           @pick="onPick(spec.key)"
         >
@@ -432,6 +492,7 @@ function addCryo() {
             :control="spec.control"
             :readonly="!spec.editable"
             :model-value="fieldValue(spec.key)"
+            :ocr-mark="ocrMarks.has(spec.key)"
             @update:model-value="(v: string) => setField(spec.key, v)"
             @pick="onPick(spec.key)"
           >

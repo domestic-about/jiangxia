@@ -1,0 +1,29 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "results": [
+  {
+   "ticket": "OCR-MP-001",
+   "index": 1,
+   "form": "STATE",
+   "name": "预填合并规则过 fixture：只填空项、已手填的不覆盖、空值不填不标、表单里没有的键忽略",
+   "exit": 0,
+   "seconds": 1.0,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/OCR-MP-001-acc1.sh",
+   "log": ".tmp/ocr-mp-accept-logs/OCR-MP-001-acc1.sh.log"
+  },
+  {
+   "ticket": "OCR-MP-001",
+   "index": 2,
+   "form": "API",
+   "name": "构建是本次产物；识别条只在新增时出现；小程序包里没有任何第三方识别服务的域名或密钥",
+   "exit": 0,
+   "seconds": 4.6,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/OCR-MP-001-acc2.sh",
+   "log": ".tmp/ocr-mp-accept-logs/OCR-MP-001-acc2.sh.log"
+  }
+ ]
+}

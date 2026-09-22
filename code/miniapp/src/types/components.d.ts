@@ -24,6 +24,7 @@ declare module 'vue' {
     MeRow: typeof import('./../components/biz/MeRow.vue')['default']
     MeSectionTitle: typeof import('./../components/biz/MeSectionTitle.vue')['default']
     NoteBar: typeof import('./../components/lqg/NoteBar.vue')['default']
+    OcrBar: typeof import('./../components/lqg/OcrBar.vue')['default']
     PlaceholderPage: typeof import('./../components/ui/PlaceholderPage.vue')['default']
     SampleCard: typeof import('./../components/lqg/SampleCard.vue')['default']
     SamplePicker: typeof import('./../components/lqg/SamplePicker.vue')['default']

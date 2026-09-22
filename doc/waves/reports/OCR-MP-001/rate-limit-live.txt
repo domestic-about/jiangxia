@@ -1,0 +1,9 @@
+[rate] 删除 redis 桶 1 个，等 62s 让 JVM 里的旧桶状态过期
+[rate] extC 前 6 次：200,200,200,200,200,200（应全是 200）
+[rate] 第 7 次（浏览器点击）提示 = "没识别出来，请手动填写"
+[rate] 失败态 DOM 小标数 = 0（应 0）
+[rate] 第 7 次响应体 = {"code":500,"msg":"识别太频繁了，请稍后再试（每分钟最多 6 次）","data":null}
+[assert] 限流 → 同一句失败提示 OK
+[rate] 限流后仍能手填 = "限流后手填"，提交按钮 = 1
+[assert] 限流不阻塞填表 OK
+[shot] 11-ocr-rate-limited-manual-ok.png

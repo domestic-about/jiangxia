@@ -31,12 +31,18 @@ const props = withDefaults(defineProps<{
   placeholder?: string
   /** 必填小星号 */
   required?: boolean
+  /**
+   * 「识别 · 请核对」小标（OCR-MP-001）：这一项是被这次识别**预填**的。
+   * 用户改动该项后由页面把它从 `marks` 里摘掉（§5.7：在值左侧、改动后消失）。
+   */
+  ocrMark?: boolean
 }>(), {
   modelValue: '',
   control: 'text',
   readonly: false,
   placeholder: '请填写',
   required: false,
+  ocrMark: false,
 })
 
 const emit = defineEmits<{
@@ -59,10 +65,16 @@ const display = computed(() => (props.modelValue === '' ? '' : props.modelValue)
     @click="!readonly && control !== 'seg' && emit('pick')"
   >
     <template v-if="control === 'seg'">
-      <slot />
+      <view class="fr__val">
+        <slot />
+        <text v-if="ocrMark" class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
+      </view>
     </template>
     <template v-else>
-      <text class="fr__text">{{ display || '—' }}</text>
+      <view class="fr__val">
+        <text class="fr__text">{{ display || '—' }}</text>
+        <text v-if="ocrMark" class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
+      </view>
       <text v-if="!readonly && control !== 'text'" class="fr__arrow">›</text>
     </template>
   </wd-cell>
@@ -89,13 +101,30 @@ const display = computed(() => (props.modelValue === '' ? '' : props.modelValue)
     :model-value="modelValue"
     @update:model-value="(v: string) => emit('update:modelValue', v)"
     @click="control === 'date' || control === 'datetime' || control === 'select' ? emit('pick') : undefined"
-  />
+  >
+    <!-- 「识别 · 请核对」小标：wd-input 的 suffix 槽正好在值右边（§5.7） -->
+    <template v-if="ocrMark" #suffix>
+      <text class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
+    </template>
+  </wd-input>
 </template>
 
 <style lang="scss" scoped>
+.fr__val {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--lqg-sp-3);
+  min-width: 0;
+}
+
 .fr__text {
   font-size: var(--lqg-fs-body);
   color: var(--lqg-ink);
+}
+
+.fr__mark {
+  flex: none;
 }
 
 .fr__arrow {

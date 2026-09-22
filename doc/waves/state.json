@@ -226,12 +226,12 @@
       "note": "拍照识别只做预填（只填空项、标「请核对」、失败不挡手填），provider 可插拔、付费通道默认关、不落库不存图。accept 2/2 绿（accept-run.py 逐字重放，NF1/NF2 自动补）；单测 OcrFieldParserFixtureTest 7/7 + OcrProviderSelectionTest 9/9，全模块 197 run / 0 fail / 0 error；0 支迁移（不建表/不建菜单/不造权限串）。★三条给下游的硬坑：①**限流 key 必须带用户**——框架默认 global:rate_limit:<URI>: + RateType.OVERALL 是全局桶，一个用户刷完所有人被拦（连 accept 都跑不完）；改用 @RateLimiter(key=\"#{@ocrRateLimitKey.userKey()}\") + 新 bean OcrRateLimitKey。顺带实测框架 SpEL 三种错法：#T(...)→EL1006E、user:#T(...)→EL1041E、@bean.method()（不含 #）被当字面量；只有 #{@bean.method()} 可用。②**夹具必须进 main <resources>**，只拷 test-classes 时运行期 stub bean 的 rawLines 恒 []（单测绿、接口空）→ 改成 main 资源，单测与 stub 共用同一份。③**@RateLimiter 依赖要显式加**：全仓只有 ruoyi-admin 依赖 ruoyi-common-ratelimiter（方向 admin→lqg），lqg 里写注解编不过。越界仅 1 个文件：ruoyi-modules/ruoyi-lqg/pom.xml（+32 行，ratelimiter 依赖 + <resources> 拷夹具）——已记 WARN。"
     },
     "OCR-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D5",
       "track": "OCR",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序识别条（OcrBar）+ 填写页预填：只填空项、已手填不覆盖、空值不填不标、表单里没有的键忽略；仅新增时显示识别条；生产包对第三方识别域名/key 词表零命中。accept 2/2 绿（票面逐字重放，**0 条归一化**，NF1/NF2 都没命中）；prefill.fixture.spec.ts 19/19、小程序全量 147/147、type-check 本票零报错、build:mp-weixin 重打。★四条给下游的硬坑：①**响应有两层，收口函数两层都要收**——api/ocr.ts 的 uploadFile 直接 resolve body.data，而 utils/request.ts 那条路给整个响应体；只认一层时接口字段回全了、页面照样说「没识别出来」，而单测喂的是另一层 → 全绿（本票代价一次假失败）。已改 readOcrResponse 按「自己有没有 data 键」分流 + 19 条回归用例。②「识别·请核对」小标藏在两个容器：文本/数字行走 wd-input 的 #suffix 槽（没有 wd-cell__title），seg/日期/只读行走 wd-cell 默认槽；只按 .wd-cell__title 找行的 Playwright 脚本五格只命中一格（看着像实现红、其实是选择器错）。③限流取证必须清桶+等 >60s（上游坑 #184），且主脚本(extA)与限流脚本(extC)必须分身份分两次跑。④**小标语义是「这格的值是识别写的」而不是「识别认得它」**：外部新增时来源单位那格识别前已有档案默认值 → 不挂标（OcrBar 新增 recognizing 事件在识别开始那刻拍快照），夹具 01 的 6 个字段因此只填/标 5 格。★票面 §4.1 的**真机录屏未覆盖**（真机/体验版要测试环境 = SYS-STAGING-001 的交付物；沙箱里微信开发者工具也跑不通），等价覆盖 = H5+Playwright 真 DOM 9 条路径 34 断言 + 11 张截图落盘，报告已明写「在 SYS-STAGING-001 后补录屏」。越界 2 处（utils/request.ts 导出 resolveBaseUrl、FieldRow.vue 加 ocrMark prop 纯增量）已记 WARN。"
     },
     "OCR-SPIKE-001": {
       "status": "escalated",
@@ -2254,6 +2254,56 @@
       "type": "debt",
       "title": "建议把两条 OCR 实现期踩到的坑补进 doc/verify/README.md 的「本栈已知的坑」表",
       "detail": "①框架限流默认 key 不含用户（global:rate_limit:<URI>: + RateType.OVERALL 是全局桶），加限流必须自带 key 表达式，且 SpEL 只认 #{@bean.method()} 形态；②夹具必须放 main <resources>，否则运行期 bean 读不到、单测却绿。两条都是「换个票还会再踩」的类型，README 的已知坑表正是为这种准备的。方案：由后续任一票顺手补表（属 doc 编辑，不涉及实现）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 186,
+      "ticket": "OCR-MP-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越出 touches：utils/request.ts 导出 resolveBaseUrl + components/lqg/FieldRow.vue 新增 ocrMark prop",
+      "detail": "①uploadFile 必须与 request 同源，否则 baseUrl 解析两套（正是本票坑 1 的温床）→ 把 resolveBaseUrl 导出复用；②FieldRow 需要「这格的值是识别写的」小标位 → 加 ocrMark prop（纯增量，默认 false，不影响既有调用）。两处都是票面 touches 之外的合理越界。方案：后续把「上传类接口必须走 request 的 baseUrl 解析」写成小程序侧约定（放 doc/api-contract.md 或 miniapp README）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 187,
+      "ticket": "OCR-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "识别条「原文折叠区」措辞与说明小字：ticket §2 与权威 UI:mp.sample.form.ocr 不一致（实现按权威逐字）",
+      "detail": "ticket §2 的措辞与蓝图锚 UI:mp.sample.form.ocr 的文案有差（折叠区标题、说明小字）。实现一律按蓝图逐字。影响：机器断言打在权威上，所以票面字面重放会看到「文案不同」。方案：回写 ticket §2 与权威对齐（属 ① 侧修订），或明确「文案以权威锚为准」的通用规则。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 188,
+      "ticket": "OCR-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "小标口径：标的是「这格的值是识别写的」而非「识别认得它」——票面没写，实现自行判断",
+      "detail": "外部新增时「来源单位」格在识别前已有档案默认值，识别若也返回同值，按「识别认得」就该标、按「识别写的」就不该标。实现取后者（并用 OcrBar 的 recognizing 事件在识别开始那刻拍表单快照做判据），夹具 01 的 6 个字段因此只填/标 5 格。影响：两种口径对老师看到的徽标数量不同；本票机器断言按实现口径写的。方案 a) 在权威 UI 锚里补一句「小标 = 该值由识别写入」；b) 若要改成「识别认得即标」，回 ①xuqiu 改口径并复核夹具。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 189,
+      "ticket": "OCR-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "H5 无 uni.compressImage：图片压缩走 canvas 三跳，真机行为未验",
+      "detail": "H5 端没有 uni.compressImage，压缩改用 canvas 三跳实现；Web 上验证通过，但**真机（微信小程序运行时）的压缩行为与体积未验**——真机档统一挂在 SYS-STAGING-001 之后。方案：SYS-STAGING-001 补真机录屏时一并验「大图上传前被压缩」，若真机 canvas 路径有问题再改。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 190,
+      "ticket": "OCR-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "plus-ui dev server 会把 code/plus-ui/.eslintrc-auto-import.json 改脏（既非本票改动，也会污染别人）",
+      "detail": "复现：起 plus-ui dev（qa-up.sh 会起）后 git status 出现 M code/plus-ui/.eslintrc-auto-import.json。影响：每个碰 plus-ui dev 的 agent/分片都要手动 git checkout -- 还原一次，否则会被当成越界改动（同类还有 code/miniapp/src/pages.json 被 uni-pages 自动改写）。方案：把这两个「自动生成且 dev 时会改」的文件加进 .gitignore 或改成不落盘生成。",
       "status": "open",
       "decision": ""
     }

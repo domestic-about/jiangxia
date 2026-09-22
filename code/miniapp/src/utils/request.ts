@@ -40,7 +40,11 @@ let redirecting = false
 // 取出真正的请求根地址。
 // - 小程序 / App：直连 `VITE_SERVER_BASEURL`（真机调试时它是 LAN IP，见栈包 gotchas §6.6）
 // - H5：走 vite dev server 代理前缀，绕开浏览器跨域
-function resolveBaseUrl(): string {
+//
+// ★ 导出给 `api/ocr.ts` 的 `uni.uploadFile` 用（OCR-MP-001）：`uni.request` 那条路由本文件
+//   统一拼根地址，但 `uploadFile` 是**另一个 API**、不走这里 —— 两处各拼一次就是
+//   「H5 代理开着、上传却直连 8081」的经典事故。根地址只能有一个来源。
+export function resolveBaseUrl(): string {
   const direct = (import.meta.env.VITE_SERVER_BASEURL as string) || ''
   // #ifdef H5
   if (import.meta.env.DEV && import.meta.env.VITE_APP_PROXY_ENABLE === 'true') {
