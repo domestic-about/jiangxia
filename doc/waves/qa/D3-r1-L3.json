@@ -1,0 +1,22 @@
+{
+  "phase": "D3",
+  "round": 1,
+  "auditor": "independent",
+  "levels": {
+    "L3": {
+      "status": "pass",
+      "evidence": "反 stale（自跑，未用 api.sh --fresh-module）: `lsof -ti tcp:8081`→PID 97871; `lsof -p 97871 | grep ruoyi-admin.jar`→2 个 REG fd 指向 code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar（进程持该 jar）; jar mtime 2026-09-22 10:13:47; 后端自身启动日志 `10:40:24 Starting DromaraApplication ... PID 97871`（启动晚于 jar mtime）; `find code/RuoYi-Vue-Plus -path '*/src/*' -newer <jar> | wc -l`→0。ps 被沙箱禁，启动时间取后端日志。探针自写 doc/waves/regression/D3/L3-r1-probes.sh，全量日志 doc/waves/regression/D3/L3-r1-full.log（38 pass / 0 fail / 0 S0-S1）。 1 染色与挂靠规则(g1 8/8): reseed 后 baseline `SELECT count(*) FROM t_lqg_embed`=6；staff `POST /lqg/embed` 四条: {\"sampleId\":9000001005,\"paraffinBlockNo\":\"T-X1\",\"stainTypes\":[\"NONE\",\"HE\"]}→500「「无染色」与其余染色互斥」(库 count 仍=6)；stainTypes:[\"OTHER\"] 无 stainOther→500「选了「其他」必须写具体染色名称」(仍=6)；stainTypes:[\"PAS\"]→500「染色「PAS」不在字典 lqg_stain_type 里」(仍=6)；sampleId=9000001002(待核验)+T-X4→500「内部录入只能挂到已核验有效的样本（当前状态：pending）」(仍=6)。终态 `count(*) WHERE paraffin_block_no LIKE 'T-X%'`=0。 2 valid→invalid 闸(g2 3/3): 1004 名下已核验石蜡块数=1；staff `PUT /lqg/sample/9000001004/verify {\"action\":\"invalid\",\"reason\":\"想改判\"}`→500「该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效」；库 `verify_status`=valid；`count(*) WHERE id=9000001004 AND invalid_reason IS NULL`=1。 3 外部送样(g3 13/13): baseline `count(*) WHERE submit_source='external' AND del_flag='0'`=1、all=6；extB `POST /mp/ext/embed {\"sampleId\":9000001001}`（替同组 extA 送样）→400「只能挂本人送检过的样本」(ext 仍=1)；extA 挂自己无效的 1003→400「这条样本已判无效」(all 仍=6)；extA 夹带 {\"paraffinBlockNo\":\"T-hack9\",\"verifyStatus\":\"valid\",\"embedBy\":\"外部\",\"stainTypes\":[\"HE\"],\"operatorName\":\"外部\",\"submitSource\":\"internal\"}→body code=200 但库断言 `submit_source|verify_status|paraffin_block_no|embed_by|stain_types|operator_name` = external|pending|-|-|-|-，submitter join ext_profile=王医生（夹带 6 个字段全部不生效）；staff `PUT /lqg/embed/9000002006/verify {\"action\":\"valid\",\"paraffinBlockNo\":\"T-E06-1\"}`（所挂 1002 未核验）→500「所挂样本还未核验有效（当前状态：pending）」，库 2006 仍 pending|-；staff `PUT /lqg/embed {id:2006,\"paraffinBlockNo\":\"T-E06-9\",\"sampleType\":\"被普通保存改掉\"}`→400「待核验 / 无效的送样不能通过普通保存修改」，库 2006 仍 pending|-|-|组织；extA `PUT /mp/ext/embed/9000002001`（实验室录的块）→400「只能修改重提本人提交的送样（同组的可以看，但不能改）」、extB `PUT /mp/ext/embed/9000002006`→400；库 `count(*) WHERE sample_type IN ('被同组人改','改实验室的块')`=0。 4 外部详情 embeds 键集合(g4 8/8，按 CR-20260918-07 与 fixtures/java/ExtChokepointContractTest.java:47-51 的精确豁免，不按 phase-plan 旧写法): extB `GET /mp/ext/sample/9000001001`→embeds 的 paraffinBlockNo=[T-E01-1,T-E01-2]、[0].embedBy=李工、[0].operatorName=李工、[1].embedBy=null（包埋人/操作人对外可见）；实到 24 键 = [agaroseEmbedTime,agaroseSendTime,dehydrateTime,editable,embedBy,id,invalidReason,markers,mine,operatorName,organoidSourceType,paraffinBlockNo,paraffinEmbedTime,sampleId,sampleType,sectionTime,sectioned,stainOther,stainTypes,submitNo,submitterName,tissueProcessTime,tissueReceiveTime,verifyStatus] ⊂ 白名单，且 grep 无 internalNo/verifyBy/verifiedBy/remark/frozenBy/冻存键；`(.data|has(\"internalNo\"))`==false；extC `GET /mp/ext/sample/9000001001`→404「样本不存在」；admin 把 sys_config `lqg.ext.show-internal-no` 置 true 后 extB 详情 internalNo=T-hli01（默认关→开→开后有→还原 false）。 5 导出边界(g5 6/6): 全量 `POST /lqg/sample/export/tissue`→xlsx_header ✓ 表头 14 列与模板逐字一致、8 行；extA `POST /lqg/sample/export/tissue`→403「没有访问权限，请联系管理员授权」；带筛选 `POST /lqg/sample/export/tissue?sourceUnitId=9000009002`→xlsx_header --rows 1（= 同条件 `/lqg/sample/list?sourceUnitId=9000009002&sampleKind=tissue` 的 total=1），--find 内部编号=T-hco04 命中、--find 内部编号=T-hli01 不命中；空结果 `?sourceUnitId=9999999999`→接口 exit 0（未报错）且 xlsx_header --rows 0 通过（只有表头）。 台账三条规格冲突(#129 perms 六/七、#137 sort=recent、#138 EMBED-MP-001 accept3 grep 恒真)本轮 L3 未触及其断言点，未据以判实现缺陷。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S3",
+      "level": "L3",
+      "type": "doc-drift",
+      "ticket": "AUTH-EXT-002",
+      "title": "phase-plan D3 qa_scope 的 embeds 键集合仍是 CR-20260918-07 之前的旧写法（要求「没有 embedBy / operatorName」）",
+      "detail": "复现: doc/phase-plan.yaml D3 qa_scope L3 第 4 条写「外部详情的 embeds 里没有 embedBy / operatorName / internalNo 键」；权威 CR-20260918-07（doc/change-log.md:55-77 第 3/4 条）与 doc/verify/fixtures/java/ExtChokepointContractTest.java:47-51 的 BANNED_EXEMPT 精确豁免 「ExtEmbedVo = {operatorName, embedBy}」都要求这两个字段对外可见。实测 extB GET /mp/ext/sample/9000001001 的 embeds[0].embedBy=operatorName=李工，实现按 CR 正确。影响: 下轮/他人照 phase-plan 旧文写 L3 会得到一条假 S0。定级依据: 纯文档口径滞后，不改产品行为、不影响主流程，按 S3 记账不拦门（非实现缺陷，故不判实现 S0/S1）。"
+    }
+  ]
+}

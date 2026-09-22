@@ -12,12 +12,15 @@ import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleQueryBo;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
+import org.dromara.lqg.sample.hint.SampleHintService;
+import org.dromara.lqg.sample.hint.vo.SampleHintVo;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.query.SampleSubmitterProfileQuery;
 import org.dromara.lqg.sample.query.SampleSubmitterProfileVo;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 样本读侧（doc/api-contract.md 的 {@code GET /lqg/sample/list} / {@code GET /lqg/sample/{id}}）。
@@ -58,6 +61,13 @@ public class SampleQueryService {
     private final SampleFieldCipher fieldCipher;
     private final SampleNameResolver nameResolver;
     private final SampleSubmitterProfileQuery submitterProfileQuery;
+    /**
+     * 切片染色提示（SAMPLE-HINT-001）：读时计算，整页一条 GROUP BY。
+     *
+     * <p>放在这一层而不是各 controller：{@code /lqg/sample/list} 与 {@code /mp/int/sample/list}
+     * 走的是<b>同一个</b> {@link #list(SampleQueryBo)}，挂在这里两侧同时生效、口径只有一份。
+     */
+    private final SampleHintService sampleHintService;
 
     /**
      * 样本列表。
@@ -110,8 +120,77 @@ public class SampleQueryService {
             List<SampleVo> rows = result.getRecords().stream().map(this::toVo).toList();
             // 每行带出提交人姓名 / 组别名（读时 join 外部档案；内部人员与自填单位的行是 null）
             submitterProfileQuery.fill(rows);
+            fillHints(rows);
             return TableDataInfo.build(new Page<SampleVo>(result.getCurrent(), result.getSize(), result.getTotal())
                 .setRecords(rows));
+        });
+    }
+
+    /**
+     * 给一页行挂「切片染色提示」（SAMPLE-HINT-001）。
+     *
+     * <p>★ 三条不变量都在这里收口：
+     * <ol>
+     *   <li><b>一页只发一次聚合查询</b>：入参是整页的 id 集合
+     *       （{@code SampleHintService.hintsOf} 内部一条 GROUP BY / 一个 IN）；
+     *       逐行 {@code for} 里查一次是最自然也最错的形态；</li>
+     *   <li><b>每一行都有 hint</b>：没有（有效）石蜡块的行补零值 —— 尤其是
+     *       {@code submit_source='internal'} 录进来、还没做包埋的样本；前端读
+     *       {@code row.hint.blockCount}，null 会当场炸；</li>
+     *   <li><b>列表里不出现 null</b>：{@code getOrDefault} 是第二道保险（正常走不到，
+     *       {@code hintsOf} 已经给每个请求的 id 铺了零值）。</li>
+     * </ol>
+     *
+     * <p>详情（{@link #detail(Long)}）与导出（{@link #exportRows(SampleQueryBo)}）<b>不挂</b>：
+     * 契约第 45 行只把 {@code hint} 写在 list 的行上，导出用的是各域自己的
+     * {@code *ExportVo}（多一个键会多一列）。
+     */
+    private void fillHints(List<SampleVo> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        Map<Long, SampleHintVo> hints = sampleHintService.hintsOf(
+            rows.stream().map(SampleVo::getId).toList());
+        for (SampleVo vo : rows) {
+            vo.setHint(hints.getOrDefault(vo.getId(), SampleHintVo.empty()));
+        }
+    }
+
+    /**
+     * <b>导出用的整表（不分页）</b>：与 {@link #list(SampleQueryBo)} <b>同一份 wrapper、
+     * 同一份装配</b> —— {@code POST /lqg/sample/export/tissue|organoid} 与
+     * {@code GET /lqg/sample/list} 的口径逐条一致。
+     *
+     * <p>★ SAMPLE-EXPORT-001 accept 1 的两段钉的就是这里：
+     * <ul>
+     *   <li><b>「带筛选导出只出筛选结果」</b>（{@code ?sourceUnitId=9000009002} 的导出行数）；
+     *       在导出里另写一份 WHERE，正是 counterfeit 点名的形态；</li>
+     *   <li><b>「导出行数与同条件的列表 total 一致」</b> —— 两侧必须是同一个
+     *       {@link #buildWrapper} 加同一条档案口径。</li>
+     * </ul>
+     *
+     * <p>★ <b>软删行永不出现</b>：{@code @TableLogic} 兜住（seed 的 1010 不导）。
+     * <b>待核验 / 无效的样本也导</b>（内部编号一格为空）—— ticket §2。
+     *
+     * <p>★ 排序与筛选一字不改地沿用 {@code list} 那一套（含 {@code sort=recent} 与「待核验置顶」）：
+     * 导出文件的行序与列表页一致，导出的每一行也都能在列表页上按同一条件找到。
+     *
+     * @param query 与 {@code GET /lqg/sample/list} 同一组筛选参数；{@code pageNum / pageSize} 被忽略
+     * @return 解过密的行（{@code donorName} / {@code hospitalNo} 是明文 —— 导出要明文，
+     *         ADR-0006：工作台内部人员看明文）
+     */
+    public List<SampleVo> exportRows(SampleQueryBo query) {
+        SampleQueryBo q = query == null ? new SampleQueryBo() : query;
+        return DataPermissionHelper.ignore(() -> {
+            List<Long> submitterIds = submitterProfileQuery.submitterIds(q.getGroupId());
+            if (submitterIds != null && submitterIds.isEmpty()) {
+                // 与 list 同一条守卫：该组别下没有任何外部档案 → 空集，别退化成「不过滤 = 全表」
+                return List.of();
+            }
+            LambdaQueryWrapper<Sample> wrapper = buildWrapper(q, submitterIds, currentUserId());
+            List<SampleVo> rows = sampleMapper.selectList(wrapper).stream().map(this::toVo).toList();
+            submitterProfileQuery.fill(rows);
+            return rows;
         });
     }
 

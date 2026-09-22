@@ -41,7 +41,11 @@ export default {
     addOrganoid: 'New organoid receipt',
     exportTissue: 'Export sample records',
     exportOrganoid: 'Export organoid receipts',
-    exportNotYet: 'Export lands in the next task (SAMPLE-EXPORT-001)',
+    exportTissueFile: 'Sample records',
+    exportOrganoidFile: 'Organoid receipts',
+    exportTissueDone: 'Sample records exported (current filter)',
+    exportOrganoidDone: 'Organoid receipts exported (current filter)',
+    exportEmpty: 'No sample matches the current filter; no file was generated',
     refresh: 'Refresh'
   },
 
@@ -66,9 +70,23 @@ export default {
     submitterName: 'Submitter',
     groupName: 'Group',
     operatorName: 'Operator',
+    hint: 'Slicing / staining',
     updateTime: 'Last modified',
     remark: 'Remark',
     action: 'Actions'
+  },
+
+  // ── Slicing / staining hint (SAMPLE-HINT-001 / UI:admin.sample.list.hint) ──
+  hint: {
+    block: 'Blocks {n}',
+    sectioned: 'Sectioned',
+    none: '—',
+    blockNo: 'Block no.',
+    sectionTime: 'Section time',
+    empty: 'No block details yet',
+    loading: 'Loading…',
+    loadFailed: 'Block details failed to load',
+    open: 'Open the paraffin embedding page'
   },
 
   status: {

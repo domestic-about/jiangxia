@@ -9,7 +9,6 @@ import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.ext.domain.bo.ExtSampleQueryBo;
 import org.dromara.lqg.ext.domain.vo.ExtDocVo;
-import org.dromara.lqg.ext.domain.vo.ExtEmbedVo;
 import org.dromara.lqg.ext.domain.vo.ExtSampleDetailVo;
 import org.dromara.lqg.ext.domain.vo.ExtSampleVo;
 import org.dromara.lqg.ext.guard.MaskRules;
@@ -52,6 +51,7 @@ public class ExtSampleAssemblyService {
 
     private final ExtScopeService extScopeService;
     private final ExtInternalNoSwitch internalNoSwitch;
+    private final ExtEmbedAssemblyService extEmbedAssemblyService;
     private final SampleQueryService sampleQueryService;
     private final SampleFieldCipher fieldCipher;
 
@@ -136,7 +136,10 @@ public class ExtSampleAssemblyService {
         vo.setMine(flags.mine());
         vo.setEditable(flags.editable());
         vo.setCreateTime(sample.getCreateTime());
-        vo.setEmbeds(List.<ExtEmbedVo>of());
+        // ★ 第②段：该样本名下未删的全部石蜡包埋记录 —— **含外部提交还没核验的送样**
+        //   （paraffinBlockNo 空、带状态与无效原因），外部要能看到自己送的样走到哪一步
+        //   （FLOW:F-EMBED-01.step4 的 produces）。装配在 embed 域 + ext 拼装层，本类不碰 mapper。
+        vo.setEmbeds(extEmbedAssemblyService.embedsOfSample(userId, sampleId));
         vo.setDocs(List.<ExtDocVo>of());
         return vo;
     }

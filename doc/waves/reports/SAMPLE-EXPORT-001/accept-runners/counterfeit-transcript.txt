@@ -1,0 +1,42 @@
+== ① 全表扫描 ==
+== tissue：/tmp/lqg-probe-tissue.xlsx（8 行 × 14 列）==
+  ✓ 表头没有列表 VO 才有的列（送检单号, 核验状态, 有无病理, 提交人, 组别, 最后修改, 类别）
+  ✓ 类器官那条（T-oco01）没有混进 tissue 导出
+  ✓ 软删的 1010（T-del99）没有导出
+  ✓ 按钮列只有「有 / 无」：['有']
+  ✓ 没选的「有无」按钮留空（空格子数 9）
+  ✓ 性别列只有 男/女/未知：['女', '未知', '男']
+  ✓ 「供体姓名」是明文（没有裸 Base64 密文）：['测试供体庚', '测试供体乙', '测试供体丙']…
+  ✓ 「住院号」是明文（没有裸 Base64 密文）：['ZY0000007', 'ZY0000002', 'ZY0000006']…
+  ✓ 收样日期是 yyyy-MM-dd：[]
+  ✓ 处理时间是 yyyy-MM-dd HH:mm:ss：[]
+PROBE PASS
+== organoid：/tmp/lqg-probe-organoid.xlsx（1 行 × 7 列）==
+  ✓ 表头没有列表 VO 才有的列（送检单号, 核验状态, 有无病理, 提交人, 组别, 最后修改, 类别）
+  ✓ 组织样本（T-hli01）没有混进 organoid 导出
+  ✓ 按钮列只有「有 / 无」：['有']
+  ✓ 性别列只有 男/女/未知：[]
+  ✓ 收样日期是 yyyy-MM-dd：[]
+  ✓ 处理时间是 yyyy-MM-dd HH:mm:ss：[]
+PROBE PASS
+
+== ② 类别由端点决定（传反了也不串） ==
+  /export/tissue?sampleKind=organoid    → 行数 8（期望 8 = tissue 全量）
+  /export/organoid?sampleKind=tissue    → 行数 1（期望 1 = organoid 全量）
+
+== ③ 导出与列表同一份 where（五组筛选，行数 == 列表 total） ==
+  tissue?sourceUnitId=9000009001                       导出 6 行 / 列表 total 6
+  tissue?verifyStatus=pending                          导出 2 行 / 列表 total 2
+  tissue?tissueType=%E8%82%9D                          导出 5 行 / 列表 total 5
+  tissue?receiveDateBegin=2026-08-20&receiveDateEnd=2026-09-05 导出 4 行 / 列表 total 4
+  tissue?operatorName=%E6%9D%8E&submitSource=external  导出 4 行 / 列表 total 4
+  organoid?sourceUnitId=9000009002                     导出 1 行 / 列表 total 1
+
+== ④ 外部 403；匿名 401（未认证） ==
+  --as extA  → 403	没有访问权限，请联系管理员授权
+  --as extB  → 403	没有访问权限，请联系管理员授权
+  --as extA /export/tissue   → 403	没有访问权限，请联系管理员授权
+  --as extA /export/organoid → 403	没有访问权限，请联系管理员授权
+  --as anon  → 401	认证失败，无法访问系统资源
+
+COUNTERFEIT PROBES  PASS

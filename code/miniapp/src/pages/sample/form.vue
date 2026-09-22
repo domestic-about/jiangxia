@@ -343,7 +343,15 @@ async function submit() {
   }
 }
 
-/** 「给这个样本加石蜡块」「加冻存」：先置灰，EMBED-MP-001 / CRYO-MP-001 接（ticket §2） */
+/** 「给这个样本加石蜡块」：带上 `sampleId` 进石蜡包埋填写页（EMBED-MP-001 点亮这条链接） */
+function addEmbed() {
+  if (!sampleId.value) {
+    return
+  }
+  goPage(`/pages/embed/form?mode=new&sampleId=${sampleId.value}`)
+}
+
+/** 「加冻存」：先置灰，CRYO-MP-001 接（ticket §2） */
 function notYet() {
   uni.showToast({ title: '这一项在后续版本开放', icon: 'none' })
 }
@@ -444,7 +452,7 @@ function notYet() {
         {{ mode === 'new' ? '提交' : '保存' }}
       </button>
       <view class="form__links">
-        <text class="form__link" @click="notYet">给这个样本加石蜡块</text>
+        <text class="form__link" @click="addEmbed">给这个样本加石蜡块</text>
         <text class="form__link" @click="notYet">加冻存</text>
       </view>
     </view>

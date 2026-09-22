@@ -1,0 +1,94 @@
+################ 修前 · QA 定点探针（node doc/waves/regression/D3/L2-probe-verify-drawer.mjs）################
+rows before: 5
+extA submit: {"code":200,"msg":"操作成功","data":"2102228382795182082"}
+
+first row after extA submit: 外部|	|待核验|	|待核验|	|T-hli01|	|组织|	|—|	|—|	|—|	|—|	|—|	|—|	|—|	|—|	|未切片|	|—|	|—|	|—|	|—|	|2026-09-22 10:47:59 · 王医生|	|核验
+form items = 16 blockNo index = 1
+input value after fill = T-R1L2-PROBE
+btn disabled = false
+--- NET/ERR LOG ---
+REQ PUT http://127.0.0.1:8082/dev-api/lqg/embed :: {"sampleId":9000001001,"paraffinBlockNo":"T-R1L2-PROBE","sampleType":"组织","organoidSourceType":null,"tissueReceiveTime":null,"tissueProcessTime":null,"agaroseEmbedTime":null,"embedBy":null,"dehydrateTime":null,"agaroseSendTime":null,"paraffinEmbedTime":null,"sectionTime":null,"stainTypes":[],"stainO
+PAGEERROR: error
+
+RESP 200 http://127.0.0.1:8082/dev-api/lqg/embed :: {"code":400,"msg":"待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）","data":null}
+--- drawer still visible: true
+--- toast: []
+--- db row: pending|-
+pending|-
+
+
+################ 修后 · 同一条 QA 定点探针 ################
+##### 2) QA L2-probe-verify-drawer
+rows before: 5
+extA submit: {"code":200,"msg":"操作成功","data":"2102229490548617218"}
+
+first row after extA submit: 外部|	|待核验|	|待核验|	|T-hli01|	|组织|	|—|	|—|	|—|	|—|	|—|	|—|	|—|	|—|	|未切片|	|—|	|—|	|—|	|—|	|2026-09-22 10:52:23 · 王医生|	|核验
+form items = 16 blockNo index = 1
+input value after fill = T-R1L2-PROBE
+btn disabled = false
+--- NET/ERR LOG ---
+REQ PUT http://127.0.0.1:8082/dev-api/lqg/embed/2102229490548617218/verify :: {"action":"valid","paraffinBlockNo":"T-R1L2-PROBE"}
+RESP 200 http://127.0.0.1:8082/dev-api/lqg/embed/2102229490548617218/verify :: {"code":200,"msg":"操作成功","data":null}
+--- drawer still visible: false
+--- toast: []
+--- db row: pending|-
+valid|T-R1L2-PROBE
+
+EXIT2=0
+
+################ 修后 · 本票三条路径探针（issue145-probe.mjs，19/19）################
+##### B) issue145-probe (rework, 19 检查)
+PASS  I145-00 造出 3 条外部待核验送样（挂 1001，库内 pending|-|external） — [{"id":"2102230920617537538","st":"pending|-|external"},{"id":"2102230920831447042","st":"pending|-|external"},{"id":"2102230921028579329","st":"pending|-|external"}]
+PASS  I145-01 核验抽屉给出「所挂样本已核验有效」的提示 — alert=所挂样本已核验有效，可以判为有效|判为有效要给石蜡块编号（全库唯一），之后照常补工序与染色；判为无效必须写原因。
+PASS  I145-02 抽屉里找到了「石蜡块编号」输入框
+PASS  I145-03 判有效只发了一条 PUT /lqg/embed/{id}/verify（普通 PUT /lqg/embed 一条都没发） — net=["REQ PUT /lqg/embed/2102230921028579329/verify :: {\"action\":\"valid\",\"paraffinBlockNo\":\"T-I145-R1-A\"}","RESP 200 /lqg/embed/2102230921028579329/verify :: {\"code\":200,\"msg\":\"操作成功\",\"data\":null}"]
+PASS  I145-04 verify 请求体带上了判有效的必填项 paraffinBlockNo — {"action":"valid","paraffinBlockNo":"T-I145-R1-A"}
+PASS  I145-05 verify 响应 200，且没有任何 400 的普通保存 — ["REQ PUT /lqg/embed/2102230921028579329/verify :: {\"action\":\"valid\",\"paraffinBlockNo\":\"T-I145-R1-A\"}","RESP 200 /lqg/embed/2102230921028579329/verify :: {\"code\":200,\"msg\":\"操作成功\",\"data\":null}"]
+PASS  I145-06 判有效真的落库：valid + 编号 + 核验人 9000000100 — row=valid|T-I145-R1-A|9000000100
+PASS  I145-07 成功有明确提示（el-message 含「已判为有效」） — toasts="已判为有效" notes="消息
+
+上午好，欢迎登录 RuoYi-Vue-Plus 后台管理系统"
+PASS  I145-08 判有效成功后抽屉关闭 — drawerOpen=false
+PASS  I145-09 全程没有未捕获 rejection / pageerror — 
+PASS  I145-10 判无效也直接走 /verify（不带普通 PUT），请求体带 reason — net=["REQ PUT /lqg/embed/2102230920831447042/verify :: {\"action\":\"invalid\",\"reason\":\"issue145 返工验收：外部送样信息不符\"}","RESP 200 /lqg/embed/2102230920831447042/verify :: {\"code\":200,\"msg\":\"操作成功\",\"data\":null}"]
+PASS  I145-11 判无效落库：invalid + 原因 + 核验人 9000000100 — row=invalid|issue145 返工验收：外部送样信息不符|9000000100
+PASS  I145-12 判无效成功有提示且抽屉关闭 — toasts="已判为无效" notes=""
+PASS  I145-13 判无效路径无未捕获 rejection — 
+PASS  I145-14 负对照：撞号的 verify 请求确实发出且被后端拒（非 200） — ["REQ PUT /lqg/embed/2102230920617537538/verify :: {\"action\":\"valid\",\"paraffinBlockNo\":\"T-E01-1\"}","RESP 200 /lqg/embed/2102230920617537538/verify :: {\"code\":500,\"msg\":\"石蜡块编号「T-E01-1」已存在，请换一个\",\"data\":null}"]
+PASS  I145-15 负对照：库内该行仍是 pending|-（什么都没变） — row=pending|-
+PASS  I145-16 负对照：失败必 toast（el-message 非空且是后端那句 msg） — toasts="石蜡块编号「T-E01-1」已存在，请换一个" msgNodes=2 notes=""
+PASS  I145-17 负对照：失败不关抽屉（留着让人改编号） — drawerOpen=true
+PASS  I145-18 负对照：失败也没有未捕获 rejection — 
+
+== issue145 19/19 通过 ==
+EXIT_B=0
+
+################ 修后 · QA L2-g1-web（reseed 后单独跑，24/24）################
+##### A) reseed + QA g1-web (standalone, 干净 seed)
+PASS  G1A-01 侧边栏进入石蜡包埋页 — url=http://127.0.0.1:8082/embed
+PASS  G1A-02 列表行数 = 库里未删石蜡包埋记录数 — ui=5 db=5
+PASS  G1A-03 待核验的外部送样（2006）置顶：首行 = 外部 · 待核验 · 待核验 — first=外部|	|待核验|	|待核验|	|—|	|组织|	|—|	|—|	|—|	|—|	|—|	|—|	|—|	|—|	|未切片|	|—|	|—|	|—|	|—|	|最后修改：从未修改|	|核验
+PASS  G1A-04 待核验行 DOM class + 计算样式是浅黄底 — class=el-table__row lqg-embed__row-pending row.bg=rgb(252, 241, 218)
+PASS  G1A-05 非待核验行不是浅黄（对照组） — second.bg=rgb(255, 255, 255)
+PASS  G1A-06 列表含「内 / 外部」「核验状态」两个徽标列 + 模板 16 列 — head=内 / 外部|	|核验状态|	|石蜡块编号|	|样本编号|	|样本类型|	|类器官来源类型|	|组织收样时间|	|组织处理时间|	|琼脂糖包埋样本时间|	|包埋人|	|脱水时间|	|琼脂糖包埋样本送样时间|	|石蜡包埋时间|	|切片时间|	|染色|	|mark的表达情况|	|操作人|	|备注|	|最后修改|	|操作
+PASS  G1A-07 待核验行石蜡块编号一格显示「待核验」而不是空 — 
+PASS  G1B-01 待核验行操作列给的是「核验」按钮（不是普通编辑） — 核验
+PASS  G1B-02 所挂样本（1002 pending）未核验有效时「判为有效并保存」置灰 — disabled=true class=el-button el-button--primary el-button--default is-disabled
+PASS  G1B-03 抽屉里写明原因（读 sampleVerifyStatus，不是空提示） — alert=所挂样本还没核验有效（当前状态：待核验），不能判为有效|判为有效要给石蜡块编号（全库唯一），之后照常补工序与染色；判为无效必须写原因。
+PASS  G1B-04 提示词含所挂样本的实际状态文案 — drawer=核验石蜡包埋送样|最后修改：从未修改||所挂样本还没核验有效（当前状态：待核验），不能判为有效|判为有效要给石蜡块编号（全库唯一），之后照常补工序与染色；判为无效必须写原因。||包埋信息|选择样本|— · SJ90000002 · 所挂样本已确定，不能更换|石蜡块编号|样本类型|类器官来源类型|包埋人|工序时间|组织收样时间|组织处理时间|琼脂糖包埋样本时间|脱水时间|琼脂糖包埋样本送样时间|石蜡
+PASS  G1B-05 置灰按钮悬停给出说明 tooltip — tip=所挂样本还没核验有效（当前状态：待核验），不能判为有效
+PASS  G1C-01 编辑抽屉带出石蜡块编号 T-E01-1 与染色 HE/IHC，顶部有「最后修改」小字 — values=["T-E01-1","组织","李工","2026-08-23","2026-08-23","2026-08-24","2026-08-25","2026-08-25","2026-08-26","2026-08-27","HE","IF","IHC","OTHER","NONE","Ki67","negative","weak","strong","CK19","negative","weak","strong","李工"] | drawer=编辑石蜡包埋记录|最后修改：从未修改|包埋信息|选择样本|T-hli01 · SJ90000001 · 所挂样本已确定，不能更换|石蜡块编号|样本类型|类器官来源类型|包埋人|工序时间|组织收样时间|组织处理时间|琼脂糖包埋样本时间|脱水时间|琼脂糖包埋样本送样时间|石蜡包埋时间|切片时间|染色与 marker|染色|
+PASS  G1D-01 石蜡包埋「导出」下载到 xlsx 文件（PK 头） — file=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/regression/D3/L2-shots/g1-web/embed-export.xlsx size=4432 head=PK suggested=石蜡包埋送样记录.xlsx
+PASS  G1D-02 样本总表有两个导出按钮（组织 + 类器官） — buttons=["搜索","重置","新增样本记录","导出样本记录信息表","导出类器官收样记录","核验","质控文档","石蜡包埋","冻存","","核验","质控文档","石蜡包埋","冻存","","编辑","质控文档","石蜡包埋","冻存","","编辑","质控文档","石蜡包埋","冻存","","编辑","质控文档","石蜡包埋","冻存","","编辑","质控文档","石蜡包埋","冻存","","编辑","质控文档","石蜡包埋","冻存","","编辑","质控文档","石蜡包埋","冻存","","编辑","质控文档","石蜡包埋","冻存","","",""]
+PASS  G1D-03 样本总表「组织」导出下载到 xlsx（PK 头） — file=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/regression/D3/L2-shots/g1-web/sample-tissue-export.xlsx size=4619 head=PK
+PASS  G1D-04 样本总表「类器官」导出下载到 xlsx（PK 头） — file=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/regression/D3/L2-shots/g1-web/sample-organoid-export.xlsx size=3905 head=PK
+PASS  G1E-01 样本总表有「切片染色」提示列 — head=内部编号|	|送检单号|	|来源单位|	|类别|	|来源|	|核验状态|	|供体姓名|	|性别|	|年龄|	|住院号|	|组织类型 / 类器官类型|	|收样日期|	|有无固定|	|处理时间|	|质控表|	|细胞活率报告|	|有无病理|	|提交人|	|组别|	|操作人|	|切片染色|	|最后修改|	|备注|	|操作
+PASS  G1E-02 T-hli01（1001）行提示 = 石蜡块 2 + 已切片 + HE + IHC — hint=石蜡块 2|已切片|HE|IHC
+PASS  G1E-03 没有有效石蜡块的样本（1002 待核验）显示「—」 — hint=—
+PASS  G1E-04 悬停提示列出各石蜡块编号与切片时间（T-E01-1/T-E01-2） — popper=石蜡块编号|切片时间|T-E01-2|—|T-E01-1|2026-08-27
+PASS  G1E-05 点提示跳到石蜡包埋页 — url=http://127.0.0.1:8082/embed?sampleId=9000001001
+PASS  G1E-06 跳过去带着该样本过滤（页面出现样本过滤标签 / 行只剩该样本的块） — head=石蜡包埋送样记录|内外部送样都在这一张表里：待核验的外部送样置顶、浅黄底，点开即可核验；按筛选导出与甲方模板逐列一致。|石蜡块编号|样本编号|染色|请选择|切片时间|-|核验状态|请选择|内 / 外部|请选择|搜索|重置|新增石蜡包埋记录|导出石蜡包埋送样记录|刷新|内 / 外部|	|核验状态|	|石蜡块编号|	|样本编号|	|样本类型|	|类器官来源类型|	|组织收样时间|	|组织处理时间|	|琼脂糖包埋样本时间|	|包埋人|	|脱水
+PASS  G1Z-99 工作台页面无 JS 运行时报错 — 
+
+== D3-r1-L2-g1 24/24 通过 ==
+EXIT_A=0

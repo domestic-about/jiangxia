@@ -62,11 +62,13 @@ class SampleRecentFilterContractTest {
     /** 「只看我提交的」那一组（同样是 OR，同样包住）。 */
     private static final String MINE_GROUP = "(create_by = ? OR update_by = ?)";
 
-    /** 不启 Spring：本类只碰 wrapper 组装，用不到 mapper / 档案查询（加密列两个筛选都不传 → 不会真加密）。 */
+    /** 不启 Spring：本类只碰 wrapper 组装，用不到 mapper / 档案查询（加密列两个筛选都不传 → 不会真加密）。
+     *  SAMPLE-HINT-001 在构造器末尾补了 {@code SampleHintService}（读侧列表装配用）—— 本类不碰它，传 null。 */
     private static SampleQueryService service() {
         return new SampleQueryService(
             null,
             new SampleFieldCipher(new EncryptorProperties()),
+            null,
             null,
             null);
     }

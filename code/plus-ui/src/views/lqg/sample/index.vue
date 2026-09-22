@@ -129,10 +129,22 @@
           </el-dropdown>
         </el-col>
         <el-col :span="1.5">
-          <el-button plain icon="Download" @click="handleExportNotYet('tissue')">{{ t('lqg.sample.toolbar.exportTissue') }}</el-button>
+          <el-button
+            v-hasPermi="['lqg:sample:export']"
+            plain
+            icon="Download"
+            :loading="exporting"
+            @click="exportTissue"
+          >{{ t('lqg.sample.toolbar.exportTissue') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button plain icon="Download" @click="handleExportNotYet('organoid')">{{ t('lqg.sample.toolbar.exportOrganoid') }}</el-button>
+          <el-button
+            v-hasPermi="['lqg:sample:export']"
+            plain
+            icon="Download"
+            :loading="exporting"
+            @click="exportOrganoid"
+          >{{ t('lqg.sample.toolbar.exportOrganoid') }}</el-button>
         </el-col>
       </el-row>
 
@@ -208,6 +220,14 @@
           <template #default="scope">{{ scope.row.groupName || '—' }}</template>
         </el-table-column>
         <el-table-column :label="t('lqg.sample.col.operatorName')" prop="operatorName" width="100" :show-overflow-tooltip="true" />
+        <!-- ★ 切片染色提示（SAMPLE-HINT-001 / UI:admin.sample.list.hint）：读时计算、不可编辑；
+             挂在「操作人」之后（权威的列序里它就在操作人与备注之间）；
+             悬停再查石蜡块明细、点击带 sampleId 跳石蜡包埋页 —— 都在组件里 -->
+        <el-table-column :label="t('lqg.sample.col.hint')" width="200">
+          <template #default="scope">
+            <HintBadges :hint="scope.row.hint" :sample-id="scope.row.id" />
+          </template>
+        </el-table-column>
         <!-- ★ 最后修改：updateTime 为 null = 从没改过（SAMPLE-MP-001 的跨票行为变更），显式渲染 -->
         <el-table-column :label="t('lqg.sample.col.updateTime')" prop="updateTime" width="170" :show-overflow-tooltip="true">
           <template #default="scope">
@@ -230,7 +250,15 @@
               {{ scope.row.verifyStatus === 'pending' ? t('lqg.sample.rowAction.verify') : t('lqg.sample.rowAction.edit') }}
             </el-button>
             <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.qcDoc') }}</el-button>
-            <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.embed') }}</el-button>
+            <!-- ★ 石蜡包埋入口（EMBED-WEB-001 点亮）：带 sampleId 跳到工作台「石蜡包埋」页并自动过滤 -->
+            <el-button
+              v-hasPermi="['lqg:embed:list']"
+              link
+              type="primary"
+              @click="handleEmbed(scope.row)"
+            >
+              {{ t('lqg.sample.rowAction.embed') }}
+            </el-button>
             <el-button link disabled :title="t('lqg.sample.rowAction.notYet')">{{ t('lqg.sample.rowAction.cryo') }}</el-button>
             <el-button v-hasPermi="['lqg:sample:remove']" link type="danger" icon="Delete" @click="handleDelete(scope.row)"></el-button>
           </template>
@@ -253,13 +281,18 @@
 <script setup name="LqgSample" lang="ts">
 import { delSample, listSamples, neverModified } from '@/api/lqg/sample';
 import type { SampleQuery, SampleVO } from '@/api/lqg/sample';
+// ★ 两张导出（SAMPLE-EXPORT-001）：与列表同一组筛选参数，走 query 参数 POST，responseType=blob
+import { exportOrganoidSamples, exportTissueSamples } from '@/api/lqg/sample/export';
 import { listGroups, listUnits } from '@/api/lqg/auth/group';
 import type { SourceUnitVO, UnitGroupVO } from '@/api/lqg/auth/group';
 import SampleDrawer from './SampleDrawer.vue';
+// ★ 切片染色提示（SAMPLE-HINT-001）：徽标组 + 悬停明细 + 点击跳石蜡包埋页
+import HintBadges from './HintBadges.vue';
 import { useI18n } from 'vue-i18n';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
+const router = useRouter();
 
 // 字典全部走 useDict（ticket §2.2）；文案走 lqg.sample.*
 const { lqg_sample_kind, lqg_submit_source, lqg_verify_status, lqg_gender } = toRefs<any>(
@@ -267,6 +300,7 @@ const { lqg_sample_kind, lqg_submit_source, lqg_verify_status, lqg_gender } = to
 );
 
 const loading = ref(false);
+const exporting = ref(false);
 const rows = ref<SampleVO[]>([]);
 const total = ref(0);
 const units = ref<SourceUnitVO[]>([]);
@@ -350,8 +384,64 @@ const handleOpen = (row: SampleVO) => {
   drawerRef.value?.open(row);
 };
 
-const handleExportNotYet = (sheet: string) => {
-  proxy?.$modal.msgWarning(t('lqg.sample.toolbar.exportNotYet') + ' · ' + sheet);
+/**
+ * 导出用的查询条件：**与列表同一份筛选**（SAMPLE-EXPORT-001 ticket §2）。
+ *
+ * ★ 日期区间住在 `receiveDateRange` 这个本地 ref 里，导出前必须先落进 queryParams
+ *   —— 否则「按收样日期区间筛出来再导出」会静默导成不带日期条件的全量。
+ * ★ pageNum / pageSize 原样带着也无妨：后端导出走 `selectList`（不分页），那两个参数被忽略。
+ */
+const buildExportQuery = (): SampleQuery => {
+  queryParams.receiveDateBegin = receiveDateRange.value?.[0] ?? null;
+  queryParams.receiveDateEnd = receiveDateRange.value?.[1] ?? null;
+  return queryParams;
+};
+
+/** 导出共用的下载动作（blob → a[download]；空文件给提示而不是下一个 0 字节的 xlsx） */
+const downloadExport = async (
+  fetcher: (query: SampleQuery) => Promise<any>,
+  fileName: string,
+  doneKey: string
+) => {
+  exporting.value = true;
+  try {
+    const res: any = await fetcher(buildExportQuery());
+    const blob = new Blob([res?.data ?? res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    if (!blob.size) {
+      proxy?.$modal.msgWarning(t('lqg.sample.toolbar.exportEmpty'));
+      return;
+    }
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName + '.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    proxy?.$modal.msgSuccess(t(doneKey));
+  } finally {
+    exporting.value = false;
+  }
+};
+
+/** 导出「样本记录信息表」（tissue 类 14 列；类别由后端端点决定） */
+const exportTissue = () =>
+  downloadExport(exportTissueSamples, t('lqg.sample.toolbar.exportTissueFile'), 'lqg.sample.toolbar.exportTissueDone');
+
+/** 导出「类器官收样记录」（organoid 类 7 列；类别由后端端点决定） */
+const exportOrganoid = () =>
+  downloadExport(exportOrganoidSamples, t('lqg.sample.toolbar.exportOrganoidFile'), 'lqg.sample.toolbar.exportOrganoidDone');
+
+/**
+ * 「石蜡包埋」行操作：带 sampleId 跳到工作台「石蜡包埋」页（EMBED-WEB-001）。
+ *
+ * ★ 跳转参数是 **sampleId**（后端 `EmbedQueryBo.sampleId` 的既有筛选），
+ *   不是内部编号 —— 待核验样本还没有内部编号，用编号跳会筛出空页。
+ */
+const handleEmbed = (row: SampleVO) => {
+  // 路径就是菜单 5310 的 path（'embed'，顶级 = /embed），不是 /lqg/embed
+  router.push({ path: '/embed', query: { sampleId: String(row.id) } });
 };
 
 const handleDelete = async (row: SampleVO) => {

@@ -47,7 +47,13 @@ export interface SampleRow {
   invalidReason?: string | null
 }
 
-/** 详情：外部详情多三段（包埋 / 文档本张恒为空数组），内部详情另带收样段全字段 */
+/**
+ * 详情：外部详情多两段（石蜡包埋卡片 AUTH-EXT-002 / 质控文档 AUTH-EXT-003），
+ * 内部详情另带收样段全字段。
+ *
+ * ★ 外部详情里的 `internalNo`：**只有后端开关 `lqg.ext.show-internal-no` 打开时才有这个键**
+ * （CR-20260918-07）—— 关着时键本身不存在，页面按 `has(internalNo)` 决定整行渲不渲染。
+ */
 export interface SampleDetail extends SampleRow {
   gender?: string | null
   age?: string | null
@@ -61,9 +67,56 @@ export interface SampleDetail extends SampleRow {
   hasQcSheet?: string | null
   hasViabilityReport?: string | null
   operatorName?: string | null
-  /** 外部详情里的内部编号：**只有后端开关打开时才有这个键**（CR-20260918-07） */
-  embeds?: unknown[]
+  /** 第②段：该样本名下的石蜡包埋卡片（**含外部提交还没核验的送样**，AUTH-EXT-002） */
+  embeds?: EmbedRow[]
+  /** 第③段：质控文档（AUTH-EXT-003） */
   docs?: unknown[]
+}
+
+/**
+ * 外部样本详情第②段的石蜡包埋卡片（`ExtEmbedVo`，AUTH-EXT-002）。
+ *
+ * 键集合就是后端的白名单（`doc/api-contract.md` 第 64 行）：
+ * **有**操作人 `operatorName` 与包埋人 `embedBy`（CR-20260918-07 放开），
+ * **没有**内部编号 / 备注 / 核验人 / 冻存。（`EmbedCard.vue` 不出现这几个词是硬约束。）
+ */
+export interface EmbedRow {
+  id: string | number
+  sampleId?: string | number | null
+  submitNo?: string | null
+  /** 石蜡块编号：外部提交还没核验的送样为空 → 卡片显示「待核验」/「无效」 */
+  paraffinBlockNo?: string | null
+  sampleType?: string | null
+  organoidSourceType?: string | null
+  tissueReceiveTime?: string | null
+  tissueProcessTime?: string | null
+  agaroseEmbedTime?: string | null
+  dehydrateTime?: string | null
+  agaroseSendTime?: string | null
+  paraffinEmbedTime?: string | null
+  sectionTime?: string | null
+  /** 已切片（后端由切片时间推） */
+  sectioned?: boolean | null
+  stainTypes?: string[] | null
+  stainOther?: string | null
+  markers?: EmbedMarker[] | null
+  verifyStatus?: string | null
+  invalidReason?: string | null
+  submitterName?: string | null
+  /** 这条送样是不是我提交的 */
+  mine?: boolean | null
+  /** 本人提交且待核验 / 无效才可改后重提 */
+  editable?: boolean | null
+  /** 包埋人 */
+  embedBy?: string | null
+  /** 操作人 */
+  operatorName?: string | null
+}
+
+/** 一条 marker 表达（只有名称与表达两个键） */
+export interface EmbedMarker {
+  markerName?: string | null
+  expression?: string | null
 }
 
 /** 表单字段（送检段 + 收样段；提交时整份带回去，后端 PUT 收部分字段也能改） */

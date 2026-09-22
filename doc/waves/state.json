@@ -25,8 +25,9 @@
     },
     {
       "id": "D3",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 2,
+      "qa_seq": 2
     },
     {
       "id": "D4",
@@ -64,12 +65,12 @@
       "note": "/mp/ext/** 咽喉落成：可见集合只在 ExtScopeServiceImpl（ext 包唯一持 Mapper 的类）算，其余 ext 类只拼装转发；ExtInternalNoSwitch 读 sys_config lqg.ext.show-internal-no（注入 ConfigService 不持 mapper）；ExtSampleAssemblyService 无 mapper；ExtSampleController/ExtOrganoidController 类级 @SaCheckRole('lqg_external')；业务写侧 ExtSampleSubmitService 放 sample 包（遵 ADR-0004 i4）；越出 touches 一处：SampleQueryService 加 selectExtPage(Page, LambdaQueryWrapper)（i4 逼出来的，ext 包不能注 mapper）；无迁移（外部接口无菜单，lqg.ext.show-internal-no 那行由 V202609210830 插）。四条不变量由 ExtChokepointContractTest（逐字节未改 + Tests run: 4）守住；27 条对抗性探针全 PASS。★accept 2 有 1/15 段未绿：--as extA GET /mp/int/sample/list 期望 ^403 实测 404，因为该端点由后置的 SAMPLE-MP-001 注册 —— 是 accept 跨票引用造成的瞬态，不是缺陷；不动 accept（需求层资产），由 D2 QA 门在 SAMPLE-MP-001 落地后用同一条断言收口。★给下游的硬坑：① MP 3.5.16 的 LambdaQueryWrapper 没有按列名排序的重载，表达式排序只能 wrapper.last('ORDER BY …')；② donorName/hospitalNo 是密文，给外部看必须先 SampleFieldCipher.decrypt 再掩码（第一版对密文打码得到 T**）；③ @SaCheckRole 不挡方法不匹配的请求（内部打 GET /mp/ext/organoid 返 405，角色切面没跑），角色断言只能打在真实存在的 METHOD+PATH 上。"
     },
     "AUTH-EXT-002": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "新增 /mp/ext/embed {list,{id},POST,PUT}（类级 @SaCheckRole('lqg_external')）+ ExtEmbedAssemblyService（零 *Mapper 字段，i4 绿）：可见集合走 ExtScopeService、记录走 EMBED-MODEL-001 留的读口 EmbedQueryService.{pageByWrapper,detail,listBySampleId}，本票一个 SQL 都没写。ExtEmbedVo 满配 24 键白名单（含 embedBy/operatorName，无 internalNo/remark/verifyBy/冻存）；ExtEmbedMarkerVo 只带名称+表达；onlyMine/mine/editable 按**本条记录自己的 submitter_id**（不是所挂样本的提交人）；ExtSampleDetailVo.embeds 接上数据（含待核验送样）；ExtEmbedSubmitBo 只有 3 键。小程序新增 components/lqg/EmbedCard.vue + detail-ext.vue 第②段。迁移 V202609230902（幂等兜底 sys_config 那行）。accept 3/3 + 26 条探针 PASS；回归：EMBED-MODEL-001 acc1/2、SAMPLE-MP-001 acc1/2、ExtChokepointContractTest 4/4 且 cmp 逐字节未改、全模块 Tests run 93（本票 +7）、D1 回归包只剩既有 flyway 写死总数那条假红（现 12 支）。★踩坑与处置：迁移号 0902 < 已应用的 1100 撞 out-of-order（启动即 FlywayValidateException），按 issue #12/SYS-WEB-001 先例重建 dev 库让全量按序重跑解决（没改 out-of-order、没改 lint-profile）。越界仅两处（生成产物 components.d.ts、本票自加的 ExtEmbedShapeContractTest）。"
     },
     "AUTH-EXT-003": {
       "status": "pending",
@@ -192,28 +193,28 @@
       "note": ""
     },
     "EMBED-MODEL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "EMBED",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609231100（gen_ddl_pg 逐字节 = t_lqg_embed + t_lqg_embed_marker + 菜单 5300(C)+5301-5307(F) 授 101/102）；后端 18 类在 embed/**（实体/VO/BO/mapper/3 个纯函数 guard/5 service/controller）；单测新增 22（总 86 绿）。accept 4/4 绿（DDL/STATE/API/STATE）。★定时炸弹按口径拆掉：EmbedChildrenChecker 只把『未删且已核验有效』的石蜡块算 children（SQL: del_flag='0' AND sample_id=? AND verify_status='valid'），三条探针钉死——1004 有 valid 块→改判被拒、1008 只有软删块→放行、1002 只有 pending 的 2006→放行；D2 的 SAMPLE-VERIFY-001 accept 1/2 复跑仍绿、D1 回归包只剩既有的 flyway 写死总数那条假红。坑：① @SaCheckPermission 缺 sys_menu 权限行是 403 不是 500；② MP 的 apply(sql,args) 惰性登记参数，不先 getTargetSql() 渲染一次则 getParamNameValuePairs() 是空 map（单测假红）；③『补逗号 LIKE』整元素匹配的通配符不能少——第一版写 LIKE ',IHC,'（少两侧 %）实测 total:0，正确是 '%,IHC,%'；④ @TableLogic 只保证 del_flag='0'，children 判据必须显式叠 verify_status='valid'；⑤ update(null, LambdaUpdateWrapper) 不填 update_by（第三次命中）→ 三处写侧都显式 .set。交接：EMBED-WEB-001 必须把菜单 5300-5307 搬到 5310-5317（否则它的 getRouters==1 拿不到）；EMBED-MP-001/AUTH-EXT-002 可直接复用 EmbedQueryService.list(sort/mine/handlerName) 与 EmbedExternalService 签名；SAMPLE-HINT-001 与本 checker 同一份计数口径。"
     },
     "EMBED-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "EMBED",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序：pages/embed/form（染色五按钮多选+无染色互斥，与工作台共用 fixture 口径；保存不要求填完；日期两侧转格式；外部只渲染选择样本+样本类型+类器官来源类型，选样本只列本人未判无效的、显示送检单号+掩码供体姓名、不出现内部编号）+ 组件放 src/components/lqg/（4 个，避免被 uni-pages 注册成垃圾路由）+ pages/ledger/sheets.ts 注册 embed + pages/history/sources.ts 注册 embed（sort=recent，不写死 mine）+ api/embed.ts；后端注册 /mp/int/embed/**（类级 @SaCheckRole('lqg_internal')），复用 EmbedQueryService.list + EmbedService.update(patch)。accept 3/3：产物 form.js+ledger/index.js 在、7 段 grep、vitest 19、/mp/int/embed/list 五条、extA→403（把 AUTH-EXT-002 遗留的 404 收口了）、sort=recent 五条+2006 打头+handlerName 无 null+2001→[李工,true]/2004→[测试管理员,false]、mine=true→{2001,2003} 且与直连库同集合；改管理员录的 2002→200 且仍 2 块没新增行、update_by 记人、排最前；撞号/待核验被拒且库内不变。回归全绿（EMBED-MODEL 4、EMBED-WEB 2、AUTH-EXT-002 3、SAMPLE-MP-001 2、SAMPLE-MP-002 3、SAMPLE-HINT 2 全 EXIT=0）；后端 Tests run 120；小程序 vitest 115（本票 +36）；D1 回归包 41 绿/1 红（既有 flyway 假红）。越界：EmbedQueryBo/EmbedQueryService/其契约测试（+keyword＝石蜡块编号模糊 OR 所辖样本内部编号等值，OR 包成一组，3 参重载保留）、pages/ledger/index.vue、api/ledger.ts（多筛选组）、types/components.d.ts（生成产物）。"
     },
     "EMBED-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "EMBED",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609231110：把 EMBED-MODEL-001 落的菜单 5300-5307 整体 DELETE 后重建到 5310-5317（不做则 getRouters 会有两条 lqg/embed/index）；后端 embed/export/{EmbedExportVo,EmbedExportService}（导出视图放 service 层供 SYS-EXPORT-001 复用）+ EmbedExportContractTest 5 例（一例用 JDK zip+DOM 读甲方模板原件做两侧对账）+ POST /lqg/embed/export + EmbedDictService.labels() + EmbedQueryService.exportRows()；前端 views/lqg/embed/{index.vue,EmbedDrawer.vue,stain.ts,stain.fixture.spec.ts} + api + lang；样本总表『石蜡包埋』入口点亮 + 带 sampleId 跳 /embed 自动过滤。accept 2/2（导出 6 段：表头 16 列逐字同序/全量 5 行/T-E01-1 样本编号=T-hli01+HE染色、IHC染色+Ki67：强表达；CK19：阴性+包埋人李工/T-E04-1=其他（Masson）+弱表达/T-E02-1=无染色+空/两个筛选段；菜单段 5310+perms 精确集合+getRouters 恰 1 条+vitest 19/19）。核验抽屉按 sampleVerifyStatus 置灰并写明原因，且做了反向对照（样本核验有效后按钮变可点）。回归：EMBED-MODEL-001 4/4、AUTH-EXT-002 3/3、SAMPLE-WEB-001 2/2、SAMPLE-MP-002 acc2、ExtChokepointContractTest 4/4、Java 98/98。★新识别 harness 缺陷（我已修）：D1 回归包 lsof -p | grep -q 在 set -uo pipefail 下因 SIGPIPE(141) 恒假红 → 改成落盘再 grep。"
     },
     "OCR-IMPL-001": {
       "status": "pending",
@@ -264,20 +265,20 @@
       "note": ""
     },
     "SAMPLE-EXPORT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "新增 ruoyi-lqg/.../sample/export/{SampleExportController,SampleExportService,SampleTissueExportVo,SampleOrganoidExportVo} + SampleExportContractTest 5 例（含与甲方模板原件逐字对账）；SampleQueryService 加 exportRows（与 list 同一份 wrapper/装配）；迁移 V202609231000（只 INSERT 5217 + 两条 role_menu）；前端 plus-ui/api/lqg/sample/export.ts + views/lqg/sample/index.vue（两个按钮 + buildExportQuery 带当前筛选含日期区间）+ 两本 i18n。accept 1：tissue 表头 14 列逐字同序 / 8 行；T-hli01 十格逐字（性别=男、有无固定=有、质控表=有、细胞活率报告=有、操作人=李工、供体姓名=测试供体甲=已解密）；organoid 7 列/1 行/T-oco01 三格；?sourceUnitId=9000009002 行数==列表 total；extA 403。accept 2：5217:lqg:sample:export:5210 + 授 101/102 + getRouters 恰 1 条 + getInfo 含该权限 + 两份前端文件命中。counterfeit 探针 PASS；UI 取证不读 PNG。Java 103 绿。★踩坑：touches 没列 db/migration/**，但 accept 2 强制 5217 出自本票迁移 → 必须补 V202609231000，而 1000 < 已应用的 1110 → 又撞 out-of-order，按先例重建 dev 库后 14 支按序跑完。★跨票冲突（issue #129）：与 SAMPLE-WEB-001 accept 2 段 4『perms 精确等于六个』不可同时满足，主会话裁定按需求归属解（导出权限归本票所有，对方断言过紧），实现不动、待①放宽。"
     },
     "SAMPLE-HINT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D3",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "sample/hint/** 一条 GROUP BY（e.del_flag='0' AND e.verify_status='valid'，与 EmbedChildrenChecker 同源）算出每行 hint:{blockCount,sectioned,stains}；/lqg/sample/list 与 /mp/int/sample/list 每行都挂（无包埋记录给零值不给 null）；stains 拆开后去 NONE 按字典序。工作台 HintBadges.vue（悬停再查石蜡块编号+切片时间、点击带 sampleId 跳包埋页、无记录显示 —）+ 接进 index.vue；小程序 sheets.ts 最后一列「切片染色」。无新增 Flyway。accept 1：1001=[2,true,[HE,IHC]]、1004=[1,true,[]]、1006=[1,true,[OTHER]]、1008=[0,false,[]]、1002=[0,false,[]]，整页无 hint==null，db=4 sum=4，mp 端点同样带 hint。accept 2：ddl_vs_ssot 逐列相符（样本表零冗余列）+ HintBadges 在盘 + SampleHint*Test 9 例（含『传 20 个样本 id 只触发 1 次查询』用 mapper spy 数调用次数）。7 条 counterfeit 探针全排掉（不加 del_flag→1008 数出 1；不加 verify_status→1002 数出 1；不拆 NONE；两条读路径零 null；真日志证明一页只 1 条聚合 SQL；information_schema 冗余列=0；两条读路径逐行 hint 相等）。Java 112 绿。★越出 touches 5 处（全为新增、无签名变更）：SampleVo 加 hint、SampleQueryService 加依赖+fillHints、SampleRecentFilterContractTest 构造器补第 5 个 null（不补编译不过）、plus-ui api 加类型、miniapp sheets.spec.ts。"
     },
     "SAMPLE-MODEL-001": {
       "status": "done",
@@ -1542,6 +1543,376 @@
       "type": "debt",
       "title": "外部 PUT 重提会把既有 source_unit_id 清成 null（source_unit_name 仍在）",
       "detail": "D2 r4 L3 片发现：#100（外部重提）会把 seed 里既有行的 source_unit_id（1002=9000009001）清空。根因与 #112 同族（没有『单位名→id』解析）。影响仅『来源单位+组别』组合筛选少一行。权威 field-ssot.yaml:144 明写该列 nullable「自填单位名时为空」→ 按本轮口径不判 S0/S1，建议与 #112 合并处理。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 115,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S2",
+      "type": "arch",
+      "title": "跨票交接：EMBED-WEB-001 必须把石蜡包埋菜单 5300-5307 搬到 5310-5317",
+      "detail": "EMBED-MODEL-001 落了 5300(C)+5301-5307(F)；EMBED-WEB-001 的票面是 5310-5317 且它的 accept 要 menu_id=5310 + getRouters 里 component='lqg/embed/index' 恰 1 条。照 SAMPLE-WEB-001 的先例：在 EMBED-WEB-001 的迁移里 DELETE 5300-5307 段再重建到 5310 段，否则 getRouters 会出现两条路由或拿不到。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 116,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "『补逗号 LIKE』做整元素匹配时通配符不能少：LIKE ',IHC,' 静默 0 行，正确 '%,IHC,%'",
+      "detail": "EMBED-MODEL-001 第一版就踩了：LIKE ',IHC,'（少两侧 %）实测 total:0，被它的 accept 3 抓到。SAMPLE-HINT-001 若也用这招按染色/工序筛，务必照 '%,IHC,%' 写，且单测要断言**完整模式串**（别只断言结果数）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 117,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT /lqg/embed 语义 = patch（markers 传了才整组替换），票面未写",
+      "detail": "票面只说『待核验/无效的送样不能被普通保存改掉』，没写清其它字段是 patch 还是全量覆盖。后续 EMBED-MP-001 / EMBED-WEB-001 复用同一写口，需知道是 patch 语义。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 118,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "paraffinBlockNo 筛选取模糊（票面/契约未写）",
+      "detail": "读写口径需写进契约或 authority，免得 EMBED-WEB-001 / EMBED-MP-001 各自实现成不同语义。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 119,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "EMBED-MODEL-001 为本票/AUTH-EXT-002 预置的读口（sort/mine/handlerName/pageByWrapper）本票无端到端 accept",
+      "detail": "这些读口在 EMBED-MODEL-001 里只被单测覆盖，端到端行为要靠 EMBED-MP-001 与 AUTH-EXT-002 的票面去打。派单时已把这些签名传下去。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 120,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "契约第 51 行 ExtSampleDetailVo 清单缺 sampleKind；ticket §4.6 说「第 51/64 行还是 CR 之前的写法」不准确（第 64 行已是 CR 后写法）",
+      "detail": "契约只读，实施方未改。方案：① 核对第 51 行是否缺 sampleKind 并补齐（AUTH-EXT-001 的 accept 里 /mp/ext/sample/{id} 的 keys 差集是含 sampleKind 的）；② 修 ticket §4.6 的指路。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 121,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT /mp/ext/embed/{id} 是覆盖两个字段（不是 patch）；ExtEmbedVo.submitterName 对实验室录入的送样恒 null",
+      "detail": "EMBED-MP-001 的填写页重提时必须两个字段都带（sampleType / organoidSourceType）。另：submitterName 只查外部档案，实验室录入的送样该键恒 null —— 小程序展示时别假设它有值。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 122,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "外部打 /mp/int/embed/list 现为 404（端点未注册），EMBED-MP-001 落完自动变 403",
+      "detail": "与 AUTH-EXT-001 的同类 WARN 同源。D3 QA 门跑 AUTH-EXT-002 的 accept 时要注意这段在 EMBED-MP-001 落地前是 404；落地后由 D3 QA 用同一条断言收口。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 123,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "「AUTH-EXT-003 会再撞一次迁移段位交叉」的前提不成立（它是 D7 的票，日期段 20260927）",
+      "detail": "实施方 WARN-1 的提醒有价值（段位交叉这件事本身成立），但指错了票：AUTH-EXT-003 的 phase 是 D7，迁移号会是 V2026092709xx，远大于当时的 max applied，不会 out-of-order。D3 里已无 AUTH 域票。方案（长期）：ticket 生成器禁止跨域补号，或 dev 显式 out-of-order（prod 保持 false）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 124,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "【已修】D1 回归包 lsof -p | grep -q 在 pipefail 下因 SIGPIPE 恒假红（新鲜度检查一直报假红）",
+      "detail": "doc/waves/regression/D1/verify.sh 原第 112 行：grep -q 命中即退出 → lsof 收 SIGPIPE(141) → set -uo pipefail 下整条管道判失败。EMBED-WEB-001 给了等价取证（同 PID grep -c = 2 行、逐字重放 HELD）。主会话已改成『lsof 先落临时文件再 grep』并 bash -n 过。这条是 D1 回归包现在两条红之一（另一条是 flyway 写死总数 7）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 125,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 与实现不符：必须动 EmbedDictService / EmbedQueryService / EmbedController 三个不在 touches 的文件",
+      "detail": "三处全是新增方法、无签名变更（EmbedDictService.labels() 字典中文标签、EmbedQueryService.exportRows() 同一份 wrapper+装配、EmbedController 加端点）。ticket touches 只列了 embed/export/**。方案：把这三个文件划进 EMBED-WEB-001 的 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 126,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "核验档「先保存再核验」是两次请求、非原子",
+      "detail": "抽屉里点『判为有效并保存』= 先 PUT 保存再 PUT verify，中间失败会留下已保存未核验的状态。方案：合成一个接口，或前端在第二次失败时明确提示。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 127,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "石蜡包埋列表加了「最后修改」列（authority 的列清单里没有）",
+      "detail": "按 D2 起的 updateTime==null 语义加的。方案：把该列写进 UI:admin.embed.list 的列清单，或去掉。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 128,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "/mp/int/export/embed 无运行时证据（端点属 SYS-EXPORT-001）",
+      "detail": "本票只落了导出视图供复用，小程序导出端点由 SYS-EXPORT-001 落。到那时要补端到端断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 129,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【需求层冲突】SAMPLE-WEB-001 accept 2 段 4 与 SAMPLE-EXPORT-001 accept 2 段 1 不可同时满足",
+      "detail": "前者断 sys_menu 里 parent_id=5210 且 menu_type='F' 的 perms **精确等于六个**（lqg:sample:list,query,add,edit,remove,verify）；后者强制 5217/perms='lqg:sample:export'/parent_id=5210 且授 101,102。任何满足后者的实现都必然打红前者（实测 [FAIL] 集合不相等：多出 ['lqg:sample:export']）。★裁定：冲突由**需求归属**解决——导出权限是 REQ-SAMPLE-011/012 的要求、归 SAMPLE-EXPORT-001 所有，SAMPLE-WEB-001 那句「精确等于六个」是写早了、过紧的断言。故正确现状是「六个 + lqg:sample:export 一条」。方案（属①的资产，主会话不改）：把 SAMPLE-WEB-001 accept 2 段 4 改成「包含六个」或加 AND perms <> 'lqg:sample:export'。D3 QA 门已被告知这是已知规格冲突、不得据此判产品红。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 130,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 未列 db/migration/**，但 accept 2 强制 5217 权限出自本票迁移（连带必然撞 out-of-order）",
+      "detail": "ticket touches 只有 sample/export/** + 前端两文件；实际必须新增 V202609231000（5201 段的 5217 按钮权限）。而 1000 < 已应用最大值 1110 → 必须重建 dev 库。方案：把 db/migration/** 划进本票 touches，并在 ticket §0 写明「本票迁移号小于同任务已应用的最大号时需重建 dev 库」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 131,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "exportRows 落在 sample/service/SampleQueryService.java（不在 touches）",
+      "detail": "为了与列表共用同一份 wrapper/装配（这是 accept 1 的『行数==列表 total』所要求的），新增方法落在既有文件上。全为新增方法、无签名变更。方案：把该文件划进 touches，或把导出查询与列表查询抽到一个共享类里。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 132,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "导出格式细节未写死：处理时间 yyyy-MM-dd HH:mm:ss、性别 unknown→未知（按字典 label）",
+      "detail": "accept 未钉这两处，实现按字典 label 与本地时间格式导。建议写进契约或导出说明，免得后续模板核对时口径漂移。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 133,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "越出 touches 5 处（全为新增、无签名变更）：SampleVo / SampleQueryService / 既有契约测试构造器 / plus-ui api / miniapp spec",
+      "detail": "touches 只列了 sample/hint/** + 三个前端文件，但「往 list 每行挂 hint」必然要动列表装配方（SampleVo + SampleQueryService）、而给 SampleQueryService 加 @RequiredArgsConstructor 依赖会打断不启 Spring 的既有单测（SampleRecentFilterContractTest 构造器得补第 5 个 null 实参，不补编译不过）。方案：把 sample/domain/vo/SampleVo.java、sample/service/SampleQueryService.java 与 plus-ui api 类型划进本票 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 134,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "悬停浮层只列已核验有效的块（与徽标块数同源）；要不要列待核验送样待定",
+      "detail": "去掉 verifyStatus='valid' 一个参数即可改。口径要与 EMBED-MODEL-001 的 children 判据保持一致（那边也只看 valid）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 135,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "hint 只在 list 行上：详情与两张导出都不带（契约也只写在 list 上）",
+      "detail": "hintOf(Long) 已备好，若详情/导出要带，一行即可接。建议写进契约明确边界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 136,
+      "ticket": "SAMPLE-HINT-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "小程序「切片染色」列是纯文本小字（LedgerTable.vue 的 cells 是字符串矩阵），要徽标需另开小票",
+      "detail": "与 SAMPLE-MP-002 的哑组件设计有关（props 全是可序列化纯数据）。若甲方要求与工作台一致的徽标，需扩展 LedgerTable 的单元格类型。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 137,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【需求层冲突】EMBED 的 sort=recent 只排序不收窄到「内部人员经手」，与权威 UI:mp.history 及 SAMPLE 域行为不一致",
+      "detail": "权威 UI:mp.history 内部视角明写『**中心全部内部人员**新增或修改过的记录』；SAMPLE 域已按此收窄（D2 的直连库对账钉过：create_by/update_by ∈ sys_user.user_type='sys_user'），EMBED 域只排序 → 历史页签出现 extA 建的待核验送样、经手人显示外部姓名『王医生』。而 EMBED-MP-001 的 accept 1 明文要『sort=recent → 五条全在』，按权威收窄就必然打红它 → 票面与权威互斥。★裁定留 Kevin：① 按权威与 SAMPLE 对齐（收窄），同时放宽该 accept；② 维持票面（记已知偏差）。主会话不改需求层文件。D3 QA 门已被告知这是规格层冲突、不得据此判实现缺陷。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 138,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "src/pages/** 下的 .vue 会被 uni-pages 自动注册成页面路由（实测多 4 条垃圾路由）——建议进栈包 gotchas",
+      "detail": "4 个组件因此放 src/components/lqg/（pages.json / uni-pages.d.ts 回到 HEAD 零 diff）。代价：accept 3 最后一段『! grep internalNo src/pages/embed/SamplePickerExt.vue』因路径不存在而恒真（命令仍 EXIT=0）——实施方已用 layout.fixture.spec.ts 里按真实 import 路径 readFileSync 的更强等价断言补上（文件不存在即红 + 反向断它确实读了 fetchExtMySamples/donorNameMasked）。方案：把该 accept 的路径改成真实路径，并在栈包 gotchas 里加一行『组件别放 src/pages/**』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 139,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "SAMPLE-MP-002 报告里端侧 04 屏（?sheet=embed 回落到第一个已注册）在 EMBED-MP-001 落地后失效",
+      "detail": "它的 accept 不测这一屏（所以不红），坏的是报告证据。D2 的 L2 资产若要复跑该屏，改用 ?sheet=cryo（仍未注册）或 ?sheet=<未知>。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 140,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "columns.ts 里 embed 的「样本编号」key 是 sampleSubmitNo 而实际字段是 internalNo（实施方在 api/embed.ts 对齐）",
+      "detail": "列 key 与字段名不一致，容易在下一个消费方（导出/小程序其它页）踩。方案：把 columns.ts 的 key 改成 internalNo，或加映射注释。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 141,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "embed-form fixture 漏钉「外部 + 待核验 + 非本人」在 edit 模式下的 editable 判据（证伪实测为假）",
+      "detail": "D3 r1 L0+L1 片证伪实测：把 layout.ts 的  去掉后 9 条 embed-form fixture 全绿——而票面 counterfeit 声称该情形会红。产品代码是对的，纯 harness 期望表缺一条病灶用例。方案：在 doc/verify/fixtures/embed-form-cases.json 里补「外部 + 待核验 + 非本人 + mode=edit → editable=false」一例。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 142,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 层「2006 置顶」被 seed 时间戳顺带满足（拆掉置顶 ORDER BY 后 accept 仍绿）",
+      "detail": "D3 r1 L0+L1 片证伪实测：拆掉『待核验置顶』的 ORDER BY 后 EMBED-MODEL accept 3 与 EMBED-MP accept 1 仍绿，因为 seed 里 2006 本来 create_time 就最新；单测 EmbedQueryContractTest.orderByTwoModes 会红，有兜底。方案：accept 里加一条『把 2006 create_time 回拨仍应置顶』（L0+L1 片就是这么补验的）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 143,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【实锤·待 Kevin】issue #129：5210 下 perms 现为 7 个，SAMPLE-WEB-001「恰六个」断言 exit 1",
+      "detail": "D3 r1 独立实测确认。裁定按需求归属解（导出权限归 SAMPLE-EXPORT-001 所有），但需求层文件未改。等 Kevin 定：让我按此口径回填该断言，还是走一轮 ①。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 144,
+      "ticket": "EMBED-MP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "【实锤·待 Kevin】issue #137：EMBED sort=recent 返回全 5 条（含外部提交的 2006），SAMPLE 只回 {1008,1009} 已按权威收窄",
+      "detail": "D3 r1 独立实测：EMBED 全 5 条、SAMPLE 已收窄；权威 UI:mp.history 明写内部视角 = 中心全部内部人员新增或修改过的记录；而 EMBED-MP-001 accept 1 明文要五条全在 → 票面与权威互斥。等 Kevin 定（按权威对齐并放宽该 accept / 记已知偏差）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 145,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S0",
+      "type": "arch",
+      "title": "【S0】工作台核验抽屉「判为有效并保存」点不动：前端先 PUT /lqg/embed 被 400 拒，verify 端点一次都没发",
+      "detail": "复现（100%）：extA 提交挂在已核验有效样本(1001)上的外部送样 → 工作台 /embed 该行置顶浅黄、点「核验」→ 抽屉里提示正确、按钮可点（不置灰）→ 填唯一石蜡块编号点保存。抓到：唯一写请求是 PUT /lqg/embed，后端 400『待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）』；PUT /lqg/embed/{id}/verify 一次都没发；库里仍 pending|-|noverify；抽屉不关、无任何 el-message（静默失败）+ 未捕获 rejection。根因（源码）：EmbedDrawer.vue submitValid() 先 await saveBeforeVerify() → updateEmbed(PUT /lqg/embed)，对该记录必被 400 拒，异常在 verifyEmbed() 之前抛出；submitInvalid() 同一段前置 → 判无效同样走不通。反证：直接 api.sh --as staff PUT /lqg/embed/{id}/verify {action:valid,paraffinBlockNo:...} → 200、库里 valid|T-r1l2-E1|9000000101 → 后端核验端点是好的，缺陷纯在前端调用顺序。定级：这就是 D3 主流程（外部提交→实验室核验给编号，CR-20260917-05）——老师走到该步按钮无反应、拿不到编号、永远停待核验 → S0；下游 EMBED-MP-001『外部有效后展示包埋卡片』在真实路径不可达。修法方向：待核验/无效的外部送样**不要**先走普通保存（后端本来就拒），直接调 verify 端点（必填项随 verify 一起送）；仅当记录处于可普通保存的状态（内部录入/已生效且内部改）才先 save。静默失败（无提示）是同一根因的 UX 症状，一并修：失败必须 toast 且不关抽屉。",
+      "status": "decided",
+      "decision": "fixed：D3 r2 两片独立复验：#145 已修。L0+L1 片（真 UI 22/22）与 L2 片（真实点击）都实测「pending 记录只发 1 次 PUT /lqg/embed/{id}/verify、无预保存、200、抽屉关、库落 valid|编号|核验人」；判无效路径与撞号负对照（500 + toast + 抽屉不关 + 库不变）均过；L3 片另从后端侧复验 17/17（含缺编号/缺原因被拒且库不变）。r1 的未捕获 rejection 不再出现。"
+    },
+    {
+      "id": 146,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "phase-plan 的 D3 qa_scope L3 第 4 条仍是 CR-20260918-07 之前的旧写法（会得到假 S0）",
+      "detail": "它写『外部详情的 embeds 里没有 embedBy / operatorName / internalNo 键』，与 CR-20260918-07 + ExtChokepointContractTest.java:47-51 的精确豁免互斥——按 scope 旧文会把正确实现判成 S0。D3 r1 的 L0+L1 与 L3 两片都按 CR 修正后判过。方案：把该条改成『没有 internalNo（除非开关打开）/ verifyBy / remark / 冻存键；embedBy 与 operatorName 必须可见』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 147,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S2",
+      "type": "ux",
+      "title": "核验抽屉在 verify 模式下可填的工序/染色/marker 不随 verify 落库（EmbedVerifyBo 只收 3 键）",
+      "detail": "D3 #145 返工方自记 W3：契约的 EmbedVerifyBo 只收 action/paraffinBlockNo/reason，核验时若抽屉里还能改工序时间/染色/marker，那些输入会被静默丢弃（设计意图是核验后再点编辑补填）。需核：① 抽屉在 verify 模式下到底展示了哪些可填项；② 若展示了却丢弃 → 数据静默丢失，按产品影响定级（可能 S1）；③ 若只展示 3 项 → 记 clarify 即可。已要求 D3 r2 的 L2 片在走查核验抽屉时把这条当显式检查项。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 148,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "业务码 500 时全局拦截器与抽屉 catch 各弹一条同文案 el-message（msgNodes=2）",
+      "detail": "D3 #145 返工方自记 W1。实测可见性优先、用户只看到一条，保留双弹。方案：抽屉 catch 里对已由全局拦截器提示过的情况做去重（或统一由一处提示）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 149,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "缺 catch 导致未捕获 promise rejection 的同类症状散在多个抽屉/页面",
+      "detail": "D3 #145 返工方全仓扫描：SampleDrawer(4) / extuser(2) / staff(3) / unit(4) / embed index(2) 与 EmbedDrawer.searchSamples，均不属本次 S0（不阻塞主流程），但同一形态会随面积扩大。方案：统一给这些提交/查询入口补 catch + toast（与 EmbedDrawer 修法同形）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 150,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "QA 的 L2-g3-mp-ext.mjs 有三条断言需随 #145 修复更新（否则 r2 会误判成未修）",
+      "detail": "① G3B-06 把核验人写死 9000000101，而探针自己用 lqgadmin(=9000000100) 登录 → 库里实测 valid|T-r1l2-E1|9000000100 值是对的；② G3B-08 的断言内容就是『缺陷必须存在』→ 修后按定义必红；③ G3B-09 的『API 兜底』在 UI 已核验后变成 valid→valid 的 no-op、被转移表拒。另 L2-g1-web.mjs 自己不 reseed，必须 reseed 后单独跑（串跑会被 g3 遗留的第三个石蜡块带红一条，单跑 24/24）。已要求 D3 r2 的分片独立重跑并自行更正这些期望，不得直接复读旧断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 151,
+      "ticket": "EMBED-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "update_time 为空的 seed 记录，编辑抽屉显示「最后修改：从未修改」",
+      "detail": "D3 r2 L2 片发现。语义正确（与 D2 起的 updateTime==null 口径一致），只是文案在 seed 行上略怪。可接受，记账。",
       "status": "open",
       "decision": ""
     }

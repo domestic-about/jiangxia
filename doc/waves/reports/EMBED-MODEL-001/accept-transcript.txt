@@ -1,0 +1,175 @@
+EMBED-MODEL-001 · accept + 回归 + 探针 实跑记录
+================================================
+验收对象：jar ruoyi-admin.jar @ 2026-09-22 08:31:41 · 后端 PID 4776（8081，dev + --api-decrypt.enabled=false）
+分支：task/D3
+说明：四条 accept 与 ticket 的 run 逐字相同，唯一差异 = 去掉沙箱恒非 0 的 `--fresh-module ruoyi-lqg`
+（等价证据见下 §0）。★ 四条 accept 各自 reseed 首尾，**必须串行**。
+
+§0 反 stale 等价证据（覆盖 --fresh-module 守卫的两个半边）
+----------------------------------------------------------
+jar mtime      : 2026-09-22 08:31:41
+lqg src newer  : []                       （find ruoyi-lqg/src -newer jar）
+admin src newer: []                       （find ruoyi-admin/src -newer jar）
+8081 PID       : 4776                     （lsof -ti tcp:8081 -sTCP:LISTEN）
+PID holds jar  : 2                        （lsof -p 4776 | grep -c 'ruoyi-admin/target/ruoyi-admin.jar'）
+start >= jar   : 1790037105 >= 1790037101 -> True   （libproc.proc_pidinfo，不用 ps）
+backend log    : 2026-09-22 08:32:49
+嵌套 jar 复核   : BOOT-INF/lib/ruoyi-lqg-5.5.3.jar 内含
+                  org/dromara/lqg/embed/{controller/EmbedController,
+                  service/{EmbedService,EmbedQueryService,EmbedVerifyService,EmbedExternalService,
+                           EmbedBlockNoGuard,EmbedDictService},
+                  guard/{StainRules,MarkerExprRules,EmbedChildrenChecker},
+                  domain/{Embed,EmbedMarker},domain/bo/*,domain/vo/*}.class
+Flyway 启动日志 : Migrating schema "public" to version "202609231100 - EMBED-MODEL-001-embed"
+                  Successfully applied 1 migration to schema "public", now at version v202609231100
+D1 回归 L0.2    : ✓ 新鲜度：源码不新于 jar；pid 4776 持有该 jar；进程启动 08:31:45 ≥ jar 08:31:41
+8080 / 5432 / 6379 : 全程未碰
+
+§1 accept 1 · DDL
+------------------
+$ bash doc/waves/reports/EMBED-MODEL-001/accept-runners/embed001-acc1.sh
+✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+1
+ACCEPT-1 EXIT=0
+RC1=0
+
+counterfeit 排掉（DDL 形状）：
+$ python3 doc/verify/db.py --sql "SELECT string_agg(column_name||'='||is_nullable, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_name='t_lqg_embed' AND column_name IN ('tissue_receive_time','tissue_process_time','agarose_embed_time','dehydrate_time','agarose_send_time','paraffin_embed_time','section_time')"
+agarose_embed_time=YES,agarose_send_time=YES,dehydrate_time=YES,paraffin_embed_time=YES,section_time=YES,tissue_process_time=YES,tissue_receive_time=YES
+$ python3 doc/verify/db.py --sql "SELECT is_nullable FROM information_schema.columns WHERE table_name='t_lqg_embed' AND column_name='paraffin_block_no'"
+YES
+$ python3 doc/verify/db.py --sql "SELECT indexdef FROM pg_indexes WHERE tablename='t_lqg_embed' AND indexname='uk_embed_block_no'"
+CREATE UNIQUE INDEX uk_embed_block_no ON public.t_lqg_embed USING btree (paraffin_block_no) WHERE (del_flag = '0'::bpchar)
+$ python3 doc/verify/db.py --sql "SELECT count(*) FROM information_schema.columns WHERE table_name='t_lqg_embed' AND column_name IN ('sample_no','internal_no','marker_name','expression')" --eq 0
+0
+$ python3 doc/verify/db.py --sql "SELECT string_agg(table_name||'.'||column_name, ',' ORDER BY table_name, column_name) FROM information_schema.columns WHERE column_name IN ('marker_name','expression')"
+t_lqg_embed_marker.expression,t_lqg_embed_marker.marker_name
+
+§2 accept 2 · STATE
+--------------------
+$ bash doc/waves/reports/EMBED-MODEL-001/accept-runners/embed001-acc2.sh
+0
+True
+2
+valid
+ACCEPT-2 EXIT=0
+RC2=0
+
+（段 1-6 六次被拒的原文见完工报告 §4.2 表；段 7 = 被拒后库里 0 行新增；
+ 段 8 = POST T-OK1 命中 ^200；段 9 = HE,IHC|收样日期|internal|valid；
+ 段 10 = marker count 2；段 11 = 1004 改判被拒；段 12 = 1004 仍 valid）
+
+§3 accept 3 · API
+------------------
+$ bash doc/waves/reports/EMBED-MODEL-001/accept-runners/embed001-acc3.sh
+true
+true
+true
+true
+true
+ACCEPT-3 EXIT=0
+RC3=0
+
+染色筛选的反证（accept 的 counterfeit 备注点名要贴 stain=HE）：
+$ bash doc/verify/api.sh --as staff GET '/lqg/embed/list?stain=HE'    | jq -c '[.rows[].paraffinBlockNo]'
+["T-E01-1"]
+$ bash doc/verify/api.sh --as staff GET '/lqg/embed/list?stain=OTHER' | jq -c '[.rows[].paraffinBlockNo]'
+["T-E04-1"]
+$ bash doc/verify/api.sh --as staff GET '/lqg/embed/list?pageSize=100' | jq -c '[.rows[].paraffinBlockNo]'
+[null,"T-E04-1","T-E02-1","T-E01-2","T-E01-1"]
+落到 SQL（p6spy 原文）：
+(',' || stain_types || ',') LIKE '%,IHC,%'
+(',' || stain_types || ',') LIKE '%,HE,%'
+
+§4 accept 4 · STATE（外部送样核验状态机）
+------------------------------------------
+$ bash doc/waves/reports/EMBED-MODEL-001/accept-runners/embed001-acc4.sh
+pending|-|-|组织
+true
+pending|-
+valid|T-E06-1|9000000101|external|9000000111|T-hli77
+true
+valid|2026-09-17
+ACCEPT-4 EXIT=0
+RC4=0
+
+§5 回归
+--------
+$ bash doc/waves/reports/SAMPLE-VERIFY-001/accept-runners/verify001-acc1.sh
+pending|-|-
+true
+valid|T-hli77|9000000101|Y|external
+true
+true
+9000001002:invalid:误判，退回
+9000001003:valid:
+ACCEPT-1 EXIT=0
+RC=0
+
+$ bash doc/waves/reports/SAMPLE-VERIFY-001/accept-runners/verify001-acc2.sh
+true
+true
+external:3
+internal:1
+3
+true
+ACCEPT-2 EXIT=0
+RC=0
+
+$ bash doc/waves/regression/D1/verify.sh --skip-build > .tmp/regression-D1-embed001.log 2>&1; echo $?
+D1_VERIFY_RC=1    green=41 red=1 env=0
+  ✓ L1.1 flyway 无失败行（success IS NOT TRUE 的行 = 0）
+  ✗ L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001） → [FAIL] 期望 '7'，实际 '11' 11
+失败 1 条：
+  - L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001） → [FAIL] 期望 '7'，实际 '11' 11
+（既有 harness 缺陷：D1 回归包写死迁移总数 7；state.json 已记 issue。D1 的 7 支逐个点名全绿。）
+
+§6 ★ checker 判据探针（本票背的定时炸弹）
+--------------------------------------------
+$ # P1 1004（名下有已核验有效的 2003）改判无效应被拒
+$ bash doc/verify/api.sh --as staff --bizcode PUT /lqg/sample/9000001004/verify '{"action":"invalid","reason":"探针"}'
+500	该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效
+$ python3 doc/verify/db.py --sql "SELECT verify_status FROM t_lqg_sample WHERE id=9000001004" --eq valid
+valid
+$ # P2 1008（名下唯一的块 2005 是软删）改判无效应放行
+$ bash doc/verify/api.sh --as staff --bizcode PUT /lqg/sample/9000001008/verify '{"action":"invalid","reason":"探针：只有软删的块"}'
+200	操作成功
+$ python3 doc/verify/db.py --sql "SELECT verify_status FROM t_lqg_sample WHERE id=9000001008" --eq invalid
+invalid
+$ # P3 1002（名下只有待核验的 2006）pending→valid→invalid 应放行
+$ bash doc/verify/api.sh --as staff PUT /lqg/sample/9000001002/verify '{"action":"valid","receiveDate":"2026-09-17","internalNo":"T-probe99"}' | jq -e '.code==200'
+true
+$ bash doc/verify/api.sh --as staff --bizcode PUT /lqg/sample/9000001002/verify '{"action":"invalid","reason":"探针：只有待核验送样"}'
+200	操作成功
+$ python3 doc/verify/db.py --sql "SELECT verify_status FROM t_lqg_sample WHERE id=9000001002" --eq invalid
+invalid
+
+checker 等价的 SQL：
+SELECT COUNT(*) FROM t_lqg_embed
+ WHERE del_flag = '0'          -- @TableLogic 自动补
+   AND sample_id = ?
+   AND verify_status = 'valid' -- 待核验 / 无效不算
+
+§7 单测
+--------
+$ (cd code/RuoYi-Vue-Plus && mvn -o -pl ruoyi-modules/ruoyi-lqg -am test -s <ws>/.mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome)
+[INFO] Running org.dromara.lqg.embed.service.EmbedQueryContractTest          Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running org.dromara.lqg.embed.guard.EmbedRulesContractTest            Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running org.dromara.lqg.embed.guard.EmbedChildrenCheckerContractTest  Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running org.dromara.lqg.embed.domain.EmbedShapeContractTest           Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running org.dromara.lqg.ext.ExtChokepointContractTest                 Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running org.dromara.lqg.sample.verify.VerifyTransitionsContractTest   Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 86, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+§8 收尾
+--------
+$ bash doc/verify/reseed.sh --yes
+（已灌 01-05；跳过 06-cryo / 07-qc-docs：表还没建）reseed 完成
+$ bash doc/waves/tools/clean-orphan-accounts.sh --yes
+清掉孤儿账号 0 个；同手机号多行 0；非 seed 段运行时账号 0
+$ python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_embed WHERE del_flag='0'" --eq 5        → 5
+$ python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_embed WHERE del_flag='1'" --eq 1        → 1
+$ python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_embed_marker WHERE del_flag='0'" --eq 3 → 3
+$ python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE del_flag='0'" --eq 9       → 9
+后端 8081：PID 4776 kill → 无监听；8080 未碰。

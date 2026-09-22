@@ -1,0 +1,80 @@
+== G1 染色与挂靠规则 ==
+  baseline t_lqg_embed=6
+  [PASS] 无染色+HE 同时提交被拒 -> code=500
+      msg=「无染色」与其余染色互斥，不能同时选
+  [PASS]   拒后未多行 [=6]
+  [PASS] 选其他不写名称被拒 -> code=500
+      msg=选了「其他」必须写具体染色名称
+  [PASS]   拒后未多行 [=6]
+  [PASS] 字典外染色值(PAS)被拒 -> code=500
+      msg=染色「PAS」不在字典 lqg_stain_type 里（只能是 HE / IF / IHC / OTHER / NONE）
+  [PASS]   拒后未多行 [=6]
+  [PASS] 挂到待核验样本(1002)被拒 -> code=500
+      msg=内部录入只能挂到已核验有效的样本（当前状态：pending）
+  [PASS]   拒后未多行 [=6]
+  最终 T-X% 行数=0
+RESULT g1 pass=8 fail=0
+-----
+== G2 valid->invalid 闸 ==
+  1004 现有已核验石蜡块数=1
+  [PASS] 有已核验石蜡块的样本 1004 改判无效被拒 -> code=500
+      msg=该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效
+  [PASS]   拒后样本仍 valid [=valid]
+  [PASS]   拒后无效原因仍为空 [=1]
+RESULT g2 pass=3 fail=0
+-----
+== G3 外部送样 ==
+  baseline ext=1 all=6
+  [PASS] extB 替同组 extA 的 1001 送样被拒 -> code=400
+      msg=只能挂本人送检过的样本
+  [PASS]   拒后外部送样数不变 [=1]
+  [PASS] extA 挂到自己无效样本 1003 被拒 -> code=400
+      msg=这条样本已判无效，不能提交石蜡包埋送样
+  [PASS]   拒后总数不变 [=6]
+  -- 夹带 paraffinBlockNo/stainTypes/verifyStatus/operatorName/embedBy/submitSource --
+200	操作成功
+  [PASS]   夹带字段全部未生效(落 external|pending|-|-|-|-) [=external|pending|-|-|-|-]
+  [PASS]   submitter 仍是王医生 [=王医生]
+  新建送样 id=2102226956144623618
+  [PASS] 所挂样本未核验(1002)时判有效被拒 -> code=500
+      msg=所挂样本还未核验有效（当前状态：pending），不能判为有效
+  [PASS]   拒后 2006 仍 pending|- [=pending|-]
+  [PASS] 普通保存改待核验送样被拒 -> code=400
+      msg=待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）
+  [PASS]   拒后 2006 行不变 [=pending|-|-|组织]
+  [PASS] extA 改实验室录的 2001 被拒 -> code=400
+      msg=只能修改重提本人提交的送样（同组的可以看，但不能改）
+  [PASS] extB 改 extA 的 2006 被拒 -> code=400
+      msg=只能修改重提本人提交的送样（同组的可以看，但不能改）
+  [PASS]   拒后无被改行 [=0]
+  最终 all=7 ext=2
+RESULT g3 pass=13 fail=0
+-----
+== G4 外部详情 embeds 键集合 ==
+  -- extB 取 1001 详情 --
+  [PASS] embeds 形状 + embedBy/operatorName 均为「李工」对外可见
+  [PASS] 键集合 ⊂ 白名单（无 internalNo/verifyBy/remark/冻存键）
+  [PASS] 开关默认关：详情无 internalNo 键
+  [PASS] embeds 无 verifyBy/remark/冻存/创建人 键
+  实到键: ["agaroseEmbedTime","agaroseSendTime","dehydrateTime","editable","embedBy","id","invalidReason","markers","mine","operatorName","organoidSourceType","paraffinBlockNo","paraffinEmbedTime","sampleId","sampleType","sectionTime","sectioned","stainOther","stainTypes","submitNo","submitterName","tissueProcessTime","tissueReceiveTime","verifyStatus"]
+  -- extC 取 1001 详情应 404 --
+  [PASS] extC 取 1001 详情 404 -> code=404
+      msg=样本不存在
+  -- 开关打开后 internalNo 才出现 --
+  [PASS] 开关置 true
+  [PASS] 开关打开后 1001 详情 internalNo=T-hli01
+  [PASS]   开关已还原 false [=false]
+RESULT g4 pass=8 fail=0
+-----
+== G5 导出边界 ==
+  全量导出: ✓ 表头 14 列与模板逐字一致；数据 8 行
+  [PASS] 外部角色(extA)调导出 403 -> code=403
+      msg=没有访问权限，请联系管理员授权
+  同条件列表 total=1
+  [PASS] 带筛选导出只出筛选结果（行数=1）
+  [PASS] 筛选结果含 1006/T-hco04
+  [PASS] 筛选结果未混入 T-hli01
+  [PASS] 空结果导出接口未报错
+  [PASS] 空结果导出只有表头、0 数据行
+RESULT g5 pass=6 fail=0
+-----

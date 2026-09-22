@@ -1,0 +1,23 @@
+########## EMBED-WEB-001 · accept 转录（2026-09-22 09:13:48） ##########
+
+===== accept 1（DATA · 按模板导出） =====
+✓ 表头 16 列与模板逐字一致；数据 5 行
+✓ 表头 16 列与模板逐字一致；数据 5 行
+✓ 表头 16 列与模板逐字一致；数据 5 行
+✓ 表头 16 列与模板逐字一致；数据 5 行
+✓ 表头 16 列与模板逐字一致；数据 2 行
+✓ 表头 16 列与模板逐字一致；数据 4 行
+ACCEPT-1 EXIT=0
+
+===== accept 2（MENU · 菜单与页面） =====
+5310:embed:lqg/embed/index
+lqg:embed:list
+lqg:embed:query
+lqg:embed:add
+lqg:embed:edit
+lqg:embed:remove
+lqg:embed:export
+lqg:embed:verify
+true
+true
+ACCEPT-2 EXIT=0
