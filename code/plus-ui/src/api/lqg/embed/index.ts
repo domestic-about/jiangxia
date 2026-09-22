@@ -229,3 +229,25 @@ export function isExternalPending(row: Pick<EmbedVO, 'submitSource' | 'verifySta
 export function isEditable(row: Pick<EmbedVO, 'editable' | 'verifyStatus'>): boolean {
   return row?.editable === true || (row?.editable === undefined && row?.verifyStatus === 'valid');
 }
+
+/**
+ * 核验 / 改判之前，要不要**先走一次普通保存**（`PUT /lqg/embed`）。
+ *
+ * ★ 这条判据是 issue #145（核验抽屉「判为有效并保存」点不动 · S0）的防复发闸：
+ * 后端 `EmbedService.update` 只放行 `verifyStatus === 'valid'` 的记录，对 `pending` / `invalid`
+ * 一律 400「核验与改判只走 PUT /lqg/embed/{id}/verify」。所以**待核验 / 无效的记录不许预保存**——
+ * 那一次请求必然被拒，异常会在 `verifyEmbed()` 之前抛出，核验请求永远发不出去
+ * （旧代码 `saveBeforeVerify()` 正是如此）。核验动作的必填项（判有效 = 石蜡块编号，
+ * 判无效 = 原因）应当**随 verify 请求一起送**，而不是先打一个注定被拒的 PUT。
+ *
+ * 只有记录本身允许普通保存时（内部录入的、或已生效且内部在改的 `valid` 行）才保留
+ * 「先保存再核验」的顺序 —— 好让抽屉里补填的工序 / 染色跟着一起落库。
+ * 核验抽屉打开的都是 `isExternalPending` 的行（pending / invalid）→ 此判据恒为 false；
+ * 留着它是给「已生效记录的改判」这类入口用的（那时预保存才是合法的）。
+ *
+ * 判据与后端同源：`editable` 就是 `EmbedQueryService.toVo` 按
+ * `"valid".equals(verifyStatus)` 算出来的那个布尔（缺键时按 verifyStatus 兜底）。
+ */
+export function shouldSaveBeforeVerify(row: Pick<EmbedVO, 'editable' | 'verifyStatus'>): boolean {
+  return isEditable(row);
+}

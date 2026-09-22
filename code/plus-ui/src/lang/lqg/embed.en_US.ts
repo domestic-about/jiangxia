@@ -158,6 +158,9 @@ export default {
 
   msg: {
     exportNotYet: 'Export is not wired yet',
-    loadUnitsFailed: 'Failed to load units / groups'
+    loadUnitsFailed: 'Failed to load units / groups',
+    /** Fallback when the backend msg is unavailable (issue #145) */
+    saveFailed: 'Save failed, please retry',
+    verifyFailed: 'Verification failed, please retry'
   }
 };

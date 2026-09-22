@@ -214,7 +214,16 @@
 
 <script setup name="LqgEmbedDrawer" lang="ts">
 import SegButtons from '@/components/lqg/SegButtons/index.vue';
-import { addEmbed, getEmbed, neverModified, sampleVerified, updateEmbed, verifyEmbed, isExternalPending } from '@/api/lqg/embed';
+import {
+  addEmbed,
+  getEmbed,
+  neverModified,
+  sampleVerified,
+  shouldSaveBeforeVerify,
+  updateEmbed,
+  verifyEmbed,
+  isExternalPending
+} from '@/api/lqg/embed';
 import type { EmbedForm, EmbedMarkerVO, EmbedVO } from '@/api/lqg/embed';
 import { listSamples } from '@/api/lqg/sample';
 import type { SampleVO } from '@/api/lqg/sample';
@@ -456,6 +465,19 @@ const validateStain = (): boolean => {
   return true;
 };
 
+/**
+ * 失败时的 toast 文案：**优先用后端那句 msg**，拿不到才退回通用话术。
+ *
+ * ★ 为什么 catch 里能拿到 msg：`@/utils/request` 的响应拦截器对 500 / 601 走的是
+ * `Promise.reject(new Error(msg))`（`e.message` 就是后端原话）；对 400 它是
+ * `ElNotification.error(msg)` + `Promise.reject('error')`（原话已经以通知弹过一次），
+ * 这里只剩通用话术可用。两条路都**不许静默**——静默失败正是 issue #145 的第二个症状。
+ */
+const failText = (e: unknown, fallback: string): string => {
+  const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : '';
+  return msg && msg !== 'error' ? msg : fallback;
+};
+
 const submitSave = async () => {
   if (!(await formRef.value?.validate().then(() => true).catch(() => false))) {
     return;
@@ -473,17 +495,32 @@ const submitSave = async () => {
     proxy?.$modal.msgSuccess(t('lqg.embed.drawer.saved'));
     visible.value = false;
     emit('saved');
+  } catch (e) {
+    // ★ 失败：toast 出后端 msg、**不关抽屉**、把 rejection 就地吃掉（不再漏成 pageerror）
+    proxy?.$modal.msgError(failText(e, t('lqg.embed.msg.saveFailed')));
   } finally {
     submitting.value = false;
   }
 };
 
 /**
- * 核验前把抽屉里填的工序 / 染色 / marker 一起存掉（`PUT /lqg/embed` 允许 pending / invalid 之外的状态；
- * 这里先存再核验，用户填的东西不会因为核验请求只收三个键而丢）。
+ * 核验 / 改判前的调用顺序 —— ★ issue #145（S0）的病灶就在这一句上。
+ *
+ * 1. 待核验 / 无效的记录**不能**先走普通保存：后端 `EmbedService.update` 对这两个状态一律 400
+ *    「核验与改判只走 PUT /lqg/embed/{id}/verify」，预保存必被拒、异常会在 `verifyEmbed()`
+ *    之前抛出，核验请求永远发不出去（旧代码的 `saveBeforeVerify()` 就是这样，判有效 / 判无效
+ *    两条路都走不通）。所以核验动作的必填项**随 verify 请求一起送**。
+ * 2. 只有记录本身允许普通保存时（`shouldSaveBeforeVerify`，判据 = 后端 `editable`
+ *    = `verifyStatus === 'valid'`）才保留「先保存再核验」的顺序。核验抽屉打开的都是
+ *    `isExternalPending` 的行（pending / invalid）→ 这里恒为 false；留这条分支是给
+ *    「已生效记录的改判」这类入口用的：那种情况下抽屉里补填的工序 / 染色才存得进去。
+ * 3. 核验抽屉里补填的工序 / 染色 / marker 本次不落库：契约里 `EmbedVerifyBo` 只收
+ *    action / paraffinBlockNo / reason（doc/api-contract.md 第 62 行）。核验通过后这行变成
+ *    `valid`（可普通保存），从列表点「编辑」补填即可 —— 抽屉顶部提示也是这么写的
+ *    （「之后照常补工序与染色」）。这里**不再**为了它们去发一个注定被拒的 PUT。
  */
-const saveBeforeVerify = async () => {
-  if (mode.value !== 'verify' || !form.value.id) {
+const preSaveIfEditable = async () => {
+  if (mode.value !== 'verify' || !form.value.id || !shouldSaveBeforeVerify(form.value)) {
     return;
   }
   await updateEmbed({ ...payload(), id: form.value.id });
@@ -499,7 +536,8 @@ const submitValid = async () => {
   }
   submitting.value = true;
   try {
-    await saveBeforeVerify();
+    await preSaveIfEditable();
+    // ★ 待核验的外部送样直接走 /verify，判有效的必填项（石蜡块编号）随这一次请求一起送
     await verifyEmbed(form.value.id as string | number, {
       action: 'valid',
       paraffinBlockNo: (form.value.paraffinBlockNo ?? '').trim()
@@ -507,6 +545,9 @@ const submitValid = async () => {
     proxy?.$modal.msgSuccess(t('lqg.embed.drawer.verifiedValid'));
     visible.value = false;
     emit('saved');
+  } catch (e) {
+    // ★ 判有效失败：toast 出后端 msg（如「石蜡块编号已存在」「所挂样本还未核验有效」）、不关抽屉
+    proxy?.$modal.msgError(failText(e, t('lqg.embed.msg.verifyFailed')));
   } finally {
     submitting.value = false;
   }
@@ -524,12 +565,16 @@ const submitInvalid = () => {
     }
     submitting.value = true;
     try {
-      await saveBeforeVerify();
+      await preSaveIfEditable();
+      // ★ 与判有效同一条路：直接调 /verify，原因随这次请求一起送（不再先做必被拒的普通保存）
       await verifyEmbed(form.value.id as string | number, { action: 'invalid', reason: invalidDialog.reason });
       proxy?.$modal.msgSuccess(t('lqg.embed.drawer.verifiedInvalid'));
       invalidDialog.visible = false;
       visible.value = false;
       emit('saved');
+    } catch (e) {
+      // ★ 判无效失败：原因弹窗与抽屉都留着，让人能改完再点；错误必须看得见
+      proxy?.$modal.msgError(failText(e, t('lqg.embed.msg.verifyFailed')));
     } finally {
       submitting.value = false;
     }
