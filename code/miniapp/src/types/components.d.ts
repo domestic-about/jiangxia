@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    EmbedCard: typeof import('./../components/lqg/EmbedCard.vue')['default']
     EmptyState: typeof import('./../components/lqg/EmptyState.vue')['default']
     EntryGrid: typeof import('./../components/biz/EntryGrid.vue')['default']
     EntryTile: typeof import('./../components/ui/EntryTile.vue')['default']
