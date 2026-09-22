@@ -3326,6 +3326,36 @@
       "detail": "复现（D7 r1 L3 片实测，已记证据在 doc/waves/qa/D7-r1-L3.json）：`--as extA/extB/extC/extE/extF` 打 `GET /lqg/home/todo` → **全部 200**，拿到 {pendingSamples:2,pendingEmbeds:1,cryoOverdue:2,pendingExtUsers:2,renderFailed:0}；打 `GET /lqg/home/recent` → **全部 200、9 行**，字段 {submitTime, submitNo, sourceUnitName, submitSource, verifyStatus} —— **跨 A 医院/B 大学/本中心**。极端对照：extC 的可见集合只有 {1005}，却能读到 **B 大学的 SJ90000006 与本中心的 SJ90000008**。★**我在 #270 里给的两个缓解论证都被实测推翻**：①「只有 5 个聚合数、无患者明细」→ 错，/recent 吐的是明细（单号+单位+核验状态）；②「要拿到工作台会话才行」→ 错，**小程序（mp client）签发的 token 就够**；唯一还成立的对照是「extB 走 pc 密码登录会被拒（500 该账号无权登录工作台）」，也就是说**只有 pc 那条路被挡住了**。根因：HomeController 的两个 handler 只挂 @SaCheckLogin（类注释还把票面 §2 的「登录即可调（101/102）」当成依据写死了），与 AUTH-STAFF-001 §2.2「工作台拒外部」以及本项目的外部隔离不变量（ADR-0004 / ExtChokepoint 体系）冲突。定级依据：**外部隔离是本项目被甲方明确要求、且由 ExtChokepointContractTest 守着的不变量**，而这个新端点绕过了咽喉并把别家单位的数据给了外部角色——不是 cosmetic；L3 片按它自己的窄口径（「老师用不了 ∪ 下游跑不通」）判了 S2，我按「甲方明示的隔离要求被破坏 + 无特权的外部角色可触发」升为 **S1**。修法（一行 + 注释）：HomeController 两个端点改挂 `@SaCheckRole({\"lqg_admin\",\"lqg_internal\"})`（**必须两个角色都放**——101 是 lqg_admin、102 是 lqg_internal，只写 lqg_internal 会把工作台超管的首页一起打 403）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 292,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "撤回后约 20ms 窗口内旧合并件仍可被外部取走：失效完全依赖异步写、且没有持久 stale 标记",
+      "detail": "复现（D7 r1 L3 片第 8 条的紧循环实测）：publish 三份 → 渲染完 → unpublish 其中一份 → 立刻以外部身份循环取合并件，得到 (t=12ms,200)(t=19ms,200)(t=22ms,404) —— **unpublish 返回 200 之后，含已撤回文档的旧合并件仍被外部成功取走约 20ms**。根因：失效靠 DocPublishService 里 CompletableFuture.runAsync 的异步写（markStale/invalidateMerged），而 **artifactComplete 的注释声称「不依赖那次异步 invalidateMerged 有没有跑完」——实测与注释不符**；并且库里**没有持久 stale 标记**（没有“这一版已作废”的列/行），所以异步没跑到、或进程在两步之间退出，旧合并件就会**永久可发**。影响：窄窗口 + 无持久兜底；对外部而言是「撤回后仍可能拿到含该文档的合并件」。方案 a) 在 unpublish 的**同一事务**里落一个持久 stale 标记（或直接把 header 行的指纹改掉，让 artifactComplete 立刻不成立）后再返回 200；b) 至少把 artifactComplete 的注释改成与实现一致，并把「无持久标记」记成已知边界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 293,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "撤回后工作台仍能下到含已撤回文档的旧合并 Word；同份 pages=done 但 0 页、PDF 400、「重新生成」是 no-op",
+      "detail": "复现（D7 r1 L3 片第 8 条）：撤回 1001/organoid-qc 之后，工作台 `GET /lqg/doc/1001/merged/download?format=docx&audience=internal` **仍 200**，下下来的 Word 里**三份都在**（含刚撤回的那份）；而同一份合并件的 `pages` 返回 `status=done` 且 **pages=0**（页产物已被按指纹过滤掉）。连带两处：①`?format=pdf` → 400；②「重新生成」返回 `cached:true` = **no-op**（合并件无法为「剩下的成员」重建——它按当前指纹取不到任何成员页产物）。根因同 #上一条：失效是异步的、且 header 行状态被 markStale 与 artifactComplete 的判据分裂成两套。影响：内部侧看到「按钮可用（判据是 status===done）+ 点下载拿到含已撤回文档的 Word」，是**内部一致性**问题（外部侧已按 artifactComplete 挡住）。方案 a) 让 pages/download 对合并件统一走 artifactComplete（status 也按它给），并让「重新生成」在合并件不完整时真的重建而不是 cached:true；b) 至少把 PreviewPane 的按钮判据从 status===done 改成 artifactComplete。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 294,
+      "ticket": "DOC-PDF-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "本机 dev 的 OSS 桶匿名可读+可列举（994 个 lqg/ 对象）：D6/D7 的「私有桶+签名」断言在 dev 只能证明 URL 带 Expires",
+      "detail": "复现（D7 r1 L3 片额外发现）：`curl \"http://127.0.0.1:9000/ruoyi?list-type=2&prefix=lqg/\"` → **200**，一次列出 994 个对象（含所有 /internal/ 页图）；把工作台拿到的**内部版**签名链接去掉 query 再 curl → **200 12571 字节**，拿到含 `T-hli01` 的内部 Word。根因**不在应用代码**（我们永远 presign），而在环境/配置：**Flyway 基线的 sys_oss_config 第 1 行**是 9000/ruoyi/access_policy=1(public)/status=0（默认行），指向 **与别的项目共用的 dev-minio**；而本项目 compose 自备的 lqg-dev-minio(9002) 里连桶都没建（DOC-PDF-001 的 WARN-3 只记了「指错 MinIO」，没记这条更重的后果）。影响：本机 dev 上，「10 分钟签名 + 私有桶」这条安全语义**无法被证明**——断言只能证明 URL 带 Expires，证不了「别人拿不到」；同理 #262/#250 那类隔离结论在 dev 都只有一半证据。★**若测试环境（songjian.tianda.studio）沿用了同一条配置行 → 应立刻升 S1**（那会让「测试环境里的内部版文档」公网可读）；建议在「上线一轮」里真跑 SYS-PROD-001 的 `LQG_OSS_PROBE_URL` 匿名 403 探针，并核对测试库 sys_oss_config 到底指向哪个 endpoint/桶/access_policy。方案 a) 给 dev 建一个独立的 lqg-dev 桶（private）并把该行改指它；b) 至少把这条写进 doc/verify/README.md 的已知坑表，避免下游再把「签名 URL 带 Expires」当成隔离证明。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
