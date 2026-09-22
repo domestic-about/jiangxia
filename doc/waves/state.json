@@ -12,8 +12,16 @@
     },
     {
       "id": "D2",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 2,
+      "qa_seq": 4,
+      "rearms": [
+        {
+          "reason": "Kevin 授权：D2 连红 2 轮的判断成立——两轮抓到的是不同的实现缺陷（r1 3×S0+2×S1 已修并经 r2 复验；r2 新发现 #96 工作台来源单位筛选筛不出内部录的样本，根因清楚、修法机械），不是蓝图/口径问题。授权一批返工修 #96 后重跑 r3。",
+          "from_rounds": 2,
+          "at_seq": 2
+        }
+      ]
     },
     {
       "id": "D3",
@@ -48,12 +56,12 @@
   ],
   "tickets": {
     "AUTH-EXT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "/mp/ext/** 咽喉落成：可见集合只在 ExtScopeServiceImpl（ext 包唯一持 Mapper 的类）算，其余 ext 类只拼装转发；ExtInternalNoSwitch 读 sys_config lqg.ext.show-internal-no（注入 ConfigService 不持 mapper）；ExtSampleAssemblyService 无 mapper；ExtSampleController/ExtOrganoidController 类级 @SaCheckRole('lqg_external')；业务写侧 ExtSampleSubmitService 放 sample 包（遵 ADR-0004 i4）；越出 touches 一处：SampleQueryService 加 selectExtPage(Page, LambdaQueryWrapper)（i4 逼出来的，ext 包不能注 mapper）；无迁移（外部接口无菜单，lqg.ext.show-internal-no 那行由 V202609210830 插）。四条不变量由 ExtChokepointContractTest（逐字节未改 + Tests run: 4）守住；27 条对抗性探针全 PASS。★accept 2 有 1/15 段未绿：--as extA GET /mp/int/sample/list 期望 ^403 实测 404，因为该端点由后置的 SAMPLE-MP-001 注册 —— 是 accept 跨票引用造成的瞬态，不是缺陷；不动 accept（需求层资产），由 D2 QA 门在 SAMPLE-MP-001 落地后用同一条断言收口。★给下游的硬坑：① MP 3.5.16 的 LambdaQueryWrapper 没有按列名排序的重载，表达式排序只能 wrapper.last('ORDER BY …')；② donorName/hospitalNo 是密文，给外部看必须先 SampleFieldCipher.decrypt 再掩码（第一版对密文打码得到 T**）；③ @SaCheckRole 不挡方法不匹配的请求（内部打 GET /mp/ext/organoid 返 405，角色切面没跑），角色断言只能打在真实存在的 METHOD+PATH 上。"
     },
     "AUTH-EXT-002": {
       "status": "pending",
@@ -272,44 +280,44 @@
       "note": ""
     },
     "SAMPLE-MODEL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "迁移 V202609221000（gen_ddl_pg 逐字节输出 + 序列 seq_lqg_submit_no + 菜单 5200/5201-5205 授 101+102）；org.dromara.lqg.sample：SampleController(list/{id}/POST/PUT/DELETE)、HintController(GET /mp/dict/hints)、SampleKindRules、SampleFieldCipher、SampleSubmitNoGenerator、SampleChildrenChecker(s)(0 实现)、SampleKindRulesContractTest 6 例；java 测试 31 绿（含 L0 门 ExtChokepointContractTest 4 绿），对抗性探针 14 组全过。★口径裁定：ticket 字面要『加 @EncryptField』，但框架 EncryptorManager 会加 ENC_ 前缀，而 seed/gen_seed/ADR-0006 既有密文是裸 Base64（openssl -aes-128-ecb -nosalt -base64）→ 照注解做会让 seed 9 行读出来还是密文、accept 的『接口返明文』与『库里 == 裸 Base64』双红。seed 与 accept 都是需求层资产且『别改 seed 迁就实现』是硬规矩，故统一口径定为【裸 Base64 + 层内手工 EncryptUtils 加解密】，本票以 SampleFieldCipher 落地并写进迁移与类注释。后续所有加密列（QC-MODEL-001 的 patient_no 等）照此办。坑：① update(null, LambdaUpdateWrapper) 不会自动填 update_by，MP 的 updateFill 只认 BaseEntity 参数对象；② PageQuery 在 5.5.3 只有两参构造器，继承它的 BO 必须自己写无参构造。"
     },
     "SAMPLE-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "后端 org.dromara.lqg.sample.mp（Controller/Service/QueryBo + 7 例 MpSampleContractTest，java 46 绿）；小程序 pages/sample/{layout.ts,layout.fixture.spec.ts,form.vue,detail-ext.vue}、pages/history/{index.vue,sources.ts}、api/sample.ts、components/lqg/*。accept 1：vitest 22/22 + fixture 结构 6 个数逐项相符（13/7/5/0/2/true）+ 8 段 grep 全过，fixture 一字节未改；accept 2：rm 产物后 build:mp-weixin 通过（form.js/history/index.js 在、无 mine.js）+ API 15 段全绿，含把 AUTH-EXT-001 WARN-3 那段收口（--as extA GET /mp/int/sample/list 现在返 403）。★三条硬坑：① updateTime 是『这行有没有被改过』的唯一判据——删掉了兜底成 createTime 的逻辑，于是工作台 GET /lqg/sample/* 上从没改过的行 updateTime 由 createTime 变 null，这是跨票行为变更，SAMPLE-WEB-001 做修改页会用到；② 组件里只用 easycom 引用 wd-* 会**静默丢掉该模块的 .js 产物**（构建仍报 Build complete，产物只有 .json/.wxml，真机加载不到逻辑）→ 必须显式 import 'wot-design-uni/components/wd-xxx/wd-xxx.vue'；③ 分页接口没有 data 键（TableDataInfo = {code,msg,rows,total}），utils/request.ts 默认只 resolve body.data → 列表恒 undefined，给它加了 raw:true 选项（越出 touches，报告 §2.4 列清），凡用 MP 列表的票都要带。"
     },
     "SAMPLE-MP-002": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "表格页（只读，四张表共用一个列清单来源）：src/pages/ledger/{columns.ts,columns.fixture.spec.ts,sheets.ts,index.vue} + components/lqg/LedgerTable.vue（哑组件、首列 sticky、横滑）+ api/ledger.ts；类器官收样页 src/pages/organoid/{layout.ts,layout.fixture.spec.ts,api.ts,form.vue}；history/sources.ts 注册 organoid 页签。accept 1（DATA）逐段 true（organoid 集合同源 / total==库独立数 / 内部录入 organoid|internal|valid|B 大学|Y / PUT 补丁改成王工 / mine 顺序 / 外部落 pending 且提交人=赵医生 / extA 空集）；accept 2（DATA）pages/ledger/index.js 与 pages/organoid/form.js 都在 + 7 段 grep + 甲方四份 xlsx 原件逐字 diff；accept 3（STATE）vitest 13 例（columns 7 例），全量 vitest 67 例、后端 55 绿。★它抓到 accept 自身的缺陷：db.py --quiet 实测『不打印任何行』（已由主会话复核：SELECT 1 不带 quiet 输出 1、带 quiet 输出空），10 张 ticket 用了这个句式，AUTH-EXT-001 的 accept 3 因此假绿（空 OID → /mp/ext/organoid/ → 404 落进正则）。★越界（已授权，报告 §5.1 逐条）：entries.ts 的 ledgerTarget、FieldRow 加 select 控件、后端 SampleQueryBo/SampleQueryService 补 keyword（SAMPLE-MP-001 明确移交的判据），另给 sample/form.vue 的只读页补 CR-20260918-07 要求的『修改』入口（跨票行为变更）。★另发现：SYS-MP-001 的 accept 有一段 grep 扫整个 src 抓裸 *（本意抓 * 选择器），JSDoc 的 ' * ' 注释块与 a * b 算术都会被命中，会让**上一张票**的 accept 变红。"
     },
     "SAMPLE-VERIFY-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "org.dromara.lqg.sample.verify：VerifyTransitions（与表无关的纯函数，合法 5 条边白名单，供 EMBED-MODEL-001 复用）/ SampleVerifyBo / SampleResubmitBo / SampleVerifyService（4 条内部转移 + resubmitByExternal）/ SampleVerifyController（PUT /lqg/sample/{id}/verify，权限 lqg:sample:verify）；单测 39/39（新增 8 例，18 组合穷举 × tissue/organoid 各一遍）。口径：判有效必须同时给 receiveDate+internalNo（编号唯一）、判无效必须给 reason，缺了拒绝且库里什么都不变；invalid→valid 放开且改判后清旧 invalid_reason；外部不能改成 valid、重提只回 pending；状态机不分 sample_kind。★本票越界加了一支迁移 V202609221001（菜单 5206 授 101/102）——touches 没列 migration，但 lqg:sample:verify 权限串只能本票补，缺它 accept 全 403；已确认可接受。★它推翻了我给的一句 briefing：盘上 GET /lqg/sample/list 并不支持 submitSource 筛选（SampleQueryBo 只声明 5 个），所以 accept 2 第 7 段是空转绿；真正证明『快照』的是同段 SQL join 计数 external:3 / internal:1（实跑通过），快照本身没问题。"
     },
     "SAMPLE-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D2",
       "track": "SAMPLE",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "工作台样本总表：plus-ui views/lqg/sample/** + api/lqg/sample/** + lang/lqg/sample.*.ts + components/lqg/SegButtons/**，后端 sample/query/**（SampleTableQueryService）+ 迁移 V202609221010（菜单 5210 path=sample component=lqg/sample/index，授 101+102，6 个按钮权限串）。accept 1：9 个筛选逐段精确集合相等（sourceUnitId=9001→6 条、groupId=9101→5 条、sampleKind=organoid→[1009]、submitSource=internal→[1008,1009]、verifyStatus=pending→[1002,1007]、日期区间→[1004,1005]、三条件 AND→3 条、全量 9 条无软删 1010、pageSize=2 前两行都是 pending 且 total=9）；accept 2：菜单/permission 集合/SegButtons 出现 7 次（≥4）/四个有无字段无 el-switch；java 55 绿（新增 8 例 SampleTableQueryContractTest）。★两条派单硬要求落地：① submitSource 用样本行落库快照列 eq（全类不出现 LoginHelper.getLoginUser，契约测试守着），不按当前角色现算；② updateTime==null 显式渲染「从未修改」。★SAMPLE-VERIFY-001 的空转断言已收口（external 精确 7 条 / internal 2 条）。越界：改了 SAMPLE-MODEL-001 的 SampleQueryBo/SampleQueryService/SampleVo 三个文件（只新增字段/分支，SampleController 未动）——accept 要的筛选住在那里，touches 只列了 sample/query/**。"
     },
     "SYS-BACKUP-001": {
       "status": "pending",
@@ -744,8 +752,8 @@
       "type": "debt",
       "title": "工作台在 pnpm dev 下任何菜单导航都渲染成空白页（构建产物不受影响）",
       "detail": "D1 QA r1 L2 片实测：pnpm dev(8082) 下点侧边栏任何菜单，.app-main innerHTML 长度=7（只剩 <!--->），硬刷新同一 URL 就正常；无 JS 报错。触发点已隔离到 src/layout/components/AppMain.vue 的 <transition mode=\"out-in\">（去 mode 或去 transition 即恢复；keep-alive 单独不影响；清 .vite、禁 vue-devtools 仍复现）。pnpm build:dev 静态产物 + 同一后端三页 appMainLen=16757/18895/20986 全部正常 → 老师拿构建产物不被卡，故不是 S0；但后续每个 WEB ticket 的人工/L2 走查都走 pnpm dev，会持续被卡，故 S1。截图 doc/waves/regression/D1/shots-L23/11b-web-menu-nav-blank.png vs 12-web-staff-list.png。修法在 code/plus-ui/**（touches 允许），但 SYS-WEB-001 §3 写了『不改上游布局组件』，边界待定。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：已由 cbeaf4f 修复（AppMain.vue 去掉 transition mode=out-in；根因是 views/index.vue 顶层注释在 vite dev 下让首页根变 Fragment，卸载 Fragment 不回调 afterLeave → BaseTransition.isLeaving 永久 true）。D1 QA r2 两轮独立复验：dev 8082 与 build 8083 各 bad=0/6，有头 Chrome 也验过。残留：越界改上游布局组件已另记 issue #39。"
     },
     {
       "id": 36,
@@ -944,6 +952,596 @@
       "type": "doc-drift",
       "title": "reseed.sh 不清运行时建的账号，README 未写明，易污染「最后管理员」闸门",
       "detail": "实测建第二个 lqg_admin 后只跑 reseed，库里仍有 2 个 admin → 「不能撤到没有管理员」这条闸门会合理地不触发，看起来像实现没做。受控复现（干净 1 管理员）时闸门正确返 500 且库不变。方案：doc/verify/README.md 写明『收尾必须 reseed + clean-orphan 两步』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 56,
+      "ticket": "SAMPLE-MODEL-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "加密载体口径已裁定为裸 Base64 + 手工 EncryptUtils（ticket 字面『加 @EncryptField』与 seed/gen_seed 的裸 Base64 不是一套编码）",
+      "detail": "框架 EncryptorManager.encrypt 会加 ENC_ 前缀，而 doc/verify/seed/、gen_seed.py、ADR-0006 的既有密文是裸 Base64（openssl -aes-128-ecb -nosalt -base64，密钥 LqgTestAesKey#01）。照 ticket 字面加注解 → seed 9 行 decrypt 见不到 ENC_ 就原样返回 → accept 2 双红。裁定：统一裸 Base64 + 层内手工 EncryptUtils（语义与 ADR-0006 一致，只是载体从注解换成 SampleFieldCipher），因为 seed 与 accept 是需求层资产且『别改 seed 迁就实现』是硬规矩。影响：QC-MODEL-001 的 patient_no、DOC 域若有加密列一律照此办；ADR-0006 措辞建议由 Kevin 改成『用 EncryptUtils 加密落库』。请 Kevin 在 all_done 时过目。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 57,
+      "ticket": "SAMPLE-MODEL-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "ADR-0004 字面『外部只能调 /mp/ext/**』与 /mp/dict/hints 冲突（契约第 21 行本就列了 /mp/dict/**）",
+      "detail": "accept 3 用 --as extA 调 GET /mp/dict/hints；按 accept 实现（契约第 21 行把 /mp/dict/** 列进内外部都能调），已跑 ExtChokepointContractTest 证明四条咽喉不变量不受影响（新 controller 在 ext 包外、路径 /mp/dict）。建议 ADR-0004 的 decision 补成『业务**数据**接口只有 /mp/ext/**』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 58,
+      "ticket": "SAMPLE-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT /lqg/sample/{id} 的语义未写死（哪些字段可改、是否触发重核验）",
+      "detail": "ticket 未写死；本票按『只改本票范围内字段、不改核验状态』实现。SAMPLE-VERIFY-001 / SAMPLE-WEB-001 若要改状态需自己显式处理。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 59,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 里 submitSource 筛选是空转绿：盘上 /lqg/sample/list 没有这个筛选参数",
+      "detail": "SAMPLE-VERIFY-001 accept 2 第 7 段用 GET /lqg/sample/list?submitSource=external 断 1001 在其中，但 SampleQueryBo 只声明 sampleKind/verifyStatus/internalNo/donorName/hospitalNo 五个筛选，submitSource 被 Spring 当未知参数忽略 → total=9 且含 internal 的 1008/1009，断言恒真。SAMPLE-WEB-001 的 accept 会真正用到 submitSource 筛选（q 'submitSource=internal'）。要求：实现时用【样本行上已落库的 submit_source 列】eq 筛选，**不许按提交人当前角色现算**（那是这条口径最自然也最错的实现）；同时把该段断言改成集合精确相等。★另记一条主会话的教训：我在 briefing 里断言『list 已支持 submitSource』是我从 accept 反推的、没先验盘上代码，错的。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 60,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "D3 定时炸弹：注册 SampleChildrenChecker 后 D2 的 valid→invalid 会变红（种子 1002 名下有待核验送样 2006）",
+      "detail": "本票 checker 注册数=0 所以跑得通；EMBED-MODEL-001 注册实现后，seed 里 1002 名下有 extA 提交的**待核验**石蜡包埋送样 2006 → SAMPLE-VERIFY-001 accept 1 的 valid→invalid 会在 D3 之后复跑时变红。权威口径（D3 qa_scope L3『有已核验石蜡块的样本改判无效被拒』）支持：checker **只把已生效（非软删）的下游记录算 children，待核验的外部送样不算**。EMBED-MODEL-001 必须照此实现，否则 D3 的 QA 回归会连带打红 D2。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 61,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "判有效时『其余字段』的 null 语义未写死（本实现取 patch 语义）",
+      "detail": "请求体里没给的字段不动（patch），不是整体覆盖。后续若有人按 PUT 全量语义写会踩。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 62,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "resubmitByExternal 本票无运行时入口，只被单测覆盖",
+      "detail": "外部重提的 HTTP 入口在 AUTH-EXT-001；AUTH-EXT-001 落地后应把它接上并补一条端到端断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 63,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "accept 2 跨票引用后置端点：--as extA GET /mp/int/sample/list 期望 403，SAMPLE-MP-001 落地前是 404",
+      "detail": "accept 依赖同任务后置票注册的端点，depends_on 里没有这条边。处置：不改 accept（需求层资产）；由 D2 QA 门在 SAMPLE-MP-001 落地后用同一条断言收口（D2 qa_scope L3 本就要求『外部角色打 /lqg/** 与 /mp/int/** 一律 403』）。方案（供 ①xuqiu 参考）：accept 里引用同任务后置票的端点时，要么加 depends_on，要么把断言挪到后置票。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 64,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "ExtChokepointContractTest 的 I3 禁用字段表不含 internalNo，也不拦 ExtEmbedVo 的 operatorName/embedBy",
+      "detail": "i3 是设计豁免（开关控制的字段 + CR-20260918-07 明确放开的外部可见字段），所以『某个 Ext*Vo 声明了 internalNo 却忘了接开关』i3 不会红。AUTH-EXT-001 靠 accept 的 keys 差集兜住；AUTH-EXT-002 的 ExtEmbedVo 要注意：operatorName/embedBy 是 CR 放开的外部可见字段，仍在 I3 禁用表里被精确豁免——别把豁免当默认可加。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 65,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "/mp/ext/units 与 /mp/ext/profile 没有类级 @SaCheckRole('lqg_external')，内部也能调",
+      "detail": "ADR-0004 只说『外部只能调 /mp/ext/**』，没说 /mp/ext/** 只给外部；accept 第 1 条第 3 段只要求 ≥2 处类级注解，AUTH-EXT-001 新增的两个 controller 已满足。实测 admin/staff GET /mp/ext/units → 200、staff PUT /mp/ext/profile → 500 业务校验（内部没有外部档案，不可利用）。AUTH-EXT-001 刻意没动它们（塞进那张票会让 AUTH-GROUP-001 的验收结论失效）。若要收紧，另开小票。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 66,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "invalid→pending（外部重提）没有『名下有下游记录就只放内部』的闸",
+      "detail": "valid→invalid 那条路已在用 SampleChildrenCheckers；重提方向没有。影响 EMBED/CRYO/QC 的后续判断，待定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 67,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "doc/verify/db.py 拒写时 exit 0（README 写的是 2），会让人把「没执行」当「执行了」",
+      "detail": "实测：db.py 遇到写语句时返回 exit 0。方案：改成 exit 2 或至少非 0，并把 README 的退出码表对齐。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 68,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "跨票行为变更：/lqg/sample/* 上从没改过的行 updateTime 由 createTime 变 null",
+      "detail": "SAMPLE-MP-001 删掉了 SampleNameResolver 里『updateTime 为空时兜底成 createTime』那段（它的 accept 断 updateTime == null = 新增）。影响工作台 GET /lqg/sample/*：从没改过的行 updateTime 现在是 null。SAMPLE-WEB-001 做修改页/列表『最后修改』列时会用到——要么显式处理 null，要么把该口径写进它的 §0。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 69,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "小程序：组件里只用 easycom 引用 wd-* 会静默丢掉该模块的 .js 产物（构建仍报成功）",
+      "detail": "SAMPLE-MP-001 实测 form.vue / history/index.vue / FieldRow.vue 第一版全中招：产物只有 .json/.wxml，没有 .js，页面在真机上加载不到逻辑，而 build 仍打印 Build complete。解法 = 显式 import WdXxx from 'wot-design-uni/components/wd-xxx/wd-xxx.vue'。影响后续每一张 MP 票（SAMPLE-MP-002 / EMBED-MP-001 / CRYO-MP-001 / OCR-MP-001 / DOC-MP-001 / DOC-MP-002）。方案：写进栈包 gotchas，并让 MP 票的 accept 都断『页面 .js 产物存在』。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 70,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "分页接口没有 data 键：utils/request.ts 默认只 resolve body.data → MP 列表恒 undefined",
+      "detail": "后端 TableDataInfo = {code,msg,rows,total}，没有 data。SAMPLE-MP-001 给 utils/request.ts 加了 raw:true 选项（越出 touches，已在报告 §2.4 列清）。凡是要用 MP 分页列表的票都必须带这个选项，否则列表恒 undefined。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 71,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "/mp/int/** 用 --as admin 实测 403：lqgadmin 只有角色 101，契约要求 lqg_internal",
+      "detail": "下游 MP 票与 QA 别写 --as admin 断 200；内部视角一律用 --as staff。若确实要让管理员也能用小程序内部功能，得有票把它同时挂 102（AUTH-STAFF-001 的 grant 已实现 lqg_admin 同时挂 lqg_internal，但 seed 里的 lqgadmin 是直接插的、没走那条路）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 72,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "沙箱里用 nohup & 起的后端会被中途杀（exit 143）——长进程要用受管后台 job",
+      "detail": "SAMPLE-MP-001 实测：nohup 起的 java 后端中途被杀（exit 143），改用受管后台作业才稳。影响所有需要常驻后端的 ticket 与 QA 分片。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 73,
+      "ticket": "AUTH-GROUP-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "越界（已授权）：SAMPLE-WEB-001 改了 SAMPLE-MODEL-001 的 SampleQueryBo/SampleQueryService/SampleVo",
+      "detail": "accept 要的筛选参数（sourceUnitId/groupId/submitSource/receiveDate 区间）住在 SAMPLE-MODEL-001 建的 sample 包里，而 SAMPLE-WEB-001 的 touches 只列了 sample/query/**。主会话已口头授权：只新增字段/分支、无签名变更、SampleController 未动。方案：ticket 生成时把 sample/domain/bo/** 与 SampleQueryService 划给 SAMPLE-WEB-001，或在 SAMPLE-MODEL-001 里就预留全量筛选。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 74,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "UI:admin.sample.edit 的『名下有包埋/冻存/质控文档时禁用改判无效』前端前置禁用做不了",
+      "detail": "详情不带该标记，且 SampleChildrenCheckers 在盘上注册 0 个实现。后端兜底有效（SampleVerifyService 拒绝 + 回原因），但 UI 是点了才知道错。EMBED/CRYO/QC 的 MODEL 票注册 checker 后需补一小改（详情带标记 + 前端前置禁用）——建议排进 D3。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 75,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "契约第 45 行没写行内 submitterName/groupName（ticket §2.1 要求加，已加）",
+      "detail": "总表新增「提交人/组别」两列，UI:admin.sample.list 的列清单里也没有（依据是 ticket §2.1 正文）。方案：契约与 ui-index 的列表行字段补齐。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 76,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "nohup & 起的后端被杀后仍占住 8081，下一次受管 job 报 Port 8081 already in use",
+      "detail": "SAMPLE-MP-001 WARN-2 的第二症状。方案：起后端前先 lsof -ti tcp:8081 拿 PID 清干净；统一用受管后台作业。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 77,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "【高优】db.py --quiet 实测『不打印任何行』，10 张 ticket 的 OID=\"$(db.py --quiet …)\" 句式会拿到空值；AUTH-EXT-001 已因此假绿",
+      "detail": "主会话复核：python3 doc/verify/db.py --sql 'SELECT 1' 输出 1；加 --quiet 输出空。doc/verify/db.py:95 是 if not a.quiet 才打印行。受影响 10 张：AUTH-EXT-001 / SAMPLE-EXPORT-001 / SYS-EXPORT-001 / CRYO-FLOW-001 / DOC-RENDER-001 / EMBED-WEB-001 / CRYO-WEB-001 / DOC-PUBLISH-001 / OCR-IMPL-001 / SAMPLE-MP-002。最严重的是 AUTH-EXT-001 accept 3：OID 为空 → PUT /mp/ext/organoid/ → 404，正好落进断言正则 ^(400|403|404) → 假绿（真实行为未被验证）。处置：不改只读区（db.py 与 ticket 都是需求层资产）；【D2 及以后每一轮 QA 必须把所有 $(db.py --quiet …) 插值的段落用『去掉 --quiet』的方式复跑一遍】，因为那些段落是空转的；all_done 时集中报 Kevin 修 db.py（改成只打印值）或改 ticket 生成器。",
+      "status": "decided",
+      "decision": "fixed：Kevin 2026-09-22 拍板：--quiet 改成「只打印值」（每行第一列，无表头/无拼接/不截断）。已改 doc/verify/db.py 并在 doc/verify/README.md 的执行器表里补了一行说明。实测：SELECT 1 → 1；多行只打印首列；空结果打印空；--eq 等断言语义与退出码一字未变；插值 OID 已能拿到真实值。连带修好 5 张导出票的 xlsx_header --rows \"$(db.py --quiet …)\"（原先喂进去的是空串）。"
+    },
+    {
+      "id": 78,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "SYS-MP-001 的 accept 有一段 grep 扫整个 src 抓裸 *，JSDoc 注释与乘法都会命中（会让上一张票变红）",
+      "detail": "grep -rnE ':not\\(|(^|[ ,{])\\*[ ,{]' src --include=*.vue --include=*.scss（本意抓裸 * 选择器，但扫整个 src）。SAMPLE-MP-002 第一版 LedgerTable.vue 的 JSDoc ' * ' 注释块与 a * b 算术两处被命中。方案：把该 grep 收窄到 <style> 块内 / 排除注释，或让后续 MP 票都知道别在 .vue/.scss 里写 JSDoc 块。传下去给每一张 MP 票。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 79,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "跨票行为变更（SAMPLE-MP-002 补的）：sample/form.vue 只读页新增右上角『修改』入口",
+      "detail": "CR-20260918-07 的『只读页右上角修改』覆盖四张表，SAMPLE-MP-001 只做了『view 全只读』。SAMPLE-MP-002 给它补了入口（touches 之外）。D2 QA 复跑 SAMPLE-MP-001 的端侧 11-int-form-view 会多一个『修改』文本，但它断的『保存按钮 0 / 输入控件 0』仍成立。EMBED/CRYO 的 MP 票照此办。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 80,
+      "ticket": "EMBED-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "ticket §2 写『内部历史 organoid 用 mine=true』与 CR-20260918-07 冲突",
+      "detail": "SAMPLE-MP-002 按 CR 实现（默认全中心 sort=recent + 只看我提交的开关才带 mine），与样本页签同形。建议改 ticket 措辞，免得 EMBED-MP-001 / CRYO-MP-001 / DOC-MP-* 的历史页签照抄 mine=true。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 81,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "src/pages/admin/*.vue 四个占位页已无引用（SAMPLE-MP-002 没删，在 touches 之外）",
+      "detail": "内部管理四格现在指向 pages/ledger；admin/*.vue 是 SYS-MP-001 建的占位页，已无引用。方案：后续 MP 票或收尾时删掉。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 82,
+      "ticket": "SYS-BASE-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "D1 回归包把 flyway 迁移总数写死成 7，D2 起每加一支迁移就假红一条",
+      "detail": "D2 r1 L0+L1 片重放 doc/waves/regression/D1/verify.sh：41 绿 / 1 红，唯一红是 SELECT count(*) FROM flyway_schema_history --eq 7（D1 时代硬编码总数；D2 又加 3 支 → 实际 10）。D1 的 7 支逐个点名、无失败行、迁移文件在源码树全绿 → 是 harness 缺陷，不是『以前好的坏了』。方案：回归包改成断『D1 那 7 支版本号逐个存在且无 success=false』，别断总数。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 83,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S0",
+      "type": "arch",
+      "title": "【S0】小程序首页四个入口都不带 mode=new → 填写页进只读错误页，首页送检主流程整条断",
+      "detail": "pages/index/entries.ts 的 ENTRY_FORM_TARGET 是裸路径（不带 ?mode=new）；填写页 normalizeMode(undefined)=='view' 且无 id → 渲染「没能加载这条样本」错误页、没有提交按钮。后果：外部无法从首页开始送检、内部也无法从首页录收样——四个入口全坏（D2 主流程第 1 步）。fixture home-entries-cases.json 也把目标写成裸路径，所以 L0 的 targetCases 全绿、掩盖了它。修法：入口目标带 mode=new（并同步 fixture 的期望——fixture 是需求层资产，需按 CR/权威判定该改哪边）。",
+      "status": "decided",
+      "decision": "fixed：D2 r1 拦门项，已在 1e8ea8c 修复，并由 D2 r2 的独立 QA 分片在运行页面上逐条复验不再复现（L0+L1 片另在编译产物里核实 invalidReason/props/mode 已落进构建）。"
+    },
+    {
+      "id": 84,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S0",
+      "type": "debt",
+      "title": "【S0】withDefaults(defineProps…) 未赋 const props 却引用 props.x → 三个组件运行时 ReferenceError",
+      "detail": "StatusChip.vue:34 / FieldRow.vue:45 / SegButtons.vue:23 都写成 withDefaults(defineProps…) 未赋值却引用 props.x → 运行时 ReferenceError: props is not defined。后果：① 历史编辑记录每行的核验状态徽标全不渲染（UI:mp.history 要求；实测 chips=0）；② 只读表单（内部管理点一行的 mode=view）一个字段值都没有；③ 性别/有无固定/质控表/细胞活率报告等按钮组点不动（点「男」后 --on 仍是「女」）。这是 L0 单测覆盖不到的运行时形态。",
+      "status": "decided",
+      "decision": "fixed：D2 r1 拦门项，已在 1e8ea8c 修复，并由 D2 r2 的独立 QA 分片在运行页面上逐条复验不再复现（L0+L1 片另在编译产物里核实 invalidReason/props/mode 已落进构建）。"
+    },
+    {
+      "id": 85,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S0",
+      "type": "arch",
+      "title": "【S0】wd-datetime-picker 没有 visible 这个 prop，页面却传 :visible 且从不 open() → 日期面板永不渲染",
+      "detail": "内部类器官收样的「收样日期」必填且只能靠这个控件填 → 内部一条类器官收样都建不出来（库内 0 行）。修法：按 wot-design-uni 1.14 的真实 API（用 v-model:visible 或 ref.open()）改。",
+      "status": "decided",
+      "decision": "fixed：D2 r1 拦门项，已在 1e8ea8c 修复，并由 D2 r2 的独立 QA 分片在运行页面上逐条复验不再复现（L0+L1 片另在编译产物里核实 invalidReason/props/mode 已落进构建）。"
+    },
+    {
+      "id": 86,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S1",
+      "type": "debt",
+      "title": "【S1】useDict('sample_kind') 与库里真名 lqg_sample_kind 不符 → 「样本类别」下拉永远「无数据」",
+      "detail": "sample/index.vue:266 用 useDict('sample_kind')，字典真名是 lqg_sample_kind → 该类筛选从 UI 走不通（后端接口本身正确，10/11 个筛选集合都对）。",
+      "status": "decided",
+      "decision": "fixed：D2 r1 拦门项，已在 1e8ea8c 修复，并由 D2 r2 的独立 QA 分片在运行页面上逐条复验不再复现（L0+L1 片另在编译产物里核实 invalidReason/props/mode 已落进构建）。"
+    },
+    {
+      "id": 87,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S1",
+      "type": "ux",
+      "title": "【S1】外部看不到无效原因：唯一带红条的 detail-ext 对「本人+editable」不可达",
+      "detail": "历史列表没有原因、点进去是 edit 表单也没有、而唯一带红条的 detail-ext 只对「非本人或不可改」可达（sources.ts 的 target 对本人+editable 走 form?mode=edit）→ 外部只能盲改。REQ/方案流程图要求「无效后能看到原因再改后重提」。",
+      "status": "decided",
+      "decision": "fixed：D2 r1 拦门项，已在 1e8ea8c 修复，并由 D2 r2 的独立 QA 分片在运行页面上逐条复验不再复现（L0+L1 片另在编译产物里核实 invalidReason/props/mode 已落进构建）。"
+    },
+    {
+      "id": 88,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "外部写端点对非法/缺字段 body 回 500，msg 回吐完整 SQL + 整行 DB 明细（含密文与内部 user_id）",
+      "detail": "复现：--as extA PUT /mp/ext/sample/9000001002 带 hasPathology:'yes'（字典只给 Y/N）或省略 sourceUnitName；--as extC POST /mp/ext/organoid 省略 sourceUnitName 同样。响应 msg 里带表名列名、donor_name/hospital_no 密文、内部 user_id。小程序表单只送 Y/N 且全字段，主流程走不到，但对外部用户泄露库结构。方案：外部入参校验前置 + 异常处理器不回吐 SQL 明细。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 89,
+      "ticket": "SAMPLE-VERIFY-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "客户端拒绝的业务码不统一：外部 PUT 回 400，内部 PUT 与核验四条回 500",
+      "detail": "msg 分支都对，但业务码不一致会让客户端分支写法漂移。方案：定一份『参数/状态类拒绝 = 400』的约定并统一。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 90,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "ux",
+      "title": "内部新增类器官收样的『来源单位』无默认值（裁定：保持必填，不加默认）",
+      "detail": "D2-rework-r1 的新发现。页面上有完整选择路径（底部弹层列 /mp/ext/units 候选 + 手填开关 + 必填校验），所以**不是产品缺陷**——真人在页面上选一个即可提交；r1 的 L2 脚本提交前没驱动那个选择器，属 harness 漏操作。裁定：保持必填、不加默认值（默认选 units[0] 会替用户猜掉单位快照，是数据质量问题）。可选 UX 优化（非必须）：记住上次选过的单位。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 91,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "r1 的 L2 脚本提交类器官收样前没驱动『来源单位』选择器（W-4 的真身）",
+      "detail": "该字段是必填项（UI:mp.organoid.form 的内部七项之一），页面上有弹层选择器与手填两条路径。脚本没操作就提交 → 被必填拦 → 误报成产品缺口。方案：凡走填写页的脚本，提交前必须先满足所有必填项（或先断言必填提示存在）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 92,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "实现方在返工时改了 QA 资产（已逐条核过，可接受）：G3-20 根因探针翻正负号、WEB-L2-06b 补鉴权头",
+      "detail": "D2-rework-r1 改了 doc/waves/regression/D2/ 两份脚本：① G3-20 原断言『StatusChip 抛 ReferenceError 的条数 > 0』（证明病灶存在）→ 改成 === 0（证明病灶消失），属根因探针随修复翻转，产品期望值没动；② WEB-L2-06b 原来裸 fetch 没带 Authorization+clientid → 后端起手回 401、data=null，断言『假名为空』恒真；现在补头并改成断真名有 2 条。主会话已逐行核过 diff。★纪律：QA 资产原则上不许实现方动；本轮因探针自身有 bug 且改动已在 commit message 里显式声明，予以接受。D2 r2 的 QA 片不得把 r1 资产当独立证据。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 93,
+      "ticket": "SYS-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "vue-tsc 类型债：UnitGroupPicker.vue:174,178 与 me/unit-group.vue:156 的 string→number",
+      "detail": "SAMPLE-MP-002 返工时发现，改动前后都有，本轮零新增。真门是 build 不是类型检查，故不拦门。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 94,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "G3-19『历史每行都有核验状态徽标』只在 1 行样本上验到，覆盖不足",
+      "detail": "D2-rework-r1 的 W-6。方案：断言改成『<= 列表行数』之外，还要在 >=3 行样本（含不同 verifyStatus）上各验一次。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 95,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "同一条「样本不存在」业务码不一致：内部 /lqg/sample/{id} 回 500、外部 /mp/ext/sample/{id} 回 404",
+      "detail": "D2 r2 L0+L1 片发现。HTTP 都 200，不影响拿东西/判权限；L3 的越权用例只打 /mp/ext/** 不受影响。方案：内部『查无此物』也回 404（或统一成 400 白名单），别用 500 表达「不存在」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 96,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S1",
+      "type": "arch",
+      "title": "【S1】工作台「来源单位」筛选筛不出内部录的样本（会传染 D3 导出）",
+      "detail": "纯 seed 即可复现：按内部编号 T-oco01 筛出 SJ90000009，行内来源单位列写『B 大学』；把筛选选成来源单位=B 大学后它消失（total=1 只剩 SJ90000006）。根因：SampleQueryService.list 把『组别/来源单位』一律走 t_lqg_ext_profile（提交人外部档案）取 user_id 集合再 submitter_id IN (...)；注释给的理由『样本行上没有 group_id』只对组别成立——来源单位在样本行上有 source_unit_id/source_unit_name → 内部账号提交的行永远筛不出来。影响：老师按来源单位筛会拿不到界面标着该单位的样本；FLOW:F-SAMPLE-02.step5 的导出范围 = 当前筛选结果 → D3 的样本/类器官导出会静默漏掉内部样本（影响另一个 ticket 的实现路径）。修法：来源单位按样本行自己的 source_unit_id 筛；组别仍走外部档案（或一并按提交人的档案 JOIN，但两条口径要分开写清）。旧 accept 只测 A 医院（其下无内部样本）所以 r1 没暴露。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 97,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "工作台样本总表行不渲染 invalidReason（只在核验抽屉里）",
+      "detail": "权威 UI:admin.sample.list 的列清单没锚它；小程序侧历史行与 edit 表单红条已满足 r1 那条 S1 的真实要求。建议把口径写死：工作台列表行是否显示无效原因（若要显示，SAMPLE-WEB-001 补一列/一个 tooltip）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 98,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "返工把两条旧回归断言改成不再约束页面的形态（本片已用正面断言补上）",
+      "detail": "WEB-L2-06b 退化成测字典接口、G3-20 退化成测 console 无异常。方向与权威一致、不算迎合实现，但 r2 片已另写正面断言覆盖页面形态。纪律：改 QA 断言要留『原来断的是什么、现在断的是什么』的对照（本轮做到了）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 99,
+      "ticket": "SAMPLE-EXPORT-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "连带修好：5 张导出票的 xlsx_header --rows \"$(db.py --quiet …)\" 原先喂的是空串",
+      "detail": "SAMPLE-EXPORT-001 / SYS-EXPORT-001(×2) / EMBED-WEB-001 / CRYO-WEB-001 用 --rows \"$(db.py --quiet --sql 'SELECT count(*) …')\" 取行数；--quiet 原先什么都不打印 → --rows 收到空串。db.py 已按 Kevin 的裁定改成「只打印值」，这 5 处从 D3/D7 起会变成**真断言**（行数必须对得上），届时若红属正常收紧。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 100,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "ticket 正文把 sourceUnitId 与 groupId 并列写「join t_lqg_ext_profile」——正是 #96 的实现依据，下个 agent 照抄会带回来",
+      "detail": "doc/tickets/SAMPLE-WEB-001/prompt.md:102。正确口径：来源单位按样本行自己的 source_unit_id 快照筛（内外部一视同仁）；组别才走提交人的外部档案。建议 ① 改 ticket 正文这一句（实现方已把分界写进代码注释 + 加硬断言防回头路）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 101,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 1 的九条筛选没有一条覆盖「来源单位下有内部样本」→ 漏到 r2 才发现 #96",
+      "detail": "建议增一条 sourceUnitId=9000009002 → {1006,1009}（B 大学下既有外部 extD 的 1006、也有内部 staff 的 1009）。这条一旦加上，同类错误在 ticket 自己的 accept 就会红，不用等端到端 QA。属①的断言强度前移。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 102,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "authority 未写「自填单位名 / 同名不同 id」的筛选裁定（现只在代码注释里）",
+      "detail": "现裁定：按名字只走 keyword 的 source_unit_name LIKE；自填单位名（id 空）不落 id 筛选；同名不同 id 以 id 为准。建议写进 authority 或契约。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 103,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "工作台「组别」下拉未选来源单位时 disabled → 无法只按组别筛",
+      "detail": "plus-ui 端的可用性问题；后端 groupId 单独筛是支持的。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 104,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "L2r2-web.mjs 的 R2W-04.1/04.2 期望按 name 现算、产品按 id，seed 恰好等价 → 将来会假红",
+      "detail": "seed 里 B 大学=9000009002 且同名唯一，所以两种口径结果相同；一旦出现同名不同 id 的单位，该断言会假红。方案：断言改成按 id 现算，或在 fixture 里加同名单位作为病灶。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 105,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S1",
+      "type": "arch",
+      "title": "【S1】SampleQueryService 顶层 .or() 未加括号 → sort=recent 与其它筛选串味，mine=true 失效",
+      "detail": "SampleQueryService.java:136-142 用顶层 .or() 拼「create_by 是内部 OR update_by 是内部」，MyBatis-Plus 不给它加括号 → SQL 退化为 (其它筛选 AND create_by IN 内部) OR update_by IN 内部。实测（reseed + staff 改 1001）：/mp/int/sample/list?sampleKind=organoid&sort=recent = [1001(tissue!),9000001009]；sourceUnitId=9000009002&sort=recent、internalNo=T-oco01&sort=recent、mine=true&… 同样串味。第二形态：admin 建一行（staff 从没碰过），staff sort=recent&mine=true 仍返回它 → 「只看我提交的」开关根本没生效。小程序 history/sources.ts 内部两个页签固定发 sampleKind+sort=recent(+mine)，即「我的→历史编辑记录」的类器官页签会出现组织样本、点进去还进 organoid 表单；违背 CR-20260918-07 与剧本 7，并落到 SAMPLE-MP-002 的取数路径。修法：用 .and(w -> w.in(create_by,…).or().in(update_by,…)) 把 OR 包成一组；mine 同理 .and(w -> w.eq(create_by,me).or().eq(update_by,me))。p6spy 原始 SQL 在 D2-r3-L01.json 的 evidence 里。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 106,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "MpSampleController javadoc 写「待核验/无效 → 400」，实测 500",
+      "detail": "D2 r3 L3 片新记。注释与实现不一致（行为本身正确：拒绝且库里不变）。方案：javadoc 改成 500，或把实现统一到 400（与业务码混用那条 S3 一起收）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 107,
+      "ticket": "SAMPLE-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "网页工作台 PUT /lqg/sample 仍可改 sample_kind（本次只授权收小程序口）",
+      "detail": "D2 #105 返工只收了小程序口（前端不发 + 后端不一致 400）。工作台口按契约第 49 行『有效样本全部字段可改』仍允许改 kind —— 内部管理改判类目是另一件事，需要明确口径：要么一起禁，要么写明只有工作台能改（并留审计）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 108,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "ux",
+      "title": "非页签入口仍能带错 kind 打开表单，只靠后端 400 兜底（无「你点错类别了」引导）",
+      "detail": "修 #105 时前端修改模式已不发 sampleKind、后端不一致回 400，但用户在错类别表单里保存只会看到一个 400，没有明确引导。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 109,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S3",
+      "type": "debt",
+      "title": "跨类字段残留：别类表单保存到该类记录时，别类的类型字段仍会写进去",
+      "detail": "类别（sample_kind）已不可改，但例如组织样本表单里若带了 organoidType 之类别类字段，写侧没有统一拦。建议定一份『按 sample_kind 白名单字段』的写侧校验。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 110,
+      "ticket": "SYS-BASE-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "全仓没有「顶层裸 .or()」的静态闸，D3/D4 加取数口时可能复发",
+      "detail": "#105 的形态（MyBatis-Plus 顶层 .or() 不加括号 → SQL 退化成 (A AND B) OR C）全仓只有一处，已修并有契约测试钉死。建议加一条架构测试/静态检查：wrapper 里出现 .or() 时其上下文必须是 .and(w -> …) 或 .or(w -> …) 的嵌套块。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 111,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S2",
+      "type": "ux",
+      "title": "来源单位（SSOT nullable:false）在创建路径零校验 → 500 + 裸 PostgreSQL 报错串 toast 给用户",
+      "detail": "D2 r4 L0+L1 片真 UI 复现：新外部号（未绑定）点首页『样本记录信息表』→ 填供体姓名+组织类型 → 提交，请求体 sourceUnitName:\"\"，响应 code 500 + 裸 PostgreSQL 报错串（null value in column \"source_unit_name\" … Failing row contains (…)），前端把该 msg 原样 toast。API 同样：--as staff POST /mp/int/sample 不带/空 sourceUnitName → 500；--as extA POST /mp/ext/sample、--as extC POST /mp/ext/organoid 不带 → 500。三个入参 BO 都无 @NotBlank，SampleKindRules 也不查它，前端表单也没给该字段挂必填星号。库里不多出行（回滚）。定 S2 不 S1 的依据：所有 ticket 的 accept 载荷都带 sourceUnitName，没有下游 ticket 因此跑不通；按剧本 1 的『先填单位组别再提交』流程也能避开。方案：三个 BO 补 @NotBlank + 前端挂必填星号 + 新外部号进表单时给『先去我的→单位与组别』的引导；并让 500 不再回吐库内部细节（与 #88 同族）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 112,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "ux",
+      "title": "外部新增样本不落 source_unit_id → 工作台「来源单位+组别」组合筛选带不出（权威允许为空，属设计后果）",
+      "detail": "D2 r4 L2 片发现：小程序外部新增样本实测 source_unit_id 为空，于是工作台『来源单位=A 医院 + 组别』组合筛选带不出这条（单一『组别』带得出，因为组别走提交人档案）。★主会话取证：权威 FIELD:t_lqg_sample.source_unit_id 明写「FK→t_lqg_source_unit.id；**自填单位名时为空**」且 nullable:true —— 外部提交走的是单位名入参，所以 id 为空是权威允许的设计，不是产品缺陷，故维持 S2 不上调。要改的话是口径问题：要么让外部提交时按名字解析出 id（当名字命中已有单位），要么让工作台筛来源单位时同时按 name 匹配。请在 all_done 时定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 113,
+      "ticket": "SAMPLE-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "核验/状态机「被拒」实回 code=500，而契约第 10/49 行与 MpSampleService 注释都写 400",
+      "detail": "D2 r4 L3 片发现。行为正确（被拒且库不变），前端 request.ts 对任意非 200 一律 toast .msg → 无用户可见差异；对照组 sampleKind 不一致实测是正确 400。连带 SAMPLE-VERIFY-001 的 /verify 缺必填路径。方案：统一成 400 并同步契约/注释（与既有的『业务码 400/500 混用』那条 S3 一起收）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 114,
+      "ticket": "AUTH-EXT-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "外部 PUT 重提会把既有 source_unit_id 清成 null（source_unit_name 仍在）",
+      "detail": "D2 r4 L3 片发现：#100（外部重提）会把 seed 里既有行的 source_unit_id（1002=9000009001）清空。根因与 #112 同族（没有『单位名→id』解析）。影响仅『来源单位+组别』组合筛选少一行。权威 field-ssot.yaml:144 明写该列 nullable「自填单位名时为空」→ 按本轮口径不判 S0/S1，建议与 #112 合并处理。",
       "status": "open",
       "decision": ""
     }

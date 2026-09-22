@@ -1,0 +1,19 @@
+# 修前实跑输出（本票 2026-09-22 06:09，jar = 01:19 旧包）
+# 命令：node doc/waves/regression/D2/L2r2-probe-sourceunit.mjs
+# 与 doc/waves/qa/D2-r2-L2.json issue #96 / D2-r2-L2-notes.md 的 r2 记录一致
+{
+ "row1009_by_internalNo": "T-oco01|\t|SJ90000009|\t|B 大学|\t|类器官|\t|内部|\t|有效|\t|\t|\t|\t|\t|结直肠类器官|\t|2026-07-24|\t|—|\t|2026-07-24 10:00:00|\t|—|\t|有|\t|—|\t|—|\t|—|\t|李工|\t|从未修改|\t|—|\t|编辑|质控文档|石蜡包埋|冻存",
+ "filter_B_university": {
+  "total": 1,
+  "submitNos": [
+   "SJ90000006"
+  ]
+ },
+ "tableHas1009": false,
+ "db": {
+  "s1009": "internal|9000009002|B 大学|T-oco01",
+  "unitB": "9000009002",
+  "dbRowsWithUnitB": "SJ90000006,SJ90000009"
+ }
+}
+VERDICT CONFIRMED_BUG

@@ -26,6 +26,12 @@ export interface RequestOptions {
   redirectOnUnauthorized?: boolean
   /** 是否静默：true 时非 200 不弹 toast，由调用方自己处理 */
   silent?: boolean
+  /**
+   * 原样返回**整个响应体**（`{code,msg,rows,total}`）而不是只给 `data`。
+   * 分页接口（`TableDataInfo`）的形状是 `{code,msg,rows,total}`，**没有 `data` 键** ——
+   * 走默认那条路会 resolve 出 `undefined`（SAMPLE-MP-001 实测踩过：页面显示「没能加载」）。
+   */
+  raw?: boolean
 }
 
 /** 是否正在跳登录页，避免并发请求弹多次 */
@@ -91,6 +97,7 @@ export function request<T = unknown>(options: RequestOptions): Promise<T> {
     header,
     redirectOnUnauthorized = true,
     silent = false,
+    raw = false,
   } = options
 
   const finalUrl = `${resolveBaseUrl()}${url}${buildQuery(params)}`
@@ -142,7 +149,7 @@ export function request<T = unknown>(options: RequestOptions): Promise<T> {
           reject(new Error(msg))
           return
         }
-        resolve(body.data)
+        resolve((raw ? body : body.data) as T)
       },
       fail: (err) => {
         const msg = '网络连接失败，请检查网络'

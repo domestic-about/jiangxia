@@ -1,0 +1,19 @@
+PASS C1 sourceUnitId=9000009002(B 大学) == 库内样本行 source_unit_id 集合 got=[SJ90000006,SJ90000009] expect=[SJ90000006,SJ90000009] total=2
+INFO C1b total=2 set=2
+PASS C2 sourceUnitId=9000009002 + submitSource=internal == 库内集合 got=[SJ90000009] expect=[SJ90000009]
+PASS C3 该条件下返回了 submit_source=internal 的行（无外部档案也能筛出） submitNo=SJ90000009
+PASS C4 sourceUnitId=9000009002 + groupId=9000009103 == 库内 join 现算 got=[SJ90000006] expect=[SJ90000006]
+PASS C5 sourceUnitId=9000009003(无样本) == 空集（不许退化成全表） got=[] expect=[] total=0
+PASS C6 sourceUnitId=9000009001(A 医院) 仍 == 库内 source_unit_id 集合（应 6 条，与改前一致） got=[SJ90000001,SJ90000002,SJ90000003,SJ90000004,SJ90000005,SJ90000007] expect=[SJ90000001,SJ90000002,SJ90000003,SJ90000004,SJ90000005,SJ90000007]
+PASS C7 groupId=9000009101 仍 == 库内「提交人档案」join 现算（应 5 条，口径不变） got=[SJ90000001,SJ90000002,SJ90000003,SJ90000004,SJ90000007] expect=[SJ90000001,SJ90000002,SJ90000003,SJ90000004,SJ90000007]
+PASS C8 internalNo=T-oco01 got=[SJ90000009] expect=[SJ90000009]
+PASS C9 sampleKind=organoid got=[SJ90000009] expect=[SJ90000009]
+PASS C10 submitSource=internal got=[SJ90000008,SJ90000009] expect=[SJ90000008,SJ90000009]
+PASS C11 verifyStatus=valid + submitSource=internal got=[SJ90000008,SJ90000009] expect=[SJ90000008,SJ90000009]
+PASS C12 tissueType=肝组织（模糊·内部行） got=[SJ90000001,SJ90000003,SJ90000004,SJ90000007,SJ90000008] expect=[SJ90000001,SJ90000003,SJ90000004,SJ90000007,SJ90000008]
+PASS C13 operatorName=李工（模糊） got=[SJ90000001,SJ90000004,SJ90000005,SJ90000006,SJ90000008,SJ90000009] expect=[SJ90000001,SJ90000004,SJ90000005,SJ90000006,SJ90000008,SJ90000009]
+PASS C14 receiveDate 区间含该内部行 =2026-07-24 got=[SJ90000009] expect=[SJ90000009]
+PASS C15 donorName=测试供体辛（精确·加密列·内部行） got=[SJ90000008] expect=[SJ90000008]
+PASS C16 hospitalNo=ZY0000008（精确·加密列·内部行） got=[SJ90000008] expect=[SJ90000008]
+INFO C17 seed 中「名字同为 B 大学但 id 不同/为空」的行 = 无；sourceUnitId 以样本行 source_unit_id 为准，不按名字兜底
+VERDICT FIXED (bad=0)
