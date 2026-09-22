@@ -1,0 +1,45 @@
+
+════ 0. 回到确定性快照
+reseed ok
+
+════ A. counterfeit「待核验用户数把 unbound 也算进去」—— seed 里没有 unbound，先手工造一条
+改之前：{"code":200,"msg":"操作成功","data":{"pendingSamples":2,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":0}}
+库里 bind_status 分布：pending=2 unbound=1 verified=3
+pending 计数       = 2
+pending+unbound    = 3
+改之后：{"code":200,"msg":"操作成功","data":{"pendingSamples":2,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":0}}
+→ pendingExtUsers = 2（必须仍是 2；把 unbound 算进去的实现会给 3）
+
+════ B. counterfeit「渲染失败数写死成 0」+「按行数数而不是组数」
+停掉 gotenberg（造一次**真实**失败），跑完会起回来
+{"status":"failed","errorMsg":"转换服务不可用（POST http://127.0.0.1:3010/forms/libreoffice/convert 失败：java.net.ConnectException）"}
+库里失败「行数」       = 1
+库里失败「组数」       = 1
+接口（真实失败刚发生）：{"code":200,"msg":"操作成功","data":{"pendingSamples":2,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":1}}
+→ renderFailed = 1（写死 0 的实现这里会是 0 → accept 第 43 段红）
+再手工补一行**同一组**的失败产物（pdf），模拟「一次失败写多行」（DocRenderService 的 catch 会 markFailed 两次）
+库里失败「行数」       = 2
+库里失败「组数」       = 1
+接口：{"code":200,"msg":"操作成功","data":{"pendingSamples":2,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":1}}
+→ renderFailed = 1（按行数数的实现这里会是 2 → accept 第 43 段红）
+gotenberg /health = 200
+
+════ C. counterfeit「待核验样本只数组织」—— 外部交一条**类器官**收样
+交之前：{"code":200,"msg":"操作成功","data":{"pendingSamples":2,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":0}}
+{"code":200}
+{"code":200}
+交之后：{"code":200,"msg":"操作成功","data":{"pendingSamples":3,"pendingEmbeds":2,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":0}}
+库里 pending 样本：全部=3  其中类器官=1  其中组织=2
+→ pendingSamples = 3（只数组织的实现会给 2）pendingEmbeds = 2
+
+════ D. counterfeit「最近提交没过滤软删」
+库里未删样本 = 10  含软删 = 11
+软删那行的送检单号 = SJ90000010
+接口行数 = 10；含 SJ90000010 = false
+
+════ E. counterfeit「工作台与冻存清单各写各的超期 where」
+首页 cryoOverdue=2  超期清单长度=2
+
+════ 收尾：reseed 回快照
+reseed ok
+最终 todo：{"code":200,"msg":"操作成功","data":{"pendingSamples":2,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":0}}

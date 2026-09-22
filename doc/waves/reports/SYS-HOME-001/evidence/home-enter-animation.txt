@@ -1,0 +1,2 @@
+进入首页这一跳出现过的 animate 类： [ 'animate__animated', 'animate__fadeIn' ]
+首页根元素： DIV [class] app-container home

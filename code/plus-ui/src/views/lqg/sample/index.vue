@@ -312,6 +312,7 @@ import { useI18n } from 'vue-i18n';
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
 const router = useRouter();
+const route = useRoute();
 
 // 字典全部走 useDict（ticket §2.2）；文案走 lqg.sample.*
 const { lqg_sample_kind, lqg_submit_source, lqg_verify_status, lqg_gender } = toRefs<any>(
@@ -508,6 +509,12 @@ const flagText = (value?: string | null) => {
 };
 
 onMounted(async () => {
+  // 工作台首页「待核验样本」卡片带 ?verifyStatus=pending 进来（SYS-HOME-001）→ 自动套上筛选。
+  // ★ 只认已知的状态值，避免把任意 query 直接塞进查询参数。
+  const verifyStatus = route.query.verifyStatus;
+  if (typeof verifyStatus === 'string' && ['pending', 'valid', 'invalid'].includes(verifyStatus)) {
+    queryParams.verifyStatus = verifyStatus;
+  }
   await loadUnits();
   await getList();
 });

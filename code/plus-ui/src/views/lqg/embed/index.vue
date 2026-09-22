@@ -376,6 +376,11 @@ onMounted(async () => {
   if (sampleId) {
     queryParams.sampleId = String(sampleId);
   }
+  // 工作台首页「待核验石蜡包埋送样」卡片带 ?verifyStatus=pending 进来（SYS-HOME-001）→ 自动套上筛选
+  const verifyStatus = route.query.verifyStatus;
+  if (typeof verifyStatus === 'string' && ['pending', 'valid', 'invalid'].includes(verifyStatus)) {
+    queryParams.verifyStatus = verifyStatus;
+  }
   await getList();
 });
 </script>

@@ -1,0 +1,33 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "SYS-HOME-001",
+   "index": 1,
+   "form": "DATA",
+   "name": "五个数与库里独立数的一致并钉在 seed 上；外部新交一条类器官收样、一条石蜡包埋送样后两个待核验数各加一；超期数与超期清单同源；渲染失败数会随真实失败变化",
+   "exit": 0,
+   "seconds": 7.8,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-HOME-001-acc1.sh",
+   "log": ".tmp/sys-home-accept-logs-down/SYS-HOME-001-acc1.sh.log"
+  },
+  {
+   "ticket": "SYS-HOME-001",
+   "index": 2,
+   "form": "API",
+   "name": "前端构建是本次产物；首页五张卡片接的是接口而不是写死的数；为 0 不隐藏；菜单角标与卡片同一个来源（含石蜡包埋）",
+   "exit": 0,
+   "seconds": 10.8,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-HOME-001-acc2.sh",
+   "log": ".tmp/sys-home-accept-logs-down/SYS-HOME-001-acc2.sh.log"
+  }
+ ]
+}

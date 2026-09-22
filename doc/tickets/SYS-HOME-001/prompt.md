@@ -39,13 +39,18 @@ accept:
       bash doc/verify/api.sh --as staff GET /lqg/home/todo | jq -e '.data.pendingSamples==3 and .data.pendingEmbeds==2' &&
       python3 doc/verify/db.py --sql "SELECT (SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND verify_status='pending' AND sample_kind='organoid') || '|' || (SELECT count(*) FROM t_lqg_embed e JOIN t_lqg_sample s ON s.id = e.sample_id WHERE e.del_flag='0' AND e.verify_status='pending')" --eq "1|2" &&
       bash doc/verify/reseed.sh --yes >/dev/null &&
-      bash doc/verify/api.sh --as staff POST '/lqg/doc/9000001001/sample_qc/render?audience=internal' >/dev/null ; sleep 5 ;
+      docker compose -f code/deploy/dev/docker-compose.yml stop gotenberg >/dev/null 2>&1 ;
+      bash doc/verify/api.sh --as staff POST '/lqg/doc/9000001001/sample_qc/render?audience=internal' | jq -e '.data.status=="failed"' ;
+      RC=$? ; docker compose -f code/deploy/dev/docker-compose.yml start gotenberg >/dev/null 2>&1 ; test "${RC}" = 0 ;
+      for i in $(seq 1 30); do curl -sf http://127.0.0.1:3010/health >/dev/null 2>&1 && break; sleep 1; done ;
+      sleep 2 ;
       python3 doc/verify/db.py --sql "SELECT count(*) FROM (SELECT DISTINCT sample_id, doc_kind, audience FROM t_lqg_doc_file WHERE del_flag='0' AND render_status='failed') x" --eq "$(bash doc/verify/api.sh --as staff GET /lqg/home/todo | jq -r '.data.renderFailed')" &&
       bash doc/verify/api.sh --as staff GET /lqg/home/todo | jq -e '.data.renderFailed >= 1' &&
       bash doc/verify/api.sh --as staff GET /lqg/home/recent | jq -e '(.data|length) <= 10 and ([.data[].submitNo] | index("SJ90000010")) == null' &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-
-      渲染失败数写死成 0（「反正现在没有失败的」）→ 故意渲染一份图片地址是假的文档（1001 的样本质控表，seed 埋的病灶）之后仍是 0，红。
+      渲染失败数写死成 0（「反正现在没有失败的」）→ 第 42 段显式停掉 gotenberg 造一次**真实的**渲染失败之后仍是 0，红。
+      （★ 2026-09-22 更正：本行原写「故意渲染一份图片地址是假的文档（1001 的样本质控表，seed 埋的病灶）之后仍是 0」——该前提已不成立。按 issue #217 的裁定，docx 阶段取不到的图是**跳过 + WARN、文档照出 done**，所以假地址图片**不会**让渲染失败；要造真失败必须让**流水线步骤**失败，即本行现在写的「停 gotenberg」。同理 #245 是同一处冲突在 DOC-PDF-001 的残留。）
       待核验用户数把 unbound 也算进去 → 2 变 2+ 红。
       待核验样本只数组织样本 → 外部交了类器官之后仍是 2 红。待核验送样没做或数了全部外部送样（含已核验的）→ 1 / 2 那两段红。
       工作台首页和冻存列表各写各的超期 where → 与超期清单长度不等红。

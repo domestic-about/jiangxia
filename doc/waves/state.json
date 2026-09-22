@@ -348,12 +348,12 @@
       "note": ""
     },
     "SYS-HOME-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D7",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "工作台首页：五张待办卡片（待核验样本/待核验送样/超期/待核验外部用户/渲染失败）+ 最近提交 10 条 + 侧边菜单角标。后端 org.dromara.lqg.sys.home 的 HomeCounterService + GET /lqg/home/todo 与 /lqg/home/recent（登录即可调，101/102）；前端 views/lqg/home/**、api/lqg/home.ts、store/modules/lqgTodo.ts（唯一取数处）、views/index.vue、Sidebar/SidebarItem.vue。accept 2/2 绿（**我改完票面后在 gotenberg 正常运行的默认环境下独立重跑**）；ruoyi-lqg 全模块单测 263/263；D1 菜单回归 9/9；pnpm build:prod EXIT=0。**无迁移**（不建表/列/菜单）。★五条关键：①**渲染失败数按「组」不按「行」**：DocRenderService 的 catch 会 markFailed 两次（docx header + pdf），读口写 COUNT(DISTINCT sample_id,doc_kind,audience)；反证实测「库里失败行数=2、组数=1 时接口=1」。②**超期一个字节没重写**：只调 CryoOverdueService#countOverdue()，并用**源码级白名单单测**钉住（不许出现 in_minus80/to_ln2_time/freeze_time/CryoOverdueMapper/CryoOverdueSqlProvider）——这正是本项目「超期只有一个真相源」的纪律。③**卡片与角标同源**：前端唯一调接口的地方是 store/modules/lqgTodo.ts（in-flight Promise 去重）→ 探针实测登录到首页整轮 **todo 请求数=1**，四个角标与卡片同数；Sidebar 里没有任何接口路径。④★**顺手拆掉了 D1 那次 S1 的地雷**：views/index.vue 的顶层模板注释已挪进 script setup；dev 编译产物根节点实测为 _createElementBlock(\"div\")、Fragment 痕迹 0 命中；D1 原探针 9/9 绿（四跳 app-main 无一为 7），并修掉 issue #41（进入首页录到 animate__fadeIn）。**需要 dev server 才能验，不能只看 build**。⑤五张卡为 0 也显示 + is-zero 变灰（不用 v-if）；角标 0 时 :hidden；另加 4 个目标页认领 route.query，否则卡片跳转的筛选会丢。★**acc1 的票面字面缺陷由我改**（同形态第 3 次）：原第 42 段「渲染 1001/sample_qc 造失败」的前提（seed 假图 → 渲染必败）已被 #217 裁定推翻（取不到的图跳过+WARN、文档照出 done），于是第 44 段 .data.renderFailed>=1 在默认环境下永不成立。我按 DOC-PDF-001 acc2 的**先例**把它改成显式 docker stop/start gotenberg 造**真失败**（并等 /health 就绪再继续），同时更正了 counterfeit 里同样陈旧的那句；改完在默认环境重跑得 2/2、收尾 gotenberg healthy。★越界 5 处：DOC 域 DocFileMapper +1 读口（§0.1 硬要求授权）、plus-ui 四个列表页 onMounted 认领 route.query。"
     },
     "SYS-MANUAL-001": {
       "status": "pending",
@@ -3076,6 +3076,56 @@
       "type": "debt",
       "title": "downloadFile 合法域名未定（D7/D8 的 release blocker）：真机下载在域名未配前必然失败",
       "detail": "现状：小程序下载走 downloadFile，需在微信后台把下载链接域名加进「downloadFile 合法域名」；当前 appid 与后台配置都没有（Kevin 2026-09-22 明确暂时无法提供）→ **真机下载无法验**，H5 上不受此限。影响：属上线档；它同时是 SYS-RELEASE-001 的输入之一。方案：appid 到位后把 OSS/后端下载域名加进后台白名单，并把它写进 SYS-RELEASE-001 的发布清单。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 268,
+      "ticket": "SYS-HOME-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "票面字面缺陷（同形态第 3 次）：acc1 的 renderFailed>=1 与 #217 冲突，默认环境下永不成立 → 已按先例改成显式停 gotenberg 造真失败",
+      "detail": "复现：票面 acc1 原第 42 段用「渲染 1001/sample_qc（seed 图是 https://seed.invalid 假地址）」来造一次失败，然后第 44 段断 .data.renderFailed>=1。但按 issue #217 的裁定，docx 阶段取不到的图是**跳过 + WARN、文档照出 done**（DOC-RENDER-001 既定行为，DOC-PDF-001 #245 已复核过同一处冲突），所以该段渲染**成功**、renderFailed 恒 0 → 第 44 段永不成立；实现方实测「gotenberg 在跑 → 1/2；docker stop gotenberg → 2/2」并如实上报（未改票面，处置正确）。处置（我做的）：照 **DOC-PDF-001 acc2 的先例**（那条已经用 docker compose stop/start 造失败）把第 42 段改成 docker stop gotenberg → render → jq 断 .data.status==\"failed\" → 记 RC → docker start → test RC → 等 /health 就绪；并更正 counterfeit 里「假图能造失败」那句陈旧前提。改完在**默认环境**（gotenberg 运行中）独立重跑 accept 得 **2/2**，收尾 gotenberg healthy。★这是同形态第 3 次（#248 True/true、#251 陈旧前提派生期望），共同根因是**上游裁定语义后没有回扫受影响的票面断言**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 269,
+      "ticket": "SYS-HOME-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "渲染失败数的分组口径：票面 §2 写 (样本,种类,版本)，acc1 第 43 行写 (样本,种类,受众) —— 实现按 acc1",
+      "detail": "冲突两方：票面 §2 说 renderFailed = t_lqg_doc_file 里 render_status=failed 的 (样本, 文档种类, **版本**) 组数；acc1 第 43 行（机器断言）按 (sample_id, doc_kind, **audience**) 分组。实现按 acc1（因为那是被机器检查的那条）。影响：同一份文档内外部版都渲染失败时，按 audience 会数成 **2**，按版本会数成 1——老师看到的待办数不同。方案：把口径写进契约或 UI 权威锚。我倾向「按 (样本,种类) 去重更贴合待办卡片的语义」（一份文档坏了就是一个待办），但那要同时改实现与 acc1，属规格层，先记账不动。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 270,
+      "ticket": "SYS-HOME-001",
+      "severity": "S3",
+      "type": "arch",
+      "title": "/lqg/home/todo 与 /recent 只挂 @SaCheckLogin：外部账号若拿到工作台会话可读全中心 5 个聚合数（不含患者信息）",
+      "detail": "现状：两个聚合端点按票面「登录即可调（101 / 102）」实现，只挂 @SaCheckLogin。影响：只要外部账号能拿到工作台会话，就能读到全中心的待办数（**只有数量，不含任何患者/样本明细**）。缓解：AUTH-STAFF-001 的既有约束是「工作台拒外部登录」——若该约束生效，@SaCheckLogin 实际等价于内部；我未能用 grep 直接定位那条拒登逻辑（可能在登录策略里按 user_type 判），故按「理论上可读」记账。方案：收紧只需加 @SaCheckPermission(\"lqg:cryo:list\") 之类，不影响 accept（accept 用 --as staff）。建议至少让 QA 的 L3 片去实测「外部账号能否调 /lqg/home/todo」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 271,
+      "ticket": "SYS-HOME-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "侧边角标只在进/回首页时重算（不实时）：待办数变化后要刷新首页才更新",
+      "detail": "现状：角标与卡片取同一次 /lqg/home/todo（store/modules/lqgTodo.ts），刷新时机是进入/返回首页。影响：老师在其它页面处理完一条待办后，角标仍显示旧数，直到回首页。影响面小（回首页即更新），但会让人以为「没生效」。方案：处理完待办后主动 refresh（store 已有 refresh，可被调用），或按需定时轮询（票面 §3 不做推送，故不要把推送当解法）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 272,
+      "ticket": "SYS-HOME-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越出 touches 5 处：DOC 域加 1 个读口 + 4 个列表页认领 route.query",
+      "detail": "①code/.../doc/render/mapper/DocFileMapper.java 加渲染失败数的读口——这是「能在被调方加读口就不要在本包写 SQL」硬要求逼出来的（授权过）；②plus-ui 的 sample/embed/cryo/auth-extuser 四个列表页 onMounted 认领 route.query——否则首页卡片带筛选条件跳过去后筛选会丢（票面要求点击卡片带筛选跳转，但四个目标页在 touches 之外）。两处都属合理越界。",
       "status": "open",
       "decision": ""
     }
