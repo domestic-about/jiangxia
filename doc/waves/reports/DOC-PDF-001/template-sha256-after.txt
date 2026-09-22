@@ -1,0 +1,3 @@
+823622eb1f383e79957269220e683aaae7dd49796bff4aa49b4812e0bb29a82f  code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/resources/lqg/doc-templates/organoid_qc.docx
+e0165dd14278e6a90a25a83a0364db2b65ee2a1fed024fd80b2c498b6602de35  code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/resources/lqg/doc-templates/organoid_score.docx
+45f3ee009846d6f7b35786bb1d369c9c0f38d0277d7bdf1d3802971a05e5f6a5  code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/resources/lqg/doc-templates/sample_qc.docx

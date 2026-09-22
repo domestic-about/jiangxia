@@ -1,0 +1,26 @@
+════ 探针：转换服务不可用 → 整体 failed + 原因；旧产物保留但不再被返回；恢复后可重试
+── reseed + 首次渲染 9000001006/organoid_score
+{"status":"done","errorMsg":null,"pages":null,"hash":"e2a380fd"}
+── 停 gotenberg
+   lqg-dev-gotenberg Exited (0) Less than a second ago
+── 改分（内容变了 → 指纹变 → 必须重出）
+200
+── 再渲染：期望 failed + 原因
+{"status":"failed","errorMsg":"转换服务不可用（POST http://127.0.0.1:3010/forms/libreoffice/convert 失败：java.net.ConnectException）","hash":"fa9cb732"}
+── 此刻 pages：期望 status=failed 且 pages=[]
+{"status":"failed","errorMsg":"转换服务不可用（POST http://127.0.0.1:3010/forms/libreoffice/convert 失败：java.net.ConnectException）","pages":[]}
+── 此刻 download?format=pdf：期望 400（旧 PDF 不被当成最新）
+{"code":400,"msg":"这份文档还没生成（先 POST /lqg/doc/9000001006/organoid_score/render?audience=internal）"}
+── 此刻 download?format=docx：期望 400（整体 failed）
+{"code":400,"msg":"这份文档还没生成（先 POST /lqg/doc/9000001006/organoid_score/render?audience=internal）"}
+── 库里这一份的行（旧 oss_id 仍在 = 旧产物保留）
+docx/0 status=failed oss=2102340199655706626 hash=fa9cb732
+pdf/0 status=done oss=2102340199685066754 hash=e2a380fd
+png/1 status=done oss=2102340199995445249 hash=e2a380fd
+png/2 status=done oss=2102340200024805378 hash=e2a380fd
+── 启 gotenberg + 等就绪 + 重试
+{"status":"done","errorMsg":null,"cached":false,"hash":"fa9cb732"}
+── 重试后 pages
+{"status":"done","pages":[1,2]}
+── 收尾 reseed
+   reseed ok

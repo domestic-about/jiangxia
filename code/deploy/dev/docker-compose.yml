@@ -87,6 +87,32 @@ services:
       timeout: 5s
       retries: 20
 
+  gotenberg:
+    # DOC-PDF-001：docx → PDF 的转换（LibreOffice）+ 开源中文字体（见 ../common/gotenberg/）。
+    # 从仓库里的 Dockerfile 构建：字体文件与许可都在 code/deploy/common/gotenberg/fonts/。
+    build:
+      context: ../common/gotenberg
+      dockerfile: Dockerfile
+    image: lqg-gotenberg:8
+    container_name: lqg-dev-gotenberg
+    restart: unless-stopped
+    # 只在内网暴露：宿主只绑环回，端口 3010（3000 / 3001 本机已被别的 node 服务占着）。
+    # 后端跑在**宿主**上（qa-up 起的 JVM），必须能连到它 → 只能发布环回端口。
+    ports:
+      - "127.0.0.1:${LQG_GOTENBERG_PORT:-3010}:3000"
+    # 与 ticket §2 的「超时 60 秒」一致；LibreOffice 的并发由后端单线程执行器 + Gotenberg
+    # 自身的单实例队列一起保证（见 ../common/gotenberg/README.md）
+    command:
+      - gotenberg
+      - --api-timeout=60s
+    healthcheck:
+      # 官方镜像自带 curl；探 /health（Gotenberg 8 的健康端点，不需要 token）
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
 volumes:
   lqg-pgdata:
   lqg-redisdata:

@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.web.core.BaseController;
+import org.dromara.lqg.doc.pdf.DocPagesService;
+import org.dromara.lqg.doc.pdf.domain.vo.DocPagesVo;
 import org.dromara.lqg.doc.render.domain.vo.DocDownloadVo;
 import org.dromara.lqg.doc.render.domain.vo.DocRenderVo;
 import org.dromara.lqg.doc.render.service.DocRenderService;
@@ -20,7 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  *   POST /lqg/doc/{sampleId}/{docKind}/render?audience=internal|external
- *   GET  /lqg/doc/{sampleId}/{docKind}/download?format=docx&audience=internal|external
+ *   GET  /lqg/doc/{sampleId}/{docKind}/download?format=docx|pdf&audience=internal|external
+ *   GET  /lqg/doc/{sampleId}/{docKind}/pages?audience=internal|external
  * </pre>
  *
  * <p>★ <b>{@code docKind} 的取值是字典 {@code lqg_doc_kind} 的原文</b>
@@ -43,6 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DocRenderController extends BaseController {
 
     private final DocRenderService docRenderService;
+    private final DocPagesService docPagesService;
 
     /**
      * 触发渲染（幂等：指纹未变直接返回 done，不重出）。
@@ -56,7 +60,7 @@ public class DocRenderController extends BaseController {
     }
 
     /**
-     * 取 10 分钟签名下载链接 + 文件名。
+     * 取 10 分钟签名下载链接 + 文件名（{@code format=docx|pdf}）。
      */
     @SaCheckPermission("lqg:doc:query")
     @GetMapping("/{sampleId}/{docKind}/download")
@@ -65,5 +69,19 @@ public class DocRenderController extends BaseController {
                                      @RequestParam(required = false, defaultValue = "docx") String format,
                                      @RequestParam String audience) {
         return R.ok(docRenderService.download(sampleId, docKind, format, audience));
+    }
+
+    /**
+     * 页面图片 + 图片位 + 附件（小程序预览页 / 工作台预览用，ticket §2）。
+     *
+     * <p>★ {@code data.status} 取自这份文档的整体状态：{@code failed} 时 {@code pages} 一定是空的，
+     * 并带 {@code errorMsg} 说明原因（工作台据此显示失败原因与「重新生成」按钮）。
+     */
+    @SaCheckPermission("lqg:doc:query")
+    @GetMapping("/{sampleId}/{docKind}/pages")
+    public R<DocPagesVo> pages(@PathVariable Long sampleId,
+                               @PathVariable String docKind,
+                               @RequestParam String audience) {
+        return R.ok(docPagesService.pages(sampleId, docKind, audience));
     }
 }

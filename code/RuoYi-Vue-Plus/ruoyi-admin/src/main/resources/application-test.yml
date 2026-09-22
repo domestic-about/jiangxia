@@ -325,6 +325,14 @@ lqg:
   ocr:
     provider: stub
     paid-enabled: false
+  # 文档渲染（DOC-PDF-001 / ADR-0005）：docx → PDF 的转换容器（Gotenberg）。
+  #   test 里 backend 也是容器，和 gotenberg 在同一个 compose 网络 → 走**服务名**，
+  #   不发布宿主端口（测试机 3000 是别的项目的 next-server，见 code/deploy/test/docker-compose.yml）。
+  #   timeout-seconds 与容器的 `--api-timeout=60s` 一致；超时 = 整体 failed + 原因，可重试。
+  doc:
+    gotenberg:
+      url: ${LQG_GOTENBERG_URL:http://gotenberg:3000}
+      timeout-seconds: 60
   wx:
     # 真实微信小程序：appid / secret 走环境变量注入（测试机由 code/deploy/test/.env 注入）。
     # 甲方主体 appid 未提供（SYS-RELEASE-001）→ 测试环境先用乙方测试号，体验版登录走 mock。

@@ -163,12 +163,12 @@
       "note": ""
     },
     "DOC-PDF-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "DOC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "docx→pdf→png 同一指纹的流水线（org.dromara.lqg.doc.pdf 7 类 + 4 VO：PdfConvertService 单线程排队/60s 预算/不走代理、PdfPageRasterizer 150DPI、PageImageService、DocArtifactRows/Store、DocPagesService）+ 新端点 GET /lqg/doc/{id}/{docKind}/pages 与 download?format=pdf 与 docKind=merged + Gotenberg 镜像层（4 个开源字体 + OFL 许可随文件进仓库）+ dev/test compose 服务 + 模板字体替换（宋体→Noto Serif SC、Times New Roman→Tinos，template-version 1→2，tblGrid 逐字未变）。accept 2/2 绿（跑两遍）；单元测试 38/38（含上游 DOC-RENDER-001 的 18 个仍绿）；pnpm build:prod 绿。★四条关键：①**取图失败按两类落地**（我转达的裁定）：docx 阶段个别图取不到 = 跳过+WARN、文档照 done（实测 1001/sample_qc = done/errorMsg=null，4 张 seed 假图跳过）；流水线步骤失败（连不上/超时/非 PDF）= 整体 failed+原因。未改上游、未改票面。②**arm64 无硬阻塞**：官方 gotenberg/gotenberg:8 有 arm64 变体；本机须 DOCKER_BUILDKIT=0 docker build（buildx 写 ~/.docker 被沙箱拒）。③**字体回退是隐形雷**：只换 eastAsia 不够——容器没有 Times New Roman → LibreOffice 回退 Liberation Serif → accept 的 !grep DejaVu|Liberation 直接红；故 Latin 也换成度量兼容的 Tinos。④**失败语义**：失败只改 header 行状态+error_msg、不动 oss_id；pages/download 只认「与 header 同一指纹」的行 → 结构上排除「Word 是新的、预览图是旧的」。★越界 6 处（票面 §2 点名要改但 touches 漏列）：ruoyi-lqg/pom.xml（pdfbox）、doc/render/service/DocRenderService.java、doc/render/controller/DocRenderController.java、迁移 V202609261420__DOC-PDF-001-doc-console.sql、plus-ui/src/api/lqg/doc/index.ts、plus-ui/src/views/lqg/doc/index.vue。★容器：lqg-dev-gotenberg 建议留着 running（127.0.0.1:3010，healthy），后续 DOC-PUBLISH/QC-WEB/DOC-MP 的 accept 都要用。★我复核了它报的 hidden 问题：诊断需纠正（见 issue），并发现 QC-WEB-001 票面规定的迁移号段已被本票越过。"
     },
     "DOC-PROOF-001": {
       "status": "pending",
@@ -2605,6 +2605,66 @@
       "type": "debt",
       "title": "docx 模板的两处结构约定（图片位 3 个独立 run、评分表分值列 vMerge）未写进任何文档",
       "detail": "①「要求图片可以放大」那一格必须拆成 3 个各自独立的 run —— 挤在一个 run 里，poi-tl 的 ClearHandler 会因为某一格没数据把另外两张一起抹掉；②评分表的「类器官质量评分」列在原甲方原件里是**按变量纵向合并**的，占位符只能进 4 个 vMerge=restart 的格子。影响：换模板或让甲方给定稿模板（REQ-DOC-011 是 clarify）时，这两条不写下来就会重踩。方案：写进 code/.../resources/lqg/doc-templates/ 的 README，或 doc/api-contract.md 的模板约定一节。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 221,
+      "ticket": "DOC-PDF-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "5520 顶层 C 菜单（parent_id=0）走 isMenuFrame 分支 → 页面路由自身没有 hidden；QC-WEB-001 accept 1 照现状会红",
+      "detail": "【我复核后的机制，纠正实现方 WARN 里「RouterVo.hidden 从未被赋值」的说法】：框架确实有赋值（SysMenuServiceImpl:189 router.setHidden(\"1\".equals(menu.getVisible()))），但  为真时会走**专用分支**：外层包一个 Layout 外壳（外壳拿到 hidden=true、meta=null、name=路由名+menuId），真正的页面变成**子路由且不带 hidden**。实测 /system/menu/getRouters（--as admin，role 101）返回：外壳 ('/', hidden=true, Layout, name='5520') + 子路由 ('/doc-console', hidden=None, 'lqg/doc/index')。**用户可见行为其实是对的**（外壳 hidden → 侧边栏不渲染），但 QC-WEB-001 accept 1 断言的是 doc-console 路由的 .hidden==true → 必然红。上游惯例：所有隐藏 C 页面都挂在目录菜单（type=M）下（116/130/131/132/133 全 parent_id≠0）→ 走 else 分支 → 路由自身 hidden=true ✓。方案 a)（推荐，合框架惯例）新建一个**隐藏的 M 目录**并把 5520 与 QC-WEB-001 的 5510 都挂到它下面（M 目录 parent=0 时也走 else 分支拿 hidden=true，整条链都隐藏且可路由）；b) 保持 parent_id=0 并在 QC-WEB-001 里把断言改成「外壳 hidden=true」；c) 把 5520 的 is_frame 改成 '0'（会走 else 分支拿到 hidden，但语义上等于标成外链，不推荐）。**注：V202609261420 已应用，不许改它；要改结构必须新开一支迁移。** 已把 a/b 两个方案原文转达 QC-WEB-001。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 222,
+      "ticket": "QC-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "票面规定的迁移号段 V20260926132* 已被 DOC-PDF-001 的 V202609261420 越过 → 照票面写会撞 Flyway out-of-order=false",
+      "detail": "复现：票面 touches 写 code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/db/migration/V20260926132*__QC-WEB-001-*.sql；而 DOC-PDF-001 已应用 V202609261420（且 QC-MODEL-001 用了 1300/1310、DOC-RENDER-001 用了 1400/1410）。Flyway 配置是 out-of-order=false → 新迁移版本号只要小于已应用的最大值，后端启动即 FlywayValidateException（本项目已因此重建过 4 次开发库，见 issue #12 等先例）。方案：QC-WEB-001 的迁移**改用大于 202609261420 的号**（如 V202609261430__QC-WEB-001-qc-menu.sql），并在完工报告里写明取号依据。这条在派单时已提前告知实现方，本处留档。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 223,
+      "ticket": "DOC-PDF-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越出 touches 6 处（票面 §2 点名要改、touches 却漏列）",
+      "detail": "①ruoyi-lqg/pom.xml（引 pdfbox，票面 §2 要求）；②doc/render/service/DocRenderService.java（票面 §2 要求扩流水线）；③doc/render/controller/DocRenderController.java（票面 §2 要求加端点）；④db/migration/V202609261420__DOC-PDF-001-doc-console.sql（工作台那一步的落点）；⑤plus-ui/src/api/lqg/doc/index.ts；⑥plus-ui/src/views/lqg/doc/index.vue。前三条是票面明确要求、touches 漏列；后三条属「工作台 failed 时显示原因 + 重新生成按钮」的最小落点（整页编辑页留给 QC-WEB-001）。**这是 touches 系统性偏窄的又一例**（D2 起已记多条）。建议：①侧拆票时把「票面 §2 点到要改的文件」自动并进 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 224,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "渲染老产物只靠指纹过滤、不做清理 → 存储单调增长",
+      "detail": "设计：同一 (docKind, audience) 每次重出都写新行、新的 oss_id；pages/download 只认与 header 同行指纹的那份，旧产物保留但不被返回。好处是失败时不会误返回旧产物；代价是对象存储只增不减（每次改一个字都留一份 docx+pdf+每页 PNG）。影响：长期会积累；当前体量无碍。方案 a) 加一个保留 N 个版本的清理任务；b) 至少记一条运维待办（放 SYS-BACKUP-001 或上线一轮）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 225,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "GET …/pages 的返回体比契约多了一个 errorMsg 键",
+      "detail": "票面/契约写的形状是 {status, pages:[{pageNo,url}], images:[{url,previewUrl}], attachments:[{fileName,fileSize,url}]}；实现多返回一个 errorMsg（failed 时给前端显示原因用，票面工作台那一步确实需要它）。影响：前端可忽略未知键，不破坏；但契约该补。方案：把 errorMsg 补进 doc/api-contract.md 的该端点。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 226,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "test 环境的 gotenberg 需测试机就位 amd64 镜像、且 deploy.sh 要 rsync common/gotenberg",
+      "detail": "本票给 code/deploy/test/docker-compose.yml 加了 gotenberg 服务、并新建 code/deploy/common/gotenberg/（Dockerfile + 字体）。但测试机上的部署脚本（code/deploy/test/deploy.sh 与 remote/*.sh）目前**只同步后端 jar 与 compose**，不会把 common/gotenberg 传上去，也没有在测试机构建该镜像——所以下次重部署测试环境时 gotenberg 会起不来（PDF 渲染在测试环境不可用）。影响：属上线档（Kevin 2026-09-22 已把上线相关推迟到「上线一轮」）。方案：上线一轮里补 deploy.sh 的 rsync/gotenberg 构建，并在测试机预拉 amd64 镜像。",
       "status": "open",
       "decision": ""
     }

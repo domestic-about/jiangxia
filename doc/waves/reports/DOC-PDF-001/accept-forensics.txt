@@ -1,0 +1,45 @@
+════ accept 1 产物的逐项取证（accept 跑完后的 /tmp/lqg-*.pdf 原样）
+-- /tmp/lqg-a.pdf（9000001001/organoid_score/internal）
+-rw-r--r--  1 wkui  wheel   50332 Sep 22 18:14 /tmp/lqg-a.pdf
+-rw-r--r--  1 wkui  wheel  101114 Sep 22 18:14 /tmp/lqg-m.pdf
+-rw-r--r--  1 wkui  wheel  108962 Sep 22 18:14 /tmp/lqg-p1.png
+Pages:           2
+name                                 type              encoding         emb sub uni object ID
+------------------------------------ ----------------- ---------------- --- --- --- ---------
+BAAAAA+NotoSerifSC-Bold              Type 1            Builtin          yes yes yes     12  0
+CAAAAA+NotoSerifSC-Regular           Type 1            Builtin          yes yes yes     22  0
+DAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     32  0
+EAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     37  0
+FAAAAA+NotoSerifSC-Regular           Type 1            Builtin          yes yes yes     17  0
+GAAAAA+Tinos-Regular                 TrueType          WinAnsi          yes yes yes     27  0
+-- pdftotext -layout 前 6 行
+                 类器官质量评分表
+
+
+
+      变量              分类      评分标准   类器官质量评分
+
+-- 关键字命中：
+   类器官质量评分表 -> 1
+   药敏实验失败风险较大 -> 1
+-- 页面图 /tmp/lqg-p1.png
+   尺寸 (1275, 1649) 灰度极值 (0, 255)
+
+-- /tmp/lqg-m.pdf（merged）：页数与三份顺序
+Pages:           5
+   位置：样本质控表=0 类器官质控表=257 类器官质量评分表=329 → 顺序 OK ✅
+   BAAAAA+NotoSerifSC-Bold yes
+   CAAAAA+NotoSerifSC-Regular yes
+   DAAAAA+Tinos-Regular yes
+   EAAAAA+NotoSerifSC-Regular yes
+   FAAAAA+Tinos-Regular yes
+   GAAAAA+Tinos-Regular yes
+   HAAAAA+Tinos-Regular yes
+
+════ 1001 样本质控表此刻的渲染状态与 error_msg（accept 1 counterfeit 点名要的一条）
+{"status":"done","errorMsg":null,"contentHash":"d1d85c94","templateVersion":"2"}
+（该样本名下 4 张图都是 seed 假地址 service=seed → docx 阶段取不到 → **跳过 + WARN**，文档照出 done；
+ 见 image-skip-warn.txt。这是 DOC-RENDER-001 的既定行为，本票按「流水线步骤失败才整体 failed」的分类对齐，见报告 §5 WARN-1）
+
+── 收尾 reseed
+   reseed ok

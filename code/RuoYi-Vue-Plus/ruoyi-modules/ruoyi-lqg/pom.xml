@@ -132,6 +132,17 @@
             <version>5.4.1</version>
         </dependency>
 
+        <!--
+          DOC-PDF-001：PDFBox（FLOW:F-DOC-01.step4 的决策值字面就是「PDFBox 按 150 DPI
+          把 PDF 每页渲染成 PNG」，ADR-0005 同）。本模块此前类路径上没有 PDF 库。
+          3.x 的 API 与 2.x 不同（org.apache.pdfbox.Loader.loadPDF），别按 2.x 的写法写。
+        -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.5</version>
+        </dependency>
+
         <!-- 单元测试（MockLoginGuardContractTest 契约测试用；只引 JUnit，不引 Spring 上下文） -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
