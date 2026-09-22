@@ -335,7 +335,7 @@ SELECT id,sample_id,…,del_flag,create_dept,create_by,create_time,update_by,upd
 SELECT id,submit_no,…,internal_no,…,del_flag,… FROM t_lqg_sample WHERE id IN ( … ) AND del_flag='0'
 ```
 
-**(c) ★ 对抗性探针**（`doc/waves/reports/CRYO-MODEL-001/accept-runners/cryo001-probes.sh`，全文实跑输出）：
+**(c) ★ 对抗性探针**（`doc/waves/reports/CRYO-MODEL-001/accept-runners/cryo001-probes.sh`，第二轮实跑输出原文；唯一会变的是 P8 里运行时新建那条批次的雪花 id）：
 
 ```
 == P0 干净 seed 起点
@@ -385,7 +385,7 @@ sample 1008 未删批次数=2        ← 3008 软删，不计
 1002 verify_status=invalid
 
 == P8 软删的冻存批次不算 children：1005 建批 → 被拒；软删该批 → 放行
-新建批次 id=2102241470470688770
+新建批次 id=2102242750492672001
 500	该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效
 200	操作成功
 软删后 del_flag=1
