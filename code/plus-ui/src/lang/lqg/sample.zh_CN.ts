@@ -47,7 +47,11 @@ export default {
     addOrganoid: '新增类器官收样',
     exportTissue: '导出样本记录信息表',
     exportOrganoid: '导出类器官收样记录',
-    exportNotYet: '导出在下一个任务接入（SAMPLE-EXPORT-001）',
+    exportTissueFile: '样本记录信息表',
+    exportOrganoidFile: '类器官收样记录',
+    exportTissueDone: '样本记录信息表已导出（当前筛选结果）',
+    exportOrganoidDone: '类器官收样记录已导出（当前筛选结果）',
+    exportEmpty: '当前筛选没有样本，未生成文件',
     refresh: '刷新'
   },
 

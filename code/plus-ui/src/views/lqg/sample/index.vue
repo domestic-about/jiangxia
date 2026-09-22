@@ -129,10 +129,22 @@
           </el-dropdown>
         </el-col>
         <el-col :span="1.5">
-          <el-button plain icon="Download" @click="handleExportNotYet('tissue')">{{ t('lqg.sample.toolbar.exportTissue') }}</el-button>
+          <el-button
+            v-hasPermi="['lqg:sample:export']"
+            plain
+            icon="Download"
+            :loading="exporting"
+            @click="exportTissue"
+          >{{ t('lqg.sample.toolbar.exportTissue') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button plain icon="Download" @click="handleExportNotYet('organoid')">{{ t('lqg.sample.toolbar.exportOrganoid') }}</el-button>
+          <el-button
+            v-hasPermi="['lqg:sample:export']"
+            plain
+            icon="Download"
+            :loading="exporting"
+            @click="exportOrganoid"
+          >{{ t('lqg.sample.toolbar.exportOrganoid') }}</el-button>
         </el-col>
       </el-row>
 
@@ -261,6 +273,8 @@
 <script setup name="LqgSample" lang="ts">
 import { delSample, listSamples, neverModified } from '@/api/lqg/sample';
 import type { SampleQuery, SampleVO } from '@/api/lqg/sample';
+// ★ 两张导出（SAMPLE-EXPORT-001）：与列表同一组筛选参数，走 query 参数 POST，responseType=blob
+import { exportOrganoidSamples, exportTissueSamples } from '@/api/lqg/sample/export';
 import { listGroups, listUnits } from '@/api/lqg/auth/group';
 import type { SourceUnitVO, UnitGroupVO } from '@/api/lqg/auth/group';
 import SampleDrawer from './SampleDrawer.vue';
@@ -276,6 +290,7 @@ const { lqg_sample_kind, lqg_submit_source, lqg_verify_status, lqg_gender } = to
 );
 
 const loading = ref(false);
+const exporting = ref(false);
 const rows = ref<SampleVO[]>([]);
 const total = ref(0);
 const units = ref<SourceUnitVO[]>([]);
@@ -359,9 +374,54 @@ const handleOpen = (row: SampleVO) => {
   drawerRef.value?.open(row);
 };
 
-const handleExportNotYet = (sheet: string) => {
-  proxy?.$modal.msgWarning(t('lqg.sample.toolbar.exportNotYet') + ' · ' + sheet);
+/**
+ * 导出用的查询条件：**与列表同一份筛选**（SAMPLE-EXPORT-001 ticket §2）。
+ *
+ * ★ 日期区间住在 `receiveDateRange` 这个本地 ref 里，导出前必须先落进 queryParams
+ *   —— 否则「按收样日期区间筛出来再导出」会静默导成不带日期条件的全量。
+ * ★ pageNum / pageSize 原样带着也无妨：后端导出走 `selectList`（不分页），那两个参数被忽略。
+ */
+const buildExportQuery = (): SampleQuery => {
+  queryParams.receiveDateBegin = receiveDateRange.value?.[0] ?? null;
+  queryParams.receiveDateEnd = receiveDateRange.value?.[1] ?? null;
+  return queryParams;
 };
+
+/** 导出共用的下载动作（blob → a[download]；空文件给提示而不是下一个 0 字节的 xlsx） */
+const downloadExport = async (
+  fetcher: (query: SampleQuery) => Promise<any>,
+  fileName: string,
+  doneKey: string
+) => {
+  exporting.value = true;
+  try {
+    const res: any = await fetcher(buildExportQuery());
+    const blob = new Blob([res?.data ?? res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    if (!blob.size) {
+      proxy?.$modal.msgWarning(t('lqg.sample.toolbar.exportEmpty'));
+      return;
+    }
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName + '.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    proxy?.$modal.msgSuccess(t(doneKey));
+  } finally {
+    exporting.value = false;
+  }
+};
+
+/** 导出「样本记录信息表」（tissue 类 14 列；类别由后端端点决定） */
+const exportTissue = () =>
+  downloadExport(exportTissueSamples, t('lqg.sample.toolbar.exportTissueFile'), 'lqg.sample.toolbar.exportTissueDone');
+
+/** 导出「类器官收样记录」（organoid 类 7 列；类别由后端端点决定） */
+const exportOrganoid = () =>
+  downloadExport(exportOrganoidSamples, t('lqg.sample.toolbar.exportOrganoidFile'), 'lqg.sample.toolbar.exportOrganoidDone');
 
 /**
  * 「石蜡包埋」行操作：带 sampleId 跳到工作台「石蜡包埋」页（EMBED-WEB-001）。

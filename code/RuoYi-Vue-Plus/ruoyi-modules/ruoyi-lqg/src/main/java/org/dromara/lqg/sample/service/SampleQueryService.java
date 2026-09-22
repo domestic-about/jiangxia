@@ -116,6 +116,44 @@ public class SampleQueryService {
     }
 
     /**
+     * <b>导出用的整表（不分页）</b>：与 {@link #list(SampleQueryBo)} <b>同一份 wrapper、
+     * 同一份装配</b> —— {@code POST /lqg/sample/export/tissue|organoid} 与
+     * {@code GET /lqg/sample/list} 的口径逐条一致。
+     *
+     * <p>★ SAMPLE-EXPORT-001 accept 1 的两段钉的就是这里：
+     * <ul>
+     *   <li><b>「带筛选导出只出筛选结果」</b>（{@code ?sourceUnitId=9000009002} 的导出行数）；
+     *       在导出里另写一份 WHERE，正是 counterfeit 点名的形态；</li>
+     *   <li><b>「导出行数与同条件的列表 total 一致」</b> —— 两侧必须是同一个
+     *       {@link #buildWrapper} 加同一条档案口径。</li>
+     * </ul>
+     *
+     * <p>★ <b>软删行永不出现</b>：{@code @TableLogic} 兜住（seed 的 1010 不导）。
+     * <b>待核验 / 无效的样本也导</b>（内部编号一格为空）—— ticket §2。
+     *
+     * <p>★ 排序与筛选一字不改地沿用 {@code list} 那一套（含 {@code sort=recent} 与「待核验置顶」）：
+     * 导出文件的行序与列表页一致，导出的每一行也都能在列表页上按同一条件找到。
+     *
+     * @param query 与 {@code GET /lqg/sample/list} 同一组筛选参数；{@code pageNum / pageSize} 被忽略
+     * @return 解过密的行（{@code donorName} / {@code hospitalNo} 是明文 —— 导出要明文，
+     *         ADR-0006：工作台内部人员看明文）
+     */
+    public List<SampleVo> exportRows(SampleQueryBo query) {
+        SampleQueryBo q = query == null ? new SampleQueryBo() : query;
+        return DataPermissionHelper.ignore(() -> {
+            List<Long> submitterIds = submitterProfileQuery.submitterIds(q.getGroupId());
+            if (submitterIds != null && submitterIds.isEmpty()) {
+                // 与 list 同一条守卫：该组别下没有任何外部档案 → 空集，别退化成「不过滤 = 全表」
+                return List.of();
+            }
+            LambdaQueryWrapper<Sample> wrapper = buildWrapper(q, submitterIds, currentUserId());
+            List<SampleVo> rows = sampleMapper.selectList(wrapper).stream().map(this::toVo).toList();
+            submitterProfileQuery.fill(rows);
+            return rows;
+        });
+    }
+
+    /**
      * 「经手人 = 内部账号」的子查询（{@code user_type='sys_user'}）。
      *
      * <p>包内可见：契约测试拿它拼「这一组 OR 被括号包住」的期望串（issue #105）。
