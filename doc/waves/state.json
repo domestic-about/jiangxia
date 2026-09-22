@@ -3114,8 +3114,8 @@
       "type": "arch",
       "title": "/lqg/home/todo 与 /recent 只挂 @SaCheckLogin：外部账号若拿到工作台会话可读全中心 5 个聚合数（不含患者信息）",
       "detail": "现状：两个聚合端点按票面「登录即可调（101 / 102）」实现，只挂 @SaCheckLogin。影响：只要外部账号能拿到工作台会话，就能读到全中心的待办数（**只有数量，不含任何患者/样本明细**）。缓解：AUTH-STAFF-001 的既有约束是「工作台拒外部登录」——若该约束生效，@SaCheckLogin 实际等价于内部；我未能用 grep 直接定位那条拒登逻辑（可能在登录策略里按 user_type 判），故按「理论上可读」记账。方案：收紧只需加 @SaCheckPermission(\"lqg:cryo:list\") 之类，不影响 accept（accept 用 --as staff）。建议至少让 QA 的 L3 片去实测「外部账号能否调 /lqg/home/todo」。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "superseded：被 S1 取代（本会话新增的那条 S1 记录了同一处缺陷，但两个前提都被 D7 r1 L3 的实测推翻了）：①原写「只有数量、无患者明细」——错，/lqg/home/recent 返回 submitNo+sourceUnitName+submitSource+verifyStatus 的跨单位明细；②原写「只要外部账号能拿到工作台会话」——错，小程序 mp token 就够（只有 pc 密码登录那条路被挡）。严重度由 S3 升为 S1，处置改为立即修复（@SaCheckRole 两个内部角色）。保留本条是为了留下「判断是如何被实测纠正的」这条轨迹。"
     },
     {
       "id": 271,
@@ -3314,6 +3314,16 @@
       "type": "harness",
       "title": "★ gate.sh 两处缺陷：①mvn 非 0 一律记 env-broken（把测试失败伪装成工具故障）②reseed 排在单测之后（库耦合单测读到跨午夜的旧行）",
       "detail": "两处都在 D7 门重跑时暴露（它们让一条真红看起来像环境问题、并让 exit code 变成 2）：①**分类错**：L0.1 对 mvn 非 0 一律调 envb()，而 mvn 非 0 也可能是**测试失败**——日志里明明有 `<<< FAILURE!` 与 `Tests run: 274, Failures: 1`，却被标成「环境/工具问题」，于是 gate exit=2（环境坏）而不是 1（断言不成立），qa 审计里也只留一条 S2/harness 而没有 S1 级别的产品红。修法：先 grep 日志判「是不是测试失败」（`Tests run:.*(Failures: [1-9]|Errors: [1-9])|<<< FAILURE!|<<< ERROR!`）→ 是则 bad()（红），否则才 envb()。②**顺序错**：reseed 原本排在 L0.1 单测**之后**（原 L1.0），而 seed 里的日期是**以 reseed 时刻为基准**的相对表达式（freeze_time = CURRENT_DATE - 20）→ 库耦合的单测读到上一轮遗留的行，跨午夜就漂一天。修法：把 reseed+清孤儿账号提到 L0.1 **之前**（新步骤 L0.0b），L0 从此跑在确定性快照上。影响面：这两个缺陷**对所有任务的每个门都生效**——①让任何测试失败都被误报成环境问题（浪费排查时间、可能漏掉真红）；②让任何依赖库日期的单测在跨午夜后失败。修复后 D7 门重跑：L0.1 274/274 绿。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 291,
+      "ticket": "SYS-HOME-001",
+      "severity": "S1",
+      "type": "arch",
+      "title": "★ S1：外部账号（小程序 token）可读 /lqg/home/recent —— 跨单位送检单号+单位名+核验状态；/todo 五数亦可读（升格 #270）",
+      "detail": "复现（D7 r1 L3 片实测，已记证据在 doc/waves/qa/D7-r1-L3.json）：`--as extA/extB/extC/extE/extF` 打 `GET /lqg/home/todo` → **全部 200**，拿到 {pendingSamples:2,pendingEmbeds:1,cryoOverdue:2,pendingExtUsers:2,renderFailed:0}；打 `GET /lqg/home/recent` → **全部 200、9 行**，字段 {submitTime, submitNo, sourceUnitName, submitSource, verifyStatus} —— **跨 A 医院/B 大学/本中心**。极端对照：extC 的可见集合只有 {1005}，却能读到 **B 大学的 SJ90000006 与本中心的 SJ90000008**。★**我在 #270 里给的两个缓解论证都被实测推翻**：①「只有 5 个聚合数、无患者明细」→ 错，/recent 吐的是明细（单号+单位+核验状态）；②「要拿到工作台会话才行」→ 错，**小程序（mp client）签发的 token 就够**；唯一还成立的对照是「extB 走 pc 密码登录会被拒（500 该账号无权登录工作台）」，也就是说**只有 pc 那条路被挡住了**。根因：HomeController 的两个 handler 只挂 @SaCheckLogin（类注释还把票面 §2 的「登录即可调（101/102）」当成依据写死了），与 AUTH-STAFF-001 §2.2「工作台拒外部」以及本项目的外部隔离不变量（ADR-0004 / ExtChokepoint 体系）冲突。定级依据：**外部隔离是本项目被甲方明确要求、且由 ExtChokepointContractTest 守着的不变量**，而这个新端点绕过了咽喉并把别家单位的数据给了外部角色——不是 cosmetic；L3 片按它自己的窄口径（「老师用不了 ∪ 下游跑不通」）判了 S2，我按「甲方明示的隔离要求被破坏 + 无特权的外部角色可触发」升为 **S1**。修法（一行 + 注释）：HomeController 两个端点改挂 `@SaCheckRole({\"lqg_admin\",\"lqg_internal\"})`（**必须两个角色都放**——101 是 lqg_admin、102 是 lqg_internal，只写 lqg_internal 会把工作台超管的首页一起打 403）。",
       "status": "open",
       "decision": ""
     }
