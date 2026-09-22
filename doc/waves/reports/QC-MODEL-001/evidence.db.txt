@@ -1,0 +1,56 @@
+═══ 迁移（flyway_schema_history）
+ installed_rank |   version    |                   script                   | success 
+----------------+--------------+--------------------------------------------+---------
+             18 | 202609261300 | V202609261300__QC-MODEL-001-qc-docs.sql    | t
+             19 | 202609261310 | V202609261310__QC-MODEL-001-doc-assets.sql | t
+(2 rows)
+
+═══ 五张表的列（information_schema）
+      table_name      | cols 
+----------------------+------
+ t_lqg_doc_attachment |   13
+ t_lqg_doc_image      |   13
+ t_lqg_qc_organoid    |   16
+ t_lqg_qc_sample      |   21
+ t_lqg_qc_score       |   20
+(5 rows)
+
+═══ formed_time / feedback_time 的类型（accept 1 第 3 段）
+  column_name  |     data_type     | character_maximum_length 
+---------------+-------------------+--------------------------
+ feedback_time | character varying |                      100
+ formed_time   | character varying |                      100
+(2 rows)
+
+═══ 三个部分唯一索引
+       indexname        |                                                           indexdef                                                           
+------------------------+------------------------------------------------------------------------------------------------------------------------------
+ idx_doc_attachment_doc | CREATE INDEX idx_doc_attachment_doc ON public.t_lqg_doc_attachment USING btree (doc_type, doc_id)
+ pk_lqg_doc_attachment  | CREATE UNIQUE INDEX pk_lqg_doc_attachment ON public.t_lqg_doc_attachment USING btree (id)
+ idx_doc_image_doc      | CREATE INDEX idx_doc_image_doc ON public.t_lqg_doc_image USING btree (doc_type, doc_id, slot)
+ pk_lqg_doc_image       | CREATE UNIQUE INDEX pk_lqg_doc_image ON public.t_lqg_doc_image USING btree (id)
+ pk_lqg_qc_organoid     | CREATE UNIQUE INDEX pk_lqg_qc_organoid ON public.t_lqg_qc_organoid USING btree (id)
+ uk_qc_organoid_sample  | CREATE UNIQUE INDEX uk_qc_organoid_sample ON public.t_lqg_qc_organoid USING btree (sample_id) WHERE (del_flag = '0'::bpchar)
+ pk_lqg_qc_sample       | CREATE UNIQUE INDEX pk_lqg_qc_sample ON public.t_lqg_qc_sample USING btree (id)
+ uk_qc_sample_sample    | CREATE UNIQUE INDEX uk_qc_sample_sample ON public.t_lqg_qc_sample USING btree (sample_id) WHERE (del_flag = '0'::bpchar)
+ pk_lqg_qc_score        | CREATE UNIQUE INDEX pk_lqg_qc_score ON public.t_lqg_qc_score USING btree (id)
+ uk_qc_score_sample     | CREATE UNIQUE INDEX uk_qc_score_sample ON public.t_lqg_qc_score USING btree (sample_id) WHERE (del_flag = '0'::bpchar)
+(10 rows)
+
+═══ 菜单与授权（5501-5503 → 101/102）
+ menu_id |     perms      |  roles  
+---------+----------------+---------
+    5501 | lqg:qc:query   | 101,102
+    5502 | lqg:qc:edit    | 101,102
+    5503 | lqg:qc:publish | 101,102
+(3 rows)
+
+═══ seed 里的质控文档（reseed 后的确定性快照）
+ sample_id  | sample_qc  | doc_status | organoid_qc | o_status  |   score    | c_status  | total_score 
+------------+------------+------------+-------------+-----------+------------+-----------+-------------
+ 9000001001 | 9000005001 | published  |  9000005101 | published | 9000005201 | published |          85
+ 9000001004 | 9000005002 | published  |  9000005102 | draft     |            |           |            
+ 9000001005 | 9000005003 | draft      |             |           |            |           |            
+ 9000001006 |            |            |             |           | 9000005202 | published |          18
+(4 rows)
+

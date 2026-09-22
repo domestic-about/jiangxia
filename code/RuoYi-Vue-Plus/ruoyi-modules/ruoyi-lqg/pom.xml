@@ -103,6 +103,46 @@
             <version>4.7.0</version>
         </dependency>
 
+        <!--
+          DOC-RENDER-001：Word 渲染（ADR-0005 的决策值字面就是「poi-tl 按 docx 模板渲染 Word」）。
+          本模块此前类路径上没有 POI，所以必须显式引入。
+
+          ★ 故意 exclude poi-tl 自带的 poi-ooxml 5.2.2，改钉 5.4.1 —— 与工作台导出 Excel 的
+            fastexcel 1.3.0 拉进来的那一份同版本，一个 jar 里只有一份 POI，不出现
+            「编译期 5.2.2 / 运行期 5.4.1」那种只在运行时才炸的组合。poi-tl 1.12.2 只用 XWPF 的
+            稳定 API（XWPFDocument / XWPFRun / 段落与表格遍历），对 5.4.1 二进制兼容；
+            DocxTemplateRenderTest 与 accept 都在真渲染里验证过。
+          ★ batik 是 poi-tl 为 SVG 图片拖进来的（约 10MB）；模板里只有位图，但
+            PictureRenderPolicy 在编译期就引用 SVGConvertor，不能 exclude。
+        -->
+        <dependency>
+            <groupId>com.deepoove</groupId>
+            <artifactId>poi-tl</artifactId>
+            <version>1.12.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.poi</groupId>
+                    <artifactId>poi-ooxml</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+
+        <!--
+          DOC-PDF-001：PDFBox（FLOW:F-DOC-01.step4 的决策值字面就是「PDFBox 按 150 DPI
+          把 PDF 每页渲染成 PNG」，ADR-0005 同）。本模块此前类路径上没有 PDF 库。
+          3.x 的 API 与 2.x 不同（org.apache.pdfbox.Loader.loadPDF），别按 2.x 的写法写。
+        -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.5</version>
+        </dependency>
+
         <!-- 单元测试（MockLoginGuardContractTest 契约测试用；只引 JUnit，不引 Spring 上下文） -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

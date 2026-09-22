@@ -1,0 +1,4 @@
+# QC-WEB-002 accept[1] 评分即时反馈过 fixture：0 分档照算、没选全合计为空；保存只提交档位
+# LQG_VERIFY_ENV_FILE=(未设)
+
+true

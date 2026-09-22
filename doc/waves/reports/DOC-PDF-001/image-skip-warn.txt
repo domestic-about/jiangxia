@@ -1,0 +1,6 @@
+════ 后端日志里「取图失败 → 跳过这张图 + WARN」的原样输出（sample_qc 1001）
+[0;39m - 渲染取图失败，跳过这张图 ossId=9000004004 service=seed file=seed/lqg/img-4.jpg：org.dromara.common.oss.exception.OssException: 系统异常, 'seed'配置信息不存在!
+[0;39m - 渲染取图失败，跳过这张图 ossId=9000004003 service=seed file=seed/lqg/img-3.jpg：org.dromara.common.oss.exception.OssException: 系统异常, 'seed'配置信息不存在!
+[0;39m - 渲染取图失败，跳过这张图 ossId=9000004001 service=seed file=seed/lqg/img-1.jpg：org.dromara.common.oss.exception.OssException: 系统异常, 'seed'配置信息不存在!
+[0;39m - 渲染取图失败，跳过这张图 ossId=9000004002 service=seed file=seed/lqg/img-2.jpg：org.dromara.common.oss.exception.OssException: 系统异常, 'seed'配置信息不存在!
+[0;39m - 渲染取图失败，跳过这张图 ossId=9000004004 service=seed file=seed/lqg/img-4.jpg：org.dromara.common.oss.exception.OssException: 系统异常, 'seed'配置信息不存在!

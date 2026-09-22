@@ -1,0 +1,35 @@
+═══ 0) GET /lqg/qc/9000001001（seed 已有三份 published 文档）的形状
+{"code":200,"internalNo":"T-hli01","donorName":"测试供体甲","sampleQcId":9000005001,"docStatus":"published","patientNo":"P-0001","viability":"活率报告.pdf","imageSlots":[{"orig":2},{"observe":1},{"pretreat":0}],"origFirst":{"id":9000005301,"slot":"orig","ossId":9000004001,"previewOssId":9000004001,"sort":1,"url":"https://seed.invalid/lqg/img-1.jpg","previewUrl":"https://seed.invalid/lqg/img-1.jpg"},"organoidSlots":["organoid_observe"],"scoreImages":[],"scoreTotal":85,"attachments":["活率报告.pdf"]}
+
+═══ 1) GET 幂等：再取一次，三张表各 1 行
+1|1|1
+
+═══ 2) 附件：POST / GET 带出 / 超 50MB 被拒 / DELETE 软删
+{"code":200,"id":"2102325400586715138"}
+{"code":400,"msg":"单个附件不能超过 50MB（当前：60000000 字节）"}
+{"code":200,"attachments":[{"fileName":"活率报告.pdf","fileSize":319488,"url":"https://seed.invalid/lqg/viability.pdf"}]}
+{"code":200}
+0
+
+═══ 3) 图片位排序 + 软删（doc 9000005001 的 orig 有两张 9000005301/9000005302）
+{"code":200}
+9000005302:1
+9000005301:2
+{"code":400,"msg":"排序要给出该图片位里全部 2 张图的 id"}
+{"code":200}
+observe:1
+orig:1
+{"code":400,"msg":"图片不存在（或不属于这个样本的这份文档）"}
+0
+
+═══ 4) 非 jpg/大图之外的分支：oss 不是 minio 配置（seed 的假 OSS）时 preview_oss_id 退回原图
+9000004003|9000004003
+
+═══ 5) 待核验/无效样本一律 400
+400	质控文档只能对已核验有效的样本打开（当前状态：invalid）
+400	质控文档只能对已核验有效的样本打开（当前状态：pending）
+400	样本不存在
+
+═══ 6) 上游回归：有 published 质控文档的样本改判无效（1001 三份 published）被拒；1002 无质控文档仍可被改判
+500	该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效
+{"code":200}

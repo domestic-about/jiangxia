@@ -2,10 +2,10 @@
  "skill": "zhixing",
  "status": "needs_human",
  "task": {
-  "current": "D6",
+  "current": "D7",
   "status": "pending",
   "qa_rounds": 0,
-  "progress": "ticket 26/43 done, 任务 5/8 通过 QA 门",
+  "progress": "ticket 31/43 done, 任务 6/8 通过 QA 门",
   "branch_model": "integration 集成分支 + 每任务一条 task/D<N>；不 push、不合 main（push 与部署留给 Kevin）"
  },
  "tickets": {
@@ -22,19 +22,19 @@
   "CRYO-WEB-001": "done",
   "DOC-MP-001": "pending",
   "DOC-MP-002": "pending",
-  "DOC-PDF-001": "pending",
+  "DOC-PDF-001": "done",
   "DOC-PROOF-001": "pending",
   "DOC-PUBLISH-001": "pending",
-  "DOC-RENDER-001": "pending",
+  "DOC-RENDER-001": "done",
   "EMBED-MODEL-001": "done",
   "EMBED-MP-001": "done",
   "EMBED-WEB-001": "done",
   "OCR-IMPL-001": "done",
   "OCR-MP-001": "done",
   "OCR-SPIKE-001": "escalated",
-  "QC-MODEL-001": "pending",
-  "QC-WEB-001": "pending",
-  "QC-WEB-002": "pending",
+  "QC-MODEL-001": "done",
+  "QC-WEB-001": "done",
+  "QC-WEB-002": "done",
   "SAMPLE-EXPORT-001": "done",
   "SAMPLE-HINT-001": "done",
   "SAMPLE-MODEL-001": "done",
@@ -58,14 +58,14 @@
   "L1": "pass",
   "L2": "pass",
   "L3": "pass",
-  "note": "DD1,D2,D3,D4,D5 的 QA 门 已通过"
+  "note": "DD1,D2,D3,D4,D5,D6 的 QA 门 已通过"
  },
  "exception": null,
  "open_issues": {
-  "total": 207,
+  "total": 246,
   "by_severity": {
-   "S2": 78,
-   "S3": 119,
+   "S2": 92,
+   "S3": 144,
    "S1": 6,
    "S0": 4
   },
@@ -77,7 +77,7 @@
   ],
   "note": "S0/S1 会在 qa_gate 的 pending_issues 里被拦；S2/S3 推到 all_done 一起清（载体是 doc/waves/state.json 的 open_issues，勿另建台账）"
  },
- "summary": "ticket 26/43 done；已通过 QA 门的任务：D1,D2,D3,D4,D5。当前 D6（pending，QA 第 0 轮）。未决台账 207 条（S0/S1 1 条）。",
+ "summary": "ticket 31/43 done；已通过 QA 门的任务：D1,D2,D3,D4,D5,D6。当前 D7（pending，QA 第 0 轮）。未决台账 246 条（S0/S1 1 条）。",
  "needs_human": {
   "route": "kevin",
   "why": "zhixing 停在等人：escalated 票 OCR-SPIKE-001",

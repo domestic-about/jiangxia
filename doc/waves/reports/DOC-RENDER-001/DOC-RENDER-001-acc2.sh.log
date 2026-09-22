@@ -1,0 +1,6 @@
+# DOC-RENDER-001 accept[2] 渲染产物表与 SSOT 相符；指纹缓存成立：内容没变不重出、改了任何一处都重出、内外部各一份互不覆盖
+# 归一化 NF1,NF2
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+✓ 1 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+true

@@ -126,6 +126,7 @@ export default {
     edit: '编辑',
     verify: '核验',
     qcDoc: '质控文档',
+    qcDocInvalid: '只有已核验有效的样本能打开质控文档',
     embed: '石蜡包埋',
     cryo: '冻存',
     notYet: '在后续任务接入',

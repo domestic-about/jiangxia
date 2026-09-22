@@ -117,6 +117,7 @@ export default {
     edit: 'Edit',
     verify: 'Verify',
     qcDoc: 'QC documents',
+    qcDocInvalid: 'QC documents open only for verified valid samples',
     embed: 'Paraffin embedding',
     cryo: 'Cryo',
     notYet: 'lands in a later task',

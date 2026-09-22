@@ -1,0 +1,11 @@
+# QC-MODEL-001 accept[3] 首次打开幂等建三份草稿且默认文字逐字照模板；图片位规则（归属、每位至多三张）被拒时库里不变；患者编号落库是密文
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true
+1|1|1
+true
+observe:1
+orig:3
+true
+WGk4sblY1e3HTyYUeNdt2g==

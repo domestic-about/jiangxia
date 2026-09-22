@@ -1,0 +1,29 @@
+PASS  页头摘要条带出样本只读字段（内部编号 T-hli01 / 供体 测试供体甲） — "质控文档 T-hli01 以下七项从样本主档带出，只读；要改请去样本总表 ‹ 返回样本总表 来源单位A 医院 患者姓名测试供体甲 性别male 收样时间2026-08-23 处理时间2026-08-23 14:20:00 操作人李工 内部编号T-hli01"
+PASS  页头七项只读字段齐（来源单位/患者姓名/性别/收样时间/处理时间/操作人/内部编号）
+PASS  三个页签都在且带状态徽标（已完成） — "样本质控表 已完成 类器官质控表 已完成 类器官质量评分表 已完成"
+PASS  样本质控表页签里有 3 个图片位 + 1 个通用附件区 — slot=4 imageSlot=3
+PASS  三个图片位在库里各有图（orig 3 / observe 2 / pretreat 1） — "observe:2:true\norig:3:true\npretreat:1:true"
+PASS  ★ TIFF 的 preview_oss_id ≠ oss_id（后端另存了一张 JPEG 预览图） — preview<>orig = t
+PASS  ★ 原图是 tif、预览图是 jpg（不是把 TIFF 直接塞给浏览器） — .tif/.jpg
+PASS  页面上能看到 6 张缩略图（3+2+1） — thumbs=6
+PASS  ★ 图片位满 3 张后上传按钮消失（orig） — inputs=0
+PASS  未满的图片位仍有上传入口（observe 2/3） — inputs=1
+PASS  点图放大浮层打开（el-image preview） — 94f13fc6846b4f588816845c9b072de1.jpg
+PASS  ★ TIFF 缩略图点开放大的不是 TIFF 原始地址（tif 浏览器放不出来 → 走预览图） — 94f13fc6846b4f588816845c9b072de1.jpg
+PASS  ★ 真上传的 PNG 点图放大（浮层显示原图签名地址，不是 seed 假地址） — c3684c37755e4df999a6549f40115e93.png
+PASS  ★ 拖拽排序真的落库（orig 三张 id 顺序变了、集合没变） — 9000005301,9000005302,2102347576996126721 → 9000005302,2102347576996126721,9000005301
+PASS  ★ 有未保存改动时离开被拦（弹确认框） — "有未保存的改动 这一页还有没保存的改动，离开就会丢掉。确定离开吗？ 留下继续编辑 离开"
+PASS  ★ 保存草稿落库（患者编号密文变了、且重新加密后能解回新值） — 8pRfE0lZx5iRIge9uzBWzg== → 6gqF+RVrf+TkZ7nZLC0G0Q==
+PASS  保存草稿不改 doc_status（上游口径：状态机在 DOC-PUBLISH-001） — published
+PASS  细胞活率测定附件选中后页面上显示文件名 — " viability.txt"
+PASS  ★ 细胞活率附件落库（viability_oss_id 非空 + 文件名） — 2102347784781946882/viability.txt
+PASS  ★ 移除细胞活率附件 = 保存时发 viabilityOssId:0，库里两列都被清空（issue #212） — NULL/NULL
+PASS  ★ 通用附件落库（文件名 + 字节数可选地带上） — "活率报告.pdf/319488\nattachment.txt/63"
+PASS  附件区列出刚挂的文件（不是在页面上假装挂上） — "附件 添加附件 活率报告.pdf 312.0 KB attachment.txt 63 B 可挂多个附件；单个不超过 50 MB"
+PASS  ★ 样本总表「质控文档」入口对有效样本可点（T-hli01） — [{"no":"—","disabled":true},{"no":"—","disabled":true},{"no":"—","disabled":true},{"no":"T-hco04","disabled":false},{"no":"T-hga03","disabled":false},{"no":"T-hli02","disabled":false}]
+PASS  「质控文档」入口对待核验样本置灰（列表里存在 disabled=true 的行） — [{"no":"—","disabled":true},{"no":"—","disabled":true},{"no":"—","disabled":true}]
+PASS  ★ 侧边栏没有「质控文档」「文档渲染状态」入口（visible=1 的隐藏路由不进菜单） — "首页|系统管理|样本总表|石蜡包埋|人员与单位|冻存管理"
+PASS  ★ 5520「文档渲染状态」改挂隐藏目录后路由仍通（/qc-console/doc-console 渲染出页面） — http://127.0.0.1:8093/qc-console/doc-console
+PASS  页面没有未捕获的 JS 异常（忽略 seed 假地址图导致的资源加载失败） — []
+
+== QC-WEB-001 人眼验收 27/27 通过 ==

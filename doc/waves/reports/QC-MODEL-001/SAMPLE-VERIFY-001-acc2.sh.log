@@ -1,0 +1,10 @@
+# SAMPLE-VERIFY-001 accept[2] 内外部属性是提交当时的快照：提交人后来被授权成内部，他以前送的样本仍是外部样本；他之后新录的才是内部样本
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true
+true
+external:3
+internal:1
+3
+true

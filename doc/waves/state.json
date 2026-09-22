@@ -43,8 +43,9 @@
     },
     {
       "id": "D6",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D7",
@@ -163,12 +164,12 @@
       "note": ""
     },
     "DOC-PDF-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "DOC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "docx→pdf→png 同一指纹的流水线（org.dromara.lqg.doc.pdf 7 类 + 4 VO：PdfConvertService 单线程排队/60s 预算/不走代理、PdfPageRasterizer 150DPI、PageImageService、DocArtifactRows/Store、DocPagesService）+ 新端点 GET /lqg/doc/{id}/{docKind}/pages 与 download?format=pdf 与 docKind=merged + Gotenberg 镜像层（4 个开源字体 + OFL 许可随文件进仓库）+ dev/test compose 服务 + 模板字体替换（宋体→Noto Serif SC、Times New Roman→Tinos，template-version 1→2，tblGrid 逐字未变）。accept 2/2 绿（跑两遍）；单元测试 38/38（含上游 DOC-RENDER-001 的 18 个仍绿）；pnpm build:prod 绿。★四条关键：①**取图失败按两类落地**（我转达的裁定）：docx 阶段个别图取不到 = 跳过+WARN、文档照 done（实测 1001/sample_qc = done/errorMsg=null，4 张 seed 假图跳过）；流水线步骤失败（连不上/超时/非 PDF）= 整体 failed+原因。未改上游、未改票面。②**arm64 无硬阻塞**：官方 gotenberg/gotenberg:8 有 arm64 变体；本机须 DOCKER_BUILDKIT=0 docker build（buildx 写 ~/.docker 被沙箱拒）。③**字体回退是隐形雷**：只换 eastAsia 不够——容器没有 Times New Roman → LibreOffice 回退 Liberation Serif → accept 的 !grep DejaVu|Liberation 直接红；故 Latin 也换成度量兼容的 Tinos。④**失败语义**：失败只改 header 行状态+error_msg、不动 oss_id；pages/download 只认「与 header 同一指纹」的行 → 结构上排除「Word 是新的、预览图是旧的」。★越界 6 处（票面 §2 点名要改但 touches 漏列）：ruoyi-lqg/pom.xml（pdfbox）、doc/render/service/DocRenderService.java、doc/render/controller/DocRenderController.java、迁移 V202609261420__DOC-PDF-001-doc-console.sql、plus-ui/src/api/lqg/doc/index.ts、plus-ui/src/views/lqg/doc/index.vue。★容器：lqg-dev-gotenberg 建议留着 running（127.0.0.1:3010，healthy），后续 DOC-PUBLISH/QC-WEB/DOC-MP 的 accept 都要用。★我复核了它报的 hidden 问题：诊断需纠正（见 issue），并发现 QC-WEB-001 票面规定的迁移号段已被本票越过。"
     },
     "DOC-PROOF-001": {
       "status": "pending",
@@ -187,12 +188,12 @@
       "note": ""
     },
     "DOC-RENDER-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "DOC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "docx 模板渲染（带出字段+填写字段+两句印死的注+真图嵌入）+ 内容指纹缓存（内外部各一份互不覆盖）。accept 2/2 绿（票面逐字重放）；两票迁移 V202609261400/V202609261410（> 库里最大 202609261310，已应用）；新增 doc/render 16 类 + 2 测试；tracked 文件零越界（唯一动的是 touches 内的 ruoyi-lqg/pom.xml +29 行）。★五条给下游的硬坑：①**环境病灶（最贵）**：macOS 系统代理被 JDK 灌成 http.proxyHost，而 JDK 自带 http.nonProxyHosts 只含 localhost、不含 127.0.0.1 → AWS SDK(Netty) 把发往 127.0.0.1:9000(MinIO) 的请求丢给代理 → 框架自带 POST /resource/oss/upload 直接 500（阻塞 120s 才报 doBlockingWrite）；curl 不受影响、**只有 JVM 踩**。原修法写在 gitignored 的 code/deploy/dev/.env（不可复现）→ 我已把它移进 doc/waves/tools/qa-up.sh 作为 JVM 参数，并**证伪验证过**：把那行 .env 注释掉、只靠 qa-up 注入，accept 仍 2/2 绿。②**accept 的 --min-images 2 撞 POI 图片字节去重**：同一张图挂两个位时 word/media 只 1 份 → 新增 DocImageBytes 在 PNG IEND 前插 tEXt / JPEG SOI 后插 COM（规范内辅助段、解码器忽略）让每次出现各自成独立媒体。③**取不到图 = 跳过该图 + WARN、文档照出 done**（seed 是 https://seed.invalid 假 URL）；§6.1 已点名这与 DOC-PDF-001 counterfeit 里「取图失败应整体 failed」相反，请以本票行为为准（他们的 accept 1 也要求 1001/organic_qc 状态 done）。④图片位「可放大」必须换成 3 个各自独立的 run（挤一个 run 会被 poi-tl 的 ClearHandler 一处空数据抹掉三张）；评分表分值列在原稿里是按变量纵合并，占位符只进 4 个 vMerge=restart 格。⑤**system:oss:upload 此前只授 role 3（超管）**，而 accept 要求 --as staff 调上传 → 403；已在 V202609261410 给 101/102 补授 1600-1602（功能性授权，但确实扩大了内部角色的上传权限，已记 WARN）。★独立复验：我在收口时用 qa-up 起的环境重跑了两遍 accept（.tmp/doc-render-verify{,2}.json），均 2/2。"
     },
     "EMBED-MODEL-001": {
       "status": "done",
@@ -243,28 +244,28 @@
       "note": "硬卡：等甲方真实样本照片。票面 §0 口径2 明写「甲方的 10-20 张真实照片……照片没到 → 本张 blocked」，accept 要求 _input/ocr-photos ≥10 张（现 0 张，且无替身——拿自拍样张出结论会被判红）。本张的唯一价值是用真照片算出命中率与推荐方案，骨架（候选清单/脚本/报告模板）单独做没有验收意义，故不派实现。解除条件：甲方照片到位（可遮挡隐私，含 ≥3 张手写）。"
     },
     "QC-MODEL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "QC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "质控文档数据模型（五表两支迁移 V202609261300/V202609261310）+ 评分由后端按字典 remark 回填 + 图片/附件规则 + QcChildrenChecker。accept 3/3 绿（票面逐字重放，仅 NF1）；上游回归 SAMPLE-VERIFY-001 2/2、EMBED-MODEL-001 4/4 仍绿；模块全套单测 217/0；git status 25 条全是本票新增、零越界。★五条给下游的硬坑：①**并发幂等不能裹事务**——GET /lqg/qc/{sampleId} 缺哪份建哪份，撞 sample_id 部分唯一索引时 PG 会把整个事务标 aborted，「抓住冲突再查一遍」就废了 → 这些方法刻意不加 @Transactional，逐条语句提交 + 捕 DataIntegrityViolationException 后重查。②**@EncryptField 过不了 accept 3 末段**：框架拦截器写 ENC_+Base64，而 accept 要裸 Base64 → 复用 SampleFieldCipher 手工加解密（SAMPLE-MODEL-001 先例），实测落库 WGk4sblY1e3HTyYUeNdt2g== 与 openssl 逐字相等。③**0 分档 vs 未选**：全链路用 Integer（null=没选、0=选了 0 分档），四项都非 null 才求和；分值唯一来源是 sys_dict_data.remark（不缓存）。④**前端假分值无处落脚**：QcScoreSaveBo 只要四个 *Level（反射测试钉住「一个 *Score 字段都没有」），Jackson 忽略未知键 → preCultureScore:99/totalScore:100 一个字不生效。⑤**菜单号**：accept 1 断「本票 Flyway 恰 2 行」→ 菜单并进第一支迁移；只落 F 权限 5501-5503，C 页面菜单 5510 留给 QC-WEB-*。"
     },
     "QC-WEB-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "QC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "工作台质控文档编辑页（三页签 + 图片位 + 附件 + 评分）落成在 plus-ui 的 views/lqg/qc/editor/** 与 components/**；后端 Java 一行未改。accept 2/2 绿；另做 27/27 人眼验收（真 Playwright + 真 OSS 上传 + 真库）：三个图片位各传图、真 TIFF 触发预览转换（preview_oss_id≠oss_id，.tif→.jpg）、点图放大、拖拽排序落库（用 issue #210 的 {ids:[全部 id]} 形状）、活率附件用 viabilityOssId=0 摘掉（#212）、通用附件 fileSize 可选（#209）、总表入口只对有效样本可点、离开拦截。★按我给的两条照做：①取号改 V202609261430（票面 V20260926132* 已被 202609261420 越过，照写会 FlywayValidateException），依据写进迁移头注释；②隐藏菜单选**方案 a**（新建隐藏 M 目录 5500，把 5520 与 5510 都挂进去）→ 实测 getRouters 外层与两个子路由**都** hidden=true，不再依赖 isMenuFrame() 外壳分支。★代价（已记 WARN）：真实路由变成 /qc-console/qc-editor?sampleId=…（票面写的 /qc-editor 不再成立）、5520 变 /qc-console/doc-console；5520 用**新迁移 UPDATE parent_id**（没碰已应用的 V202609261420），并回归验证 /qc-console/doc-console 仍可路由。★越界 2 处：lang/lqg/sample.{zh_CN,en_US}.ts 各 +1 key（置灰入口 title，i18n 约定无别的落点）、迁移里 UPDATE sys_menu SET parent_id=5500 WHERE menu_id=5520。★它还抓到我一处派单模板错误：Playwright 的 require 锚点用 code/plus-ui/package.json 会 MODULE_NOT_FOUND（plus-ui 没声明 playwright，pnpm install 会把它剪掉），实际装在小程序前端 —— 我早先的核查被一个残留目录骗了，已把 README-modeB 的模板改成 code/miniapp/package.json。"
     },
     "QC-WEB-002": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "QC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "类器官质控页签（OrganoidQcTab：观察情况图片位 slot=organoid_observe + 五栏文本 + 两个时间字段）与评分页签（ScoreTab：ScoreRadioGroup ×4，选项文字与分值来自 useDict 的 label/remark；score.ts 的 scoreSummary；score.fixture.spec.ts 读 doc/verify/fixtures/score-cases.json）落成，editor/index.vue 的两个占位页签换成真的。accept 2/2 绿（连跑 3 次一致、nf 为空=NF1/NF2 都没触发）；另做 25/25 真浏览器验收（0 分档显示 0 不是 —、合计 18/85、日期选了填 yyyy-MM-dd、手输「约第 7 天」落库、换页签不丢改动、无 JS 异常）+ 6/6 假绿探针。零 Java 改动、**无迁移**（已应用最大版本仍 202609261430）。★五条值得记的：①**票面 §2 假设 useDict 透传 remark，实际上游只映射 label/value/elTagType/elTagClass → 分值根本拿不到**；越界给 utils/dict.ts + types/global.d.ts 加了可选 remark（加法、向后兼容），分值仍只在 sys_dict_data.remark 一份真相源。②**「时间栏 = 日期选择器 + 手输」不能只用 el-date-picker**（失焦会把「约第 5 天」清掉，而后端 BO 明说不校验格式）→ 用 el-input（值恒为字符串）+ 一个只负责「选了填 yyyy-MM-dd」的 picker。③**后两个页签接真后，QC-WEB-001 的 v-if 挂载会在换页签时静默丢掉另一页签未保存的改动** → 改 v-show 常驻 + dirty 按页签各记一份（越界）。④**直接 psql 改 sys_dict_data 不会失效 Redis 字典缓存**（探针第一版实测 GET 仍返旧值）→ 必须走 PUT /system/dict/data（@CachePut）；这条给 D6 QA 门用。⑤accept 2 的 grep useDict 硬编码分值也能过 → 它自己补了 counterfeit-probe.mjs（把 remark 8→88，页面三处同时变 8→88、该项 8→88、合计 18→98，再自动改回）。★越界：utils/dict.ts、types/global.d.ts、新增 components/ScoreRadioGroup.vue、新增 2 个 lang 文件 qc-web-002.*.ts、index.vue 挂载方式与 eslint 格式 diff。"
     },
     "SAMPLE-EXPORT-001": {
       "status": "done",
@@ -2475,6 +2476,396 @@
       "type": "harness",
       "title": "（known-red 入账）D5 gate acc2 的 2 处红为已登记的环境缺陷：#192 + #181",
       "detail": "gate.sh 的 L1.2 把 SYS-STAGING-001 acc2 判为 known-red（不拦门）。归因：#192（票面 sed 用 BRE \\?，本机 BSD sed 不支持 → HOST 恒空）+ #181（本机 nc 被透明代理劫持，连 1.1.1.1:59999 都「可达」）。已按三件套给等价取证（box 发夹探针 + 阳/阴性对照、ss -lntp 全 127.0.0.1、安全组入方向清单）。**断言本身仍然红，不是已修**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 208,
+      "ticket": "QC-MODEL-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "预览图真转换分支在确定性数据里跑不到：seed 是假 URL 取不到字节 + 本机 ImageIO 读不了 TIFF",
+      "detail": "票面要求「非 jpg/png 或长边>2000px → 生成长边≤2000px 的 JPEG 另存 OSS，填 preview_oss_id；否则 preview_oss_id = oss_id」。实测：seed 的 sys_oss 行 service='seed'、url 是假地址 → 取不到字节，于是**一律退回 preview_oss_id = oss_id**；且本机 ImageIO 默认读不了 TIFF（需 imageio-tiff 插件，本票未装）。影响：**真转换分支（缩放/格式转换/另存）在确定性数据上没有端到端证据**，只有代码路径与单元级判断；D6 qa_scope L2 有一条「TIFF 显示预览图」，QA 门要么补真图字节的测试数据、要么如实记为未覆盖。方案 a) 给 seed 加一张真实 TIFF 与一张长边>2000px 的图（放 OSS 或本地 fixture），并装 imageio-tiff 插件；b) 或在 QA 门里明确把该条记为未覆盖并让 Kevin 知晓。",
+      "status": "decided",
+      "decision": "partially-fixed：部分结案（2026-09-22，D6 L2 片实测纠正）：**错误的一半**——「本机 ImageIO 读不了 TIFF、需 imageio-tiff 插件」不成立，JDK 17 ImageIO 自带 TIFF reader，TIFF→JPEG 预览分支实测端到端可用（真 TIFF 经框架 OSS 上传 → preview_oss_id≠oss_id → 下载确认 JPEG；2400px PNG 也真走了缩放）。**仍成立的一半**——seed 的 sys_oss 是 https://seed.invalid 假地址取不到字节，所以预览转换在确定性 seed 数据上跑不到；要验它必须自备真图上传（D6 L2 已这么做并全绿）。结论改成：预览能力可用，缺的是「seed 里没有可真取的图」，属测试数据问题而非实现问题。已另记勘误 issue。"
+    },
+    {
+      "id": 209,
+      "ticket": "QC-MODEL-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "附件 fileSize 契约里没有、SSOT 却是 NOT NULL → 实现做成可选，无法真正强制 50MB",
+      "detail": "doc/api-contract.md 的附件上传请求形状里没有 fileSize；而 field-ssot 里该列 NOT NULL。实现：给了就校验 ≤50MB，没给则回落 sys_oss.ext1、再落 0 —— 也就是说**没给 fileSize 时 50MB 上限无法强制**（拿不到长度就管不了）。影响：票面「单个附件 ≤50MB」在契约上无法被机器保证。方案 a) 契约补 fileSize（必填）并改断言；b) 或改成后端自己从对象存储读 Content-Length 校验（多一次调用）。属规格层，要 Kevin 或 ① 侧定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 210,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT image/sort 的请求体形状契约未定：本票自行定为 {ids:[该位全部 id]}",
+      "detail": "doc/api-contract.md 只写了这个端点存在，没定请求体。实现取 ids 数组（该图片位全部 id 的新顺序）。影响：纯前端票 DOC-RENDER-001 / QC-WEB-001 要按这个形状对接；若契约后续改成 {slot, order:[...]} 就是破坏性变更。方案：把形状补进契约。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 211,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "patientNo 用手工加解密而非 @EncryptField 注解（ADR-0006 字面 vs accept 的唯一过法，D1 起既有偏差）",
+      "detail": "ADR-0006 的字面是「加密列用 @EncryptField」；但框架拦截器写的是 ENC_+Base64，而 accept 3 末段要的是裸 Base64（与 openssl 输出逐字相等）→ 只能沿用 SampleFieldCipher 手工加解密（SAMPLE-MODEL-001 先例）。影响：这是 D1 起就存在的全局偏差，本票只是跟随既有实践；两套加密写法并存会让新人有坑。方案：回 ①xuqiu/ADR 明确「本项目加密列一律手工加解密、不用 @EncryptField」，并把理由写进 ADR-0006。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 212,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "viabilityOssId=0 被当作「摘掉活率附件」的哨兵值（契约未写）",
+      "detail": "活率报告是样本质控表上单独一栏 vitality_oss_id（不走通用附件）。实现用 0 表示「摘掉」而非 null，因为 Jackson 无法区分「字段缺省」与「显式 null」。影响：前端必须知道 0 是哨兵；契约里没有这条。方案：契约补一句，或改成显式 null + 独立布尔。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 213,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "seed 里没有「质控文档是唯一下游」的样本 → 「仅因 published 质控文档而不能改判无效」的 E2E 总被 EMBED/CRYO 先拦",
+      "detail": "QcChildrenChecker 的判据是「样本名下有 published 质控文档」。但 seed 里凡是有质控草稿的样本都同时挂了包埋或冻存批次，于是端到端测这条时总是被 EMBED/CRYO 的同类检查先拦下，分不清是哪条拦的。本票只能靠契约测试证明。影响：D6 的 L3 若要验这条，需要一条「只有质控文档、没有包埋/冻存」的样本。方案：seed 加一个这样的样本，或 QA 时临时造一条并在报告里说明。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 214,
+      "ticket": "QC-MODEL-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "任务书与历次派单写的 doc/authority/authority_lint.py 不存在（真实位置在 xuqiu skill）→ 已加转发垫片修复",
+      "detail": "复现：ls doc/authority/authority_lint.py → No such file or directory；doc/authority/ 下只有 _rendered/ _snapshot.json field-ssot.yaml flows.yaml ui-index.yaml。真实脚本在 ~/claude-config/skills/xuqiu/scripts/authority_lint.py。影响：**D1–D6 每一任 impl/QA subagent 都被指向一个不存在的文件**——只有自己找到 skill 路径的人才真取到权威口径，其余人要么静默跳过、要么记 WARN（本条就是 QC-MODEL-001 的 WARN ⑪ 发现的）。权威口径是「以蓝图为准」判定的唯一依据，这条路断掉等于把 doc-drift 的判断权交给运气。修复：新增 doc/authority/authority_lint.py 转发垫片（自动补 --ws <项目根>/doc，从任意 cwd 可用），实测 show FLOW:F-QC-01.step1 与 FIELD:t_lqg_qc_score.total_score 均正常、check 报「396 条权威 × 43 个 ticket，锚点全部有效」。建议：任务书模板与 qa/impl 提示词模板里的路径一并核对。",
+      "status": "decided",
+      "decision": "fixed：已在 2026-09-22 加 doc/authority/authority_lint.py 转发垫片（转发给 ~/claude-config/skills/xuqiu/scripts/authority_lint.py 并自动补 --ws <项目根>/doc）。机器证据：python3 doc/authority/authority_lint.py show FLOW:F-QC-01.step1 输出正确 JSON；从 /tmp 用绝对路径调 FIELD:t_lqg_qc_score.total_score 也正确；python3 doc/authority/authority_lint.py check → 「396 条权威 × 43 个 ticket，锚点全部有效、无悬空、无锚到废弃记录」。残留：这不改 ① 侧任务书模板里的路径写法（仍写 doc/authority/…，但现在是可用的）。"
+    },
+    {
+      "id": 215,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "JVM 把 127.0.0.1 的 MinIO 请求丢给系统代理 → 框架 OSS 上传 500（阻塞 120s）；已把修法从 gitignored 文件移进 qa-up.sh",
+      "detail": "病灶：macOS 系统代理（127.0.0.1:1081）被 JDK 灌成 http.proxyHost，而 JDK 自带的 http.nonProxyHosts **只含 localhost、不含 127.0.0.1** → AWS SDK(Netty) 把发往 127.0.0.1:9000(MinIO) 的请求交给代理 → 框架自带 POST /resource/oss/upload 直接 500，且阻塞 120s 才报 doBlockingWrite ... within 120 seconds。诊断难点：**curl 不受影响**（它认 NO_PROXY），只有 JVM 踩，从外部看不出是代理问题；DOC-RENDER-001 用脱离 Spring 的探针复现到 ChannelDiagnostics 里写着 R:/127.0.0.1:1081（取证 doc/waves/reports/DOC-RENDER-001/oss-proxy-root-cause.txt）。修复：原修法放在 **gitignored** 的 code/deploy/dev/.env（换机/清库即丢，不可复现）→ 已改为在 doc/waves/tools/qa-up.sh 起后端时直接注入 '-Dhttp.nonProxyHosts=localhost|127.0.0.1|*.local|local'，并把 .env 那行注释掉（单一真相源）。**证伪验证**：注释掉 .env 那行、只用 qa-up 注入重启后端 → DOC-RENDER-001 accept 仍 2/2 绿（.tmp/doc-render-verify2.json）。建议：若还有别的起后端路径（.tmp/run-backend.sh / code/deploy/test/deploy.sh），一并对齐。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 216,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "sys_oss_config.minio 指向的是另一个 MinIO 容器（dev-minio:9000/bucket ruoyi），不是项目自己的 lqg-dev-minio:9002",
+      "detail": "复现：查 sys_oss_config 里 service='minio' 那行是若依基线原值，endpoint 指向 Docker 里的 dev-minio:9000、bucket=ruoyi；而本项目自备的 lqg-dev-minio（9002 api / 9003 console）那个桶**还没建**。影响：①127.0.0.1:9000 正是上面那条代理病灶的受害者，所以这个错配恰好把问题暴露出来；②本项目 dev 的图片/附件其实写进了 Kevin 的另一个 MinIO 容器，与本项目 compose（测试环境）里的 minio 不是同一个 → 本机验证与测试环境行为可能不同；③将来 clean 环境时容易踩空。本票没动它（改配置要走迁移/seed，属 ① 侧）。方案：统一到项目自己的 lqg-dev-minio:9002 并建桶，或明确「dev 复用 dev-minio」并把文档/seed 写清。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 217,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "「取图失败」语义跨票冲突：本票=跳过该图+WARN、文档照出 done；DOC-PDF-001 counterfeit=取图失败应整份 failed",
+      "detail": "本票取证：seed 的 sys_oss 行是 https://seed.invalid 假 URL 取不到字节，而票面 accept 2 要求 1001/organoid_qc 渲染后状态为 done → 若按「取不到图整份 failed」实现，accept 永远红。实现因此取「跳过该图 + WARN、文档照出 done」。反面：DOC-PDF-001 的 counterfeit 里写着「图片地址取不到时整份文档 failed，而不是静默出一份缺图的文件」。两者互斥。给 DOC-PDF-001 的裁定建议：**以其 accept 为准**（其 accept 1 的合并件要求包含 1001 的文档，也就是 docx 必须先 done），counterfeit 那句话按「取图失败且**无任何图**」或另一类场景重新表述。属规格层，已在 D6 门集中上报。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 218,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "system:oss:upload 此前只授给 role 3（超管）→ 迁移给 101/102 补授 1600-1602（扩大内部角色上传权限）",
+      "detail": "复现：accept 1 要求 --as staff（role 102）调框架的 /resource/oss/upload，实测 403（该权限串原本只授 role 3 超管）。修复：V202609261410 给 101/102 补授 1600-1602。影响：**功能性授权但确实扩大了内部角色的上传权限**（越出 DOC 域的权限行）；合规上需要确认「内部人员自行上传图片/附件」是需求（票面 accept 已隐含要求）。方案 a) 保留（有票面依据）；b) 若要收窄，改成业务端点代理上传、不下发框架级 oss:upload。已记 WARN，建议 D6 门与 Kevin 确认。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 219,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "DocImageBytes 手工给 PNG 插 tEXt / JPEG 插 COM 以绕开 POI 的图片去重（规范内但改了字节）",
+      "detail": "缘由：票面 accept 的 --min-images 2 与一次上传挂两个位的打法，会让 POI 的 addPackagePictureData 复用同一 part（word/media 只 1 份）→ 必红。实现给每次出现插入规范内的辅助段（PNG IEND 前 tEXt、JPEG SOI 后 COM），解码器忽略它们。影响：产物里图片字节与源字节不再逐字节相同；若将来有断言比对源图与嵌入图 md5，会冲突。方案：在 doc/api-contract.md 或模板说明里写明「同一图多处引用会被注入辅助段」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 220,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "docx 模板的两处结构约定（图片位 3 个独立 run、评分表分值列 vMerge）未写进任何文档",
+      "detail": "①「要求图片可以放大」那一格必须拆成 3 个各自独立的 run —— 挤在一个 run 里，poi-tl 的 ClearHandler 会因为某一格没数据把另外两张一起抹掉；②评分表的「类器官质量评分」列在原甲方原件里是**按变量纵向合并**的，占位符只能进 4 个 vMerge=restart 的格子。影响：换模板或让甲方给定稿模板（REQ-DOC-011 是 clarify）时，这两条不写下来就会重踩。方案：写进 code/.../resources/lqg/doc-templates/ 的 README，或 doc/api-contract.md 的模板约定一节。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 221,
+      "ticket": "DOC-PDF-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "5520 顶层 C 菜单（parent_id=0）走 isMenuFrame 分支 → 页面路由自身没有 hidden；QC-WEB-001 accept 1 照现状会红",
+      "detail": "【我复核后的机制，纠正实现方 WARN 里「RouterVo.hidden 从未被赋值」的说法】：框架确实有赋值（SysMenuServiceImpl:189 router.setHidden(\"1\".equals(menu.getVisible()))），但  为真时会走**专用分支**：外层包一个 Layout 外壳（外壳拿到 hidden=true、meta=null、name=路由名+menuId），真正的页面变成**子路由且不带 hidden**。实测 /system/menu/getRouters（--as admin，role 101）返回：外壳 ('/', hidden=true, Layout, name='5520') + 子路由 ('/doc-console', hidden=None, 'lqg/doc/index')。**用户可见行为其实是对的**（外壳 hidden → 侧边栏不渲染），但 QC-WEB-001 accept 1 断言的是 doc-console 路由的 .hidden==true → 必然红。上游惯例：所有隐藏 C 页面都挂在目录菜单（type=M）下（116/130/131/132/133 全 parent_id≠0）→ 走 else 分支 → 路由自身 hidden=true ✓。方案 a)（推荐，合框架惯例）新建一个**隐藏的 M 目录**并把 5520 与 QC-WEB-001 的 5510 都挂到它下面（M 目录 parent=0 时也走 else 分支拿 hidden=true，整条链都隐藏且可路由）；b) 保持 parent_id=0 并在 QC-WEB-001 里把断言改成「外壳 hidden=true」；c) 把 5520 的 is_frame 改成 '0'（会走 else 分支拿到 hidden，但语义上等于标成外链，不推荐）。**注：V202609261420 已应用，不许改它；要改结构必须新开一支迁移。** 已把 a/b 两个方案原文转达 QC-WEB-001。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 222,
+      "ticket": "QC-WEB-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "票面规定的迁移号段 V20260926132* 已被 DOC-PDF-001 的 V202609261420 越过 → 照票面写会撞 Flyway out-of-order=false",
+      "detail": "复现：票面 touches 写 code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/db/migration/V20260926132*__QC-WEB-001-*.sql；而 DOC-PDF-001 已应用 V202609261420（且 QC-MODEL-001 用了 1300/1310、DOC-RENDER-001 用了 1400/1410）。Flyway 配置是 out-of-order=false → 新迁移版本号只要小于已应用的最大值，后端启动即 FlywayValidateException（本项目已因此重建过 4 次开发库，见 issue #12 等先例）。方案：QC-WEB-001 的迁移**改用大于 202609261420 的号**（如 V202609261430__QC-WEB-001-qc-menu.sql），并在完工报告里写明取号依据。这条在派单时已提前告知实现方，本处留档。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 223,
+      "ticket": "DOC-PDF-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越出 touches 6 处（票面 §2 点名要改、touches 却漏列）",
+      "detail": "①ruoyi-lqg/pom.xml（引 pdfbox，票面 §2 要求）；②doc/render/service/DocRenderService.java（票面 §2 要求扩流水线）；③doc/render/controller/DocRenderController.java（票面 §2 要求加端点）；④db/migration/V202609261420__DOC-PDF-001-doc-console.sql（工作台那一步的落点）；⑤plus-ui/src/api/lqg/doc/index.ts；⑥plus-ui/src/views/lqg/doc/index.vue。前三条是票面明确要求、touches 漏列；后三条属「工作台 failed 时显示原因 + 重新生成按钮」的最小落点（整页编辑页留给 QC-WEB-001）。**这是 touches 系统性偏窄的又一例**（D2 起已记多条）。建议：①侧拆票时把「票面 §2 点到要改的文件」自动并进 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 224,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "渲染老产物只靠指纹过滤、不做清理 → 存储单调增长",
+      "detail": "设计：同一 (docKind, audience) 每次重出都写新行、新的 oss_id；pages/download 只认与 header 同行指纹的那份，旧产物保留但不被返回。好处是失败时不会误返回旧产物；代价是对象存储只增不减（每次改一个字都留一份 docx+pdf+每页 PNG）。影响：长期会积累；当前体量无碍。方案 a) 加一个保留 N 个版本的清理任务；b) 至少记一条运维待办（放 SYS-BACKUP-001 或上线一轮）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 225,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "GET …/pages 的返回体比契约多了一个 errorMsg 键",
+      "detail": "票面/契约写的形状是 {status, pages:[{pageNo,url}], images:[{url,previewUrl}], attachments:[{fileName,fileSize,url}]}；实现多返回一个 errorMsg（failed 时给前端显示原因用，票面工作台那一步确实需要它）。影响：前端可忽略未知键，不破坏；但契约该补。方案：把 errorMsg 补进 doc/api-contract.md 的该端点。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 226,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "test 环境的 gotenberg 需测试机就位 amd64 镜像、且 deploy.sh 要 rsync common/gotenberg",
+      "detail": "本票给 code/deploy/test/docker-compose.yml 加了 gotenberg 服务、并新建 code/deploy/common/gotenberg/（Dockerfile + 字体）。但测试机上的部署脚本（code/deploy/test/deploy.sh 与 remote/*.sh）目前**只同步后端 jar 与 compose**，不会把 common/gotenberg 传上去，也没有在测试机构建该镜像——所以下次重部署测试环境时 gotenberg 会起不来（PDF 渲染在测试环境不可用）。影响：属上线档（Kevin 2026-09-22 已把上线相关推迟到「上线一轮」）。方案：上线一轮里补 deploy.sh 的 rsync/gotenberg 构建，并在测试机预拉 amd64 镜像。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 227,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "勘误：#221 的 detail 里被 shell 吃掉了判定式（我写 issue 时用了反引号）",
+      "detail": "补上缺失的那一句：isMenuFrame() 的判定是「parentId == TOP_PARENT_ID(0) 且 menuType == TYPE_MENU(C) 且 isFrame == NO_FRAME(常量值 1)」，三者同时成立才走专用分支。常量出处：ruoyi-common-core 的 SystemConstants（NO_FRAME=\"1\"、TYPE_MENU=\"C\"）。其余内容见 #221。教训：#221/#222 这类含判定式与代码片段的 issue，正文别用反引号（会被 bash 当命令替换），用「」或直角引号。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 228,
+      "ticket": "QC-WEB-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "「published 后再保存是否回到 draft」口径冲突：DDL 注释说会回、类注释说本票一个字不动",
+      "detail": "冲突两处：V202609261300__QC-MODEL-001-qc-docs.sql 的 DDL 注释写「published 后再保存 → 回到 draft」；而 QcDocService 类注释写「本票一个字都不动 doc_status（归 DOC-PUBLISH-001）」。QC-WEB-001 按实现（不动）写断言。影响：DOC-PUBLISH-001 落地时要拍死这条语义——「已完成的文档被再次编辑，是自动退回草稿（需要重新发布）还是保持 published 并只改内容」；两者对老师体验与下游（DOC-PROOF-001 的甲方签字基线）都不同。方案 a) 采 DDL 注释（保存即回 draft，更安全，避免已发布文档被静默改内容）；b) 采类注释（保持 published）。**属规格层，要 Kevin 或 ① 侧定**，我在派 DOC-PUBLISH-001 时会带上。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 229,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "派单模板的 Playwright 锚点写错（plus-ui）→ MODULE_NOT_FOUND；实际装在小程序前端",
+      "detail": "复现：QC-WEB-001 按派单写 createRequire(path.join(WS,'code/plus-ui/package.json')) 再 require('playwright') → MODULE_NOT_FOUND；核对：code/plus-ui/package.json **没有声明 playwright**（node_modules 里即使曾出现过也是残留，pnpm install 会剪掉），而 code/miniapp/package.json 声明 playwright ^1.63.0 且 node_modules 里在。修法：已把 doc/waves/tools/README-modeB.md 的模板改成以 code/miniapp/package.json 为锚点（D3–D5 的 QA 分片一直这么用、从未出问题）。教训：我早先的核查被 plus-ui 里一个残留的 playwright 目录骗了 —— **判依赖在不在，要看 package.json 声明，不要只看 node_modules 有没有目录**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 230,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "隐藏菜单改方案 a 后真实路由变成 /qc-console/qc-editor（票面与权威写的 /qc-editor 不再成立）",
+      "detail": "方案 a（隐藏 M 目录 5500 + 子菜单）让路由天然带一层目录前缀：实测 getRouters 里外层 /qc-console(hidden=true) + 子路由 qc-editor / doc-console 都 hidden=true；因此真实 URL 是 /qc-console/qc-editor?sampleId=…，而票面与权威锚 UI:admin.qc.editor 附近写的是 /qc-editor。影响：深链、书签、以及任何按路径匹配的断言/文档都要跟着改；若甲方或运维按文档敲 /qc-editor 会 404。方案 a) 把权威与契约里的路径同步成 /qc-console/qc-editor（推荐，与实现一致）；b) 改成不要目录前缀（那就回到 isMenuFrame 外壳分支，hidden 又落不到子路由上）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 231,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "菜单 5511-5513 与既有 5501-5503 是同一批 perm 的第二份（票面字面要求，perms 走 HashSet 去重）",
+      "detail": "票面字面要求为编辑页再建三个按钮菜单 5511/5512/5513，perm 与 QC-MODEL-001 已建的 5501/5502/5503（lqg:qc:query/edit/publish）完全相同。因为权限集合走 HashSet 去重，accept 与授权行为都不受影响，只是 sys_menu 菜单树里多三行同名按钮。影响：菜单管理页会出现重复项，长期易混淆。方案：①侧拆票时让按钮菜单归属唯一（要么 QC-MODEL-001 只建表不建按钮、要么 QC-WEB-001 只挂已有按钮）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 232,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "越界 2 处（i18n key + UPDATE 5520 parent_id）",
+      "detail": "①code/plus-ui/src/lang/lqg/sample.{zh_CN,en_US}.ts 各 +1 key（rowAction.qcDocInvalid，给置灰入口的 title 用；i18n 约定下没有别的落点）；②迁移 V202609261430 里 UPDATE sys_menu SET parent_id=5500 WHERE menu_id=5520（把 DOC-PDF-001 的隐藏页一并挂进隐藏目录，是方案 a 的一部分；**没改已应用的 V202609261420**，并回归验证 /qc-console/doc-console 仍可路由）。两处都属合理越界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 233,
+      "ticket": "QC-WEB-002",
+      "severity": "S2",
+      "type": "debt",
+      "title": "票面假设 useDict 透传 remark，实际上游不透传 → 评分分值根本拿不到；越界改共享 utils/dict.ts 与 types/global.d.ts",
+      "detail": "复现：票面 §2 写「选项与分值来自 useDict 的 label 与 remark」；实际上游 useDict 只映射 label/value/elTagType/elTagClass → 前端拿不到 remark（分值）。实现给 utils/dict.ts 与 types/global.d.ts 加了**可选** remark 透传（加法、向后兼容，不破坏既有调用）。影响：这是共享 util 的越界改动，任何依赖 useDict 返回形状的既有页面都受影响面（本票已验证无破坏）。方案 a) 保留并把它写进前端约定（评分类页面都靠它拿分值）；b) 若不愿动共享 util，改成专门的 useDictWithRemark 或评分专用接口。**注意：分值唯一真相源仍是 sys_dict_data.remark，前端不得本地硬编码分值。**",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 234,
+      "ticket": "QC-WEB-002",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越界把页签挂载从 v-if 改成 v-show（否则换页签会静默丢掉另一页签未保存的改动）",
+      "detail": "复现：QC-WEB-001 的 editor/index.vue 用 v-if 挂载页签，后两个页签接真数据后，换页签会卸载组件 → 另一页签里未保存的编辑内容静默丢失（老师会以为自己填好了）。实现改成 v-show 常驻 + dirty 按页签各记一份。影响：改动越出本票 touches（index.vue 在 touches 里，挂载方式是既有代码的语义变更）；代价是三个页签组件常驻（内存与首次加载略增）。方案 a) 保留 v-show（数据安全优先）；b) 回到 v-if 但加「离开页签前提示未保存」。**这条不是 cosmetic：它是数据丢失类问题**，已在 D6 门 L2 作为一条观察点。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 235,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "debt",
+      "title": "直接 psql 改 sys_dict_data 不失效 Redis 字典缓存：必须走 PUT /system/dict/data（@CachePut）",
+      "detail": "复现：探针第一版用 psql 把 lqg_score_pre_culture 的 lt40 remark 从 8 改成 88，页面 GET 字典仍返旧值（缓存未失效）；改走 PUT /system/dict/data 后三处同时变（8→88、该项 8→88、合计 18→98），再自动改回 8。影响：**D6 QA 门的 L1「评分对账」与 L3 的字典类邪路都要注意**——用 psql 改字典再断言会得到假红/假绿；同理任何「改字典 → 看页面」的验证必须走接口或手动清缓存。方案：把这句写进 doc/verify/README.md 的「本栈已知的坑」表（该表已有同类条目），并在 QA 派单里带上。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 236,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 2 的 grep useDict 是弱断言：前端硬编码分值也能过",
+      "detail": "复现：accept 2 只 grep 页面里出现 useDict，把分值写死在页面里（不走字典）同样能过。实现自己补了 counterfeit-probe.mjs：改字典 remark 8→88 后页面三处必须同时跟着变（8→88、该项 8→88、合计 18→98），否则红。影响：票面 accept 本身挡不住「前端硬编码分值」这个最容易犯的错（正是票面 counterfeit 想防的）。方案：把该探针的核心断言固化进 accept（或放进 D6 回归包），别只留在报告里。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 237,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "两个页签都按蓝图加了「底部附件区」（票面 §2 字面未枚举，可能被判镀金）",
+      "detail": "票面 §2 对 OrganoidQcTab / ScoreTab 的字面清单里没写附件区，但蓝图锚 UI:admin.qc.editor 的该页签下有附件；实现按蓝图加了（**prompt 与蓝图冲突时以蓝图为准**，符合派单规则）。影响：范围界定问题——若 QA 门按票面字面判「镀金」，这条会被误判。方案 a) 保留（有蓝图依据）；b) 让 ① 侧把票面 §2 与蓝图对齐。已在报告 §5 WARN-5 记明。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 238,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "勘误 #208：本机 ImageIO 读不了 TIFF 的说法不成立——TIFF→JPEG 预览分支实测端到端可用",
+      "detail": "D6 的 L2 片独立实测推翻了 #208 的一半诊断：把真 TIFF 经框架 OSS 上传后，preview_oss_id ≠ oss_id 且下载确认是 JPEG；2400px 的 PNG 也真的走了缩放分支。也就是说 **JDK 17 的 ImageIO 自带 TIFF reader**，「本机 ImageIO 读不了 TIFF，需 imageio-tiff 插件」这条不成立。#208 里仍然成立的那一半是：**seed 的 sys_oss 是 https://seed.invalid 假地址取不到字节**，所以「预览转换」在**确定性 seed 数据上**跑不到——要验它必须自备真图上传。影响：若 D7/后续票按 #208 的错前提去装 imageio-tiff 或做别的预案，会白做。纠正后的结论：①预览分支本身可用（L2 已端到端验）；②缺的是「seed 里没有可真取的图」，属测试数据问题不是实现问题；③DOC-PROOF-001 若要出样张、以及 D6 L2 的 TIFF 预览断言，都应自备真图而不是依赖 seed。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 239,
+      "ticket": "QC-WEB-002",
+      "severity": "S2",
+      "type": "ux",
+      "title": "三个页签共用一个「保存草稿」：点一次只存当前页签，toast 恒说「草稿已保存」且页签上没有脏标记",
+      "detail": "复现（D6 L2 真浏览器）：在页签1改字段 → 切到页签2改字段 → 点底部「保存草稿」→ 只有页签2落库；实测 clinical_diagnosis 仍「测试诊断」、growth_state 仍「良好」，刷新回旧值。我复核了代码：handleSaveDraft 只调 activeTabRef.value.save()，且 index.vue 第 276 行注释明写「只保存当前页签」= 有意设计；同时 dirtyTabs 按页签各记一份、dirty 被 onBeforeRouteLeave 与 beforeUnloadHandler 同时使用 → 刷新/关标签**会弹浏览器原生未保存提示**，所以不是无声丢稿。真正的问题是**误导**：按钮只写「保存草稿」、toast 恒为「草稿已保存」、页签上无脏标记。定级依据：主流程能走且有兜底提示，属本票范围内 UX 而非数据丢失 → S2（与独立 QA 判定一致，我核实后未改判）。方案 a) 按钮文案改「保存当前页签」+ 脏页签加圆点/星号；b) 一键保存所有脏页签（toast 按实际存了几个措辞）。改动很小，但会作废已跑的 L2/L3 证据，故按纪律进 all_done 清账。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 240,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "编辑页页头「性别」显示字典 raw value「male」，与样本总表的字典标签「男」、渲染出的 Word「男」三处不一致",
+      "detail": "复现（D6 L2）：编辑页页头带出的只读字段里，性别一栏渲染的是 male；样本总表同一字段走 dict-tag 显示「男」；DOC-RENDER-001 渲染出的 Word 里也是「男」。三处不一致。影响：老师在同一份文档的两个界面看到两种写法。方案：编辑页页头改用字典标签渲染（与总表同源）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 241,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "确定性 seed 下编辑页 4 个图片位全是「图片加载失败」；「要自备真图才能做视觉验收」这个前置没写进任何票面或文档",
+      "detail": "复现：seed 的 sys_oss 行是 https://seed.invalid 假地址（service=seed）→ 编辑页四个图片位全显示破图。影响：任何按票面走「视觉验收」的人都会先看到四个破图，误以为实现坏了；L2 片因此不得不自备真图上传才验成「TIFF 预览/点图放大/传满 3 张按钮消失」。方案 a) 给 seed 加几张可真取的图（放 MinIO 或本地 fixture）；b) 至少在票面/README 的「本栈已知的坑」里写明这条前置。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 242,
+      "ticket": "QC-WEB-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "QC-WEB-001 acc2 的「只读字段没进表单」是字面 grep，form[internalNo] 括号绑定可绕过",
+      "detail": "复现（D6 L2 证伪 F4/F5）：把只读字段写成 v-model=form.internalNo 时 acc2 的 grep 命中 → 红（断言生效）；改成 v-model=form[internalNo]（方括号绑定）则 acc2 仍绿（断言盲）。影响：断言挡不住「用方括号绑定把只读带出字段接进表单」这一种写法。方案：acc2 改成对提交体做断言（如保存请求的 payload 里不得出现 internalNo 等带出字段的键），而不是对源码 grep —— 与 QC-WEB-002 acc1 的同类问题（见 #236 与本次新增）是同一个根因：**源码 grep 型断言对等价写法无力**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 243,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "复核并扩大 #236：把评分分值硬编码进页面后，QC-WEB-002 acc1+acc2 与 QC-MODEL-001 acc2 三处全绿",
+      "detail": "复现（D6 L2 证伪 F3）：把分值写死在页面（不走 useDict 也不读字典 remark）→ QC-WEB-002 acc1（vitest fixture）与 acc2（grep useDict）以及 QC-MODEL-001 acc2（后端对账）**全部仍绿**，唯一有效的护栏是 QC-MODEL-001 里的后端反射测试（钉住 QcScoreSaveBo 没有 *Score 字段）。影响：票面 counterfeit 想防的「前端夹带/硬编码分值」在**前端侧**没有任何机器断言拦得住。本票实现者自己补了 counterfeit-probe.mjs（改字典 8→88 页面三处跟着变），但探针只留在报告里、没进 accept/回归包。方案：把该探针固化进 D6 回归包或 accept（这是 D6 唯一能挡这条的端到端断言）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 244,
+      "ticket": "DOC-RENDER-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "DOC-RENDER-001 acc2 的指纹覆盖只测文本字段：换图 / 升模板版本两条不在 accept 里",
+      "detail": "复现（D6 L2 证伪 F9）：acc2 只改文本字段来验「改了任一处都重出」；换一张图、升 template_version 这两条**不在 accept 覆盖内**。产品行为本身是对的（D6 L3 独立验过：改一个字/加一张图/只倒换图序都重出；升模板版本真改源码重打包重启后重出、还原后 hash 逐字回到原值）。影响：断言覆盖窄于产品语义，未来若有人把这两个输入漏出指纹，accept 不会红。方案：把「只换一张图」「只升 template_version」两条加进 acc2（L3 的取证脚本可直接复用）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 245,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "DOC-PDF-001 acc2 的 counterfeit 那句「图片地址取不到时整份文档 failed」与 #217 的裁定不一致，建议改口径",
+      "detail": "复现（D6 L3）：1001/sample_qc 三张图全是 seed 假地址 → render=done、errorMsg=null、下载 docx --max-images 0 = 0 张图，日志每张图 2 条 WARN 点名 ossId 与原因；真图对照组上传 1 张真图 → 产物恰好 1 张图；把真图对象键改成不存在 → 0 张图、仍 done、WARN 带 NoSuchKeyException 404。即实测符合 #217 裁定的 ① 侧（docx 阶段个别图取不到 = 跳过 + WARN、文档仍 done），而不是 counterfeit 字面的「整份 failed」。L3 同时排查掉了两种真缺陷形态：不存在「无 WARN 的静默 done」（DocxRenderer 对每次取图失败必打 WARN），也不存在「流水线失败仍 done」。方案：把 acc2 的 counterfeit 那句改成与裁定同口径（例如改成「**所有**图片位都取不到时可以出一份缺图文档但必须逐张 WARN；而**流水线步骤**失败必须整份 failed」）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 246,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "reseed 不清运行期上传到 sys_oss 的行 → 各轮测试的上传物在开发库里累计（L2/L3 交接时已积 341 行）",
+      "detail": "复现：D6 L3 收工交接里如实报「我自己那 41 行非 seed sys_oss 已删，剩余 341 行是 L2/更早各轮留下的」。reseed.sh 会 TRUNCATE t_lqg_* 与删 seed 段账号，但**不动 sys_oss**（上传物是运行期产物、service 不是 seed）。影响：①开发库里 sys_oss 单调增长；②任何按 count(sys_oss) 写的断言会随轮次漂移（D5 的 OCR accept 就有一条「识别前后 sys_oss 行数不变」的断言——它比的是差值所以没事，但别的计数型断言会中招）；③视觉验收时会看到一堆别人的上传物。方案 a) reseed 时连带清 sys_oss 里非 seed 行（要谨慎：sys_oss_config 与 seed 行要留）；b) 至少给测试上传加个标记列便于清理；c) 把这条写进 README 已知坑表。",
       "status": "open",
       "decision": ""
     }

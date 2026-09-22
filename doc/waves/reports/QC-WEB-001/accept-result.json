@@ -1,0 +1,31 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "QC-WEB-001",
+   "index": 1,
+   "form": "MENU",
+   "name": "隐藏菜单可路由：path 与 component 非空、visible 为隐藏、路由下发里存在且标了 hidden；三个权限串下发到内部人员",
+   "exit": 0,
+   "seconds": 0.5,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/QC-WEB-001-acc1.sh",
+   "log": ".tmp/qc-web-accept-logs/QC-WEB-001-acc1.sh.log"
+  },
+  {
+   "ticket": "QC-WEB-001",
+   "index": 2,
+   "form": "API",
+   "name": "前端构建是本次产物；编辑页用了图片位上传与附件组件；带出的只读字段没有进表单；样本总表的「质控文档」入口已点亮",
+   "exit": 0,
+   "seconds": 10.2,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/QC-WEB-001-acc2.sh",
+   "log": ".tmp/qc-web-accept-logs/QC-WEB-001-acc2.sh.log"
+  }
+ ]
+}

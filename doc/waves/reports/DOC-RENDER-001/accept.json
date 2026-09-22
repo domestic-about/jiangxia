@@ -1,0 +1,36 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "DOC-RENDER-001",
+   "index": 1,
+   "form": "DATA",
+   "name": "渲染出的 Word：带出字段与填写字段都在、两句印死的注逐字保留、没有残留占位符、图片真的嵌进去了；外部版里找不到内部编号而内部版里有",
+   "exit": 0,
+   "seconds": 1.9,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-RENDER-001-acc1.sh",
+   "log": ".tmp/doc-render-accept-logs/DOC-RENDER-001-acc1.sh.log"
+  },
+  {
+   "ticket": "DOC-RENDER-001",
+   "index": 2,
+   "form": "STATE",
+   "name": "渲染产物表与 SSOT 相符；指纹缓存成立：内容没变不重出、改了任何一处都重出、内外部各一份互不覆盖",
+   "exit": 0,
+   "seconds": 5.9,
+   "nf": [
+    "NF1",
+    "NF2"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-RENDER-001-acc2.sh",
+   "log": ".tmp/doc-render-accept-logs/DOC-RENDER-001-acc2.sh.log"
+  }
+ ]
+}

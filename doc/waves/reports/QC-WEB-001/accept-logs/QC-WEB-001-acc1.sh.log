@@ -1,0 +1,6 @@
+# QC-WEB-001 accept[1] 隐藏菜单可路由：path 与 component 非空、visible 为隐藏、路由下发里存在且标了 hidden；三个权限串下发到内部人员
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+5510:qc-editor:lqg/qc/editor/index:1
+true
+true

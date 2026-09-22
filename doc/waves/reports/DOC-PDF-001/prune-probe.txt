@@ -1,0 +1,21 @@
+════ 探针：页数变少 → 多余的旧页行软删（merged 由 3 份的 5 页 → 2 份的 3 页）
+（注：/lqg/qc/{id}/{docType}/unpublish 还没实现——那是 DOC-PUBLISH-001 的 D7 范围（实测 404），
+ 所以这里用一次**调试用的库写**把评分表打回 draft，等价于「撤回一份」；探针跑完 reseed 还原）
+── 改前 merged 的 png 行
+1 del=0 hash=e40056fc
+2 del=0 hash=e40056fc
+3 del=0 hash=e40056fc
+4 del=0 hash=e40056fc
+5 del=0 hash=e40056fc
+── 把类器官质量评分表打回 draft
+   UPDATE 1
+── 重新渲染 merged
+{"status":"done","errorMsg":null,"contentHash":"c74cf730"}
+── 改后 merged 的 png 行（注意 4/5 的 del=1）
+1 del=0 hash=c74cf730
+2 del=0 hash=c74cf730
+3 del=0 hash=c74cf730
+4 del=1 hash=e40056fc
+5 del=1 hash=e40056fc
+── pages 端点此刻的页数
+{"status":"done","pages":[1,2,3],"templateVersion":"2","contentHash":"c74cf730"}
