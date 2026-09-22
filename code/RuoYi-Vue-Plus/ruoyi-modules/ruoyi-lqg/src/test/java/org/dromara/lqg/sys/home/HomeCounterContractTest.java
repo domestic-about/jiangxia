@@ -5,8 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import org.dromara.lqg.doc.render.mapper.DocFileMapper;
 import org.dromara.lqg.sys.home.controller.HomeController;
 import org.dromara.lqg.sys.home.domain.vo.HomeRecentVo;
@@ -43,8 +44,14 @@ import java.util.stream.Collectors;
  *   <li><b>渲染失败数是「组数」不是「行数」</b>：DOC 域的读口必须 {@code DISTINCT}
  *       样本 / 文档种类 / 受众三键，且手写 {@code del_flag='0'}（自定义 SQL 不吃
  *       {@code @TableLogic}）；</li>
- *   <li><b>两个端点登录即可调</b>：只有 {@link SaCheckLogin}，没有 {@link SaCheckPermission}
- *       ——「少一行菜单权限就 403」会让「没有待办」与「功能坏了」分不清。</li>
+ *   <li><b>两个端点是内部角色闸</b>：{@code @SaCheckRole(value = {"lqg_admin", "lqg_internal"},
+ *       mode = SaMode.OR)}，<b>没有</b> {@link SaCheckPermission} ——「少一行菜单权限就 403」会让
+ *       「没有待办」与「功能坏了」分不清。★ 必须是<b>角色闸</b>而不是 {@code @SaCheckLogin}：
+ *       小程序 token 同样算「已登录」，只挂登录门时五个外部身份都读得到五个数与跨单位送检单号
+ *       （D7 r1 L3 的 S1），而内外部隔离是 ADR-0004 由 {@code ExtChokepointContractTest}
+ *       守着的不变量 —— 所以第 ⑥ 条从「登录即可调」改成「内部角色闸」。
+ *       ★★ {@code mode} 必须是 {@code OR}：Sa-Token 默认 {@code AND}，漏了它 admin（只有 101）
+ *       与 staff（只有 102）会<b>一起</b> 403 —— 实测踩过，见下。</li>
  * </ol>
  *
  * @author SYS-HOME-001
@@ -124,24 +131,36 @@ class HomeCounterContractTest {
         }
     }
 
-    // ── ⑥ 登录即可调 ─────────────────────────────────────────────────────────
+    // ── ⑥ 内部角色闸（D7 r1 L3 的 S1 修复）────────────────────────────────────
 
     @Test
-    @DisplayName("⑥ 两个端点只挂 @SaCheckLogin（没有权限串、没有菜单依赖）")
-    void bothEndpointsAreLoginOnly() {
-        assertLoginOnly("todo", "/todo");
-        assertLoginOnly("recent", "/recent");
+    @DisplayName("⑥ 两个端点挂内部角色闸 {lqg_admin|lqg_internal, OR}（不是 @SaCheckLogin），无权限串")
+    void bothEndpointsRequireAnInternalRoleGate() {
+        assertInternalRoleGate("todo", "/todo");
+        assertInternalRoleGate("recent", "/recent");
     }
 
-    private static void assertLoginOnly(String methodName, String expectedPath) {
+    private static void assertInternalRoleGate(String methodName, String expectedPath) {
         Method method = null;
         try {
             method = HomeController.class.getMethod(methodName);
         } catch (NoSuchMethodException e) {
             fail("HomeController 缺少端点 " + methodName + "()");
         }
-        assertTrue(AnnotatedElementUtils.hasAnnotation(method, SaCheckLogin.class),
-            methodName + " 必须挂 @SaCheckLogin");
+        SaCheckRole role = AnnotatedElementUtils.findMergedAnnotation(method, SaCheckRole.class);
+        assertTrue(role != null,
+            methodName + " 必须挂 @SaCheckRole —— 只挂 @SaCheckLogin 时小程序 token 也能调，外部就读得到");
+        assertEquals(Set.of("lqg_admin", "lqg_internal"), Set.of(role.value()),
+            methodName + " 的角色闸必须恰好放行 101 lqg_admin 与 102 lqg_internal"
+                + "（只放 lqg_internal 会把工作台管理员首页打 403，那是本票的主场景）");
+        assertEquals(SaMode.OR, role.mode(),
+            methodName + " 的 @SaCheckRole 必须是 SaMode.OR —— Sa-Token 默认 AND 时"
+                + "「同时具备 101 和 102」才放行，而 seed 里 lqgadmin 只有 101、内部人员只有 102，"
+                + "结果 admin 与 staff 会一起 403（D7 r1 返工实测踩过）");
+        for (String allowed : role.value()) {
+            assertFalse(allowed.contains("external"),
+                methodName + " 不许放行外部角色「" + allowed + "」—— 工作台拒外部（AUTH-STAFF-001 §2.2）");
+        }
         assertFalse(AnnotatedElementUtils.hasAnnotation(method, SaCheckPermission.class),
             methodName + " 不许挂权限串 —— 首页是登录后的第一屏，不该因为少一行 sys_menu 就 403");
         GetMapping mapping = AnnotatedElementUtils.findMergedAnnotation(method, GetMapping.class);

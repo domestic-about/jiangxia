@@ -3356,6 +3356,36 @@
       "detail": "复现（D7 r1 L3 片额外发现）：`curl \"http://127.0.0.1:9000/ruoyi?list-type=2&prefix=lqg/\"` → **200**，一次列出 994 个对象（含所有 /internal/ 页图）；把工作台拿到的**内部版**签名链接去掉 query 再 curl → **200 12571 字节**，拿到含 `T-hli01` 的内部 Word。根因**不在应用代码**（我们永远 presign），而在环境/配置：**Flyway 基线的 sys_oss_config 第 1 行**是 9000/ruoyi/access_policy=1(public)/status=0（默认行），指向 **与别的项目共用的 dev-minio**；而本项目 compose 自备的 lqg-dev-minio(9002) 里连桶都没建（DOC-PDF-001 的 WARN-3 只记了「指错 MinIO」，没记这条更重的后果）。影响：本机 dev 上，「10 分钟签名 + 私有桶」这条安全语义**无法被证明**——断言只能证明 URL 带 Expires，证不了「别人拿不到」；同理 #262/#250 那类隔离结论在 dev 都只有一半证据。★**若测试环境（songjian.tianda.studio）沿用了同一条配置行 → 应立刻升 S1**（那会让「测试环境里的内部版文档」公网可读）；建议在「上线一轮」里真跑 SYS-PROD-001 的 `LQG_OSS_PROBE_URL` 匿名 403 探针，并核对测试库 sys_oss_config 到底指向哪个 endpoint/桶/access_policy。方案 a) 给 dev 建一个独立的 lqg-dev 桶（private）并把该行改指它；b) 至少把这条写进 doc/verify/README.md 的已知坑表，避免下游再把「签名 URL 带 Expires」当成隔离证明。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 295,
+      "ticket": "SYS-HOME-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ Sa-Token 的 @SaCheckRole 默认 SaMode.AND：多角色写成 {a,b} 是「两个都必须有」→ 我派单给的字面把 admin/staff 一起打成 403",
+      "detail": "复现（D7 返工 r1 实测，sa-token-core-1.45.0）：我在返工单里写「改成 @SaCheckRole({\"lqg_admin\",\"lqg_internal\"})」——**这个字面是错的**。Sa-Token 的 @SaCheckRole 默认 mode = SaMode.AND，即「列出的角色**全部**都要有」；而 seed 里 lqgadmin 只有 101(lqg_admin)、staff 只有 102(lqg_internal) → 两个角色都不满足 → **admin 与 staff 一起 403（实现方第一版 14 格全 403，含本票主场景工作台首页）**。正确写法是 `@SaCheckRole(value={\"lqg_admin\",\"lqg_internal\"}, mode = SaMode.OR)`。影响：①这是一条**极易踩且症状反直觉**的框架语义坑（授权越写越紧，主场景反而全挂）；②它同样会影响任何后来人写「任一内部角色即可」的闸；③**我的派单字面直接制造了一次返工内的自伤**（实现方按字面做→全 403→自己查出来改 OR）。处置：已修 + 把 `mode == SaMode.OR` 钉进契约测试防回退。★顺带全仓核查（我做的）：`grep -rn \"@SaCheckRole({\" ruoyi-lqg/src/main/java` 只有 HomeController 一处用多值，**没有其它潜伏的 AND 坑**；其余都是单角色（lqg_external / lqg_internal）或不用角色闸。建议：把这条写进 doc/verify/README.md 的「本栈已知的坑」表（一句话：多角色必须显式 mode=SaMode.OR）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 296,
+      "ticket": "SYS-HOME-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ 一个契约测试把缺陷本身钉死了：HomeCounterContractTest 第⑥条原本断言 handler 必须挂 @SaCheckLogin",
+      "detail": "复现（D7 返工 r1 发现）：SYS-HOME-001 自己的 `HomeCounterContractTest` 第 ⑥ 条**逐字断言两个 handler 必须带 @SaCheckLogin**（即把票面那句「登录即可调」翻译成了机器断言）。于是：①任何人想把这两个端点收紧成内部角色闸，都会先被这条测试打红；②更糟的是，它让 S1 缺陷（外部 mp token 可读 /lqg/home/*）在**测试层面显得「按设计如此」**——测试不是没覆盖，而是**主动把错误行为锁死了**。影响：这类「测试钉住缺陷」比没有测试更危险（它给错误行为披上合规外衣，还会在修复时把修的人劝退）。处置：改成断言「角色集合恰为 {lqg_admin,lqg_internal}（现扩为与 StaffGrantRules.INTERNAL_ROLE_KEYS 一致）+ mode==OR + 无权限串」，即**守约束而不是守现状**。建议：①侧写 accept/契约测试时，区分「守需求」与「守实现现状」——凡「必须调用某注解/某函数」型断言都值得问一句「这是在守需求，还是在守某次实现？」",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 297,
+      "ticket": "SYS-ACCEPT-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "mutation-assert.sh 的起点守卫要求工作树干净 → 强化后的四条 accept 在返工树（必然脏）上跑不了",
+      "detail": "复现（D7 返工 r1）：`SYS-HOME-001 acc2` 调 `mutation-assert.sh`，其第 157 行的 `tree_ok` 守卫要求 `git diff -- code/` 只含 `pages.json`（即工作树干净）。而**返工单的工作树按定义是脏的**（改动还没提交）→ 守卫在起点就退出、H2 探针根本没跑 → acc2 红。实现方补证：手工起 8093 跑 `node probe.mjs H2` → 8/8 PASS GREEN（产品侧没问题）。影响：**SYS-ACCEPT-001 引入的「变异验证」在返工轮不可用**——而返工轮恰恰是最需要它的时候（要证明强化后的断言仍能抓红）。方案 a) 给脚本加 `--allow-dirty`，或把「干净」判据改成「除本次拟改的文件外无其它改动」（用 `git diff --name-only` 与一个白名单比对）；b) 或在门里约定「返工单先提交、再跑 acc2」。默认模式仍应保持严格（防止把未提交的实验带进变异验证）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

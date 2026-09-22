@@ -74,8 +74,11 @@ import java.util.List;
  * （不是「我负责的那些」），带数据范围的上下文会把它们静默滤小，
  * 于是「首页显示 1 条、点进去列表里有 5 条」——AUTH-LOGIN-001 报告坑 1 踩过。
  *
- * <p>★ 权限：登录即可调（101 / 102 / 外部都行，见 {@code HomeController}）。数字不带任何
- * 患者信息，外部角色看到的是同样的五个数，前端不给他渲染入口。
+ * <p>★ 权限：<b>内部角色闸</b>（101 {@code lqg_admin} / 102 {@code lqg_internal}），外部
+ * 103 {@code lqg_external} 一律 403 —— 见 {@code HomeController} 的类注释。
+ * <b>不是「登录即可调」</b>：小程序 token 也算登录过，只挂登录门外部就读得到
+ * （D7 r1 L3 的 S1）。数字本身不带患者信息，但 {@code /recent} 带跨单位送检单号与
+ * 内外部标记，所以这两个读口都不对外部开放。
  *
  * @author SYS-HOME-001
  */
