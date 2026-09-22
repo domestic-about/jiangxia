@@ -136,6 +136,19 @@ public class DocArtifactRows {
     }
 
     /**
+     * <b>标记产物过期</b>：只把这一行的 {@code content_hash} 换成当前指纹
+     * （{@code render_status} 与 {@code oss_id} 一个字节都不动，旧产物仍保留在桶里）。
+     *
+     * <p>★ 用途（DOC-PUBLISH-001）：某个样本的合并件成员集合变了（一份文档被改内容 / 撤回），
+     * 旧合并件的产物**不能再被当成最新返回**。指纹对不上之后
+     * {@link #pngPages} 与 {@code download} / {@code pages} 的「与 header 同指纹」那一道自然拦下它，
+     * 页面下一次「预览」就会重新渲染。之所以不直接软删：ticket §2「已有的旧产物保留」。
+     */
+    public void markStale(Long id, String currentHash) {
+        mark(id, w -> w.set(DocFile::getContentHash, currentHash));
+    }
+
+    /**
      * 页数变少时把多余的旧页行软删（ticket §2：{@code PageImageService} 的收尾动作）。
      *
      * @return 软删了几行

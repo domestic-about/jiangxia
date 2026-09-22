@@ -62,10 +62,11 @@ export default {
     organoidPlaceholder: '类器官质控表的编辑在 QC-WEB-002 接真（本张先占位）',
     scorePlaceholder: '类器官质量评分表的编辑在 QC-WEB-002 接真（本张先占位）',
 
-    // 右栏预览面板（页面图 / 下载在 DOC-PUBLISH-001）
+    // 右栏预览面板：面板自身在 components/PreviewPane.vue
+    // （DOC-PUBLISH-001 起生效；它的文案在 lang/lqg/qc-publish.zh_CN.ts 的 lqg.qc.preview.*）
     previewTitle: '预览',
     previewPlaceholder: '保存草稿后点「预览」',
-    previewPlaceholderSub: '页面图与下载在 DOC-PUBLISH-001 接真',
+    previewPlaceholderSub: '点「预览」生成页面图；左侧与将要下载的 Word / PDF 同源',
     renderFailed: '这份文档渲染失败了',
     renderNoReason: '（后端没给原因）',
     regenerate: '重新生成',
@@ -78,8 +79,7 @@ export default {
     saveDraft: '保存草稿',
     preview: '预览',
     publish: '完成并同步给送检方',
-    footerHint: '「预览」「完成并同步」在 DOC-PUBLISH-001 接真，本张置灰',
-    notYet: '在后续任务（DOC-PUBLISH-001）接入',
+    footerHint: '「预览」只看不发布；「完成并同步」之后送检方才看得到',
 
     // 提示与文案
     saved: '草稿已保存',

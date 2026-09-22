@@ -172,20 +172,20 @@
       "note": "docx→pdf→png 同一指纹的流水线（org.dromara.lqg.doc.pdf 7 类 + 4 VO：PdfConvertService 单线程排队/60s 预算/不走代理、PdfPageRasterizer 150DPI、PageImageService、DocArtifactRows/Store、DocPagesService）+ 新端点 GET /lqg/doc/{id}/{docKind}/pages 与 download?format=pdf 与 docKind=merged + Gotenberg 镜像层（4 个开源字体 + OFL 许可随文件进仓库）+ dev/test compose 服务 + 模板字体替换（宋体→Noto Serif SC、Times New Roman→Tinos，template-version 1→2，tblGrid 逐字未变）。accept 2/2 绿（跑两遍）；单元测试 38/38（含上游 DOC-RENDER-001 的 18 个仍绿）；pnpm build:prod 绿。★四条关键：①**取图失败按两类落地**（我转达的裁定）：docx 阶段个别图取不到 = 跳过+WARN、文档照 done（实测 1001/sample_qc = done/errorMsg=null，4 张 seed 假图跳过）；流水线步骤失败（连不上/超时/非 PDF）= 整体 failed+原因。未改上游、未改票面。②**arm64 无硬阻塞**：官方 gotenberg/gotenberg:8 有 arm64 变体；本机须 DOCKER_BUILDKIT=0 docker build（buildx 写 ~/.docker 被沙箱拒）。③**字体回退是隐形雷**：只换 eastAsia 不够——容器没有 Times New Roman → LibreOffice 回退 Liberation Serif → accept 的 !grep DejaVu|Liberation 直接红；故 Latin 也换成度量兼容的 Tinos。④**失败语义**：失败只改 header 行状态+error_msg、不动 oss_id；pages/download 只认「与 header 同一指纹」的行 → 结构上排除「Word 是新的、预览图是旧的」。★越界 6 处（票面 §2 点名要改但 touches 漏列）：ruoyi-lqg/pom.xml（pdfbox）、doc/render/service/DocRenderService.java、doc/render/controller/DocRenderController.java、迁移 V202609261420__DOC-PDF-001-doc-console.sql、plus-ui/src/api/lqg/doc/index.ts、plus-ui/src/views/lqg/doc/index.vue。★容器：lqg-dev-gotenberg 建议留着 running（127.0.0.1:3010，healthy），后续 DOC-PUBLISH/QC-WEB/DOC-MP 的 accept 都要用。★我复核了它报的 hidden 问题：诊断需纠正（见 issue），并发现 QC-WEB-001 票面规定的迁移号段已被本票越过。"
     },
     "DOC-PROOF-001": {
-      "status": "pending",
+      "status": "escalated",
       "phase": "D7",
       "track": "DOC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "按 owner 决策推迟（Kevin 2026-09-22 明确「上线的任务先放一放，先在本地做完验收测试」）。票面 §0 口径1 要求「样张必须在测试环境的容器里出」，口径3 要求「终点是甲方回一句可以」——两件都属上线/人工档：前者要测试机部署（已上线但与本地验收解耦），后者要甲方人工签字（无法 mock）。本张 size S，本身工作量极小，但**卡在两个外部动作上**，故挂起而非空转。已具备的条件：D6 已产出 PDF/Word 并排的机器辅助差异清单（doc/waves/regression/D6/pdf-word-diff.json + 三张 SIDEBYSIDE 截图），其中三条是**必须甲方签认**的差异——①评分表表尾多一行「合计」；②样本质控表「细胞活率测定」格里原件的说明文字被换成文件名；③字体 宋体/Times New Roman → Noto Serif SC/Tinos（CJK 非度量兼容）。上线一轮时：把这三条连同 SIDEBYSIDE 图发给甲方 → 拿到「可以」即收口。"
     },
     "DOC-PUBLISH-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D7",
       "track": "DOC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "质控文档「完成并同步」与「撤回」两态状态机 + 工作台预览面板。后端 org.dromara.lqg.doc.publish：DocPublishService（条件 UPDATE ... AND doc_status='draft' 防重复完成；异步渲染队列覆盖 internal/external × {本份, merged}）+ DocPublishController（POST .../publish|unpublish，lqg:qc:publish）。**回草稿的钩子落在 qc 包 service 的 7 个写入口**（三个 PUT + 图片增删排序 + 附件增删）——这就把 issue #228 按 DDL 注释那侧收口了（改内容/增删图片附件/改评分 → 回 draft + 清完成人时间），QcDocService 类注释已改写并指向 DocPublishService。前端 PreviewPane.vue（内外部版切换、逐页图、四个真签名下载、失败态与重新生成、轮询）接入编辑页右栏。accept 2/2 绿（**其中 acc1 我先自己复验过**，见下）；lqg 模块 251/251 测试绿；pnpm build:prod 绿；人眼验收 ui-check.mjs 28/28（6 张截图只落盘）。**无迁移**（三列与权限行上游已建，库里最大版本仍 202609261430）。★四条硬坑：①**docType 路径段是连字符 sample-qc、docKind 是下划线 sample_qc**，同一张票里两套命名（保存 400 / 发布 400 但状态已改）→ DocPublishService.normalizePath + docKindOf 两套都认，并由新契约测试钉死。②**发布后触发渲染不能用 @Transactional**：渲染线程要回读 doc_status（合并件按它筛成员、指纹里也带它），同事务会读到旧状态 → 每步各自提交 + 线程池排队。③右栏 PreviewPane 一开始放在 v-for 的 tab-pane 里 → ref 变数组、点预览静默无效；改成单实例 + :doc-kind=\"currentTab.docKind\"。④行不存在 ≠ 状态不对：statusOf 返回 null 时单独报「这个样本还没有这份质控文档」，否则样本不存在也会说「已经完成并同步过了」。★越界 3 处（均向上游 doc 包加法）：DocAudiences(+ALL)、DocArtifactRows(+markStale)、DocRenderService(+invalidateMerged)；前端另加 2 个 lang 文件。★**票面 acc1 的 6 处 True/False 笔误由我改正**（见 issue），改正后 accept 2/2；另：**我漏执行了 git checkout -b task/D7**，导致这张票初版实现落在 integration 工作树上——已补建 task/D7 并把改动带过去，未 commit 到 integration。★给下游：对外可见必须同时看 doc_status + 外部版 render_status=done（给 AUTH-EXT-003）；markStale 不改 render_status（别用 done 行数当产物计数）；合并件只标过期不删产物（存储单调增长，归 SYS-PROD-001）。"
     },
     "DOC-RENDER-001": {
       "status": "done",
@@ -2866,6 +2866,36 @@
       "type": "harness",
       "title": "reseed 不清运行期上传到 sys_oss 的行 → 各轮测试的上传物在开发库里累计（L2/L3 交接时已积 341 行）",
       "detail": "复现：D6 L3 收工交接里如实报「我自己那 41 行非 seed sys_oss 已删，剩余 341 行是 L2/更早各轮留下的」。reseed.sh 会 TRUNCATE t_lqg_* 与删 seed 段账号，但**不动 sys_oss**（上传物是运行期产物、service 不是 seed）。影响：①开发库里 sys_oss 单调增长；②任何按 count(sys_oss) 写的断言会随轮次漂移（D5 的 OCR accept 就有一条「识别前后 sys_oss 行数不变」的断言——它比的是差值所以没事，但别的计数型断言会中招）；③视觉验收时会看到一堆别人的上传物。方案 a) reseed 时连带清 sys_oss 里非 seed 行（要谨慎：sys_oss_config 与 seed 行要留）；b) 至少给测试上传加个标记列便于清理；c) 把这条写进 README 已知坑表。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 247,
+      "ticket": "DOC-PROOF-001",
+      "severity": "S1",
+      "type": "escalated",
+      "title": "DOC-PROOF-001 被挂起（escalated）",
+      "detail": "按 owner 决策推迟（Kevin 2026-09-22 明确「上线的任务先放一放，先在本地做完验收测试」）。票面 §0 口径1 要求「样张必须在测试环境的容器里出」，口径3 要求「终点是甲方回一句可以」——两件都属上线/人工档：前者要测试机部署（已上线但与本地验收解耦），后者要甲方人工签字（无法 mock）。本张 size S，本身工作量极小，但**卡在两个外部动作上**，故挂起而非空转。已具备的条件：D6 已产出 PDF/Word 并排的机器辅助差异清单（doc/waves/regression/D6/pdf-word-diff.json + 三张 SIDEBYSIDE 截图），其中三条是**必须甲方签认**的差异——①评分表表尾多一行「合计」；②样本质控表「细胞活率测定」格里原件的说明文字被换成文件名；③字体 宋体/Times New Roman → Noto Serif SC/Tinos（CJK 非度量兼容）。上线一轮时：把这三条连同 SIDEBYSIDE 图发给甲方 → 拿到「可以」即收口。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 248,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "票面 acc1 的期望值把 PG 文本化的布尔写成 Python 风格的 True/False → 那 6 段恒红（已改正票面，改正后 accept 2/2）",
+      "detail": "复现：票面 acc1 第 39/43/44/46/47/49 行写 test ... = \"published|9000000101|True\" 与 \"draft|-|False\"；而该 SQL 最后一段是 (published_time IS NOT NULL) 经 || 拼成**文本**，PG 给的是小写 true/false（psql 与 db.py 两条路径都实测）。只把这 6 处改成小写、其余逐字不动，整条 15 段重放 RC=0（实现方先证明、我在改完后独立重跑 accept 复验 2/2）。★**关键区分（别过度修）**：db.py 比较**布尔列**时渲染的是 Python 的 True（大写）——所以 AUTH-GROUP-001 的 --eq True 与 EMBED-MODEL-001 的 --eq True **是对的，不许动**；只有「布尔被 || 拼进文本再比字符串」才必须小写。实测证据：db.py --sql \"SELECT 1=1\" --eq True 成立、--eq true 不成立；而 db.py --sql \"SELECT 'x'||'|'||(1=1)::text\" --eq \"x|true\" 成立、--eq \"x|True\" 不成立。影响：不改则任何实现方都会在这 6 段上永远红，白烧时间或一轮返工。处置：已直接改正票面（单字符级、6 处），并跑 dag_lint 复核（43 张票无结构性错误）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 249,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "调度器流程缺陷：派单里写了「task/D7 已切好」但实际没执行，导致该票初版实现在 integration 工作树上",
+      "detail": "复现：实现方回报 git branch --show-current = integration、git rev-parse --verify task/D7 报 fatal: Needed a single revision（分支不存在）。根因：我在 D6 合进 integration 后**没有执行 git checkout -b task/D7**，却在 DOC-PUBLISH-001 的派单里写「当前分支：task/D7（若当前不是它，说明主会话已切好）」。影响：该票的改动一度落在 integration 的工作树上（未提交，故未污染 integration 历史）；实现方按「不要自己切分支」照实上报，处置正确。修复：已补建 task/D7（未提交改动随工作树带过去，16 项一字未丢），改动全部落在 task/D7。教训：**派单前先核分支真实存在**（git rev-parse --verify），别把「打算做」写成「已经做」。",
       "status": "open",
       "decision": ""
     }

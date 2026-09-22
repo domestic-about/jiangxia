@@ -36,17 +36,17 @@ accept:
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg GET /lqg/qc/9000001006 >/dev/null &&
       bash doc/verify/api.sh --as staff --bizcode POST /lqg/qc/9000001006/sample-qc/unpublish | grep -qE '^(400|500)' &&
       bash doc/verify/api.sh --as staff POST /lqg/qc/9000001006/sample-qc/publish | jq -e '.code==200' &&
-      test "$(st t_lqg_qc_sample 9000001006)" = "published|9000000101|True" &&
+      test "$(st t_lqg_qc_sample 9000001006)" = "published|9000000101|true" &&
       bash doc/verify/api.sh --as staff --bizcode POST /lqg/qc/9000001006/sample-qc/publish | grep -qE '^(400|500)' &&
       sleep 20 && python3 doc/verify/db.py --sql "SELECT audience || ':' || file_format FROM t_lqg_doc_file WHERE sample_id=9000001006 AND doc_kind='sample_qc' AND render_status='done' AND page_no IN (0,1) AND del_flag='0'" --col-set "internal:docx,internal:pdf,internal:png,external:docx,external:pdf,external:png" &&
       bash doc/verify/api.sh --as staff PUT /lqg/qc/9000001006/sample-qc '{"samplingSite":"改了一个字"}' | jq -e '.code==200' &&
-      test "$(st t_lqg_qc_sample 9000001006)" = "draft|-|False" &&
-      test "$(st t_lqg_qc_score 9000001006)" = "published|9000000101|True" &&
+      test "$(st t_lqg_qc_sample 9000001006)" = "draft|-|false" &&
+      test "$(st t_lqg_qc_score 9000001006)" = "published|9000000101|true" &&
       bash doc/verify/api.sh --as staff PUT /lqg/qc/9000001006/score '{"preCultureLevel":"gt80","cultureDaysLevel":"le14","organoidCountLevel":"lt100","diameterLevel":"lt30"}' | jq -e '.code==200' &&
-      test "$(st t_lqg_qc_score 9000001006)" = "draft|-|False" &&
-      test "$(st t_lqg_qc_organoid 9000001001)" = "published|9000000101|True" &&
+      test "$(st t_lqg_qc_score 9000001006)" = "draft|-|false" &&
+      test "$(st t_lqg_qc_organoid 9000001001)" = "published|9000000101|true" &&
       bash doc/verify/api.sh --as staff POST /lqg/qc/9000001001/organoid-qc/image '{"slot":"organoid_observe","ossId":9000004005}' | jq -e '.code==200' &&
-      test "$(st t_lqg_qc_organoid 9000001001)" = "draft|-|False" &&
+      test "$(st t_lqg_qc_organoid 9000001001)" = "draft|-|false" &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-
       「改内容回草稿」只接在了三个 PUT 上、漏了图片与附件的增删 → 最后一组（加一张图）状态仍是 published 红。送检方会看到一份和预览图对不上的文档。

@@ -1,0 +1,61 @@
+{
+ "total": 2,
+ "passed": 1,
+ "failed": [
+  {
+   "ticket": "DOC-PUBLISH-001",
+   "index": 1,
+   "form": "STATE",
+   "name": "两态状态机：重复完成、对草稿撤回被拒；完成后记下完成人与时间并触发内外部版渲染；改内容、加图片、改评分任何一种都让已完成的文档回到草稿",
+   "exit": 1,
+   "seconds": 0.9,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-PUBLISH-001-acc1.sh",
+   "log": ".tmp/doc-publish-accept-logs/DOC-PUBLISH-001-acc1.sh.log"
+  }
+ ],
+ "known_red": [],
+ "unknown_failed": [
+  {
+   "ticket": "DOC-PUBLISH-001",
+   "index": 1,
+   "form": "STATE",
+   "name": "两态状态机：重复完成、对草稿撤回被拒；完成后记下完成人与时间并触发内外部版渲染；改内容、加图片、改评分任何一种都让已完成的文档回到草稿",
+   "exit": 1,
+   "seconds": 0.9,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-PUBLISH-001-acc1.sh",
+   "log": ".tmp/doc-publish-accept-logs/DOC-PUBLISH-001-acc1.sh.log"
+  }
+ ],
+ "results": [
+  {
+   "ticket": "DOC-PUBLISH-001",
+   "index": 1,
+   "form": "STATE",
+   "name": "两态状态机：重复完成、对草稿撤回被拒；完成后记下完成人与时间并触发内外部版渲染；改内容、加图片、改评分任何一种都让已完成的文档回到草稿",
+   "exit": 1,
+   "seconds": 0.9,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-PUBLISH-001-acc1.sh",
+   "log": ".tmp/doc-publish-accept-logs/DOC-PUBLISH-001-acc1.sh.log"
+  },
+  {
+   "ticket": "DOC-PUBLISH-001",
+   "index": 2,
+   "form": "API",
+   "name": "前端构建是本次产物；预览面板接入编辑页，有内外部版切换、四个下载入口、失败态与重新生成",
+   "exit": 0,
+   "seconds": 10.9,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-PUBLISH-001-acc2.sh",
+   "log": ".tmp/doc-publish-accept-logs/DOC-PUBLISH-001-acc2.sh.log"
+  }
+ ]
+}
