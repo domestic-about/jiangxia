@@ -1,0 +1,12 @@
+sample_qc:done
+organoid_qc:done
+organoid_score:done
+true
+true
+true
+true
+true
+true
+true
+true
+ACCEPT-1-PREMISE-FIXED EXIT=0

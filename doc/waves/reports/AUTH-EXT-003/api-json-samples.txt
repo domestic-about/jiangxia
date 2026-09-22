@@ -1,0 +1,34 @@
+### 第 4 段：1001 的三份外部版产物状态（库内真值）
+organoid_qc:done
+organoid_score:done
+sample_qc:done
+
+### extB GET /mp/ext/doc/list?pageSize=100
+{"total":4,"rows":[{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"sample_qc","publishedTime":"2026-08-31 10:00:00"},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_qc","publishedTime":"2026-09-10 10:00:00"},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_score","publishedTime":"2026-09-13 10:00:00","totalScore":85},{"sampleId":9000001004,"submitNo":"SJ90000004","donorNameMasked":"测**","docKind":"sample_qc","publishedTime":"2026-09-07 10:00:00"}],"code":200,"msg":"查询成功"}
+
+### extC GET /mp/ext/doc/list?pageSize=100   （同单位异组 → 空）
+{"total":0,"rows":[],"code":200,"msg":"查询成功"}
+
+### extB GET '/mp/ext/doc/list?pageSize=100&sampleId=9000001001'
+{"total":3,"rows":[{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"sample_qc","publishedTime":"2026-08-31 10:00:00"},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_qc","publishedTime":"2026-09-10 10:00:00"},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_score","publishedTime":"2026-09-13 10:00:00","totalScore":85}],"code":200,"msg":"查询成功"}
+
+### extC GET '/mp/ext/doc/list?pageSize=100&sampleId=9000001001'   （猜 id → 空，不是 404）
+{"total":0,"rows":[],"code":200,"msg":"查询成功"}
+
+### 异组猜 id 取预览：extC /mp/ext/doc/9000001001/organoid_score/pages
+{"code":404,"msg":"样本不存在","data":null}
+
+### 草稿不给：extA /mp/ext/doc/9000001004/organoid_qc/pages （1004 可见，但类器官质控表是 draft）
+{"code":404,"msg":"文档不存在","data":null}
+
+### 预览（外部版页面图；链接是 10 分钟签名链接）
+{"code":200,"msg":"操作成功","data":{"docKind":"organoid_score","status":"done","pages":[{"pageNo":1,"url":"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/organoid_score/external/a94ee70d71f1-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T125424Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=f327e5af6623e57ce58197515e6d573cf9a84bc696fe822de342a121e5e72410"},{"pageNo":2,"url":"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/organoid_score/external/a94ee70d71f1-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T125424Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=398d4a22bf4020fd9f44d8326c60622153ac3492248f085e058e464eb77be728"}]}}
+
+### 下载（带 audience=internal 也仍然是 /external/）
+{"code":200,"msg":"操作成功","data":{"url":"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/organoid_score/external/a94ee70d71f1.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T125424Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=edd93222e2ef8a128848e9498fc7f7a68aac41039382af269c0a747ede441a6a","fileName":"类器官质量评分表-SJ90000001.pdf"}}
+
+### 样本详情的 docs（同一份查询）
+{"code":200,"msg":"操作成功","data":{"id":9000001001,"submitNo":"SJ90000001","sampleKind":"tissue","sourceUnitName":"A 医院","donorName":"测试供体甲","gender":"male","age":"56","hospitalNo":"ZY0000001","tissueType":"肝组织","organoidType":null,"hasPathology":"Y","remark":null,"verifyStatus":"valid","invalidReason":null,"submitterName":"王医生","mine":true,"editable":false,"createTime":"2026-08-22 10:00:00","embeds":[{"id":9000002001,"sampleId":9000001001,"submitNo":"SJ90000001","paraffinBlockNo":"T-E01-1","sampleType":"组织","organoidSourceType":null,"tissueReceiveTime":"2026-08-23","tissueProcessTime":"2026-08-23","agaroseEmbedTime":"2026-08-24","dehydrateTime":"2026-08-25","agaroseSendTime":"2026-08-25","paraffinEmbedTime":"2026-08-26","sectionTime":"2026-08-27","sectioned":true,"stainTypes":["HE","IHC"],"stainOther":null,"markers":[{"markerName":"Ki67","expression":"strong"},{"markerName":"CK19","expression":"negative"}],"verifyStatus":"valid","invalidReason":null,"submitterName":null,"mine":false,"editable":false,"embedBy":"李工","operatorName":"李工"},{"id":9000002002,"sampleId":9000001001,"submitNo":"SJ90000001","paraffinBlockNo":"T-E01-2","sampleType":"类器官","organoidSourceType":"肝类器官","tissueReceiveTime":null,"tissueProcessTime":null,"agaroseEmbedTime":"2026-09-10","dehydrateTime":null,"agaroseSendTime":null,"paraffinEmbedTime":null,"sectionTime":null,"sectioned":false,"stainTypes":[],"stainOther":null,"markers":[],"verifyStatus":"valid","invalidReason":null,"submitterName":null,"mine":false,"editable":false,"embedBy":null,"operatorName":null}],"docs":[{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"sample_qc","publishedTime":"2026-08-31 10:00:00"},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_qc","publishedTime":"2026-09-10 10:00:00"},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_score","publishedTime":"2026-09-13 10:00:00","totalScore":85}]}}
+
+### 外部打内部渲染接口 = 403
+403	没有访问权限，请联系管理员授权

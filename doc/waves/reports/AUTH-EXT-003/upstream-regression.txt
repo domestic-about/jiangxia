@@ -1,0 +1,57 @@
+########## AUTH-EXT-001/accept-runners/ext001-acc2.sh
+true
+true
+true
+true
+true
+ACCEPT-2 EXIT=0
+== 正文倒数第 2 段（/mp/int，上游未注册，预期红）==
+MPINT-LITERAL EXIT=0 （1 = 该端点是 404 而不是 403，原因见 WARN-3）
+rc=0
+########## AUTH-EXT-002/accept-runners/ext002-acc1.sh
+false
+true
+true
+true
+true
+true
+true
+ACCEPT-1 EXIT=0
+rc=0
+########## AUTH-EXT-002/accept-runners/ext002-acc2.sh
+1
+true
+external|pending|-|-|-|-|王医生
+0
+true
+true
+pending|-|类器官|胆管类器官
+ACCEPT-2 EXIT=0
+rc=0
+########## EMBED-MODEL-001/accept-runners/embed001-acc1.sh
+✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+1
+ACCEPT-1 EXIT=0
+rc=0
+########## EMBED-MODEL-001/accept-runners/embed001-acc2.sh
+0
+True
+2
+valid
+ACCEPT-2 EXIT=0
+rc=0
+########## CRYO-MODEL-001/accept-runners/cryo001-acc1.sh
+✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+1
+ACCEPT-1 EXIT=0
+rc=0
+########## SAMPLE-MP-001/accept-runners/mp001-acc2-api.sh
+──── 13) staff 改待核验的 1002 → 被拒（400/500）
+
+──── 14) 库里没有被改进去
+0
+
+──── 15) 收尾 reseed
+
+ACCEPT-2-API GREEN (exit 0)
+rc=0

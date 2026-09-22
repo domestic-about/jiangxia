@@ -1,0 +1,59 @@
+=== [硬约束1] ext 包里「持 *Mapper 类型字段」的类（应当只有 ExtScopeServiceImpl）===
+code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/service/ExtScopeServiceImpl.java:54:    private final SampleMapper sampleMapper;
+code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/service/ExtScopeServiceImpl.java:55:    private final ExtProfileMapper extProfileMapper;
+
+--- 逐个 Java 文件的 Mapper 字段数（0 = 不持 mapper；含注释里的出现数另计）---
+0  controller/ExtDocController.java
+0  controller/ExtEmbedController.java
+0  controller/ExtOrganoidController.java
+0  controller/ExtProfileController.java
+0  controller/ExtSampleController.java
+0  controller/ExtUnitController.java
+0  controller/package-info.java
+0  domain/bo/ExtDocQueryBo.java
+0  domain/bo/ExtEmbedQueryBo.java
+0  domain/bo/ExtEmbedSubmitBo.java
+0  domain/bo/ExtOrganoidSubmitBo.java
+0  domain/bo/ExtProfileUpdateBo.java
+0  domain/bo/ExtSampleQueryBo.java
+0  domain/bo/ExtSampleSubmitBo.java
+0  domain/package-info.java
+0  domain/vo/ExtDocDownloadVo.java
+0  domain/vo/ExtDocPageItemVo.java
+0  domain/vo/ExtDocPagesVo.java
+0  domain/vo/ExtDocVo.java
+0  domain/vo/ExtEmbedMarkerVo.java
+0  domain/vo/ExtEmbedVo.java
+0  domain/vo/ExtSampleDetailVo.java
+0  domain/vo/ExtSampleVo.java
+0  domain/vo/ExtUnitGroupVo.java
+0  domain/vo/ExtUnitVo.java
+0  guard/MaskRules.java
+0  mapper/package-info.java
+0  service/ExtCatalogQueryService.java
+0  service/ExtDocAssemblyService.java
+0  service/ExtEmbedAssemblyService.java
+0  service/ExtInternalNoSwitch.java
+0  service/ExtSampleAssemblyService.java
+0  service/ExtScopeService.java
+2  service/ExtScopeServiceImpl.java
+0  service/package-info.java
+
+=== [硬约束1] 新增/改动的 ext 类里有没有注入任何 Mapper（文本级）===
+code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/service/ExtDocAssemblyService.java:39: * <p>★ 本类<b>不持有任何 {@code *Mapper}</b>（ADR-0004 的 I4，
+code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/service/ExtDocAssemblyService.java:40: * {@code ExtChokepointContractTest#i4_onlyExtScopeServiceImplTouchesMappers} 扫整个 ext 包）：
+code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/controller/ExtDocController.java:45: * 持有 {@code *Mapper} 的实现类），文档行与产物在 {@code DocExternalQueryService}（doc 域），
+
+=== [硬约束1] 取数的读口在 doc 域（被调方），不在 ext 包 ===
+-rw-------  1 wkui  staff  19293 Sep 22 20:51 code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/doc/service/DocExternalQueryService.java
+
+=== [硬约束3] 外部文档链路里 audience 只作为常量出现（代码行，不含注释）===
+184:        DocFile header = rows.header(sampleId, kind, DocAudiences.EXTERNAL);
+207:        return pagesService.pages(sampleId, kind, DocAudiences.EXTERNAL);
+220:        return renderService.download(sampleId, kind, fmt, DocAudiences.EXTERNAL);
+256:        DocFile row = rows.find(sampleId, docKind, DocAudiences.EXTERNAL, format, 0);
+259:        if (key == null || !key.contains("/" + DocAudiences.EXTERNAL + "/")) {
+293:        if (rows.pngPages(sampleId, docKind, DocAudiences.EXTERNAL, hash).isEmpty()) {
+296:        DocFile pdf = rows.find(sampleId, docKind, DocAudiences.EXTERNAL, DocArtifactRows.FORMAT_PDF, 0);
+--- ext 侧代码里出现 audience 字样的行（应为空）---
+(代码行里一处都没有)

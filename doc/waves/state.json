@@ -76,12 +76,12 @@
       "note": "新增 /mp/ext/embed {list,{id},POST,PUT}（类级 @SaCheckRole('lqg_external')）+ ExtEmbedAssemblyService（零 *Mapper 字段，i4 绿）：可见集合走 ExtScopeService、记录走 EMBED-MODEL-001 留的读口 EmbedQueryService.{pageByWrapper,detail,listBySampleId}，本票一个 SQL 都没写。ExtEmbedVo 满配 24 键白名单（含 embedBy/operatorName，无 internalNo/remark/verifyBy/冻存）；ExtEmbedMarkerVo 只带名称+表达；onlyMine/mine/editable 按**本条记录自己的 submitter_id**（不是所挂样本的提交人）；ExtSampleDetailVo.embeds 接上数据（含待核验送样）；ExtEmbedSubmitBo 只有 3 键。小程序新增 components/lqg/EmbedCard.vue + detail-ext.vue 第②段。迁移 V202609230902（幂等兜底 sys_config 那行）。accept 3/3 + 26 条探针 PASS；回归：EMBED-MODEL-001 acc1/2、SAMPLE-MP-001 acc1/2、ExtChokepointContractTest 4/4 且 cmp 逐字节未改、全模块 Tests run 93（本票 +7）、D1 回归包只剩既有 flyway 写死总数那条假红（现 12 支）。★踩坑与处置：迁移号 0902 < 已应用的 1100 撞 out-of-order（启动即 FlywayValidateException），按 issue #12/SYS-WEB-001 先例重建 dev 库让全量按序重跑解决（没改 out-of-order、没改 lint-profile）。越界仅两处（生成产物 components.d.ts、本票自加的 ExtEmbedShapeContractTest）。"
     },
     "AUTH-EXT-003": {
-      "status": "pending",
+      "status": "done",
       "phase": "D7",
       "track": "AUTH",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "外部看文档（列表/页面图/下载）全部过咽喉：只给「已完成且对应 audience 已渲染成功」的，异组按不存在返回，audience 由服务端按身份定死（请求里带 audience=internal 也拿不到内部版），新增 VO 不带内部专用字段。新增 ext 侧 6 类 + doc 域读口 1 类（DocExternalQueryService——因为 ext 包按 ADR-0004 i4 只有 ExtScopeServiceImpl 允许持 Mapper），**无迁移**（库内最大值仍 202609261430）。ExtChokepointContractTest 4/4 绿 + 自加 ExtDocShapeContractTest 6/6 绿 + 探针 46/46 绿 + 上游 SAMPLE/EMBED/CRYO/AUTH-EXT 抽跑全绿。★**accept 2/2 绿的代价是改票面 7 处字面量（实现零改动）——我逐处核实后改的，不是迎合**：①票面 acc1 段4 断 1001 外部版 render_status=sample_qc:failed,organoid_qc:failed，实测三份全是 done——那条 counterfeit 的前提（seed 假图 → 外部版渲染必然失败）正是我在 issue #217 里裁掉的陈旧那一半（取不到的图跳过+WARN、文档照出 done）；连带 4 处期望偏了：段5 清单 2 行→4 行、段7 与段14 的 docKind 1 种→3 种（我按实测数组值填，没猜）、段11 pages 404→200。②票面 acc2 三个文件路径少了子包段（ext 根目录下没有任何 java；ExtDocController 在 ext/controller/、两个 VO 在 ext/domain/vo/，而 ExtDocVo.java 是 AUTH-EXT-001 建的占位，本票开工前就在那儿）→ 补全 controller/ 与 domain/vo/。改完 dag_lint 复核通过。★**一条重要的上游规则纠错（给下游 DOC-MP-001/002）**：DOC-PUBLISH-001 交接里写「外部可见还要求 header 的 content_hash == 此刻算出来的指纹」——**这条规则实测无效**，因为 invalidateMerged/markStale 会把 header 的 content_hash 改写成此刻该有的指纹，比较当场成立，而桶里那份 docx 还是旧成员拼的 → 撤回一份文档后送检方仍能列到/预览到/下载到含该文档的旧合并件（本票初版就是这么红的，探针 P28/P29/P30）。已改成**锚在产物上**的判据（当前指纹下有页图 + PDF 与 header 同版，正是内部 pages/download 本就用的那两道闸），P28-P30 转绿。"
     },
     "AUTH-GROUP-001": {
       "status": "done",
@@ -2896,6 +2896,26 @@
       "type": "harness",
       "title": "调度器流程缺陷：派单里写了「task/D7 已切好」但实际没执行，导致该票初版实现在 integration 工作树上",
       "detail": "复现：实现方回报 git branch --show-current = integration、git rev-parse --verify task/D7 报 fatal: Needed a single revision（分支不存在）。根因：我在 D6 合进 integration 后**没有执行 git checkout -b task/D7**，却在 DOC-PUBLISH-001 的派单里写「当前分支：task/D7（若当前不是它，说明主会话已切好）」。影响：该票的改动一度落在 integration 的工作树上（未提交，故未污染 integration 历史）；实现方按「不要自己切分支」照实上报，处置正确。修复：已补建 task/D7（未提交改动随工作树带过去，16 项一字未丢），改动全部落在 task/D7。教训：**派单前先核分支真实存在**（git rev-parse --verify），别把「打算做」写成「已经做」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 250,
+      "ticket": "AUTH-EXT-003",
+      "severity": "S2",
+      "type": "arch",
+      "title": "上游交接的「对外可见」判据无效：header.content_hash 会被 markStale 改写成当前指纹，比较恒成立 → 撤回后仍能拿到含该文档的旧合并件",
+      "detail": "复现（AUTH-EXT-003 探针 P28/P29/P30，初版因此红）：DOC-PUBLISH-001 的「给下游」节写「外部可见还要求 header 的 content_hash == 此刻算出来的指纹」。但 invalidateMerged/markStale 的实现**会把 header 行的 content_hash 改写成此刻该有的指纹**（所以它标记过期时就顺手把值对齐了），于是「header 的 hash == 现算 hash」当场成立；而对象存储里那份合并 docx 仍然是**旧成员拼的**。后果：撤回/取消发布一份文档后，送检方仍能列到、预览到、下载到含该文档的旧合并件——**是外部隔离的泄漏面**，不是显示问题。本票改为**锚在产物上**的判据：当前指纹下必须有页图、且 PDF 与 header 同版（正是内部 pages/download 用的那两道闸），P28-P30 转绿。定级依据：规则本身错（规格/文档层），实现已按正确判据落地并经探针验证；但它有泄漏面且在交接文档里，故 S2 而非 S3，且**必须同步给 DOC-MP-001/002**（它们也要判「外部能不能看到」）。方案：把 DOC-PUBLISH-001 报告 §6.1 的这句改写成「锚在产物上：当前指纹下有页图 + PDF 与 header 同版」，并在 D7 的 L3 片独立复验「撤回后外部拿不到含该文档的合并件」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 251,
+      "ticket": "AUTH-EXT-003",
+      "severity": "S2",
+      "type": "harness",
+      "title": "票面字面缺陷（同形态第 2 次）：陈旧前提 4 处期望 + 3 处文件路径少子包段 → 已改正 7 处，实现零改动后 accept 2/2",
+      "detail": "两类：①**陈旧前提**——acc1 断 1001 外部版 sample_qc/organoid_qc 渲染 failed，而实测三份全 done（因 issue #217 裁定：docx 阶段个别图取不到 = 跳过+WARN、文档照出 done；票面 counterfeit 那句「seed 假图 → 外部版渲染必然失败」是裁定前的旧写法）。连带 4 处派生期望也偏：清单 2 行→4 行、docKind 1 种→3 种（段7/段14）、pages 404→200。②**路径少子包段**——acc2 写 ext/ExtDocController.java 与 ext/ExtDocVo.java、ext/ExtDocPagesVo.java，实际在 ext/controller/ 与 ext/domain/vo/（ext 根目录下没有任何 java 文件），其中 ExtDocVo.java 是 AUTH-EXT-001 建的占位、本票开工前就在 ext/domain/vo/。处置：先自己核实（ls 目录 + git log --diff-filter=A 查占位文件来源 + 复现前置实测数组值），再只改这 7 处字面量、实现一行未动，独立重跑 accept 得 2/2；改完跑 dag_lint 复核 43 张票无结构性错误。★这是同一形态的第 2 次（上次是 DOC-PUBLISH-001 的 True/true，issue #248）——**①侧票面的断言字面与实现行为会漂移，尤其当上游裁定了语义（#217）之后**。已形成的做法：派单里明确要求「发现票面断言本身有错**不要自己改票面**，把证据写进报告报我」——本票实现方照做，处置正确。建议：①侧每次裁定语义后回扫受影响的票面断言。",
       "status": "open",
       "decision": ""
     }
