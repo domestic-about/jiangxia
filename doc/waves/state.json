@@ -148,12 +148,12 @@
       "note": "迁移 V202609241210：5410（C，path=cryo，component=lqg/cryo/index）+ 5411-5417 七个 F，授 101/102（不用搬号——上游刻意只建 5401-5407 的 F 行、把 5410 留空，迁移前该 component 0 条路由）；后端新增 cryo/export/{CryoExportVo,CryoExportService} + CryoExportContractTest 5 例（用 JDK zip+DOM 读甲方模板原件两侧对账）+ POST /export；前端 views/lqg/cryo/{index.vue,CryoDrawer,CryoFlowDrawer,CryoFlowDialog,CryoToLn2Dialog,flow.ts,flow.spec.ts} + api + lang，样本总表冻存入口点亮带 sampleId 跳 /cryo。accept 2/2：① 表头 11 列与模板逐字同序（模板 9 列 + 代数 + 当前剩余/支）、7 行=未删批次 JOIN 未删样本、3001 行冻存数量=8（初始）与当前剩余=6 分居第 3/11 列、3007=否+液氮位置、3004=3→0；② 5410 一行 + getRouters 恰 1 条 + staff perms 含 lqg:cryo:flow/export + index.vue 有 tabCounts + api 有 updateFlow/deleteFlow + views 里 el-switch 命中 0。Java 174、vitest 11、build:prod EXIT=0、vue-tsc 零 error。回归（每步先 reseed+clean-orphan）：CRYO-MODEL/FLOW/REMIND 全部、EMBED-WEB acc1/2、SAMPLE-WEB acc1、ExtChokepoint、D1 41 绿/1 红（既有 flyway 假红，现 17）。端侧：页签 7/2/2 与同次 tabCounts 两侧不同源、超期行 rgb(251,228,225)+徽标+置顶、流水抽屉真跑 PUT/DELETE flow（balanceAfter/已改标记当场更新）、pageerror 与 HTTP≥400 均为 0。★越界 2 个文件（授权）：cryo/batch 的 CryoQueryService(+exportRows+missingSampleIds，与列表共用 buildBucket 的 buildWrapper) 与 CryoBatchController(+POST /export)。★如实报备：中途 8081 被 SIGKILL(exit 137，同机同时跑 headless Chrome+vite+JVM)、按 PID 重启后重新取证。"
     },
     "DOC-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D7",
       "track": "DOC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序「我的文档」清单页：分组卡片、单份下载、合并预览/下载入口。后端新增 doc/mp/{MpDocController,MpDocService,MpDocQueryBo,MpDocVo}（GET /mp/int/doc/list，类级 @SaCheckRole(\"lqg_internal\")）+ doc/service/DocAvailabilityService（把「能不能给出去」抽成**按 audience 参数化**的共享闸；DocExternalQueryService 改为委托它、公开 API 一字未改 → 回归已证行为不变）；小程序新增 api/doc.ts、pages/doc/{group.ts,group.fixture.spec.ts,index.vue,preview.vue}、components/lqg/DocGroupCard.vue、config/app.ts，改 pages.config.ts(tab→pages/doc/index)/router/config.ts/detail-ext.vue 第③段。accept 2/2 绿（唯一 NF1 去 --fresh-module）；acc1 fixture 7 passed/0 failed；acc2 整段 exit 0（tabBar[1]=pages/doc/index、内部清单 [[T-hco04,B 大学,organoid_score,18]]、extD→403）；三条 counterfeit 逐条实测打红后还原转绿；模块 mvn test 257/0 BUILD SUCCESS；**上游回归 AUTH-EXT-003 accept 2/2 + 探针 46/46**（证明重构无行为变化）。**无迁移**（不建表/不加菜单/不加授权 → 不取号）。★四条要点：①**票面前提不成立**——票面 §2 假设内外两个接口行形状都是 {sampleId,title,subtitle}，实际外部给的是 {sampleId,submitNo,donorNameMasked}（ExtDocVo 6 键被 AUTH-EXT-003 的形状契约钉死）→ 前端在 group.ts 一处归一化（title ?? submitNo），**没改外部 VO**（改它会破 AUTH-EXT-003 守的隔离面）；契约只差把内部行形状补进第 86 行。②**src/pages.json 有意未还原**：uni-pages 的 merge 是 **old 优先**，tabBar 顺序由上次生成结果决定——实测保留重生成版 → [index,doc,me] + accept 绿；先 git checkout 再 build → [index,me,doc]（旧页 pages/docs/index 占第 2 位）+ accept 红（双向实跑留证）。我已按此改 README-modeB 的收尾规则（改 tabBar 的票不许 checkout；要重生成就先 rm 再 build）。③**合并入口口径冲突**：AUTH-EXT-003 §7.8 建议「按有没有 merged 行判」，而蓝图 FLOW:F-DOC-02.step1 写「每组最多三份」+ fixture 第四例要求 merged 不算一份 → 实现按蓝图+fixture（showMerge = 非 merged 份数 ≥2）；**DOC-MP-002 接真下载前必须处理「份数够但 merged 未渲染」**（已写进它的派单）。④未做真机/体验版（Kevin 2026-09-22 决策），验收面 = H5 + Playwright 真 DOM + 真后端 + 真库，4 张截图只登记路径与断言值、未读 PNG。★越界 10 条（含那个共享闸与生成物），只读区 porcelain 全空。"
     },
     "DOC-MP-002": {
       "status": "pending",
@@ -2966,6 +2966,76 @@
       "type": "debt",
       "title": "刻意不拿「此刻指纹」当对外可见的门槛：否则模板升级后历史文档会全部对外隐藏（内部却照旧显示）",
       "detail": "设计取舍（实现方在报告里明写）：对外可见判据锚在「当前指纹下有真实页产物 + PDF 与 header 同版」，而**不是**「header.rendered_time/hash 等于此刻现算的值」。若用后者，一次模板版本升级会让所有未重渲染的历史文档**全部对外消失**，而内部页面照旧显示 → 送检方以为文档没了。影响：这是有意的语义选择，但它意味着「模板升级后历史文档对外仍可见（内容是旧模板渲染的）」。方案：把这条语义写进契约或验收说明，并在 DOC-PROOF-001 给甲方的说明里点一句。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 257,
+      "ticket": "DOC-MP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "契约第 86 行只写了外部文档行形状（6 键），没写内部行形状；票面 §2 却假设两者同形（title/subtitle）",
+      "detail": "复现：票面 §2 说两个接口的行形状都是 {sampleId,title,subtitle,…}；实际外部那份给的是 {sampleId,submitNo,donorNameMasked,…}（ExtDocVo 的 6 键被 AUTH-EXT-003 的形状契约钉死，加不了 title/subtitle）；doc/api-contract.md 第 86/87 行也只列了那 6 键。实现处置正确：**前端在 group.ts 一处归一化**（title ?? submitNo），**没有改外部 VO**（改它会破坏 AUTH-EXT-003 守着的隔离面）。影响：契约缺「内部行形状」这一段，前端只能照实现猜；两个接口同名不同形，后来人容易踩。方案：把内部清单的行形状补进契约第 86 行（照实现：{sampleId,title,subtitle,docKind,completedTime,hasMerged…} 之类），并注明「内外部行形状不同是刻意的」。定级依据：产品行为正确、纯文档缺口 → S2（实现方在 WARN 里判 S1，我按「产出是否正确」改判 S2：老师能用、产出对）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 258,
+      "ticket": "DOC-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ src/pages.json 是生成物且 uni-pages merge 是 old 优先 → 我的标准收尾项「git checkout pages.json」对改了 tabBar 的票有害",
+      "detail": "复现（实现方双向实跑，见 doc/waves/reports/DOC-MP-001/pages-json-tabbar-order.txt）：**保留**重生成的干净版 → tabBar=[index,doc,me] 且 accept 绿；**先 git checkout 还原再 build** → tabBar 退回 [index,me,doc]（旧页 pages/docs/index 占了第 2 位）且 accept 红。机理：uni-pages 的 mergePlatformItems **old 优先**，tabBar 顺序由上一次生成结果决定，而 git HEAD 里那份记的是旧的 pages/docs/index。核实：HEAD 的 tabBar = [index, docs, me]，工作树 = [index, doc, me]。影响：**我给所有含小程序 build/dev 的派单都写了「收工前 git checkout -- code/miniapp/src/pages.json」，这条对「有意改 tabBar/页面注册」的票是有害指令**（会把正确产物退回错误产物）。改法（已同步 README-modeB）：①这类票**有意保留**重生成的 pages.json，并在报告里写明「不是漏还原」；②QA/后续票若要重生成，先 rm code/miniapp/src/pages.json 再 build，**不要**用 git checkout；③不改 tabBar 的票仍照旧还原。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 259,
+      "ticket": "DOC-MP-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "合并入口口径冲突：AUTH-EXT-003 §7.8 建议「按清单里有没有 merged 行判」vs 蓝图「每组最多三份」+ fixture「merged 不算一份」",
+      "detail": "冲突两方：AUTH-EXT-003 报告 §7.8 建议合并按钮按「清单里有没有 merged 行」判断；而蓝图锚 FLOW:F-DOC-02.step1 写「每组最多三份」，且 DOC-MP-001 的 fixture 第四例明确要求 **merged 行不算一份**。实现按**蓝图 + fixture**（showMerge = 非 merged 份数 ≥2），接口仍照旧返回 merged 行（分组层丢掉）。影响：本张按钮只提示「即将开放」所以没有 404 面；但**DOC-MP-002 接真下载前必须处理「份数够但 merged 还没渲染出来」**——那时点合并没有东西可下。已把这条写进 DOC-MP-002 的派单。方案：统一成「按非 merged 份数 ≥2 显示入口，点进去若 merged 未就绪则给『正在生成』态并轮询」——这也正是蓝图那侧的自然读法。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 260,
+      "ticket": "DOC-MP-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "契约第 86 行写「全部已完成」，票面要求「且内部版渲染成功」——实现按更严的票面",
+      "detail": "契约第 86 行对内部清单的描述是「全部已完成」；票面要求更严：「已完成 **且内部版渲染成功**」。实现按票面（更严）。影响：按契约字面读会以为只要 doc_status=published 就给，而实现还要 render_status=done（这更安全，送检方/内部看到的是能打开的文档）。方案：把契约第 86 行改成与票面同口径（加「且对应 audience 的产物已渲染成功」）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 261,
+      "ticket": "DOC-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "src/pages/docs/index.vue 成了死页面（tab 已切到 pages/doc/index），且 scripts/shots-h5.mjs 的 06-docs 仍指向旧路径",
+      "detail": "复现：pages.config.ts 的 tab 已改成 pages/doc/index，但 code/miniapp/src/pages/docs/index.vue 还在（本票没删也没改，因为它在 touches 之外）；另 code/miniapp/scripts/shots-h5.mjs 里的 06-docs 截图步骤仍指向 pages/docs/index。影响：仓库里留一个不可达页面 + 一条会失败的截图步骤（下一张碰 H5 截图脚本的票会踩）。方案：由 DOC-MP-002 或任一碰小程序的票顺手删旧页并改截图脚本指向（两处都不大）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 262,
+      "ticket": "DOC-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "接口返回 merged 行、但分组层把它丢掉：暴露面与分组语义不一致",
+      "detail": "现状：/mp/int/doc/list 与 /mp/ext/doc/list 的行里含 merged（合并件），而前端的 group.ts 在分组时按 fixture 口径把 merged 排除在「份数」之外并丢弃该行。影响：接口形状里 merged 的存在意义只体现在 hasMerged 之类标志上；若将来有人直接按行数算份数就会错（正好是 fixture 第四例防的那个）。方案：契约里写明 merged 行的存在与「不计入每组最多三份」的语义（与上一条合并入口口径一起补）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 263,
+      "ticket": "DOC-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "调度器流程缺陷：agent 还在跑时我用 git add -A 提交，把它当时的半成品一并带进了历史",
+      "detail": "复现：commit 069801e（AUTH-EXT-003 终报入账那次）里包含了 DOC-MP-001 当时尚未完工的后端 5 类 + 前端若干文件，实现方在交接时点出「不是我提交的」。根因：我在另一个 impl agent 正在写同一工作树时用了 git add -A。后果：本次无害（那些文件本就属那张票、随后也真完工了），但**坏处是把一个当时可能编译不过的中间态写进了提交历史**，且让「谁改的」变得难以追溯——这与 D1 那次并行污染是同一类问题（共享工作树 + 粗粒度提交）。改法：**有 agent 在跑时只 git add 我自己动过的具体路径**（票面/台账/工具/我自己的文档），绝不 add -A。已按此改。",
       "status": "open",
       "decision": ""
     }

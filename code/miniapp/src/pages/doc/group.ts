@@ -69,6 +69,22 @@ function text(value: unknown): string {
 }
 
 /**
+ * 组标题 / 组副标题的**归一化**（唯一一处）。
+ *
+ * ★ 两个清单接口的键名不同（都不是前端拼的，都是后端按身份给的）：
+ *   内部 `/mp/int/doc/list` → `title`（内部编号）/ `subtitle`（来源单位）；
+ *   外部 `/mp/ext/doc/list` → `submitNo`（送检单号）/ `donorNameMasked`（供体姓名掩码）。
+ * ★ **不要**在这里算内部编号或掩码：那两件事在服务端（accept 2 的禁字 grep）。
+ */
+function groupTitle(row: DocListRow): string {
+  return text(row?.title ?? row?.submitNo)
+}
+
+function groupSubtitle(row: DocListRow): string {
+  return text(row?.subtitle ?? row?.donorNameMasked)
+}
+
+/**
  * 扁平行 → 分组数组（组间最新完成时间倒序；同时间按 sampleId 升序，保证顺序稳定可测）。
  */
 export function groupDocs(rows: DocListRow[] | null | undefined): DocGroup[] {
@@ -104,8 +120,8 @@ export function groupDocs(rows: DocListRow[] | null | undefined): DocGroup[] {
     }
     groups.push({
       sampleId,
-      title: text(docs[0]?.title),
-      subtitle: text(docs[0]?.subtitle),
+      title: groupTitle(docs[0]),
+      subtitle: groupSubtitle(docs[0]),
       docs,
       docKinds: docs.map(doc => text(doc.docKind)),
       latest,

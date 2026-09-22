@@ -135,8 +135,8 @@ function notYet() {
 
 .gcd__mbtn {
   flex: 1;
-  height: var(--lqg-btn-h-sm);
-  line-height: var(--lqg-btn-h-sm);
+  height: 40px;
+  line-height: 40px;
   text-align: center;
   font-size: var(--lqg-fs-body);
   font-weight: var(--lqg-fw-semibold);

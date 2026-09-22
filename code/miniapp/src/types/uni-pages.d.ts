@@ -10,6 +10,8 @@ type _LocationUrl =
   "/pages/admin/organoid" |
   "/pages/admin/sample" |
   "/pages/cryo/form" |
+  "/pages/doc/index" |
+  "/pages/doc/preview" |
   "/pages/docs/index" |
   "/pages/embed/form" |
   "/pages/history/index" |
@@ -29,7 +31,7 @@ interface NavigateToOptions {
 interface RedirectToOptions extends NavigateToOptions {}
 
 interface SwitchTabOptions {
-  url: "/pages/index/index" | "/pages/docs/index" | "/pages/me/index"
+  url: "/pages/index/index" | "/pages/doc/index" | "/pages/me/index"
 }
 
 type ReLaunchOptions = NavigateToOptions | SwitchTabOptions;

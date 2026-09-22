@@ -1,0 +1,69 @@
+# DOC-MP-001 · 机器证据（jar / 进程 / 迁移号 / 模块测试 / 接口原样 JSON）
+
+## 1 jar 与源码新鲜度（accept 2 的 --fresh-module 在本沙箱被 NF1 去掉，用等价证据覆盖）
+  jar mtime: Sep 22 21:05:26 2026   size=183085567
+  jar mtime epoch: 1790082326
+  $ find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer <jar>  → []  （空 = 源码不比 jar 新）
+  8094 listener PID: [64236 ]
+  state 文件: { "backend_port": 8094, "web_port": 8093, "mp_port": 9202, "backend_pid": 64236, "web_pid": "", "mp_pid": "", "jar": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar", "started": "2026-09-22T13:06:55Z", "head": "069801e"}
+  8080(Kevin)/5432: [] / []  （全程没碰）
+  嵌套 jar 里的本票新类:
+    org/dromara/lqg/doc/mp/MpDocController.class
+    org/dromara/lqg/doc/mp/MpDocQueryBo.class
+    org/dromara/lqg/doc/mp/MpDocVo.class
+    org/dromara/lqg/doc/mp/MpDocService.class
+    org/dromara/lqg/doc/service/DocAvailabilityService.class
+
+## 2 Flyway 迁移：本票一支都没有（取号依据）
+  $ SELECT version, description FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1
+    202609261430|QC-WEB-001-qc-menu
+  → 本票不建表 / 不加菜单 / 不加授权（内部清单只读既有表；角色闸是既有的 lqg_internal），
+    因此没有取号、没有 V202609261440__*.sql。给后续票：要加迁移版本号必须 > 202609261430
+    （spring.flyway.out-of-order=false）。
+
+## 3 模块测试（parent 要求：MpDocService 落地后自己跑一遍）
+  $ (cd code/RuoYi-Vue-Plus && mvn -pl ruoyi-modules/ruoyi-lqg -am test -s ../../.mvn-settings.xml -Dmaven.repo.local=../../.m2repo -Duser.home=../../.buildhome)
+    [INFO] Tests run: 257, Failures: 0, Errors: 0, Skipped: 0
+    [INFO] BUILD SUCCESS
+    TEST_EXIT=0
+
+## 4 两个清单接口的原样 JSON（1001 三份 + 1006 一份都已渲染）
+  $ --as staff GET /mp/int/doc/list?pageSize=100
+    [{"sampleId":9000001006,"title":"T-hco04","subtitle":"B 大学","internalNo":"T-hco04","sourceUnitName":"B 大学","docKind":"organoid_score","publishedTime":"2026-09-18 10:00:00","totalScore":18},{"sampleId":9000001001,"title":"T-hli01","subtitle":"A 医院","internalNo":"T-hli01","sourceUnitName":"A 医院","docKind":"sample_qc","publishedTime":"2026-08-31 10:00:00","totalScore":null},{"sampleId":9000001001,"title":"T-hli01","subtitle":"A 医院","internalNo":"T-hli01","sourceUnitName":"A 医院","docKind":"organoid_qc","publishedTime":"2026-09-10 10:00:00","totalScore":null},{"sampleId":9000001001,"title":"T-hli01","subtitle":"A 医院","internalNo":"T-hli01","sourceUnitName":"A 医院","docKind":"organoid_score","publishedTime":"2026-09-13 10:00:00","totalScore":85}]
+  $ --as extA GET /mp/ext/doc/list?pageSize=100
+    [{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"sample_qc","publishedTime":"2026-08-31 10:00:00","totalScore":null},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_qc","publishedTime":"2026-09-10 10:00:00","totalScore":null},{"sampleId":9000001001,"submitNo":"SJ90000001","donorNameMasked":"测**","docKind":"organoid_score","publishedTime":"2026-09-13 10:00:00","totalScore":85},{"sampleId":9000001004,"submitNo":"SJ90000004","donorNameMasked":"测**","docKind":"sample_qc","publishedTime":"2026-09-07 10:00:00","totalScore":null}]
+  $ --as extD GET /mp/int/doc/list（角色闸：外部角色一律 403）
+    403	没有访问权限，请联系管理员授权
+  $ --as staff GET '/mp/int/doc/list?docKind=bogus'（不认识的 docKind → 空列表，不是 400）
+    {"code":200,"rows":[],"total":0}
+  $ --as staff GET '/mp/int/doc/list?publishedEnd=2026-09-13'（日期止端含当天）
+    [[9000001001,"sample_qc"],[9000001001,"organoid_qc"],[9000001001,"organoid_score"]]
+  $ --as staff GET '/mp/int/doc/list?publishedEnd=2026-09-12'（前一天不含当天）
+    [[9000001001,"sample_qc"],[9000001001,"organoid_qc"]]
+  $ --as staff GET '/mp/int/doc/list?sampleId=9000001001'（只看一组）
+    ["sample_qc","organoid_qc","organoid_score"]
+  $ --as staff GET '/mp/int/doc/list?publishedBegin=oops'（时间格式写错 → 400）
+    400	时间范围只能是 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss，收到：oops
+## 5 「能不能给出去」用的是同一道产物闸（内部清单也照 AUTH-EXT-003 的判据）
+  步骤：① 撤回中的 sample_qc 重新 publish → 重渲染 internal sample_qc + merged；
+        ② 读内部清单；③ unpublish 一份（回草稿）；④ 再读内部清单 + 外部清单。
+  $ 前置：POST /lqg/qc/9000001001/sample-qc/publish
+          POST /lqg/doc/9000001001/sample_qc/render?audience=internal  → 200
+          POST /lqg/doc/9000001001/merged/render?audience=internal     → 200
+  $ GET /mp/int/doc/list?sampleId=9000001001   ★ 撤回前（merged 在，完成时间 = 成员里最新那一份）
+    [["sample_qc","2026-09-22 21:15:50"],["organoid_qc","2026-09-10 10:00:00"],["organoid_score","2026-09-13 10:00:00"],["merged","2026-09-22 21:15:50"]]
+  $ POST /lqg/qc/9000001001/sample-qc/unpublish   （该份回草稿；不手动碰 merged 的产物行）
+  $ GET /mp/int/doc/list?sampleId=9000001001   ★ 撤回后：sample_qc 行消失（doc_status 闸）
+                                            **且 merged 行同时消失**（产物完整性闸 —— 不是比 header.content_hash）
+    [["organoid_qc","2026-09-10 10:00:00"],["organoid_score","2026-09-13 10:00:00"]]
+  $ GET /mp/ext/doc/list?sampleId=9000001001 （--as extA）同一时刻外部也看不到那两份
+    ["organoid_qc","organoid_score"]
+  → 与 AUTH-EXT-003 探针 P27–P30 的结论逐条一致：判据在 DocAvailabilityService 里只有一处。
+
+## 6 前端禁字 / 零色值字面量（SYS-MP-001 accept 3 的同款口径，本票新文件逐条过）
+  $ ! grep -n 'internalNo' src/pages/doc/index.vue src/components/lqg/DocGroupCard.vue
+    -> 无命中（accept 2 的禁字段）
+  $ ! grep -rnE '(color|background|border|fill|stroke|shadow)[^;{]*#[0-9a-fA-F]{3,8}\b' src/pages/doc src/components/lqg/DocGroupCard.vue
+    -> 无命中（零色值字面量）
+  $ 新文件里用到的 --lqg-* token 全部在 tokens.scss 里存在
+    -> 检查完（无 MISSING）

@@ -4,10 +4,13 @@
 //   内部：`GET /mp/int/doc/list`（全部样本里「已完成且内部版渲染成功」的；行带 internalNo / sourceUnitName）
 //   外部：`GET /mp/ext/doc/list`（AUTH-EXT-003；可见样本 ∩ 已完成 ∩ 外部版渲染成功；行带 submitNo / donorNameMasked）
 //
-// ★ 两个接口的行形状**对齐到同一组键**：{sampleId, title, subtitle, docKind, publishedTime, totalScore?}
-//   `title` / `subtitle` 由**后端按身份**给：
-//     内部 = 内部编号 / 来源单位；外部 = 送检单号 / 供体姓名（掩码）。
-//   → 前端只渲染 title / subtitle，**不自己拼内部编号**（accept 2 的禁字 grep 点的就是这件事）。
+// ★★ 两个接口的组标题键**不是同一组**（实测，契约第 86/87 行只把外部那 6 键写死了）：
+//     内部 `/mp/int/doc/list`：`title`（内部编号）/ `subtitle`（来源单位）；
+//     外部 `/mp/ext/doc/list`：`submitNo`（送检单号）/ `donorNameMasked`（供体姓名掩码）
+//      —— `ExtDocVo` 的字段集合被 AUTH-EXT-003 的形状契约钉成**恰好 6 键**，加不了 title/subtitle。
+//   → 两个接口的**内容**都是「后端按身份给、前端不自己拼」，只是键名不同；
+//     归一化（`DocListRow` 上的 `title/subtitle ?? submitNo/donorNameMasked`）放在 `group.ts` 一处，
+//     前端**绝不**自己算内部编号或掩码（accept 2 的禁字 grep 点的就是这件事）。
 // ★ 分页响应是 `{code,msg,rows,total}`（没有 `data` 键）→ 一律带 `raw: true`（SAMPLE-MP-001 坑 3）。
 // ★ `docKind` 是**下划线**那四个（sample_qc / organoid_qc / organoid_score / merged）——
 //   不是质控草稿侧的连字符三个（DOC-PUBLISH-001 连坑两次）。
@@ -25,6 +28,10 @@ export interface DocListRow {
   publishedTime?: string | null
   /** 评分表合计分：**只在评分表那一行上有**（别的行连键都不出） */
   totalScore?: number | null
+  /** 外部接口的组标题：送检单号（无 title 时用它） */
+  submitNo?: string | null
+  /** 外部接口的组副标题：供体姓名掩码（无 subtitle 时用它） */
+  donorNameMasked?: string | null
   /** 内部接口才有（前端不读，只用 title / subtitle） */
   internalNo?: string | null
   sourceUnitName?: string | null

@@ -1,0 +1,28 @@
+# DOC-MP-001 · accept 1 的三条 counterfeit 逐条实测（把 groupDocs 改坏 → fixture 红 → 还原绿）
+# 跑法：cd code/miniapp && pnpm vitest run src/pages/doc/group.fixture.spec.ts --reporter=json
+
+== 病灶 A：组内按完成时间排（而不是固定顺序） ==
+{"numPassedTests":6,"numFailedTests":1}
+  FAILED: groupDocs(rows)（fixture 驱动） 恰好两份也显示合并入口
+    AssertionError: expected [ { sampleId: '3', …(3) } ] to deeply equal [ { sampleId: '3', …(3) } ]
+
+== 病灶 B：showMerge 写成 docs.length > 2 ==
+{"numPassedTests":6,"numFailedTests":1}
+  FAILED: groupDocs(rows)（fixture 驱动） 恰好两份也显示合并入口
+    AssertionError: expected [ { sampleId: '3', …(3) } ] to deeply equal [ { sampleId: '3', …(3) } ]
+
+== 病灶 C：把 merged 行当成一份文档（不过滤、进组内序） ==
+{"numPassedTests":6,"numFailedTests":1}
+  FAILED: groupDocs(rows)（fixture 驱动） 病灶：接口若混进了 merged 行，不当成一份文档也不计入合并判断
+    AssertionError: expected [ { sampleId: '4', …(3) } ] to deeply equal [ { sampleId: '4', …(3) } ]
+
+== 还原（逐字回到实现） ==
+{"numPassedTests":7,"numFailedTests":0}
+
+== 病灶 A（票面字面那一版）：组内按完成时间**倒序**排 → 第一例评分表排到质控表前面 ==
+{"numPassedTests":6,"numFailedTests":1}
+  FAILED: groupDocs(rows)（fixture 驱动） 两个样本，组内顺序与组间顺序
+    AssertionError: expected [ { sampleId: '2', …(3) }, …(1) ] to deeply equal [ { sampleId: '2', …(3) }, …(1) ]
+
+== 还原后（交付态） ==
+{"numPassedTests":7,"numFailedTests":0}
