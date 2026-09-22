@@ -1,0 +1,58 @@
+{
+  "phase": "D3",
+  "round": 2,
+  "auditor": "independent",
+  "levels": {
+    "L0": {
+      "status": "pass",
+      "evidence": "后端：cd code/RuoYi-Vue-Plus && mvn -s ../../.mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome -pl ruoyi-modules/ruoyi-lqg -am install → BUILD SUCCESS，Tests run: 120, Failures: 0, Errors: 0, Skipped: 0；逐类读 surefire：EmbedRulesContractTest 8（染色固定序/NONE 互斥/OTHER 必填/字典外 PAS 拒）、SampleHintContractTest 9（含 twentySampleIdsTriggerExactlyOneQuery 断言 mapper.calls==1 且 asked.size()==20；emptyOrNullIdSetDoesNotHitTheDatabase calls==0）。反 stale 自核（不用 api.sh --fresh-module，ps 被沙箱禁）：find ruoyi-lqg/src ruoyi-admin/src -newer ruoyi-admin.jar 为空 + lsof -p 13039 确认进程持该 jar + 进程启动 11:04:52 晚于 jar mtime 10:13:47。前端：plus-ui `pnpm build:prod` exit 0（dist/index.html+assets 重建）；miniapp `pnpm build:mp-weixin` exit 0（dist/build/mp-weixin/pages/embed/form.js 存在）。fixture：plus-ui `vitest run src/views/lqg/embed/stain.fixture.spec.ts` → numTotalTests 19 / numPassedTests 19 / numFailedTests 0，无 .skip/.only；miniapp `vitest run src/pages/embed/stain.fixture.spec.ts` → 19/19；miniapp `vitest run src/pages/embed/layout.fixture.spec.ts`（embed-form-cases.json）→ 17/17，且 fixture 形状自核 cases=9 / externalFields=3 / 非 editable=5 成立。D1 回归包 verify.sh 也重放了同一套 mvn+两个前端 build，均绿。"
+    },
+    "L1": {
+      "status": "pass",
+      "evidence": "① ddl_vs_ssot：python3 doc/verify/ddl_vs_ssot.py --table t_lqg_embed --table t_lqg_embed_marker --require-public create_dept,create_by,create_time,update_by,update_time,del_flag → '✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）'；flyway 14 行全 success。② 三张导出（先 reseed）：tissue 表头 14 列与 _input/templates/样本记录信息表模板.xlsx 逐字逐序一致、8 行 == db count == list total；T-hli01 行 --expect '来源单位=A 医院,供体姓名=测试供体甲,性别=男,年龄=56,住院号=ZY0000001,组织类型=肝组织,有无固定=有,质控表=有,细胞活率报告=有,操作人=李工' 全中；库里 donor_name=TcVJXrqPUYwPPs4JJt6NRg==（密文），base64 -d | openssl enc -d -aes-128-ecb -nosalt -K $(printf 'LqgTestAesKey#01'|xxd -p) 独立解出 '测试供体甲'，与导出一致；把 1001 的 is_fixed/has_qc_sheet/has_viability_report 临时改成 'N' 后重导 → 三格都是 '无'（'有 / 无' 映射双向成立，随后 reseed 还原）。organoid 表头 7 列逐字一致、1 行 == list total，T-oco01 行 --expect 全中。embed 表头 16 列逐字一致、5 行 == db count（含 pending 外部送样 2006），T-E01-1（样本编号=T-hli01, 染色=HE染色、IHC染色, mark的表达情况=Ki67：强表达；CK19：阴性, 包埋人=李工）、T-E04-1（染色=其他（Masson）, mark的表达情况=弱表达）、T-E02-1（染色=无染色, mark的表达情况=空）全中；带筛选：internalNo=T-hli01 → 2 行 == list total 2，verifyStatus=valid → 4 行 == list total 4，tissue sourceUnitId=9000009002 → 1 行 == list total 1；extA/extC 调三个导出端点全部 403。③ 切片提示逐样本：1001=[2,true,[HE,IHC]]、1004=[1,true,[]]、1006=[1,true,[OTHER]]、1008=[0,false,[]]（软删 2005 不计）、1002=[0,false,[]]（待核验 2006 不计）；sum(hint.blockCount)=4 == 直连库 SELECT count(*) FROM t_lqg_embed e JOIN t_lqg_sample s ON s.id=e.sample_id AND s.del_flag='0' WHERE e.del_flag='0' AND e.verify_status='valid' = 4；/mp/int/sample/list 的 1001.blockCount=2。④ 外部可见石蜡包埋：extA=extB=[2001,2002,2003,2006]、extC=extE=extF=[]、extD=[2004]；onlyMine extA=[2006]、extB=[]；工作台 /lqg/embed/list 首行 id=2006（sort 后的 order [2006,2004,2003,2002,2001]），其 sampleVerifyStatus=pending、verifyStatus=pending、submitSource=external。⑤ #145 独立复验（真后端 8081 + 真库 5433 + plus-ui 8082 + Playwright 真 DOM，.tmp/qa2/probe-145.mjs）：A 判为有效 → 只发 1 次 PUT /lqg/embed/<id>/verify body={\"action\":\"valid\",\"paraffinBlockNo\":\"T-QA2-A1\"}，无预保存 PUT /lqg/embed，响应 code=200，抽屉关闭，库落 valid|T-QA2-A1|9000000100|-（核验人=lqgadmin）；B 判为无效 → 只发 1 次 /verify body={\"action\":\"invalid\",\"reason\":\"QA2 复验：材料不全\"}，无预保存，code=200，抽屉关闭，库落 invalid|-|9000000100|QA2 复验：材料不全；C 编号撞号（T-E01-1）→ /verify 确实发出、响应 code=500『石蜡块编号「T-E01-1」已存在，请换一个』、抽屉不关、toast 两条可见、库里仍 pending|-|-|-；三条路径均 0 pageerror。合计 22/22。⑥ D1 回归包重放：bash doc/waves/regression/D1/verify.sh → L0.1 BUILD SUCCESS/Tests run 120、L0.3/L0.4 两个前端 build 均 ✓、L1.2/L1.3 全 ✓，唯一红是 harness 写死 flyway 迁移数 7（实际 14）——非产品回归。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S3",
+      "level": "L0",
+      "type": "harness",
+      "ticket": "D1-regression",
+      "title": "doc/waves/regression/D1/verify.sh L1.1 把 D1 的迁移总数写死成 7，现在库里 14 行 → 每次重放必红一条",
+      "detail": "复现：bash doc/waves/regression/D1/verify.sh → 唯一失败 'L1.1 D1 的 7 支迁移全部记录在案 → [FAIL] 期望 7，实际 14'。影响：D1 回归包对后续每个任务都声称 1 条失败，淹没真回归；不改变产品行为。定级依据：断言陈旧（D2/D3 又加了 7 支迁移），是 harness 层漂移，不是产品缺陷；2 轮内已两次出现，已按题面登记。"
+    },
+    {
+      "severity": "S3",
+      "level": "L0",
+      "type": "harness",
+      "ticket": "EMBED-MP-001",
+      "title": "EMBED-MP-001 accept 3 的 `! grep -nE 'internalNo' src/pages/embed/SamplePickerExt.vue` 打在不存在的路径上 → 恒真（issue #138）",
+      "detail": "复现：code/miniapp/src/pages/embed/ 下没有 SamplePickerExt.vue（真实文件在 src/components/lqg/SamplePickerExt.vue）→ grep 退出 2，`! grep` 退出 0，该条断言无条件通过。影响：accept 里『外部选样本不显示内部编号』的一道闸形同虚设。缓解：同一票的 layout.fixture.spec.ts 已按真实路径补了一道等价的 readFileSync + not.toMatch(/internalNo/)，我实跑 17/17 通过，实际覆盖没有缺口。定级依据：断言弱化（harness），非已知产品缺陷；已在台账 issue #138。"
+    },
+    {
+      "severity": "S3",
+      "level": "L1",
+      "type": "doc-drift",
+      "ticket": "SAMPLE-WEB-001 / SAMPLE-EXPORT-001",
+      "title": "SAMPLE-WEB-001 要求 5210 下 perms 精确等于六个，SAMPLE-EXPORT-001 必须新增第七个 → 正确现状为七个（issue #129）",
+      "detail": "复现：python3 doc/verify/db.py --quiet --sql \"SELECT string_agg(perms, ',' ORDER BY menu_id) FROM sys_menu WHERE parent_id=5210 AND menu_type='F'\" → lqg:sample:list,query,add,edit,remove,verify,export（七个）；SAMPLE-WEB-001 prompt.md:66 的 --col-set 只列六个。影响：按票面字面重放 SAMPLE-WEB-001 的 MENU accept 会红，但按需求归属（导出权限是 SAMPLE-EXPORT-001 加的）现状是对的。定级依据：两票票面互斥（规格层），实现按需求归属，属设计允许，不判实现缺陷；已在台账 issue #129。"
+    },
+    {
+      "severity": "S3",
+      "level": "L1",
+      "type": "doc-drift",
+      "ticket": "EMBED-MP-001",
+      "title": "EMBED 的 sort=recent 只排序、不收窄到『内部人员新增/修改过』，与权威 UI:mp.history 及 SAMPLE 域行为不一致（issue #137）",
+      "detail": "复现：/mp/int/embed/list?pageSize=100&sort=recent → [2001,2002,2003,2004,2006]（含 extA 提交、无内部经手的 2006）；同栈的 /mp/int/sample/list?pageSize=100&sort=recent → 只有 [1008,1009]（内部人员经手的两条），而权威 doc/authority/ui-index.yaml UI:mp.history 写的是『内部：中心全部内部人员新增或修改过的记录』。影响：EMBED-MP-001 的 accept 与权威互斥（票面要求全 5 条），谁对谁错需 Kevin 裁；不拦本轮。定级依据：票面与权威互斥（规格层），已在台账 issue #137。"
+    },
+    {
+      "severity": "S3",
+      "level": "L1",
+      "type": "doc-drift",
+      "ticket": "D3 / doc/phase-plan.yaml",
+      "title": "doc/phase-plan.yaml 的 D3 qa_scope L3 第 4 条仍是 CR-20260918-07 之前的旧写法（要求 embeds 里没有 embedBy/operatorName）（issue #146）",
+      "detail": "复现：doc/phase-plan.yaml D3 qa_scope L3 第 4 条=『外部详情的 embeds 里没有 embedBy / operatorName / internalNo 键』；而 code/.../ext/ExtChokepointContractTest.java:47-51 的 BANNED_EXEMPT 明确把 ExtEmbedVo 的 operatorName/embedBy 豁免，注释写 CR-20260918-07 要外部看得到这两个；不许出现的只是 internalNo（除非 sys_config lqg.ext.show-internal-no 打开）/verifyBy/remark/冻存。影响：照 qa_scope 字面跑会误判 AUTH-EXT-002 的正确实现为红。定级依据：文档未随 CR 更新（规格层），实现与契约测试一致，不判实现缺陷；已在台账 issue #146。"
+    }
+  ]
+}

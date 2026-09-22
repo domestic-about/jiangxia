@@ -25,7 +25,7 @@
     },
     {
       "id": "D3",
-      "status": "qa_failed",
+      "status": "qa_running",
       "qa_rounds": 1,
       "qa_seq": 1
     },
