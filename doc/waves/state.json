@@ -121,12 +121,12 @@
       "note": "迁移 V202609241200（生成器逐字节：t_lqg_cryo_batch + t_lqg_cryo_flow + 菜单 5401-5407）；后端 ruoyi-lqg/.../cryo/batch/** 14 个类；单测 4 类 24 例（总 144）。accept 3/3：① DDL——两表与 SSOT 逐列相符、flyway 恰 1 行、information_schema 里 %remain%/%current%/%stock% = 0（批次表没有剩余类列）；② STATE——5 次 T-BAD 全拒且 count=0（代数格式/initQty=0/直接液氮缺位置/挂未核验样本/toLn2Time 早于 freezeTime）、正向 200、initQty 改得动且记 update_by、改成 1 得 400『已取走 2 支，冻存数量不能少于 2』且库内仍 10、有流水的批次 DELETE 被拒且 del_flag=0；③ DATA——接口 7 批剩余 = {6,4,4,0,2,5,5} 与 db.py 独立 SQL 逐批一致、location=ln2={3003,3007}、3001 带 internalNo=T-hli01。★cryo children checker 判据：SELECT COUNT(*) FROM t_lqg_cryo_batch WHERE sample_id=? AND del_flag='0'（该表没有核验状态列，建出即生效——与 EmbedChildrenChecker 的唯一差异是逐表照『生效』定义写）；三条探针：1009 改判无效 500 / 1002（无冻存批次）valid→invalid 200 / 1005 建批后拒、软删该批后放行。回归全绿：SAMPLE-VERIFY-001 acc1（1002 仍放行）+acc2、EMBED-MODEL-001 acc2、SAMPLE-WEB-001 acc1、ExtChokepoint、D1 回归包只剩既有 flyway 假红（现 15）。★交接：CRYO-REMIND-001 必须动 cryo/batch/** 的 CryoBatchVo/CryoQueryBo/CryoQueryService（不在它 touches）；5407 lqg:cryo:flow 权限行已由本票落好供 CRYO-FLOW-001 用（它的 touches 无迁移）；CRYO-WEB-001 不需要搬菜单。"
     },
     "CRYO-MP-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D4",
       "track": "CRYO",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序：pages/cryo/form（新增/修改/只读三模式）+ pages/ledger/sheets.ts & pages/history/sources.ts 注册 cryo + CryoBatchSheet.vue（显式 .vue 路径导入 + 带「修改」跳 pages/cryo/form?id=&mode=edit）+ api/cryo.ts；后端 /mp/int/cryo/** 只注册读接口 + 批次 POST/PUT（没有任何流水写接口）。accept 4/4：① tabCounts=={7,2,2}、7 行、3001 格 [6,6,'minus80']、直连库 7|2、sort=recent 7 条且 3002→[测试管理员,false]/3001→[李工,true]、mine=true→[3001,3003]、把 3004 冻存数量改 2→400/500 库不变、改 5→200 且库 5|王工|2 且排第 1 进 mine、extA 403；② 3003 flows [3104,3103,3102] + [4,7,5]；/mp/int/cryo 上 POST/PUT/DELETE flow 与 PUT to-ln2 **四段全 404 No endpoint** 且库不变；extA flows 403；两段禁字 grep 0 命中；③ 工作台转液氮 3001 → 当场 {7,1,3}、3001 行 [false,'ln2']、超期页签只剩 3005；④ form.js/ledger index.js 产物在、cryo 已注册、显式 .vue 导入、index.vue 无冻存列名、adjust|盘点调整 0 命中。后端 181 单测、小程序 vitest 128（+13）。回归（每步先 reseed+clean-orphan）：CRYO-MODEL/FLOW/REMIND/WEB 全部、EMBED-MP acc1、SAMPLE-MP-002 acc2、ExtChokepoint、D1 41 绿/1 红（既有 flyway 假红，仍 17 支）。★越界 2 处：src/api/ledger.ts +cryoView（三个页签专有筛选键，与 EMBED-MP-001 加 stain 同处）、src/style/components.scss +1 行 --overdue 红字。"
     },
     "CRYO-REMIND-001": {
       "status": "done",
@@ -2073,6 +2073,56 @@
       "type": "debt",
       "title": "/mp/int/export/cryo 无运行时证据（端点属 SYS-EXPORT-001）",
       "detail": "CRYO-WEB-001 只落了可复用的 CryoExportService#rowsOf + 形状断言。到 SYS-EXPORT-001 落地时要补端到端。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 168,
+      "ticket": "SAMPLE-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 的禁字 grep 会扫到注释：CRYO-MP-001 在 sheets.ts 注释里写 mode=edit 打红了 SAMPLE-MP-002 acc2",
+      "detail": "CRYO-MP-001 第一版在 src/pages/ledger/sheets.ts 的注释里写了 mode=edit，命中 SAMPLE-MP-002 acc2 的『! grep -q mode=edit src/pages/ledger/sheets.ts』→ 打红别人的 accept；改注释后复跑全绿并重跑整套回归。这是与 issue #154 同族的反方向形态（那条是『别写字面量去撞别人 grep』，这条是『注释也会被 grep 到』）。方案（①侧）：禁字类断言收窄到代码而非注释（例如先剥注释再 grep），或生成器给『禁字 grep』加上『排除注释行』的约定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 169,
+      "ticket": "CRYO-MP-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "touches 装不下实现：src/api/ledger.ts 与 src/style/components.scss 两个文件",
+      "detail": "ledger.ts 加 cryoView（三个页签的专有筛选键，与 EMBED-MP-001 加 stain 同处）；components.scss 加 1 行 --overdue 的 .lqg_fz-sub 红字（ticket 要求『超期红字』）。方案：把这两个跨票共用文件写进相关 MP 票的 touches。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 170,
+      "ticket": "CRYO-MP-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "DELETE /mp/int/cryo/batch/{id} 是 405 不是 404（路径被 GET /{id} 占着）",
+      "detail": "下游（D5-D8 的分片与断言）若写 ^404 会假红。方案：路径存在但方法不支持时按 405 断言，或把断言写成 ^(404|405)。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 171,
+      "ticket": "CRYO-MP-001",
+      "severity": "S3",
+      "type": "ux",
+      "title": "取用登记类型文案表被两段禁字 grep 逼到 api/cryo.ts（CRYO_FLOW_TEXT）",
+      "detail": "业务文案放在 api 层略怪（为了让页面文件不出现被禁的字面量）。方案：与『禁字 grep 扫注释』那条一起收（收窄断言而不是搬文案）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 172,
+      "ticket": "CRYO-MP-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "冻存工作表按 UI:mp.cryo.list 没有搜索框；超期行冻结格第二行整行变红",
+      "detail": "两条都是与哑组件（LedgerTable 的 cells 是字符串矩阵）的形状有关：要只红后半句需扩展单元格类型。方案：若要与工作台一致的红字粒度，另开小票扩展 LedgerTable。",
       "status": "open",
       "decision": ""
     }
