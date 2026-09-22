@@ -18,17 +18,10 @@
       </div>
     </el-card>
 
-    <el-alert
-      v-if="loadError"
-      type="error"
-      :closable="false"
-      show-icon
-      :title="loadError"
-      class="mb-2"
-    />
+    <el-alert v-if="loadError" type="error" :closable="false" show-icon :title="loadError" class="mb-2" />
 
     <el-card v-loading="loading" shadow="hover" class="lqg-qc-editor__body">
-      <!-- ═══ 三个页签（各带 草稿 / 已完成 徽标；后两个本张占位）═══ -->
+      <!-- ═══ 三个页签（各带 草稿 / 已完成 徽标）═══ -->
       <el-tabs v-model="activeTab" class="lqg-qc-editor__tabs" @tab-change="handleTabChange">
         <el-tab-pane v-for="tab in TABS" :key="tab.name" :name="tab.name">
           <template #label>
@@ -45,16 +38,40 @@
       <!-- ═══ 左编辑 / 右预览 ═══ -->
       <div class="lqg-qc-editor__split">
         <div class="lqg-qc-editor__left">
-          <SampleQcTab
-            v-if="activeTab === 'sample-qc' && bundle"
-            ref="sampleTabRef"
-            :sample-id="sampleId"
-            :doc="bundle.sampleQc"
-            :readonly="!canEdit"
-            @dirty="handleDirty"
-            @changed="reload"
-          />
-          <el-empty v-else :description="placeholderText" />
+          <!-- ★ 三份文档各挂一次、用 v-show 隐藏（**不是** v-if 卸载）：换页签再回来时，
+               没保存的改动还在（QC-WEB-001 只有样本质控表时用 v-if 没问题，三个页签都能
+               编辑之后 v-if 会在换页签时静默丢掉另一页签的改动）。
+               dirty 按页签各记一份（dirtyTabs），保存只存当前页签。 -->
+          <template v-if="bundle">
+            <SampleQcTab
+              v-show="activeTab === 'sample-qc'"
+              ref="sampleTabRef"
+              :sample-id="sampleId"
+              :doc="bundle.sampleQc"
+              :readonly="!canEdit"
+              @dirty="(value) => setTabDirty('sample-qc', value)"
+              @changed="reload"
+            />
+            <OrganoidQcTab
+              v-show="activeTab === 'organoid-qc'"
+              ref="organoidTabRef"
+              :sample-id="sampleId"
+              :doc="bundle.organoidQc"
+              :readonly="!canEdit"
+              @dirty="(value) => setTabDirty('organoid-qc', value)"
+              @changed="reload"
+            />
+            <ScoreTab
+              v-show="activeTab === 'score'"
+              ref="scoreTabRef"
+              :sample-id="sampleId"
+              :doc="bundle.score"
+              :readonly="!canEdit"
+              @dirty="(value) => setTabDirty('score', value)"
+              @changed="reload"
+            />
+          </template>
+          <el-empty v-else :description="loading ? '' : loadError || t('lqg.qc.editor.loadFailed')" />
         </div>
 
         <div class="lqg-qc-editor__right">
@@ -62,21 +79,9 @@
 
           <!-- failed 时看得见原因、点「重新生成」重试（FLOW:F-DOC-01.step6；
                页面图 / 下载 / 完成并同步是 DOC-PUBLISH-001） -->
-          <el-alert
-            v-if="renderState.status === 'failed'"
-            type="error"
-            :closable="false"
-            show-icon
-            :title="t('lqg.qc.editor.renderFailed')"
-          >
+          <el-alert v-if="renderState.status === 'failed'" type="error" :closable="false" show-icon :title="t('lqg.qc.editor.renderFailed')">
             <div class="lqg-qc-editor__reason">{{ renderState.errorMsg || t('lqg.qc.editor.renderNoReason') }}</div>
-            <el-button
-              type="primary"
-              size="small"
-              :loading="rendering"
-              class="mt-2"
-              @click="handleRegenerate"
-            >
+            <el-button type="primary" size="small" :loading="rendering" class="mt-2" @click="handleRegenerate">
               {{ t('lqg.qc.editor.regenerate') }}
             </el-button>
           </el-alert>
@@ -105,19 +110,18 @@
 
       <!-- ═══ 页脚按钮 ═══ -->
       <div class="lqg-qc-editor__footer">
-        <el-button
-          type="primary"
-          :loading="saving"
-          :disabled="!bundle || activeTab !== 'sample-qc' || !canEdit"
-          @click="handleSaveDraft"
-        >
+        <el-button type="primary" :loading="saving" :disabled="!bundle || !canEdit" @click="handleSaveDraft">
           {{ t('lqg.qc.editor.saveDraft') }}
         </el-button>
         <el-tooltip :content="t('lqg.qc.editor.notYet')" placement="top">
-          <span><el-button disabled>{{ t('lqg.qc.editor.preview') }}</el-button></span>
+          <span
+            ><el-button disabled>{{ t('lqg.qc.editor.preview') }}</el-button></span
+          >
         </el-tooltip>
         <el-tooltip :content="t('lqg.qc.editor.notYet')" placement="top">
-          <span><el-button disabled>{{ t('lqg.qc.editor.publish') }}</el-button></span>
+          <span
+            ><el-button disabled>{{ t('lqg.qc.editor.publish') }}</el-button></span
+          >
         </el-tooltip>
         <span class="lqg-qc-editor__footer-hint">{{ t('lqg.qc.editor.footerHint') }}</span>
       </div>
@@ -129,6 +133,8 @@
 import { getQcBundle, type QcDocBundleVO, type QcDocKind } from '@/api/lqg/qc';
 import { getDocPages, renderDoc } from '@/api/lqg/doc';
 import SampleQcTab from './SampleQcTab.vue';
+import OrganoidQcTab from './OrganoidQcTab.vue';
+import ScoreTab from './ScoreTab.vue';
 import { useI18n } from 'vue-i18n';
 
 // ============================================================================
@@ -140,31 +146,39 @@ import { useI18n } from 'vue-i18n';
 // ★ 工作台里**唯一不用抽屉**的录入页（内容多、带多图，抽屉装不下；方案 B 已否决）。
 // ★ 页头摘要条里那七项（来源单位 / 患者姓名 / 性别 / 收样时间 / 处理时间 / 操作人 /
 //   内部编号）从样本主档带出，**只读**——不进表单（accept 2 第 4 段断这个）。
-// ★ 右栏预览面板本张是占位（页面图 / 下载 / 完成并同步 = DOC-PUBLISH-001）；
+// ★ 三份文档都能编辑了（QC-WEB-002）：脏标记**按页签各记一份**，页头/路由离开的拦截
+//   用「任一页签脏」。保存按钮只保存当前页签（各页签的 save() 自己发各自的 PUT）。
+// ★ 右栏预览面板本张仍是占位（页面图 / 下载 / 完成并同步 = DOC-PUBLISH-001）；
 //   只有「渲染失败 → 重新生成」这一条先接上（FLOW:F-DOC-01.step6）。
 // ============================================================================
+
+type TabName = 'sample-qc' | 'organoid-qc' | 'score';
 
 const { t } = useI18n();
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const route = useRoute();
 const router = useRouter();
 
-const TABS: { name: 'sample-qc' | 'organoid-qc' | 'score'; labelKey: string; docKind: QcDocKind; placeholderKey: string }[] = [
-  { name: 'sample-qc', labelKey: 'lqg.qc.editor.tabSampleQc', docKind: 'sample_qc', placeholderKey: '' },
-  { name: 'organoid-qc', labelKey: 'lqg.qc.editor.tabOrganoidQc', docKind: 'organoid_qc', placeholderKey: 'lqg.qc.editor.organoidPlaceholder' },
-  { name: 'score', labelKey: 'lqg.qc.editor.tabScore', docKind: 'organoid_score', placeholderKey: 'lqg.qc.editor.scorePlaceholder' }
+const TABS: { name: TabName; labelKey: string; docKind: QcDocKind }[] = [
+  { name: 'sample-qc', labelKey: 'lqg.qc.editor.tabSampleQc', docKind: 'sample_qc' },
+  { name: 'organoid-qc', labelKey: 'lqg.qc.editor.tabOrganoidQc', docKind: 'organoid_qc' },
+  { name: 'score', labelKey: 'lqg.qc.editor.tabScore', docKind: 'organoid_score' }
 ];
 
 const sampleId = ref<string>((route.query.sampleId as string) || '');
-const activeTab = ref<'sample-qc' | 'organoid-qc' | 'score'>('sample-qc');
+const activeTab = ref<TabName>('sample-qc');
 const loading = ref(false);
 const saving = ref(false);
 const rendering = ref(false);
-const dirty = ref(false);
+const dirtyTabs = reactive<Record<TabName, boolean>>({ 'sample-qc': false, 'organoid-qc': false, score: false });
+/** 任一页签有未保存改动 → 离开页面时拦一次 */
+const dirty = computed(() => Object.values(dirtyTabs).some(Boolean));
 const loadError = ref('');
 const bundle = ref<QcDocBundleVO | null>(null);
 const renderState = ref<{ status: string; errorMsg?: string | null; pages: number }>({ status: 'none', pages: 0 });
 const sampleTabRef = ref<InstanceType<typeof SampleQcTab>>();
+const organoidTabRef = ref<InstanceType<typeof OrganoidQcTab>>();
+const scoreTabRef = ref<InstanceType<typeof ScoreTab>>();
 
 const sample = computed(() => bundle.value?.sample ?? ({} as QcDocBundleVO['sample']));
 /** 编辑权走 `lqg:qc:edit`（101/102 都有）；没有就整页只读（后端也会 403） */
@@ -181,7 +195,13 @@ const summaryItems = computed(() => [
 ]);
 
 const currentTab = computed(() => TABS.find((tab) => tab.name === activeTab.value) || TABS[0]);
-const placeholderText = computed(() => (currentTab.value.placeholderKey ? t(currentTab.value.placeholderKey) : ''));
+
+/** 当前页签的编辑组件（保存按钮按它派发到各自的 PUT） */
+const activeTabRef = computed(() => {
+  if (activeTab.value === 'organoid-qc') return organoidTabRef.value;
+  if (activeTab.value === 'score') return scoreTabRef.value;
+  return sampleTabRef.value;
+});
 
 /** 页签上的状态徽标 = 该文档的 doc_status（draft 草稿 / published 已完成） */
 const docStatusOf = (tab: (typeof TABS)[number]) => {
@@ -244,19 +264,22 @@ const handleRegenerate = async () => {
   }
 };
 
-const handleDirty = (value: boolean) => {
-  dirty.value = value;
+/** 页签各自的脏标记（子组件 `@dirty` 上报；保存成功后子组件自己置 false） */
+const setTabDirty = (tab: TabName, value: boolean) => {
+  dirtyTabs[tab] = value;
 };
 
 const handleTabChange = async () => {
   await loadRenderState();
 };
 
+/** 保存草稿：只保存**当前页签**（各页签的 save() 自己发各自的 PUT，见 api/lqg/qc/index.ts） */
 const handleSaveDraft = async () => {
-  if (activeTab.value !== 'sample-qc') return;
+  const tab = activeTabRef.value;
+  if (!tab) return;
   saving.value = true;
   try {
-    await sampleTabRef.value?.save();
+    await tab.save();
     await reload();
   } finally {
     saving.value = false;

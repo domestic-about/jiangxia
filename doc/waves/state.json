@@ -259,12 +259,12 @@
       "note": "工作台质控文档编辑页（三页签 + 图片位 + 附件 + 评分）落成在 plus-ui 的 views/lqg/qc/editor/** 与 components/**；后端 Java 一行未改。accept 2/2 绿；另做 27/27 人眼验收（真 Playwright + 真 OSS 上传 + 真库）：三个图片位各传图、真 TIFF 触发预览转换（preview_oss_id≠oss_id，.tif→.jpg）、点图放大、拖拽排序落库（用 issue #210 的 {ids:[全部 id]} 形状）、活率附件用 viabilityOssId=0 摘掉（#212）、通用附件 fileSize 可选（#209）、总表入口只对有效样本可点、离开拦截。★按我给的两条照做：①取号改 V202609261430（票面 V20260926132* 已被 202609261420 越过，照写会 FlywayValidateException），依据写进迁移头注释；②隐藏菜单选**方案 a**（新建隐藏 M 目录 5500，把 5520 与 5510 都挂进去）→ 实测 getRouters 外层与两个子路由**都** hidden=true，不再依赖 isMenuFrame() 外壳分支。★代价（已记 WARN）：真实路由变成 /qc-console/qc-editor?sampleId=…（票面写的 /qc-editor 不再成立）、5520 变 /qc-console/doc-console；5520 用**新迁移 UPDATE parent_id**（没碰已应用的 V202609261420），并回归验证 /qc-console/doc-console 仍可路由。★越界 2 处：lang/lqg/sample.{zh_CN,en_US}.ts 各 +1 key（置灰入口 title，i18n 约定无别的落点）、迁移里 UPDATE sys_menu SET parent_id=5500 WHERE menu_id=5520。★它还抓到我一处派单模板错误：Playwright 的 require 锚点用 code/plus-ui/package.json 会 MODULE_NOT_FOUND（plus-ui 没声明 playwright，pnpm install 会把它剪掉），实际装在小程序前端 —— 我早先的核查被一个残留目录骗了，已把 README-modeB 的模板改成 code/miniapp/package.json。"
     },
     "QC-WEB-002": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "QC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "类器官质控页签（OrganoidQcTab：观察情况图片位 slot=organoid_observe + 五栏文本 + 两个时间字段）与评分页签（ScoreTab：ScoreRadioGroup ×4，选项文字与分值来自 useDict 的 label/remark；score.ts 的 scoreSummary；score.fixture.spec.ts 读 doc/verify/fixtures/score-cases.json）落成，editor/index.vue 的两个占位页签换成真的。accept 2/2 绿（连跑 3 次一致、nf 为空=NF1/NF2 都没触发）；另做 25/25 真浏览器验收（0 分档显示 0 不是 —、合计 18/85、日期选了填 yyyy-MM-dd、手输「约第 7 天」落库、换页签不丢改动、无 JS 异常）+ 6/6 假绿探针。零 Java 改动、**无迁移**（已应用最大版本仍 202609261430）。★五条值得记的：①**票面 §2 假设 useDict 透传 remark，实际上游只映射 label/value/elTagType/elTagClass → 分值根本拿不到**；越界给 utils/dict.ts + types/global.d.ts 加了可选 remark（加法、向后兼容），分值仍只在 sys_dict_data.remark 一份真相源。②**「时间栏 = 日期选择器 + 手输」不能只用 el-date-picker**（失焦会把「约第 5 天」清掉，而后端 BO 明说不校验格式）→ 用 el-input（值恒为字符串）+ 一个只负责「选了填 yyyy-MM-dd」的 picker。③**后两个页签接真后，QC-WEB-001 的 v-if 挂载会在换页签时静默丢掉另一页签未保存的改动** → 改 v-show 常驻 + dirty 按页签各记一份（越界）。④**直接 psql 改 sys_dict_data 不会失效 Redis 字典缓存**（探针第一版实测 GET 仍返旧值）→ 必须走 PUT /system/dict/data（@CachePut）；这条给 D6 QA 门用。⑤accept 2 的 grep useDict 硬编码分值也能过 → 它自己补了 counterfeit-probe.mjs（把 remark 8→88，页面三处同时变 8→88、该项 8→88、合计 18→98，再自动改回）。★越界：utils/dict.ts、types/global.d.ts、新增 components/ScoreRadioGroup.vue、新增 2 个 lang 文件 qc-web-002.*.ts、index.vue 挂载方式与 eslint 格式 diff。"
     },
     "SAMPLE-EXPORT-001": {
       "status": "done",
@@ -2725,6 +2725,56 @@
       "type": "debt",
       "title": "越界 2 处（i18n key + UPDATE 5520 parent_id）",
       "detail": "①code/plus-ui/src/lang/lqg/sample.{zh_CN,en_US}.ts 各 +1 key（rowAction.qcDocInvalid，给置灰入口的 title 用；i18n 约定下没有别的落点）；②迁移 V202609261430 里 UPDATE sys_menu SET parent_id=5500 WHERE menu_id=5520（把 DOC-PDF-001 的隐藏页一并挂进隐藏目录，是方案 a 的一部分；**没改已应用的 V202609261420**，并回归验证 /qc-console/doc-console 仍可路由）。两处都属合理越界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 233,
+      "ticket": "QC-WEB-002",
+      "severity": "S2",
+      "type": "debt",
+      "title": "票面假设 useDict 透传 remark，实际上游不透传 → 评分分值根本拿不到；越界改共享 utils/dict.ts 与 types/global.d.ts",
+      "detail": "复现：票面 §2 写「选项与分值来自 useDict 的 label 与 remark」；实际上游 useDict 只映射 label/value/elTagType/elTagClass → 前端拿不到 remark（分值）。实现给 utils/dict.ts 与 types/global.d.ts 加了**可选** remark 透传（加法、向后兼容，不破坏既有调用）。影响：这是共享 util 的越界改动，任何依赖 useDict 返回形状的既有页面都受影响面（本票已验证无破坏）。方案 a) 保留并把它写进前端约定（评分类页面都靠它拿分值）；b) 若不愿动共享 util，改成专门的 useDictWithRemark 或评分专用接口。**注意：分值唯一真相源仍是 sys_dict_data.remark，前端不得本地硬编码分值。**",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 234,
+      "ticket": "QC-WEB-002",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越界把页签挂载从 v-if 改成 v-show（否则换页签会静默丢掉另一页签未保存的改动）",
+      "detail": "复现：QC-WEB-001 的 editor/index.vue 用 v-if 挂载页签，后两个页签接真数据后，换页签会卸载组件 → 另一页签里未保存的编辑内容静默丢失（老师会以为自己填好了）。实现改成 v-show 常驻 + dirty 按页签各记一份。影响：改动越出本票 touches（index.vue 在 touches 里，挂载方式是既有代码的语义变更）；代价是三个页签组件常驻（内存与首次加载略增）。方案 a) 保留 v-show（数据安全优先）；b) 回到 v-if 但加「离开页签前提示未保存」。**这条不是 cosmetic：它是数据丢失类问题**，已在 D6 门 L2 作为一条观察点。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 235,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "debt",
+      "title": "直接 psql 改 sys_dict_data 不失效 Redis 字典缓存：必须走 PUT /system/dict/data（@CachePut）",
+      "detail": "复现：探针第一版用 psql 把 lqg_score_pre_culture 的 lt40 remark 从 8 改成 88，页面 GET 字典仍返旧值（缓存未失效）；改走 PUT /system/dict/data 后三处同时变（8→88、该项 8→88、合计 18→98），再自动改回 8。影响：**D6 QA 门的 L1「评分对账」与 L3 的字典类邪路都要注意**——用 psql 改字典再断言会得到假红/假绿；同理任何「改字典 → 看页面」的验证必须走接口或手动清缓存。方案：把这句写进 doc/verify/README.md 的「本栈已知的坑」表（该表已有同类条目），并在 QA 派单里带上。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 236,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "harness",
+      "title": "accept 2 的 grep useDict 是弱断言：前端硬编码分值也能过",
+      "detail": "复现：accept 2 只 grep 页面里出现 useDict，把分值写死在页面里（不走字典）同样能过。实现自己补了 counterfeit-probe.mjs：改字典 remark 8→88 后页面三处必须同时跟着变（8→88、该项 8→88、合计 18→98），否则红。影响：票面 accept 本身挡不住「前端硬编码分值」这个最容易犯的错（正是票面 counterfeit 想防的）。方案：把该探针的核心断言固化进 accept（或放进 D6 回归包），别只留在报告里。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 237,
+      "ticket": "QC-WEB-002",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "两个页签都按蓝图加了「底部附件区」（票面 §2 字面未枚举，可能被判镀金）",
+      "detail": "票面 §2 对 OrganoidQcTab / ScoreTab 的字面清单里没写附件区，但蓝图锚 UI:admin.qc.editor 的该页签下有附件；实现按蓝图加了（**prompt 与蓝图冲突时以蓝图为准**，符合派单规则）。影响：范围界定问题——若 QA 门按票面字面判「镀金」，这条会被误判。方案 a) 保留（有蓝图依据）；b) 让 ① 侧把票面 §2 与蓝图对齐。已在报告 §5 WARN-5 记明。",
       "status": "open",
       "decision": ""
     }

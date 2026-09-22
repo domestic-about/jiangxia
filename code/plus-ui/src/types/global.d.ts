@@ -61,6 +61,8 @@ declare global {
     value: string;
     elTagType?: ElTagType;
     elTagClass?: string;
+    /** sys_dict_data.remark（QC-WEB-002 起透传：评分档位的分值就写在这一列） */
+    remark?: string;
   }
 
   declare interface BaseEntity {
