@@ -1,0 +1,5 @@
+[run] 2 条 accept，单条超时 900s
+  [31m✗[0m OCR-IMPL-001 acc1 [API] 五个解析用例逐例过：该出现的字段相等、不该出现的字段不出现（噪声里的数字不当年龄、单位名不硬匹配）；识别前后业务表与文件表一行不 → exit 1 (0.9s) 日志 .tmp/gate/OCR-IMPL-001/accept-logs-repeat/OCR-IMPL-001-acc1.sh.log
+  [32m✓[0m OCR-IMPL-001 acc2 [STATE] 付费通道默认关且 prod 配置里不出现这个开关；没配 provider 时明确报「请手动填写」而不是 500；限流生效 (3.6s)
+[ok] 结果落盘 .tmp/ocr-impl-accept-repeat.json
+[run] 通过 1/2

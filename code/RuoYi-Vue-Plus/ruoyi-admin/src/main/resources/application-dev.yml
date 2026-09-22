@@ -287,6 +287,17 @@ lqg:
     # phoneCode="mock:<手机号>"。**只允许 dev / test**：application-prod.yml 里刻意不出现这个键
     # （缺省 false），prod 下若被打开，MockLoginGuard 会让应用拒绝启动。
     mock-login: true
+  # 拍照识别（OCR-IMPL-001 / ADR-0007）：一个方案一个 OcrProvider 实现类，配置切换。
+  #   provider=none（缺省）→ 直接提示「识别暂不可用，请手动填写」，小程序照常能手填；
+  #   provider=stub        → **仅 dev / test** 的测试桩：按请求头 X-Ocr-Stub-Case 的前两位
+  #                          从 classpath 的 ocr-cases.json 取 rawLines（夹具由 ruoyi-lqg/pom.xml
+  #                          的 testResources 从 doc/verify/fixtures/ 拷进来）。真实识别服务
+  #                          等 OCR-SPIKE-001 的探路结论，本票不接。
+  #   paid-enabled 缺省 false，**prod 配置文件里刻意不出现这个键**（与 mock-login 同一思路）：
+  #   真要在生产打开按次收费通道，由部署方显式注入并留下甲方书面同意（合同第二条第 5 款）。
+  ocr:
+    provider: stub
+    paid-enabled: false
   wx:
     # 真实微信小程序：appid / secret 走环境变量注入，这里缺省为空（本地一律走 mock）。
     # 真机联调时 export LQG_WX_APPID=... LQG_WX_SECRET=...

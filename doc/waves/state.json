@@ -218,12 +218,12 @@
       "note": "迁移 V202609231110：把 EMBED-MODEL-001 落的菜单 5300-5307 整体 DELETE 后重建到 5310-5317（不做则 getRouters 会有两条 lqg/embed/index）；后端 embed/export/{EmbedExportVo,EmbedExportService}（导出视图放 service 层供 SYS-EXPORT-001 复用）+ EmbedExportContractTest 5 例（一例用 JDK zip+DOM 读甲方模板原件做两侧对账）+ POST /lqg/embed/export + EmbedDictService.labels() + EmbedQueryService.exportRows()；前端 views/lqg/embed/{index.vue,EmbedDrawer.vue,stain.ts,stain.fixture.spec.ts} + api + lang；样本总表『石蜡包埋』入口点亮 + 带 sampleId 跳 /embed 自动过滤。accept 2/2（导出 6 段：表头 16 列逐字同序/全量 5 行/T-E01-1 样本编号=T-hli01+HE染色、IHC染色+Ki67：强表达；CK19：阴性+包埋人李工/T-E04-1=其他（Masson）+弱表达/T-E02-1=无染色+空/两个筛选段；菜单段 5310+perms 精确集合+getRouters 恰 1 条+vitest 19/19）。核验抽屉按 sampleVerifyStatus 置灰并写明原因，且做了反向对照（样本核验有效后按钮变可点）。回归：EMBED-MODEL-001 4/4、AUTH-EXT-002 3/3、SAMPLE-WEB-001 2/2、SAMPLE-MP-002 acc2、ExtChokepointContractTest 4/4、Java 98/98。★新识别 harness 缺陷（我已修）：D1 回归包 lsof -p | grep -q 在 set -uo pipefail 下因 SIGPIPE(141) 恒假红 → 改成落盘再 grep。"
     },
     "OCR-IMPL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D5",
       "track": "OCR",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "拍照识别只做预填（只填空项、标「请核对」、失败不挡手填），provider 可插拔、付费通道默认关、不落库不存图。accept 2/2 绿（accept-run.py 逐字重放，NF1/NF2 自动补）；单测 OcrFieldParserFixtureTest 7/7 + OcrProviderSelectionTest 9/9，全模块 197 run / 0 fail / 0 error；0 支迁移（不建表/不建菜单/不造权限串）。★三条给下游的硬坑：①**限流 key 必须带用户**——框架默认 global:rate_limit:<URI>: + RateType.OVERALL 是全局桶，一个用户刷完所有人被拦（连 accept 都跑不完）；改用 @RateLimiter(key=\"#{@ocrRateLimitKey.userKey()}\") + 新 bean OcrRateLimitKey。顺带实测框架 SpEL 三种错法：#T(...)→EL1006E、user:#T(...)→EL1041E、@bean.method()（不含 #）被当字面量；只有 #{@bean.method()} 可用。②**夹具必须进 main <resources>**，只拷 test-classes 时运行期 stub bean 的 rawLines 恒 []（单测绿、接口空）→ 改成 main 资源，单测与 stub 共用同一份。③**@RateLimiter 依赖要显式加**：全仓只有 ruoyi-admin 依赖 ruoyi-common-ratelimiter（方向 admin→lqg），lqg 里写注解编不过。越界仅 1 个文件：ruoyi-modules/ruoyi-lqg/pom.xml（+32 行，ratelimiter 依赖 + <resources> 拷夹具）——已记 WARN。"
     },
     "OCR-MP-001": {
       "status": "pending",
@@ -234,12 +234,12 @@
       "note": ""
     },
     "OCR-SPIKE-001": {
-      "status": "pending",
+      "status": "escalated",
       "phase": "D5",
       "track": "OCR",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "硬卡：等甲方真实样本照片。票面 §0 口径2 明写「甲方的 10-20 张真实照片……照片没到 → 本张 blocked」，accept 要求 _input/ocr-photos ≥10 张（现 0 张，且无替身——拿自拍样张出结论会被判红）。本张的唯一价值是用真照片算出命中率与推荐方案，骨架（候选清单/脚本/报告模板）单独做没有验收意义，故不派实现。解除条件：甲方照片到位（可遮挡隐私，含 ≥3 张手写）。"
     },
     "QC-MODEL-001": {
       "status": "pending",
@@ -2194,6 +2194,66 @@
       "type": "doc-drift",
       "title": "改流水被拒时后端复用「冻存数量」话术，没指出是哪一笔流水",
       "detail": "复现：改 3003/3104 那笔 take 的 qty 8（挪早+加量让中途为负）→ 400『已取走 7 支，冻存数量不能少于 7』——这句是改初始支数的判据话术，用在改流水上语义错位，也没说清是哪一笔（时间/类型）导致中途为负。影响：老师知道被拒但不知道改哪笔能过。建议 msg 带上目标流水的 freeze_time/类型与冲突点。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 180,
+      "ticket": "OCR-SPIKE-001",
+      "severity": "S1",
+      "type": "escalated",
+      "title": "OCR-SPIKE-001 被挂起（escalated）",
+      "detail": "硬卡：等甲方真实样本照片。票面 §0 口径2 明写「甲方的 10-20 张真实照片……照片没到 → 本张 blocked」，accept 要求 _input/ocr-photos ≥10 张（现 0 张，且无替身——拿自拍样张出结论会被判红）。本张的唯一价值是用真照片算出命中率与推荐方案，骨架（候选清单/脚本/报告模板）单独做没有验收意义，故不派实现。解除条件：甲方照片到位（可遮挡隐私，含 ≥3 张手写）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 181,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "本机 nc 被透明代理劫持：任何端口都「可达」→ accept 里「不对公网开放」这类断言在本机必假红",
+      "detail": "复现：nc -z -w 3 118.178.109.11 5432/6379/9000 全部成功；对照组 nc -z 1.1.1.1 59999、118.178.109.11 1、118.178.109.11 34567 **同样全部成功** → 说明本机有 7 个 utun + all_proxy=socks5 的透明代理，把 TCP 握手在本地接掉了。影响：SYS-STAGING-001 accept2 首句 '! nc -z -w 3 \"\" 5432' 必然红（三条端口都一样），SYS-PROD-001 同类断言同样受害；这不是实现缺陷。可判别的替代证据（三件一起）：① 在 box 侧做发夹探针打自己的公网 IP —— 5432/6379/9000 不可达，而 3306/80/443/8080 可达（阳性对照，证明探针在真区分）；② aliyun ecs DescribeSecurityGroupAttribute 入方向清单；③ box 上 ss -lntp 看 bind 是 127.0.0.1 还是 0.0.0.0。建议 a) 长期：给这类断言换一个非本机的观察点（外部 port-check 服务或另一台机器）；b) 短期：按上面三件当等价证据并在完工报告里如实标注替换。已把侦察事实写进 doc/waves/ops/tianda-test-env.md §4。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 182,
+      "ticket": "OCR-IMPL-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越出 touches：改 ruoyi-modules/ruoyi-lqg/pom.xml（+32 行：ratelimiter 依赖 + <resources> 拷夹具）",
+      "detail": "ticket 的 touches 只列了 lqg/ocr/** 与 application*.yml，但：①@RateLimiter 注解要求 ruoyi-common-ratelimiter 依赖，而全仓只有 ruoyi-admin 依赖它（方向 admin→lqg），lqg 里写注解编不过；②夹具 ocr-cases.json 必须在 main <resources> 才会被打进运行期 classpath（只拷到 test-classes 时 stub provider 的 rawLines 恒空 → 单测绿但接口空）。两处都是「不改 pom 就做不到票面要求」，属合理越界。方案 a) 后续票若要在 lqg 里用限流，把 ratelimiter 依赖提到 lqg 的 pom（现状即如此）；b) 夹具统一放 main resources 的约定建议写进 doc/verify/README.md 已知坑表。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 183,
+      "ticket": "OCR-IMPL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "来源单位名口径：ticket 写「完全相等」而蓝图 FLOW:F-OCR-01.step3 写「名称表匹配」——实现取了更严的全等",
+      "detail": "实现按 ticket 字面的全等匹配（不模糊匹配、不在单位表里的名字不硬匹配），比蓝图的「名称表匹配」更严。影响：若甲方标签上的单位名与 sys 单位表有细微差异（空格/全半角/简称），会识别不出而不是猜错——偏保守。方案 a) 维持全等并在验收说明里写明；b) 若甲方希望容忍简称，回 ①xuqiu 明确匹配规则（含空白与全半角归一化）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 184,
+      "ticket": "OCR-IMPL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "识别限流的 Redisson 桶状态 24h 存活：删 key 后同 JVM 实例仍持旧态 → 连跑两遍 accept 会互相干扰",
+      "detail": "复现：连跑两次 OCR-IMPL-001 accept 时第二次拿不到 6×200+2×500 的标准现场；必须清 redis 的 global:rate_limit:/mp/ocr/* 并等 >60s 才稳定（取证见 doc/waves/reports/OCR-IMPL-001/rate-limit-live.txt）。影响：本票 accept 本身可复现（有取证），但下游/回归里任何重复调用识别接口的断言都会受这个残留态影响。方案 a) accept/回归在跑识别相关断言前先删该 key；b) 把这条写进 doc/verify/README.md 的「本栈已知的坑」表（该表是本仓惯例）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 185,
+      "ticket": "OCR-IMPL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "建议把两条 OCR 实现期踩到的坑补进 doc/verify/README.md 的「本栈已知的坑」表",
+      "detail": "①框架限流默认 key 不含用户（global:rate_limit:<URI>: + RateType.OVERALL 是全局桶），加限流必须自带 key 表达式，且 SpEL 只认 #{@bean.method()} 形态；②夹具必须放 main <resources>，否则运行期 bean 读不到、单测却绿。两条都是「换个票还会再踩」的类型，README 的已知坑表正是为这种准备的。方案：由后续任一票顺手补表（属 doc 编辑，不涉及实现）。",
       "status": "open",
       "decision": ""
     }
