@@ -56,6 +56,9 @@ ENV_BROKEN=0; FAILED=0
 
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; printf 'pass\t%s\t%s\n' "$2" "$1" >> "${TSV}"; }
 bad()  { printf '  \033[31m✗\033[0m %s\n' "$1"; printf 'fail\t%s\t%s\n' "$2" "$1" >> "${TSV}"; FAILED=1; }
+# 「红，但原因是已登记的非产品缺陷（票面/环境/harness）」——不拦门，但**照原样打印**并逐条进台账。
+# 这跟 qa merge 把 type=harness 封顶 S2 是同一个道理：不拿「我的断言/环境不对」去拉一轮返工。
+known(){ printf '  \033[33m▲\033[0m %s\n' "$1"; printf 'known\t%s\t%s\n' "$2" "$1" >> "${TSV}"; }
 envb() { printf '  \033[33m!\033[0m %s\n' "$1"; printf 'env\t%s\t%s\n' "$2" "$1" >> "${TSV}"; ENV_BROKEN=1; }
 head1(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
 
@@ -200,7 +203,7 @@ else
     # 默认：每个 lqg 表都该有的 6 个公共字段。要免跑就在 regression/<D>/require-public.txt 里写空。
     ARGS+=(--require-public "create_dept,create_by,create_time,update_by,update_time,del_flag")
   fi
-  DDL="$(python3 doc/verify/ddl_vs_ssot.py "${ARGS[@]}" 2>&1)"; rc=$?
+  DDL="$(python3 doc/verify/ddl_vs_ssot.py ${ARGS[@]+"${ARGS[@]}"} 2>&1)"; rc=$?
   case "${rc}" in
     0) ok "L1.1 $(printf '%s' "${DDL}" | tail -1)" "L1.1 ddl_vs_ssot" ;;
     1) bad "L1.1 ddl_vs_ssot 不成立：$(printf '%s' "${DDL}" | tail -3 | tr '\n' ' ')" "L1.1 ddl_vs_ssot" ;;
@@ -213,12 +216,23 @@ head1 "L1.2 票面 accept 逐字重放（${ACCEPT_N} 条）"
 if [ "${SKIP_ACCEPT}" = 1 ]; then
   echo "  --skip-accept：跳过"
 else
-  python3 doc/waves/tools/accept-run.py --phase "${PHASE}" --run \
+  KR="${ROOT}/doc/waves/regression/${PHASE}/known-red.txt"
+  KRA=(); [ -f "${KR}" ] && KRA=(--known-red "${KR}") && echo "  已登记的非产品缺陷红：${KR}"
+  python3 doc/waves/tools/accept-run.py --phase "${PHASE}" --run ${KRA[@]+"${KRA[@]}"} \
     --json "${LOGDIR}/accept.json" --logdir "${LOGDIR}/accept-logs" --timeout 900
   rc=$?
-  AP="$(python3 -c 'import json;d=json.load(open("'"${LOGDIR}"'/accept.json"));print(f"{d[\"passed\"]}/{d[\"total\"]}")' 2>/dev/null || echo '?/?')"
-  if [ "${rc}" = 0 ]; then ok "L1.2 票面 accept 全部成立（${AP}）" "L1.2 accept 重放"
-  else bad "L1.2 票面 accept 有红（${AP}）→ ${LOGDIR}/accept.json 与 accept-logs/" "L1.2 accept 重放"; fi
+  ACCJSON="${LOGDIR}/accept.json"
+  read -r PASSED_N KR_N UN_N <<<"$(python3 doc/waves/tools/accept-run.py --summary "${ACCJSON}" 2>/dev/null || echo "? 0 1")"
+  TOT_N="$(python3 doc/waves/tools/accept-run.py --summary "${ACCJSON}" 2>/dev/null | awk '{print $1}')"
+  AP="${PASSED_N}/$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['total'])" "${ACCJSON}" 2>/dev/null || echo '?')"
+  if [ "${rc}" = 0 ] && [ "${KR_N}" = 0 ]; then
+    ok "L1.2 票面 accept 全部成立（${AP}）" "L1.2 accept 重放"
+  elif [ "${rc}" = 0 ]; then
+    KR_LIST="$(python3 doc/waves/tools/accept-run.py --known-list "${ACCJSON}" 2>/dev/null)"
+    known "L1.2 票面 accept 通过 ${AP}；另 ${KR_N} 条红是**已登记的非产品缺陷**（${KR_LIST}）——不拦门，逐条记 S3" "L1.2 accept 重放"
+  else
+    bad "L1.2 票面 accept 有 ${UN_N} 条**未登记**的红（通过 ${AP}）→ ${LOGDIR}/accept.json 与 accept-logs/" "L1.2 accept 重放"
+  fi
 fi
 
 # ── L1.3 D1 回归包全量重放 ─────────────────────────────────────────────────
@@ -248,8 +262,9 @@ python3 doc/waves/tools/gate-audit.py --gate "${JSON}" --tsv "${TSV}" --phase "$
   --started "${STARTED}" --finished "${FINISHED}" --exit "${RC}" --logdir "${LOGDIR}" \
   ${AUDIT:+--audit "${AUDIT}"} || { echo "[warn] gate-audit.py 落盘失败" >&2; }
 
-PASS_N="$(grep -c '^pass' "${TSV}" || true)"; FAIL_N="$(grep -c '^fail' "${TSV}" || true)"; ENV_N="$(grep -c '^env' "${TSV}" || true)"
-printf '\n════ gate %s 结果：%s 步 pass / %s 步 fail / %s 步 env-broken → exit %s ════\n' \
-  "${PHASE}" "${PASS_N}" "${FAIL_N}" "${ENV_N}" "${RC}"
+PASS_N="$(grep -c '^pass' "${TSV}" || true)"; FAIL_N="$(grep -c '^fail' "${TSV}" || true)"
+ENV_N="$(grep -c '^env' "${TSV}" || true)"; KNOWN_N="$(grep -c '^known' "${TSV}" || true)"
+printf '\n════ gate %s 结果：%s 步 pass / %s 步 fail / %s 步 env-broken / %s 步 known-red → exit %s ════\n' \
+  "${PHASE}" "${PASS_N}" "${FAIL_N}" "${ENV_N}" "${KNOWN_N}" "${RC}"
 echo "  机器可读：${JSON}"
 exit "${RC}"

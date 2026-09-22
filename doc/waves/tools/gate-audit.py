@@ -29,6 +29,19 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 QA_DIR = os.path.join(ROOT, "doc", "waves", "qa")
 
 
+def escalated_in_phase(phase):
+    """状态里 escalated 的票 —— 未实现项必须在审计里**显式标注**（模板要求），
+    否则 QA 报告会假装这一级全覆盖了。"""
+    try:
+        with open(os.path.join(ROOT, "doc", "waves", "state.json"), encoding="utf-8") as f:
+            d = json.load(f)
+        return sorted(k for k, v in (d.get("tickets") or {}).items()
+                      if isinstance(v, dict) and v.get("phase") == phase
+                      and v.get("status") == "escalated")
+    except Exception:
+        return []
+
+
 def next_round(phase):
     merged = glob.glob(os.path.join(QA_DIR, f"{phase}-r[0-9]*.json"))
     merged = [p for p in merged if not re.search(r"-L[0-9A-Za-z]+\.json$", os.path.basename(p))]
@@ -80,12 +93,16 @@ def main():
 
     l0 = [s for s in steps if level_of(s["id"]) == "L0"]
     l1 = [s for s in steps if level_of(s["id"]) == "L1"]
+    # 只有 fail（未登记的红）才把级判红；known（已登记的非产品缺陷红）不算红。
     l0_status = "fail" if any(s["status"] == "fail" for s in l0) else "pass"
     l1_status = "fail" if any(s["status"] == "fail" for s in l1) else "pass"
     # 环境坏（env）不改级的红绿 —— 它是工具问题，由 issues 里的 S2/harness 记账，
     # 但**整轮该级仍然如实标 pass/fail**，绝不由「环境没准备好」冒充通过。
     if any(s["status"] == "env" for s in steps) and not any(s["status"] == "fail" for s in steps):
         pass  # 级状态保持 pass；env 记 issue，供人判断这轮是否可信
+    _esc = escalated_in_phase(a.phase)
+    _esc_note = ("\n⚠️ 本任务有未实现项（escalated，accept 重放按状态跳过、**不**算产品缺陷）："
+                 + ", ".join(_esc)) if _esc else ""
 
     accept = {}
     acc_path = os.path.join(a.logdir, "accept.json") if a.logdir else ""
@@ -108,6 +125,7 @@ def main():
 
     l0_ev = ev(l0, "L0 编译/单测/前端 build") + \
         (f"\n{acc_summary}" if l0 and not l1 else "")
+    _esc = escalated_in_phase(a.phase)
     l1_ev = ev(l1, "L1 reseed/ddl_vs_ssot/accept 重放/D1 回归/收尾")
 
     issues = []
@@ -131,6 +149,25 @@ def main():
                 "detail": "｜".join(detail_bits) + "。定级依据：这是票面 accept / 回归包断言不成立，"
                           "即产品行为与票面要求不符 → 拦门（S1）。",
             })
+        elif s["status"] == "known":
+            kr = []
+            if acc_path and os.path.exists(acc_path):
+                try:
+                    kr = json.load(open(acc_path, encoding="utf-8")).get("known_red") or []
+                except Exception:
+                    kr = []
+            for r in kr:
+                issues.append({
+                    "severity": "S3", "level": level_of(s["id"]), "type": "harness",
+                    "ticket": r.get("ticket") or a.phase,
+                    "title": f"[模式 B gate] {r['ticket']} acc{r['index']} 红，但已登记为非产品缺陷"
+                             f"（issue {r['known_red']['issue']}）：{r['known_red']['reason'][:80]}",
+                    "detail": f"gate.sh 步骤 {s['id']} 报 known-red：{s['msg']}。"
+                              f"该 accept 的失败原因已登记在 issue {r['known_red']['issue']}（票面/环境/harness 缺陷），"
+                              f"不是产品行为不符 → 封顶 S3，不拦门；但**断言本身仍然红**，不是已修。"
+                              f"逐条日志 {os.path.relpath(r.get('log') or '', ROOT)}。"
+                              f"定级依据：与 qa merge 对 type=harness 的处理一致（长在检查工具/票面/环境上的问题不许拉返工）。",
+                })
         elif s["status"] == "env":
             issues.append({
                 "severity": "S2", "level": level_of(s["id"]), "type": "harness", "ticket": a.phase,
@@ -147,10 +184,10 @@ def main():
         "phase": a.phase, "round": rnd, "auditor": "independent",
         "generated_by": "doc/waves/tools/gate.sh + gate-audit.py（模式 B：L0+L1 脚本化，非 LLM 审计）",
         "levels": {
-            "L0": {"status": l0_status, "evidence": l0_ev},
-            "L1": {"status": l1_status, "evidence": l1_ev},
+            "L0": {"status": l0_status, "evidence": l0_ev + _esc_note},
+            "L1": {"status": l1_status, "evidence": l1_ev + _esc_note},
         },
-        "escalated_noted": [],
+        "escalated_noted": escalated_in_phase(a.phase),
         "issues": issues,
     }
     with open(audit_path, "w", encoding="utf-8") as f:
