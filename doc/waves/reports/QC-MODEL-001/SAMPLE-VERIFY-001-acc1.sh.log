@@ -1,0 +1,11 @@
+# SAMPLE-VERIFY-001 accept[1] 非法转移被拒且库里不变：判有效缺内部编号、内部编号撞号、判无效缺原因、有效样本被外部重提；合法路径 pending→valid→invalid 与 invalid→valid 全程可达
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+pending|-|-
+true
+valid|T-hli77|9000000101|Y|external
+true
+true
+9000001002:invalid:误判，退回
+9000001003:valid:

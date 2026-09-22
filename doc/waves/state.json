@@ -243,12 +243,12 @@
       "note": "硬卡：等甲方真实样本照片。票面 §0 口径2 明写「甲方的 10-20 张真实照片……照片没到 → 本张 blocked」，accept 要求 _input/ocr-photos ≥10 张（现 0 张，且无替身——拿自拍样张出结论会被判红）。本张的唯一价值是用真照片算出命中率与推荐方案，骨架（候选清单/脚本/报告模板）单独做没有验收意义，故不派实现。解除条件：甲方照片到位（可遮挡隐私，含 ≥3 张手写）。"
     },
     "QC-MODEL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D6",
       "track": "QC",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "质控文档数据模型（五表两支迁移 V202609261300/V202609261310）+ 评分由后端按字典 remark 回填 + 图片/附件规则 + QcChildrenChecker。accept 3/3 绿（票面逐字重放，仅 NF1）；上游回归 SAMPLE-VERIFY-001 2/2、EMBED-MODEL-001 4/4 仍绿；模块全套单测 217/0；git status 25 条全是本票新增、零越界。★五条给下游的硬坑：①**并发幂等不能裹事务**——GET /lqg/qc/{sampleId} 缺哪份建哪份，撞 sample_id 部分唯一索引时 PG 会把整个事务标 aborted，「抓住冲突再查一遍」就废了 → 这些方法刻意不加 @Transactional，逐条语句提交 + 捕 DataIntegrityViolationException 后重查。②**@EncryptField 过不了 accept 3 末段**：框架拦截器写 ENC_+Base64，而 accept 要裸 Base64 → 复用 SampleFieldCipher 手工加解密（SAMPLE-MODEL-001 先例），实测落库 WGk4sblY1e3HTyYUeNdt2g== 与 openssl 逐字相等。③**0 分档 vs 未选**：全链路用 Integer（null=没选、0=选了 0 分档），四项都非 null 才求和；分值唯一来源是 sys_dict_data.remark（不缓存）。④**前端假分值无处落脚**：QcScoreSaveBo 只要四个 *Level（反射测试钉住「一个 *Score 字段都没有」），Jackson 忽略未知键 → preCultureScore:99/totalScore:100 一个字不生效。⑤**菜单号**：accept 1 断「本票 Flyway 恰 2 行」→ 菜单并进第一支迁移；只落 F 权限 5501-5503，C 页面菜单 5510 留给 QC-WEB-*。"
     },
     "QC-WEB-001": {
       "status": "pending",
@@ -2477,6 +2477,76 @@
       "detail": "gate.sh 的 L1.2 把 SYS-STAGING-001 acc2 判为 known-red（不拦门）。归因：#192（票面 sed 用 BRE \\?，本机 BSD sed 不支持 → HOST 恒空）+ #181（本机 nc 被透明代理劫持，连 1.1.1.1:59999 都「可达」）。已按三件套给等价取证（box 发夹探针 + 阳/阴性对照、ss -lntp 全 127.0.0.1、安全组入方向清单）。**断言本身仍然红，不是已修**。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 208,
+      "ticket": "QC-MODEL-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "预览图真转换分支在确定性数据里跑不到：seed 是假 URL 取不到字节 + 本机 ImageIO 读不了 TIFF",
+      "detail": "票面要求「非 jpg/png 或长边>2000px → 生成长边≤2000px 的 JPEG 另存 OSS，填 preview_oss_id；否则 preview_oss_id = oss_id」。实测：seed 的 sys_oss 行 service='seed'、url 是假地址 → 取不到字节，于是**一律退回 preview_oss_id = oss_id**；且本机 ImageIO 默认读不了 TIFF（需 imageio-tiff 插件，本票未装）。影响：**真转换分支（缩放/格式转换/另存）在确定性数据上没有端到端证据**，只有代码路径与单元级判断；D6 qa_scope L2 有一条「TIFF 显示预览图」，QA 门要么补真图字节的测试数据、要么如实记为未覆盖。方案 a) 给 seed 加一张真实 TIFF 与一张长边>2000px 的图（放 OSS 或本地 fixture），并装 imageio-tiff 插件；b) 或在 QA 门里明确把该条记为未覆盖并让 Kevin 知晓。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 209,
+      "ticket": "QC-MODEL-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "附件 fileSize 契约里没有、SSOT 却是 NOT NULL → 实现做成可选，无法真正强制 50MB",
+      "detail": "doc/api-contract.md 的附件上传请求形状里没有 fileSize；而 field-ssot 里该列 NOT NULL。实现：给了就校验 ≤50MB，没给则回落 sys_oss.ext1、再落 0 —— 也就是说**没给 fileSize 时 50MB 上限无法强制**（拿不到长度就管不了）。影响：票面「单个附件 ≤50MB」在契约上无法被机器保证。方案 a) 契约补 fileSize（必填）并改断言；b) 或改成后端自己从对象存储读 Content-Length 校验（多一次调用）。属规格层，要 Kevin 或 ① 侧定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 210,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "PUT image/sort 的请求体形状契约未定：本票自行定为 {ids:[该位全部 id]}",
+      "detail": "doc/api-contract.md 只写了这个端点存在，没定请求体。实现取 ids 数组（该图片位全部 id 的新顺序）。影响：纯前端票 DOC-RENDER-001 / QC-WEB-001 要按这个形状对接；若契约后续改成 {slot, order:[...]} 就是破坏性变更。方案：把形状补进契约。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 211,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "patientNo 用手工加解密而非 @EncryptField 注解（ADR-0006 字面 vs accept 的唯一过法，D1 起既有偏差）",
+      "detail": "ADR-0006 的字面是「加密列用 @EncryptField」；但框架拦截器写的是 ENC_+Base64，而 accept 3 末段要的是裸 Base64（与 openssl 输出逐字相等）→ 只能沿用 SampleFieldCipher 手工加解密（SAMPLE-MODEL-001 先例）。影响：这是 D1 起就存在的全局偏差，本票只是跟随既有实践；两套加密写法并存会让新人有坑。方案：回 ①xuqiu/ADR 明确「本项目加密列一律手工加解密、不用 @EncryptField」，并把理由写进 ADR-0006。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 212,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "viabilityOssId=0 被当作「摘掉活率附件」的哨兵值（契约未写）",
+      "detail": "活率报告是样本质控表上单独一栏 vitality_oss_id（不走通用附件）。实现用 0 表示「摘掉」而非 null，因为 Jackson 无法区分「字段缺省」与「显式 null」。影响：前端必须知道 0 是哨兵；契约里没有这条。方案：契约补一句，或改成显式 null + 独立布尔。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 213,
+      "ticket": "QC-MODEL-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "seed 里没有「质控文档是唯一下游」的样本 → 「仅因 published 质控文档而不能改判无效」的 E2E 总被 EMBED/CRYO 先拦",
+      "detail": "QcChildrenChecker 的判据是「样本名下有 published 质控文档」。但 seed 里凡是有质控草稿的样本都同时挂了包埋或冻存批次，于是端到端测这条时总是被 EMBED/CRYO 的同类检查先拦下，分不清是哪条拦的。本票只能靠契约测试证明。影响：D6 的 L3 若要验这条，需要一条「只有质控文档、没有包埋/冻存」的样本。方案：seed 加一个这样的样本，或 QA 时临时造一条并在报告里说明。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 214,
+      "ticket": "QC-MODEL-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "任务书与历次派单写的 doc/authority/authority_lint.py 不存在（真实位置在 xuqiu skill）→ 已加转发垫片修复",
+      "detail": "复现：ls doc/authority/authority_lint.py → No such file or directory；doc/authority/ 下只有 _rendered/ _snapshot.json field-ssot.yaml flows.yaml ui-index.yaml。真实脚本在 ~/claude-config/skills/xuqiu/scripts/authority_lint.py。影响：**D1–D6 每一任 impl/QA subagent 都被指向一个不存在的文件**——只有自己找到 skill 路径的人才真取到权威口径，其余人要么静默跳过、要么记 WARN（本条就是 QC-MODEL-001 的 WARN ⑪ 发现的）。权威口径是「以蓝图为准」判定的唯一依据，这条路断掉等于把 doc-drift 的判断权交给运气。修复：新增 doc/authority/authority_lint.py 转发垫片（自动补 --ws <项目根>/doc，从任意 cwd 可用），实测 show FLOW:F-QC-01.step1 与 FIELD:t_lqg_qc_score.total_score 均正常、check 报「396 条权威 × 43 个 ticket，锚点全部有效」。建议：任务书模板与 qa/impl 提示词模板里的路径一并核对。",
+      "status": "decided",
+      "decision": "fixed：已在 2026-09-22 加 doc/authority/authority_lint.py 转发垫片（转发给 ~/claude-config/skills/xuqiu/scripts/authority_lint.py 并自动补 --ws <项目根>/doc）。机器证据：python3 doc/authority/authority_lint.py show FLOW:F-QC-01.step1 输出正确 JSON；从 /tmp 用绝对路径调 FIELD:t_lqg_qc_score.total_score 也正确；python3 doc/authority/authority_lint.py check → 「396 条权威 × 43 个 ticket，锚点全部有效、无悬空、无锚到废弃记录」。残留：这不改 ① 侧任务书模板里的路径写法（仍写 doc/authority/…，但现在是可用的）。"
     }
   ],
   "phase_plan": {

@@ -1,0 +1,10 @@
+# EMBED-MODEL-001 accept[4] 外部送样的核验状态机：所挂样本还没有效时判有效被拒、缺原因判无效被拒、缺编号或撞号被拒、普通保存改不动待核验送样——每次被拒库里都不变；样本有效后判有效落下编号与核验人
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+pending|-|-|组织
+true
+pending|-
+valid|T-E06-1|9000000101|external|9000000111|T-hli77
+true
+valid|2026-09-17
