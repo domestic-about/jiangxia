@@ -1,0 +1,124 @@
+{
+  "beforeFilter": {
+    "sheets": [
+      "样本记录",
+      "类器官收样",
+      "石蜡包埋",
+      "-80 冻存"
+    ],
+    "activeSheet": "样本记录",
+    "count": "共 8 条 · 左右滑动看全部 15 列",
+    "filterChips": [
+      "全部",
+      "待核验",
+      "有效",
+      "无效"
+    ],
+    "exportText": "导出 Excel",
+    "exportDisabled": false,
+    "note": "核验、冻存取用请到网页工作台",
+    "hasPlaceholderToast": false,
+    "firstRowInternalNo": "内部编号"
+  },
+  "filtered": {
+    "sheets": [
+      "样本记录",
+      "类器官收样",
+      "石蜡包埋",
+      "-80 冻存"
+    ],
+    "activeSheet": "样本记录",
+    "count": "共 2 条 · 左右滑动看全部 15 列",
+    "filterChips": [
+      "全部",
+      "待核验",
+      "有效",
+      "无效"
+    ],
+    "exportText": "导出 Excel",
+    "exportDisabled": false,
+    "note": "核验、冻存取用请到网页工作台",
+    "hasPlaceholderToast": false,
+    "firstRowInternalNo": "内部编号"
+  },
+  "actionSheet": [
+    "打开",
+    "发送到微信",
+    "Cancel"
+  ],
+  "tissueBlob": {
+    "present": true,
+    "size": 4117,
+    "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "isXlsx": true
+  },
+  "cryoShape": {
+    "sheets": [
+      "样本记录",
+      "类器官收样",
+      "石蜡包埋",
+      "-80 冻存"
+    ],
+    "activeSheet": "-80 冻存",
+    "count": "共 2 条 · 左右滑动看全部 11 列",
+    "filterChips": [
+      "全部 7",
+      "-80 超期 2",
+      "液氮 2"
+    ],
+    "exportText": "导出 Excel",
+    "exportDisabled": false,
+    "note": "核验、冻存取用请到网页工作台",
+    "hasPlaceholderToast": false,
+    "firstRowInternalNo": "冻存样品"
+  },
+  "requests": [
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAxIiwicm5TdHIiOiI3SWUzUTlFeklBMHpmc1BDTWMwQkR2NnFkNXFuMVh0eCIsImNsaWVudGlkIjoiMjJiMmFlY2QwNzEwNjcxNjkxZWMxYzA3ZjI1NDJiOWQiLCJ1c2VySWQiOjkwMDAwMDAxMDEsInVzZXJOYW1lIjoibHFnXzEzODAwMDAwMDAxIn0.gO1C2JXujHJGgK5xWFZdS7Vso1kZ6d0o_LaFSrTfTIw",
+      "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+      "hasAuthHeader": true,
+      "hasClientid": true
+    },
+    {
+      "kind": "response",
+      "url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
+      "status": 200,
+      "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      "contentDisposition": "attachment; filename=export.xlsx;filename*=utf-8''%E6%A0%B7%E6%9C%AC%E8%AE%B0%E5%BD%95%E4%BF%A1%E6%81%AF%E8%A1%A8-20260922221909.xlsx",
+      "bytes": 0
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:9204/lqg-api/mp/int/export/cryo?overdueOnly=true",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAxIiwicm5TdHIiOiI3SWUzUTlFeklBMHpmc1BDTWMwQkR2NnFkNXFuMVh0eCIsImNsaWVudGlkIjoiMjJiMmFlY2QwNzEwNjcxNjkxZWMxYzA3ZjI1NDJiOWQiLCJ1c2VySWQiOjkwMDAwMDAxMDEsInVzZXJOYW1lIjoibHFnXzEzODAwMDAwMDAxIn0.gO1C2JXujHJGgK5xWFZdS7Vso1kZ6d0o_LaFSrTfTIw",
+      "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+      "hasAuthHeader": true,
+      "hasClientid": true
+    },
+    {
+      "kind": "response",
+      "url": "http://127.0.0.1:9204/lqg-api/mp/int/export/cryo?overdueOnly=true",
+      "status": 200,
+      "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      "contentDisposition": "attachment; filename=export.xlsx;filename*=utf-8''-80%E5%86%BB%E5%AD%98-20260922221914.xlsx",
+      "bytes": 0
+    }
+  ],
+  "assertions": {
+    "exportEnabled": true,
+    "noPlaceholderToast": true,
+    "noteIsNewWording": true,
+    "handedOff": true,
+    "tissueFilteredRequest": true,
+    "cryoOverdueRequest": true,
+    "everyRequestHasAuth": true,
+    "everyRequestHasClientid": true,
+    "everyResponseIsXlsx": true,
+    "chineseFileNameInHeader": true,
+    "downloadedNonEmptyXlsx": true
+  }
+}

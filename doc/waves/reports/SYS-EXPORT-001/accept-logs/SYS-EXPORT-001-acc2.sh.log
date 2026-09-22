@@ -1,0 +1,5 @@
+# SYS-EXPORT-001 accept[2] 构建是本次产物；导出与文档下载共用同一段「打开 / 发送到微信」；下载带鉴权头；拼查询串的纯函数过单测；抽公共函数后文档下载的单测仍过
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true
+true

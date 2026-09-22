@@ -1,0 +1,41 @@
+# SYS-EXPORT-001 accept 2 —— 逐段重放（票面逐字，零归一化）
+# 跑法：cd code/miniapp 后逐段执行（cwd 必须是 code/miniapp，见 issue #229）
+
+$ cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme​
+DONE  Build complete.
+Run method: open Weixin Mini Program Devtools, import dist/build/mp-weixin run.
+
+$ test -f dist/build/mp-weixin/pages/ledger/index.js
+  → rc=0
+
+$ grep -q 'fileHandoff' src/components/lqg/DownloadBar.vue
+  → rc=0
+
+$ grep -q 'fileHandoff' src/pages/ledger/index.vue
+  → rc=0
+
+$ grep -qE 'showMenu:[[:space:]]*true' src/utils/fileHandoff.ts
+  → rc=0
+
+$ grep -q 'shareFileMessage' src/utils/fileHandoff.ts
+  → rc=0
+
+$ grep -qE 'Authorization|clientid' src/pages/ledger/export.ts src/utils/fileHandoff.ts
+  → rc=0
+
+$ pnpm vitest run src/pages/ledger/export.spec.ts --reporter=json
+{"numPassedTests":10,"numFailedTests":0}
+$ jq -e '.numFailedTests == 0 and .numPassedTests >= 3' /tmp/lqg-export.json
+true
+  → true
+
+$ pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json
+{"numPassedTests":17,"numFailedTests":0}
+$ jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl2.json
+true
+  → true
+
+内容哈希（防 stale）：
+bd93a307ba24a9948b5f1e7e783d96abc250d52893eae967f98afedcf1f8f413  dist/build/mp-weixin/pages/ledger/index.js
+1b602d8f69864cad973be46e7c081249ba0fe244ca127480ae83cb573f502d15  dist/build/mp-weixin/utils/fileHandoff.js

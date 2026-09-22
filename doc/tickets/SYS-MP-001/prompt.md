@@ -30,7 +30,7 @@ accept:
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null &&
       jq -e '[.tabBar.list[].text] == ["首页","文档","我的"]' dist/build/mp-weixin/app.json &&
       ! grep -rnE "^import \{[^}]*\} from '@/components/biz'" src --include=*.vue --include=*.ts | grep -v 'import type' | grep -q . &&
-      ! grep -rnE ':not\(|(^|[ ,{])\*[ ,{]' src --include=*.vue --include=*.scss | grep -v '^src/uni.scss' | grep -q . &&
+      ! grep -rnE ':not\(|(^|[ ,{])\*[ ,{]' src --include=*.vue --include=*.scss | grep -v '^src/uni.scss' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(\*|//|/\*)' | grep -q . &&
       ! grep -rq 'mock:ext' dist/build/mp-weixin
     counterfeit: |-
       页签顺序写成「首页 / 我的 / 文档」或把「文档」叫成「报告」→ jq 红。

@@ -36,7 +36,7 @@ accept:
     run: |-
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/doc/preview.js &&
       grep -q 'previewImage' src/components/lqg/PageImageViewer.vue && grep -q 'previewImage' src/components/lqg/ThumbStrip.vue &&
-      grep -qE 'showMenu:[[:space:]]*true' src/components/lqg/DownloadBar.vue && grep -q 'shareFileMessage' src/components/lqg/DownloadBar.vue &&
+      grep -qE 'showMenu:[[:space:]]*true' src/utils/fileHandoff.ts && grep -q 'shareFileMessage' src/utils/fileHandoff.ts &&
       grep -c "@/components/lqg/.*\.vue" src/pages/doc/preview.vue | awk '{exit !($1 >= 5)}' &&
       grep -q "@/components/lqg/DownloadSheet.vue" src/components/lqg/DocGroupCard.vue && grep -q "@/components/lqg/DownloadBar.vue" src/components/lqg/DownloadSheet.vue && grep -q 'groupDocs' src/components/lqg/DocTabs.vue &&
       ! grep -nE 'errorMsg|error_msg' src/pages/doc/preview.vue &&

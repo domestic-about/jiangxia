@@ -340,12 +340,12 @@
       "note": "上游 RuoYi-Vue-Plus v5.5.3(91ba3869) 落 code/RuoYi-Vue-Plus，Flyway 三支(V202609210800 上游 PG 基线原样 / 0810 gen_ddl_pg --dicts 输出逐字节 / 0820 角色101-103)，空库端到端复验过；tenant.enable=false、dev 字段加密 LqgTestAesKey#01；ruoyi-lqg 两处接入 + GET /lqg/sys/ping 的 db/dbVersion 取自运行期 DatabaseMetaData。坑：snail-job 配置段不能删(TestBroadcastJob 有 @Value(${snail-job.port}))；Redis 服务端必须设口令(配了口令就发 AUTH)；本机构建需 -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome。端口 5433/6380/9002/9003 全绑 127.0.0.1，8080/5432/6379 未占。"
     },
     "SYS-EXPORT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D7",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "小程序四张工作表导出 Excel（tissue/organoid/embed/cryo）+ 文件交接抽公共段。后端 sys/export/{ExcelSheet,MpExportController,SysExportService}：四个 GET /mp/int/export/{sheet}，类级 @SaCheckRole(\"lqg_internal\")（**用角色闸而非 lqg:sample:export 权限串 → 零迁移**），四个 handler 各收对应 BO、只做分派+出流+RFC 5987 中文名，上游 service 0 字节改动；新契约测试 11 例。小程序：新 utils/fileHandoff.ts（downloadToTemp(url, header?)/openFile/shareFile；header 缺 Authorization 直接抛）、pages/ledger/{export.ts,export.spec.ts}、utils/baseUrl.ts（根地址判据从 request.ts 原样搬出、request.ts re-export → 调用面零变化）、DownloadBar.vue −84 行（三处平台调用整体搬进公共段、不复制）、ledger/index.vue 点亮导出；页底小字逐字保持 CR-20260918-07 新口径。accept 2/2 绿（acc1 NF1、acc2 零归一化）；Java 274/274、vitest 181/181、counterfeit 6 探针 12/12、H5 Playwright 11 断言全 true（请求打到 /lqg-api/mp/int/export/tissue?verifyStatus=pending、带 Authorization+clientid、blob 4117B spreadsheetml）；acc1 五段 xlsx_header 真实输出（14 列/8 行=db 计数、7 列/1 行、16 列/5 行=db JOIN 计数、11 列/7 行且初始 8 剩余 6、?verifyStatus=pending→2 行）+ extA→403 + /export/qc→404。★三条硬坑：①**ExcelUtil.exportExcel 会在内部把 Content-Disposition 改写成 <随机UUID>_<sheetName>.xlsx** → 必须用一个只忽略那两个头的 HttpServletResponseWrapper 把上游那次改写拦掉，否则 RFC 5987 中文名当场失效（这是「表头一份都不在 sys/export 里」的关键）。②**uni-h5 的 downloadFile 不认相对路径也不吃鉴权头** → 根地址判据抽到零依赖 utils/baseUrl.ts，公共段才能先 absoluteUrl() 再下（不然 H5 拿回一页 517 字节的 HTML）。③**/mp/int/** 是角色维度，用 @SaCheckRole 不需要 sys_menu 行** → 本票零迁移（若改成按钮权限，菜单没 seed 时会静默全 403）。★**两条跨票红由我改票面并复跑验证**：⑴DOC-MP-002 acc1 与本票互斥——它把 showMenu/shareFileMessage 钉在 DownloadBar.vue，而本票票面 §2 强制抽到 fileHandoff.ts 且禁复制 → 我把那两句 grep 的文件参数改成 src/utils/fileHandoff.ts，复跑 **2/2**；⑵**SYS-MP-001 acc1 改前就红**（那条 :not\\(|(^|[ ,{])\\*[ ,{] 正则扫整个 .vue，把 JSDoc 注释的「 * 」行全命中；HEAD 上 4 个本票没碰过的文件同型、全仓 67 行都是注释）→ 加一层注释行过滤，并**证伪验证**（临时往 scss 塞一条真 :not( 仍被抓到，已还原），复跑 **3/3**。★未在真机/微信覆盖（openDocument 菜单、shareFileMessage、downloadFile 合法域名），已如实标注。"
     },
     "SYS-HOME-001": {
       "status": "done",
@@ -3126,6 +3126,66 @@
       "type": "debt",
       "title": "越出 touches 5 处：DOC 域加 1 个读口 + 4 个列表页认领 route.query",
       "detail": "①code/.../doc/render/mapper/DocFileMapper.java 加渲染失败数的读口——这是「能在被调方加读口就不要在本包写 SQL」硬要求逼出来的（授权过）；②plus-ui 的 sample/embed/cryo/auth-extuser 四个列表页 onMounted 认领 route.query——否则首页卡片带筛选条件跳过去后筛选会丢（票面要求点击卡片带筛选跳转，但四个目标页在 touches 之外）。两处都属合理越界。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 273,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ 跨票互斥：DOC-MP-002 acc1 把平台调用钉在 DownloadBar.vue，而本票票面强制抽到 fileHandoff.ts（我造成的）→ 已改其文件参数并复跑 2/2",
+      "detail": "复现：DOC-MP-002 acc1 有两句 grep 把 showMenu: true 与 shareFileMessage 钉在 src/components/lqg/DownloadBar.vue；而 SYS-EXPORT-001 的票面 §2/§0.1-③ **强制**把「打开 / 发送到微信」抽进 src/utils/fileHandoff.ts 且**禁止复制两份** ⇒ 两条票面互斥，抽完 DOC-MP-002 acc1 必红（实现方实测确认，并如实上报、未改票面）。责任在我：**我让 SYS-EXPORT-001 抽公共段时，没有回头检查目标票的 accept 是否把旧位置钉死**。处置：把那两句 grep 的文件参数改成 src/utils/fileHandoff.ts（平台能力没丢：fileHandoff.ts 是真代码唯一一处，MP 产物实测 showMenu:!0），改完独立复跑 **DOC-MP-002 2/2**。★教训（已用于后续派单）：**任何「抽公共段 / 移动实现位置」类的指令，必须同步扫一遍所有已完工票面的 accept 里有没有钉住旧路径**——否则就是自己造一条假红。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 274,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ SYS-MP-001 acc1 预先就红：过宽正则扫整个 .vue 把 JSDoc 注释全命中（全仓 67 行都是注释）→ 已加注释行过滤并证伪",
+      "detail": "复现（SYS-EXPORT-001 顺手发现）：SYS-MP-001 acc1 第 33 行 `! grep -rnE \":not\\\\(|(^|[ ,{])\\\\*[ ,{]\" src --include=*.vue --include=*.scss | ... | grep -q .`。它扫的是**整个 .vue 文件**（含 script/template/JSDoc），而 JSDoc 的续行形如 ` * 说明文字` 正好匹配 `[ ]\\\\*[ ]` → HEAD 上 OcrBar/EmbedCard/AttachmentList/ThumbStrip 等 4 个该票没碰过的文件就已命中，全仓 67 行命中**全部是注释**。该断言的本意（从模式看）是「小程序 WXSS 不许用 :not( 与通配选择器 *」。为什么 D1 时没红：那时这些组件还不存在，是**后续票的合法代码把它打红的**——即「早期票的 accept 被后来的合法实现打红」这类跨票脆弱性。处置：加一层注释行过滤（`grep -vE \\\"^[^:]+:[0-9]+:[[:space:]]*(\\\\*|//|/\\\\*)\\\"`），**不是删掉这条断言**；并做**证伪验证**：临时往 src/style/components.scss 塞一条真的 `.x:not(.y){}` → 仍被抓到（断言没被改弱），随后 git checkout 还原。独立复跑 **SYS-MP-001 3/3 绿**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 275,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept 2 的 grep Authorization|clientid 是文件级断言，抓不到「调用点漏传 header」",
+      "detail": "复现（实现方探针 3）：accept 2 只 grep 文件里出现过 Authorization/clientid，因此把 header 传错或干脆不传给 downloadToTemp 调用点时，断言照样绿。影响：与 #264/#236/#242 同族（源码 grep 型断言对等价写法与调用点无力）。缓解（本票已做）：在 fileHandoff.ts 里加了**运行时守卫**（header 缺 Authorization 直接抛）+ 结构性断言。方案：把「调用点必须带 header」做成行为断言（H5 真 DOM 里点导出→抓请求头带 Authorization），这才是打不穿的。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 276,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "契约第 55 行缺「未知 sheet 的响应码」；导出文件名的时间段口径也与契约例子不一致",
+      "detail": "两处：①doc/api-contract.md 第 55 行没有写「未知 sheet 传进来会得到什么码」（实测 404 No endpoint / 400，取决于路径形态），票面要求「未知值 400」；②导出文件名的时间段：实现到**秒**，而契约的例子里是到**日**（如 样本记录信息表-20260918.xlsx）。影响：前端/后续票只能照实现猜。方案：把未知 sheet 的码与文件名时间格式都写进契约（两侧各改一处）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 277,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "doc/verify/README.md 的 seed 速查说石蜡包埋 6 行，实际 5 行（票面用 db.py 直连计数是对的）",
+      "detail": "现状：doc/verify/README.md 的 seed 速查里石蜡包埋的行数与实际 seed 不符（实际 5 行，README 写 6）。影响：照 README 写断言会红；本票按 db.py 直连计数所以没受影响。方案：修 README 那一行（属文档修订）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 278,
+      "ticket": "SYS-EXPORT-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "越出 touches 2 处：新增 utils/baseUrl.ts 与改 utils/request.ts（纯搬迁、行为零变化）",
+      "detail": "缘由：uni-h5 的 downloadFile 不认相对路径，公共段必须先算绝对地址；而根地址判据原本长在 utils/request.ts 里（含 clientid 等 env 拼装）。做法是把它原样搬到零依赖的 utils/baseUrl.ts，request.ts 改为 re-export → 调用面零变化（已由 doc-mp-002 的 download.fixture 17/17 回归证明）。两处都在 touches 之外但属合理搬迁。",
       "status": "open",
       "decision": ""
     }

@@ -1,0 +1,27 @@
+
+== 探针 1 · 导出侧把公共段换成自己那套 downloadFile + openDocument（票面 counterfeit 第 1 条） ==
+  [32m✓[0m 共用公共段的断言红了（导出侧没走 fileHandoff）
+  [32m✓[0m 还原后转绿
+
+== 探针 2 · 文档下载侧不再 import 公共段（票面 counterfeit 第 1 条的「抽公共段时把文档下载改坏」） ==
+  [32m✓[0m 共用公共段的断言红了（文档下载侧没走 fileHandoff）
+  [32m✓[0m 还原后转绿
+
+== 探针 3 · 两个调用方都不传鉴权头（票面 counterfeit 第 2 条：downloadFile 没带 Authorization） ==
+  [32m✓[0m ★ 抓到了「downloadToTemp 没带 header」这种改坏（票面的 Authorization|clientid grep 抓不到，见报告 WARN）
+  (跳过 node 直跑 .ts —— 由单测 / 类型检查覆盖)
+  [32m✓[0m 还原后两处都带 authHeader()
+
+== 探针 4 · exportUrl 忽略筛选参数（票面 counterfeit 第 2 条：带 verifyStatus 那段行数不是 2） ==
+  [32m✓[0m 单测红了（4 条失败）
+  [32m✓[0m 还原后单测绿（10 条通过）
+
+== 探针 5 · 公共段把显示菜单关掉（票面 counterfeit 第 1 条：用户打开了 Excel 却没有保存 / 转发入口） ==
+  [32m✓[0m 共用公共段的断言红了（showMenu 那一段）
+  [32m✓[0m 还原后转绿
+
+== 探针 6 · 抽公共段时顺手改坏文档下载的合并件口径（票面 counterfeit 第 3 条） ==
+  [32m✓[0m DOC-MP-002 的单测红了（1 条失败）
+  [32m✓[0m 还原后单测绿（17 条通过）
+
+── 探针小结：12 绿 / 0 红 ──

@@ -9,11 +9,15 @@
 //
 // 三件事：
 //   1. 格式切换 **PDF / Word**（`format=pdf|docx`，默认 Word，与后端默认一致）；
-//   2. 「打开」→ `uni.downloadFile` 到临时目录 → 微信内置查看器（打开时把 showMenu 传开，
-//      右上角菜单才有保存 / 用其他应用打开，见下面 `openDoc()`）；
-//   3. 「发送到微信」→ 微信的转发文件到聊天接口（见下面 `shareFile()`：filePath + fileName）。
+//   2. 「打开」→ 下到临时目录 → 微信内置查看器（`utils/fileHandoff.ts` 的公共段）；
+//   3. 「发送到微信」→ 转发文件到聊天（同一段；`filePath` + 文件名）。
 //   ★ 小程序**没有**「存到手机文件夹」的接口（票面 §0 平台限制）：所以这儿只有「打开」与
 //     「发送到微信」两个动作，下面那行小字就是告诉甲方这件事。
+//
+// ★★ **「临时文件 → 打开 / 发送到微信」是公共段**（SYS-EXPORT-001 抽到 `src/utils/fileHandoff.ts`）：
+//    表格导出（`pages/ledger/index.vue`）与本组件调的是同一份平台实现。本组件**只负责**
+//    「合并件生成中 / 取下载链接 / 文件名 / 失败只给一句人话」，平台调用一律走公共段
+//    （所以这儿不再自己写下载 / 打开 / 转发）。
 //
 // ★★ **合并件「份数够但还没渲染好」**：`docKind=merged` 且清单里还没有 `merged` 行时，
 //    不直接把 404 当失败 —— 进「文档生成中」态、轮询到渲染好（最多 60s，见
@@ -22,7 +26,12 @@
 // ★ 视觉按方向 A §5.8：主操作实底 + `--lqg-shadow-brand`，次操作描边/soft；零色值字面量。
 import type { DocFormat } from '@/pages/doc/download'
 import { fetchDocDownload, fetchSampleDocs } from '@/api/doc'
+import { authHeader } from '@/pages/ledger/export'
 import { downloadFileName, hasMergedRow, normalizeFormat, openDocumentType, waitForMerged } from '@/pages/doc/download'
+// ★★ 「临时文件 → 打开 / 发送到微信」这一段是**公共段**（SYS-EXPORT-001 抽到
+//   `utils/fileHandoff.ts`）：文档下载（本组件）与表格导出（`pages/ledger/index.vue`）
+//   共用同一份平台实现 —— 两份就会漂（一处带菜单、一处不带，或一处漏带鉴权头）。
+import { downloadToTemp, openFile, shareFile } from '@/utils/fileHandoff'
 import { computed, ref } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -100,66 +109,12 @@ async function ensureDownloadable(): Promise<boolean> {
   return ok
 }
 
-function downloadToTemp(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const api = (uni as any).downloadFile
-    if (typeof api !== 'function') {
-      resolve('')
-      return
-    }
-    api({
-      url,
-      success: (res: any) => resolve(String(res?.tempFilePath ?? '')),
-      fail: () => reject(new Error('downloadFile 失败')),
-    })
-  })
-}
-
-/** 微信内置查看器；打开时把 showMenu 传开，才有右上角的保存 / 转发入口（accept 1 的 grep 钉着它） */
-function openDoc(filePath: string, fileName: string, fallbackUrl: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const api = (uni as any).openDocument
-    if (typeof api !== 'function') {
-      openInBrowser(fallbackUrl)
-      resolve()
-      return
-    }
-    api({
-      filePath,
-      fileType: openDocumentType(fileName),
-      showMenu: true,
-      success: () => resolve(),
-      fail: () => reject(new Error('openDocument 失败')),
-    })
-  })
-}
-
-/** 发到微信聊天（小程序端能力） */
-function shareFile(filePath: string, fileName: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const api = (uni as any).shareFileMessage
-    if (typeof api !== 'function') {
-      uni.showToast({ title: '「发送到微信」要在微信里用', icon: 'none' })
-      resolve()
-      return
-    }
-    api({
-      filePath,
-      fileName,
-      success: () => resolve(),
-      fail: () => reject(new Error('转发文件失败')),
-    })
-  })
-}
-
-declare const window: any
-
 /**
- * H5（本地 Mock 验收面）/ 没有 `wx.openDocument` 的端：如实退化。
+ * H5（本地 Mock 验收面）的兜底：浏览器打开。
  *
- * ★ 这里**不是**小程序的行为：小程序端 `uni.openDocument` 一定在，走的是微信内置查看器。
- *   H5 上退化成「浏览器打开该签名链接」（PDF 能直接看），打不开就给一句人话。
- *   平台专属能力（微信的 openDocument / 转发文件到聊天）**在 H5 上不可验**，报告里如实标注。
+ * ★ 「临时文件 → 打开 / 发送到微信」的**平台实现已经在 `utils/fileHandoff.ts`**
+ *   （SYS-EXPORT-001 抽的公共段，导出与文档下载共用）；这里只剩「一步都下不下来」时
+ *   的兜底 —— 直接开那个签名链接（PDF 能看）。
  */
 function openInBrowser(url: string) {
   // #ifdef H5
@@ -190,9 +145,10 @@ async function run(mode: 'open' | 'share') {
     // 文件名优先用服务端给的（同一个规则）；没有再按 ticket §0 口径 5 在本地拼
     const fileName = String(info?.fileName ?? '').trim() || downloadFileName(props.docKind, props.no, format.value)
 
-    const filePath = await downloadToTemp(url)
+    // ★ 公共段：带鉴权头下到临时目录（`authHeader()` 给 Authorization + clientid）
+    const filePath = await downloadToTemp(url, authHeader())
     if (!filePath) {
-      // 平台没有 downloadFile（H5）：退化成浏览器打开 / 一句提示
+      // 平台没有下载能力：退化成浏览器打开 / 一句提示
       if (mode === 'open') {
         openInBrowser(url)
       }
@@ -203,7 +159,7 @@ async function run(mode: 'open' | 'share') {
       return
     }
     if (mode === 'open') {
-      await openDoc(filePath, fileName, url)
+      await openFile(filePath, openDocumentType(fileName))
     }
     else {
       await shareFile(filePath, fileName)
