@@ -2667,6 +2667,16 @@
       "detail": "本票给 code/deploy/test/docker-compose.yml 加了 gotenberg 服务、并新建 code/deploy/common/gotenberg/（Dockerfile + 字体）。但测试机上的部署脚本（code/deploy/test/deploy.sh 与 remote/*.sh）目前**只同步后端 jar 与 compose**，不会把 common/gotenberg 传上去，也没有在测试机构建该镜像——所以下次重部署测试环境时 gotenberg 会起不来（PDF 渲染在测试环境不可用）。影响：属上线档（Kevin 2026-09-22 已把上线相关推迟到「上线一轮」）。方案：上线一轮里补 deploy.sh 的 rsync/gotenberg 构建，并在测试机预拉 amd64 镜像。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 227,
+      "ticket": "DOC-PDF-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "勘误：#221 的 detail 里被 shell 吃掉了判定式（我写 issue 时用了反引号）",
+      "detail": "补上缺失的那一句：isMenuFrame() 的判定是「parentId == TOP_PARENT_ID(0) 且 menuType == TYPE_MENU(C) 且 isFrame == NO_FRAME(常量值 1)」，三者同时成立才走专用分支。常量出处：ruoyi-common-core 的 SystemConstants（NO_FRAME=\"1\"、TYPE_MENU=\"C\"）。其余内容见 #221。教训：#221/#222 这类含判定式与代码片段的 issue，正文别用反引号（会被 bash 当命令替换），用「」或直角引号。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
