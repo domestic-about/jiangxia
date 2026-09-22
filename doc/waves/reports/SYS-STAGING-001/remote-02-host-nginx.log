@@ -1,0 +1,12 @@
+[2026-09-22 16:12:33] 证书已存在（/www/server/panel/vhost/letsencrypt/songjian.tianda.studio），跳过签发阶段
+[2026-09-22 16:12:33] 使用证书目录：/www/server/panel/vhost/letsencrypt/songjian.tianda.studio
+[2026-09-22 16:12:33] 阶段 C：写完整的 80（ACME + 301）+ 443（TLS + 反代 127.0.0.1:8083）
+nginx: the configuration file /www/server/nginx/conf/nginx.conf syntax is ok
+nginx: configuration file /www/server/nginx/conf/nginx.conf test is successful
+[2026-09-22 16:12:33] 阶段 C 完成：https://songjian.tianda.studio/ 已生效（→ 127.0.0.1:8083）
+[2026-09-22 16:12:33] 自检：curl --resolve songjian.tianda.studio:443:127.0.0.1 https://songjian.tianda.studio/lqg/sys/ping
+curl: (51) SSL: no alternative certificate subject name matches target host name 'songjian.tianda.studio'
+  /lqg/sys/ping -> HTTP 000
+curl: (51) SSL: no alternative certificate subject name matches target host name 'songjian.tianda.studio'
+  /            -> HTTP 000
+[2026-09-22 16:12:33] 证书到期：notAfter=Dec 21 07:13:02 2026 GMT

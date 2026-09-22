@@ -1,0 +1,24 @@
+# accept[1] 逐段单独重放（把票面的 && 链拆开，避免第一段红就看不到后面）
+# 生成时间：2026-09-22 16:29:00 +0800   HEAD=01dd4e388a41
+
+### 段1 ping
+{"code":200,"msg":"操作成功","data":{"module":"ruoyi-lqg","db":"PostgreSQL","dbVersion":16,"tenantEnabled":false,"encryptEnabled":true,"mockLogin":true,"profile":"test","buildCommit":"01dd4e388a41"}}
+
+### 段2 extA 可见集合
+{"total":4,"ids":["9000001001","9000001002","9000001003","9000001004"]}
+
+### 段3 extC 看 1001
+{"code":404,"msg":"样本不存在"}
+
+### 段4 票面原样（无 sort=recent）→ ❌
+{"total":9,"ids":["9000001001","9000001002","9000001003","9000001004","9000001005","9000001006","9000001007","9000001008","9000001009"]}
+### 段4' 等价断言（+&sort=recent）→ ✅
+{"total":2,"ids":["9000001008","9000001009"],"handlerName":["李工","李工"]}
+### 段4'' sort=recent 不带 mine（全中心内部人员，CR-20260918-07 口径）
+{"total":2,"ids":["9000001008","9000001009"]}
+
+### 段5 冻存页签计数
+{"code":200,"tabCounts":{"all":7,"overdue":2,"ln2":2}}
+
+### 段6 LQG_API_BASE 前缀
+https://songjian.tianda.studio

@@ -386,12 +386,12 @@
       "note": ""
     },
     "SYS-STAGING-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D5",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "测试环境已上线：https://songjian.tianda.studio（宿主宝塔 nginx 终止 TLS → 127.0.0.1:8083 compose nginx → backend 容器；LE 证书到期 2026-12-21，SNI 实测匹配）。/lqg/sys/ping = {db:PostgreSQL, dbVersion:16, tenantEnabled:false, encryptEnabled:true, mockLogin:true, profile:test, buildCommit:01dd4e388a41}（= 本地 HEAD 短号，反 stale 成立）；工作台 /prod-api/auth/login 拿到 token、sample/list 9 行、SPA 深链 200。产出：code/deploy/common/**（多阶段 Dockerfile 给 amd64 CI、wait-for、nginx 模板）、code/deploy/test/**（compose、.env.example、deploy.sh、nginx/、remote/*.sh×5）、application-test.yml、doc/verify/verify.test.env.example、小程序 upload:mp + env/.env.test、工作台 .env.test。★accept 2/2 **本机跑不绿，3 段红全部是外部原因、非产品缺陷**：①acc1 第 4 段——票面 URL 写 /mp/int/sample/list?pageSize=100&mine=true **漏了 &sort=recent**，而实现（与 api-contract 第 49 行、SampleQueryService#buildWrapper:259/270 一致）把 mine 的收窄只放在 sort=recent 支 → 返回全表 9 行；加 &sort=recent 的等价断言 = [9000001008,9000001009] ✅（未改票面、未改实现迎合规避，已记 issue 待 Kevin 裁）；②acc2 第 1 段——本机是 **BSD sed，不支持 BRE \\?**，票面的 sed 's#…https\\?://…#' 取不到 HOST（新发现，已记 issue）；③acc2 第 2 段——本机 nc 被透明代理劫持（issue #181）。已按三件套给等价取证：box 发夹探针（本项目 15432/16379/19000/19001/8082/8083 全 unreachable；80/443/22 reachable 阳性对照；1.1.1.1:59999 阴性对照）+ ss -lntp 全 127.0.0.1 + 安全组入方向清单。其余 3 段真绿（三文件在、.env 未被 git 跟踪、compose 无 5432/6379 公网映射）。★关键坑：①镜像必须服务器原生构建（本机 arm64 / 测试机 x86_64）→ 本地打 jar + rsync + 服务器 compose build；②宿主 80/443 归宝塔，compose nginx 只绑 127.0.0.1:8083，宿主 vhost 用 location ^~ / 整体反代（宝塔生成的正则 location 会抢 location /，站根空则 JS/CSS 全 404）；③宝塔 HTTP API limit_addr 为空列表、从 box 127.0.0.1 调也 IP 校验失败 → 改走同一条 ACME 代码路径 btpython acme_v2.py；④宿主无 psql → 在 /opt/lqg-test/bin/psql 放 shim 转发进 postgres 容器，-f 宿主路径必须改成 stdin 喂（reseed.sh 一个字节没改）；⑤macOS 自带 openrsync：一个文件 + 一个带尾斜杠的目录混在一条命令里会把目录内容摊平 → 拆两条。★测试机只留本项目 5 个容器（全 restart: unless-stopped：lqg-test-postgres 15432 / redis 16379 / minio 19000-19001 / backend 8082 / nginx 8083），关停用 bash code/deploy/test/deploy.sh down；未停/删/改 guzi 与 tianda 的任何容器/站点/证书，未动安全组；拷到 /root/ 的宝塔凭据副本已删。★需要 Kevin 做：小程序 appid + 上传密钥 + request 合法域名（体验版二维码卡这里）；测试环境安全口径（公网+admin123+mock 全开）；站点是否纳管进宝塔面板。★我核过：报告里『ops 文档安全组 ID 勘误』不成立，doc/waves/ops/tianda-test-env.md 与 DescribeInstances 真值一致（sg-bp17g616h67b936e6b1b），不采纳。"
     },
     "SYS-WEB-001": {
       "status": "done",
@@ -2304,6 +2304,76 @@
       "type": "harness",
       "title": "plus-ui dev server 会把 code/plus-ui/.eslintrc-auto-import.json 改脏（既非本票改动，也会污染别人）",
       "detail": "复现：起 plus-ui dev（qa-up.sh 会起）后 git status 出现 M code/plus-ui/.eslintrc-auto-import.json。影响：每个碰 plus-ui dev 的 agent/分片都要手动 git checkout -- 还原一次，否则会被当成越界改动（同类还有 code/miniapp/src/pages.json 被 uni-pages 自动改写）。方案：把这两个「自动生成且 dev 时会改」的文件加进 .gitignore 或改成不落盘生成。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 191,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "accept1 第 4 段 URL 漏 &sort=recent：mine 只在 sort=recent 支收窄是实现的既定口径（契约第 49 行）",
+      "detail": "复现：票面 accept1 用 /mp/int/sample/list?pageSize=100&mine=true 期望 [9000001008,9000001009]，实测返回全表 9 行；补 &sort=recent → 恰好 [9000001008,9000001009] ✅。实现与 doc/api-contract.md 第 49 行、SampleQueryService#buildWrapper:259/270 一致：mine 的收窄只在 sort=recent（历史编辑记录）那一支生效——这与 D2 那轮 #105 修完后的形态一致。影响：票面字面重放会红；若 Kevin 认为 mine 应在任意筛选下都收窄，则是实现要改 + 契约要改（不是改票面）。属规格层待裁。方案 a) 回写票面 accept 加 &sort=recent（推荐，与契约一致）；b) 若语义应为「mine 独立生效」，改契约第 49 行 + SampleQueryService 两处 + 复验 D2 的 #105 相关断言。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 192,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "accept2 的 sed 's#…https\\?://…#' 用了 BRE \\?：BSD sed 不支持 → 本机 TARGET host 恒空、断言必假红",
+      "detail": "复现：macOS 自带 BSD sed 对 BRE 里的 \\?（可选量词）不认，'s#^LQG_API_BASE=https\\?://\\([^/:]*\\).*#\\1#p' 取不到任何东西 → HOST 为空 → 后续 ! nc 断言必然红。影响：与 nc 劫持（#181）叠加，使 accept2 的前 2 段在本机无法按字面通过；Linux（GNU sed）上没这个问题。方案 a) 把这类「从 URL 取 host」抽成 doc/verify 下的小工具（python3 一行），票面改调它；b) 至少把 \\? 换成 [-]* 之类可移植写法。属 ① 侧票面资产修订。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 193,
+      "ticket": "SYS-MP-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "SYS-MP-001 accept 的 ! grep -rq 'mock:ext' 恒真：mock code 是模板串拼的，产物里没有该字面量",
+      "detail": "复现：SYS-MP-001 accept 用 ! grep -rq 'mock:ext' 断言小程序生产包里搜不到 mock 登录 code；但产物里的 code 是 'mock:' + key 模板拼出来的，源码/产物里都不存在 'mock:ext' 这个字面量 → 该段恒真（实现什么都不做也绿）。影响：这是「不许出现 X」型假绿（八种形态 #1/#5）。本票 SYS-STAGING-001 用可判定方式复验过：test 构建 mockEnabled=computed(()=>!0)、prod=computed(()=>!1)。方案：把该断言换成对构建产物的可判定检查（如 grep 编译后的常量折叠结果，或加 fixture 断言）——属 ① 侧 accept 强化。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 194,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "越出 touches：测试环境相关 7 处（前端必须一起关 VITE_APP_ENCRYPT，否则工作台登录必挂）",
+      "detail": "越界清单（各有硬理由）：①code/plus-ui/.env.test + ②package.json 加 build:test —— 后端 api-decrypt 关了，前端必须一起关 VITE_APP_ENCRYPT，否则工作台登录 100% 失败；③code/miniapp/env/.env.test + ④package.json（upload:mp 脚本）+ ⑤pnpm-lock.yaml（miniprogram-ci 依赖）+ ⑥scripts/upload-mp.mjs（本地构建 + miniprogram-ci，遵栈包 gotchas §6.5）+ ⑦src/pages/login/index.vue（放开 test mode 的 mock 调试入口，生产可判定：test=computed(()=>!0)、prod=computed(()=>!1)）。合计 7 处，均属「不越界就做不到票面要求」。方案：把「环境无关的前端构建 + 按 mode 注入」写进 README-modeB 或小程序 README 作为约定。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 195,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "clarify",
+      "title": "测试环境当前是「公网可达 + admin123 + mock 登录全开」：满足合同「仅测试数据」，但口径要 Kevin 定",
+      "detail": "现状：https://songjian.tianda.studio 公网可访问，工作台超管 admin/admin123，小程序 mock 登录开着（ADR-0008 允许 test），库内只有 seed 假数据（样本 10 行 / 8 个账号 / 供体姓名是密文）。合同第四条 2(3) 只要求「测试阶段使用乙方测试服务器，仅使用测试数据」——现状满足。但任何人拿到域名就能读全部测试数据、并用超管改数据。方案 a) 维持现状（试用期最短路径，甲方对接人体验无摩擦）；b) 给站点加 HTTP Basic 或 IP 白名单，把 admin123 换成一次性口令；c) 只保留 mock 登录、关掉工作台账号密码登录。**要 Kevin 拍板**。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 196,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "debt",
+      "title": "证书续签：宝塔 acme_v2 --renew_v2=1 会原地重写订单目录，但非面板纳管站点的续签后 reload 未验证",
+      "detail": "现状：证书走 btpython acme_v2.py 签在 vhost/letsencrypt/<域名>/（宝塔每日 06:27 有 acme_v2 --renew_v2=1 会原地重写订单目录）。未验证：续签成功后是否会 reload nginx（站点不在面板站点表里，纳管与否可能决定这条链路）。影响：证书到期（2026-12-21）前若不 reload，浏览器会继续用旧证书 → 到期后站点报证书错误，而甲方正在试用。方案 a) 把站点纳管进宝塔面板（最稳）；b) 到期前人工 nginx -s reload 并加一条日历提醒；c) 加一个 cron 在 renew 后无条件 nginx -t && nginx -s reload。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 197,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "同机 gz-ruoyi-admin-staging 处于 unhealthy（非本项目，只报告）",
+      "detail": "复现：测试机上 docker ps 显示 gz-ruoyi-admin-staging Up 4 hours (unhealthy)，StartedAt 早于本项目部署（RestartCount=0）→ 与本项目部署无关。影响：不属本项目，但同一台机器上有个 unhealthy 的生产/预发容器值得 Kevin 知道；也提醒我们「同机共享资源」要在部署时避开。方案：报告给 Kevin 由其处理；本项目不做任何处置。",
       "status": "open",
       "decision": ""
     }

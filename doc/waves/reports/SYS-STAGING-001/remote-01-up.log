@@ -1,0 +1,162 @@
+[2026-09-22 16:08:44] ===== 0) 前提检查 =====
+  docker server: 26.1.3
+[2026-09-22 16:08:44]   磁盘：/dev/nvme0n1p3   59G   44G   13G  78% /
+[2026-09-22 16:08:44]   内存：7462MB total, 2705MB available
+[2026-09-22 16:08:44]   镜像就位：postgres:16-alpine
+[2026-09-22 16:08:44]   镜像就位：redis:7-alpine
+[2026-09-22 16:08:44]   镜像就位：minio/minio:latest
+[2026-09-22 16:08:44]   镜像就位：eclipse-temurin:21-jre-jammy
+[2026-09-22 16:08:44] ===== 1) 数据面：postgres / redis / minio =====
+ Network lqg-test_default  Creating
+ Network lqg-test_default  Created
+ Volume "lqg-test_lqg-test-miniodata"  Creating
+ Volume "lqg-test_lqg-test-miniodata"  Created
+ Volume "lqg-test_lqg-test-pgdata"  Creating
+ Volume "lqg-test_lqg-test-pgdata"  Created
+ Volume "lqg-test_lqg-test-redisdata"  Creating
+ Volume "lqg-test_lqg-test-redisdata"  Created
+ Container lqg-test-minio  Creating
+ Container lqg-test-postgres  Creating
+ Container lqg-test-redis  Creating
+ Container lqg-test-postgres  Created
+ Container lqg-test-redis  Created
+ Container lqg-test-minio  Created
+ Container lqg-test-postgres  Starting
+ Container lqg-test-minio  Starting
+ Container lqg-test-redis  Starting
+ Container lqg-test-minio  Started
+ Container lqg-test-postgres  Started
+ Container lqg-test-redis  Started
+ Container lqg-test-redis  Running
+ Container lqg-test-minio  Running
+ Container lqg-test-postgres  Running
+ Container lqg-test-minio  Waiting
+ Container lqg-test-postgres  Waiting
+ Container lqg-test-redis  Waiting
+ Container lqg-test-redis  Healthy
+ Container lqg-test-postgres  Healthy
+ Container lqg-test-minio  Healthy
+[2026-09-22 16:08:55] ===== 2) 后端镜像：**在本机原生构建**（amd64，只 COPY jar，秒级）=====
+[2026-09-22 16:08:55]   构建参数 BUILD_COMMIT=01dd4e388a41（= 本地 git rev-parse --short=12 HEAD）
+#0 building with "default" instance using docker driver
+
+#1 [backend internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.97kB done
+#1 DONE 0.0s
+
+#2 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jre-jammy
+#2 DONE 0.0s
+
+#3 [backend internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [backend 1/4] FROM docker.io/library/eclipse-temurin:21-jre-jammy
+#4 DONE 0.1s
+
+#5 [backend internal] load build context
+#5 ...
+
+#6 [backend 2/4] RUN mkdir -p /app/logs
+#6 DONE 0.2s
+
+#7 [backend 3/4] WORKDIR /app
+#7 DONE 0.0s
+
+#5 [backend internal] load build context
+#5 transferring context: 174.21MB 1.2s done
+#5 DONE 1.2s
+
+#8 [backend 4/4] ADD ./target/ruoyi-admin.jar ./app.jar
+#8 DONE 2.0s
+
+#9 [backend] exporting to image
+#9 exporting layers
+#9 exporting layers 0.8s done
+#9 writing image sha256:1f415b95b88f5f3f0dbab88f8c4b12b4401c690e1b04ca6188a91ac316f87d0d done
+#9 naming to docker.io/library/lqg-test-backend:01dd4e388a41 done
+#9 DONE 0.8s
+[2026-09-22 16:09:00] ===== 3) 起后端（Flyway 首次迁移在这里跑）=====
+ Container lqg-test-redis  Running
+ Container lqg-test-postgres  Running
+ Container lqg-test-backend  Creating
+ Container lqg-test-backend  Created
+ Container lqg-test-redis  Waiting
+ Container lqg-test-postgres  Waiting
+ Container lqg-test-redis  Healthy
+ Container lqg-test-postgres  Healthy
+ Container lqg-test-backend  Starting
+ Container lqg-test-backend  Started
+[2026-09-22 16:09:00] ===== 4) 等后端在宿主环回端口上应答 /lqg/sys/ping（401 = 应用活着且要求鉴权）=====
+[wait-for] http://127.0.0.1:8082/lqg/sys/ping ... ok
+[2026-09-22 16:09:21]   /lqg/sys/ping -> HTTP 200（期望 401）
+[2026-09-22 16:09:21]   ⚠ 不是 401：200（401=未登录，通常是正常的；200 也说明应用活着）
+[2026-09-22 16:09:21] ===== 5) 起 compose 的 nginx（静态 + 反代）=====
+ Container lqg-test-postgres  Running
+ Container lqg-test-redis  Running
+ Container lqg-test-backend  Running
+ Container lqg-test-nginx  Creating
+ Container lqg-test-nginx  Created
+ Container lqg-test-redis  Waiting
+ Container lqg-test-postgres  Waiting
+ Container lqg-test-redis  Healthy
+ Container lqg-test-postgres  Healthy
+ Container lqg-test-nginx  Starting
+ Container lqg-test-nginx  Started
+[wait-for] http://127.0.0.1:8083/ ... ok
+[2026-09-22 16:09:25] ===== 6) 现状 =====
+NAME                IMAGE                           COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+lqg-test-backend    lqg-test-backend:01dd4e388a41   "java -Djava.securit…"   backend    25 seconds ago   Up 24 seconds (healthy)   127.0.0.1:8082->8080/tcp
+lqg-test-minio      minio/minio:latest              "/usr/bin/docker-ent…"   minio      41 seconds ago   Up 40 seconds (healthy)   127.0.0.1:19000->9000/tcp, 127.0.0.1:19001->9001/tcp
+lqg-test-nginx      nginx:1.27-alpine               "/docker-entrypoint.…"   nginx      4 seconds ago    Up 3 seconds              127.0.0.1:8083->80/tcp
+lqg-test-postgres   postgres:16-alpine              "docker-entrypoint.s…"   postgres   41 seconds ago   Up 40 seconds (healthy)   127.0.0.1:15432->5432/tcp
+lqg-test-redis      redis:7-alpine                  "docker-entrypoint.s…"   redis      41 seconds ago   Up 40 seconds (healthy)   127.0.0.1:16379->6379/tcp
+[2026-09-22 16:09:25]   宿主环回端口占用（本项目应只有 127.0.0.1 的 15432/16379/19000/19001/8082/8083）
+LISTEN 0      4096            127.0.0.1:15432      0.0.0.0:*    users:(("docker-proxy",pid=4002286,fd=4))                                                                                                      
+LISTEN 0      4096            127.0.0.1:8082       0.0.0.0:*    users:(("docker-proxy",pid=4003041,fd=4))                                                                                                      
+LISTEN 0      4096            127.0.0.1:8083       0.0.0.0:*    users:(("docker-proxy",pid=4003601,fd=4))                                                                                                      
+LISTEN 0      4096            127.0.0.1:19000      0.0.0.0:*    users:(("docker-proxy",pid=4002313,fd=4))                                                                                                      
+LISTEN 0      4096            127.0.0.1:19001      0.0.0.0:*    users:(("docker-proxy",pid=4002298,fd=4))                                                                                                      
+LISTEN 0      4096            127.0.0.1:16379      0.0.0.0:*    users:(("docker-proxy",pid=4002273,fd=4))                                                                                                      
+[2026-09-22 16:09:25] ===== 后端启动日志尾部（Flyway 迁移结果）=====
+  ____ ____    ___ ____ _  _ ____ _  _ 
+  [__  |__| __  |  |  | |_/  |___ |\ | 
+  ___] |  |     |  |__| | \_ |___ | \| 
+  https://sa-token.cc (v1.44.0)
+  [36m2026-09-22 16:09:12[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35mc.b.m.e.s.MybatisPlusApplicationContextAware
+  [0;39m - Register ApplicationContext instances org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@607b2792
+  [36m2026-09-22 16:09:16[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35mio.undertow
+  [0;39m - starting server: Undertow - 2.3.22.Final
+  [36m2026-09-22 16:09:16[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35morg.xnio
+  [0;39m - XNIO version 3.8.16.Final
+  [36m2026-09-22 16:09:16[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35morg.xnio.nio
+  [0;39m - XNIO NIO Implementation Version 3.8.16.Final
+  [36m2026-09-22 16:09:16[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35morg.jboss.threads
+  [0;39m - JBoss Threads version 3.7.0.Final
+   ________  _____ ______   ________  ___   ___        ___     
+  |\   ____\|\   _ \  _   \|\   ____\|\  \ |\  \      |\  \    
+  \ \  \___|\ \  \\\__\ \  \ \  \___|\ \  \\_\  \     \ \  \   
+   \ \_____  \ \  \\|__| \  \ \_____  \ \______  \  __ \ \  \  
+    \|____|\  \ \  \    \ \  \|____|\  \|_____|\  \|\  \\_\  \ 
+      ____\_\  \ \__\    \ \__\____\_\  \     \ \__\ \________\
+     |\_________\|__|     \|__|\_________\     \|__|\|________|
+     \|_________|             \|_________|                     
+  V 3.3.5
+  [36m2026-09-22 16:09:16[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35morg.dromara.DromaraApplication
+  [0;39m - Started DromaraApplication in 15.211 seconds (process running for 15.95)
+  [36m2026-09-22 16:09:16[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35mo.d.c.sse.listener.SseTopicListener
+  [0;39m - 初始化SSE主题订阅监听器成功
+  [36m2026-09-22 16:09:16[0;39m [32m[main][0;39m [31mWARN [0;39m [1;35mo.d.lqg.auth.guard.MockLoginGuard
+  [0;39m - mock 登录已开启（profile=[test]）：xcxCode 以 mock: 开头时跳过微信，手机号直接取请求里的值。仅限开发 / 测试环境（ADR-0008）。
+  [36m2026-09-22 16:09:17[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35mo.d.s.runner.SystemApplicationRunner
+  [0;39m - 初始化OSS配置成功
+  [36m2026-09-22 16:09:17[0;39m [32m[main][0;39m [34mINFO [0;39m [1;35mo.d.l.o.g.OcrProviderGuardAutoConfiguration
+  [0;39m - 识别通道已就绪：provider=stub，paid-enabled=false
+  (♥◠‿◠)ﾉﾞ  RuoYi-Vue-Plus启动成功   ლ(´ڡ`ლ)ﾞ
+  [36m2026-09-22 16:09:20[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mio.undertow.servlet
+  [0;39m - Initializing Spring DispatcherServlet 'dispatcherServlet'
+  [36m2026-09-22 16:09:21[0;39m [32m[XNIO-1 task-2][0;39m [1;31mERROR[0;39m [1;35mo.d.c.s.h.SaTokenExceptionHandler
+  [0;39m - 请求地址'/lqg/sys/ping',认证失败'未能读取到有效 token',无法访问系统资源
+  [36m2026-09-22 16:09:21[0;39m [32m[XNIO-1 task-2][0;39m [1;31mERROR[0;39m [1;35mo.d.c.s.h.SaTokenExceptionHandler
+  [0;39m - 请求地址'/lqg/sys/ping',认证失败'未能读取到有效 token',无法访问系统资源
+[2026-09-22 16:09:25] 1) up 完成

@@ -1,0 +1,1 @@
+{"code":200,"msg":"操作成功","data":{"module":"ruoyi-lqg","db":"PostgreSQL","dbVersion":16,"tenantEnabled":false,"encryptEnabled":true,"mockLogin":true,"profile":"test","buildCommit":"01dd4e388a41"}}

@@ -1,0 +1,82 @@
+[36m[deploy][0m 账号硬闸 ✅ AccountId=1826406494972500（profile tianda-admin）
+[36m[deploy][0m SSH ✅ 118.178.109.11 (iZbp14wbcfphboybx9idugZ)
+=== 磁盘 / 内存 ===
+/dev/nvme0n1p3   59G   44G   13G  79% /
+              total        used        free      shared  buff/cache   available
+Mem:           7462        5531        1134         255        1346        1931
+
+=== 本项目的容器（lqg-test-*）===
+lqg-test-nginx  Up 18 minutes  127.0.0.1:8083->80/tcp
+lqg-test-backend  Up 18 minutes (healthy)  127.0.0.1:8082->8080/tcp
+lqg-test-minio  Up 19 minutes (healthy)  127.0.0.1:19000->9000/tcp, 127.0.0.1:19001->9001/tcp
+lqg-test-postgres  Up 19 minutes (healthy)  127.0.0.1:15432->5432/tcp
+lqg-test-redis  Up 19 minutes (healthy)  127.0.0.1:16379->6379/tcp
+=== 别人的容器（只读列出，未碰）===
+gz-ruoyi-admin-staging  Up 5 hours (unhealthy)
+tianda-redis  Up 5 weeks
+tianda-mysql  Up 5 weeks
+gz-redis-staging  Up 5 weeks (healthy)
+gz-mysql-staging  Up 5 weeks (healthy)
+
+=== 宿主监听端口（全量；本项目的应全是 127.0.0.1）===
+State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess                                                                                                                                         
+LISTEN 0      4096            127.0.0.1:15432      0.0.0.0:*    users:(("docker-proxy",pid=4002286,fd=4))                                                                                                      
+LISTEN 0      4096              0.0.0.0:3306       0.0.0.0:*    users:(("docker-proxy",pid=3945,fd=4))                                                                                                         
+LISTEN 0      4096            127.0.0.1:3307       0.0.0.0:*    users:(("docker-proxy",pid=49933,fd=4))                                                                                                        
+LISTEN 0      4096            127.0.0.1:6380       0.0.0.0:*    users:(("docker-proxy",pid=57328,fd=4))                                                                                                        
+LISTEN 0      4096              0.0.0.0:8080       0.0.0.0:*    users:(("docker-proxy",pid=3957188,fd=4))                                                                                                      
+LISTEN 0      511               0.0.0.0:80         0.0.0.0:*    users:(("nginx",pid=4007315,fd=20),("nginx",pid=4007314,fd=20),("nginx",pid=4007313,fd=20),("nginx",pid=4007312,fd=20),("nginx",pid=746,fd=20))
+LISTEN 0      511               0.0.0.0:8881       0.0.0.0:*    users:(("nginx",pid=4007315,fd=23),("nginx",pid=4007314,fd=23),("nginx",pid=4007313,fd=23),("nginx",pid=4007312,fd=23),("nginx",pid=746,fd=23))
+LISTEN 0      4096            127.0.0.1:8082       0.0.0.0:*    users:(("docker-proxy",pid=4003041,fd=4))                                                                                                      
+LISTEN 0      4096            127.0.0.1:8083       0.0.0.0:*    users:(("docker-proxy",pid=4003601,fd=4))                                                                                                      
+LISTEN 0      128               0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=1233,fd=3))                                                                                                                 
+LISTEN 0      100               0.0.0.0:23127      0.0.0.0:*    users:(("BT-Panel",pid=2067,fd=3))                                                                                                             
+LISTEN 0      4096            127.0.0.1:19000      0.0.0.0:*    users:(("docker-proxy",pid=4002313,fd=4))                                                                                                      
+LISTEN 0      511               0.0.0.0:888        0.0.0.0:*    users:(("nginx",pid=4007315,fd=19),("nginx",pid=4007314,fd=19),("nginx",pid=4007313,fd=19),("nginx",pid=4007312,fd=19),("nginx",pid=746,fd=19))
+LISTEN 0      4096            127.0.0.1:19001      0.0.0.0:*    users:(("docker-proxy",pid=4002298,fd=4))                                                                                                      
+LISTEN 0      100             127.0.0.1:25         0.0.0.0:*    users:(("master",pid=1213,fd=13))                                                                                                              
+LISTEN 0      4096            127.0.0.1:16379      0.0.0.0:*    users:(("docker-proxy",pid=4002273,fd=4))                                                                                                      
+LISTEN 0      511               0.0.0.0:443        0.0.0.0:*    users:(("nginx",pid=4007315,fd=21),("nginx",pid=4007314,fd=21),("nginx",pid=4007313,fd=21),("nginx",pid=4007312,fd=21),("nginx",pid=746,fd=21))
+LISTEN 0      4096                 [::]:3306          [::]:*    users:(("docker-proxy",pid=3982,fd=4))                                                                                                         
+LISTEN 0      4096                 [::]:8080          [::]:*    users:(("docker-proxy",pid=3957194,fd=4))                                                                                                      
+LISTEN 0      511                  [::]:80            [::]:*    users:(("nginx",pid=4007315,fd=22),("nginx",pid=4007314,fd=22),("nginx",pid=4007313,fd=22),("nginx",pid=4007312,fd=22),("nginx",pid=746,fd=22))
+LISTEN 0      1000   [::ffff:127.0.0.1]:8081             *:*    users:(("java",pid=2454635,fd=158))                                                                                                            
+LISTEN 0      128                  [::]:22            [::]:*    users:(("sshd",pid=1233,fd=4))                                                                                                                 
+LISTEN 0      511                     *:3000             *:*    users:(("next-server (v1",pid=2455182,fd=23))                                                                                                  
+LISTEN 0      100                 [::1]:25            [::]:*    users:(("master",pid=1213,fd=14))                                                                                                              
+LISTEN 0      511                  [::]:443           [::]:*    users:(("nginx",pid=4007315,fd=58),("nginx",pid=4007314,fd=58),("nginx",pid=4007313,fd=58),("nginx",pid=4007312,fd=58),("nginx",pid=746,fd=58))
+
+=== 本项目的 compose 状态 ===
+NAME                IMAGE                           COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+lqg-test-backend    lqg-test-backend:01dd4e388a41   "java -Djava.securit…"   backend    18 minutes ago   Up 18 minutes (healthy)   127.0.0.1:8082->8080/tcp
+lqg-test-minio      minio/minio:latest              "/usr/bin/docker-ent…"   minio      19 minutes ago   Up 19 minutes (healthy)   127.0.0.1:19000->9000/tcp, 127.0.0.1:19001->9001/tcp
+lqg-test-nginx      nginx:1.27-alpine               "/docker-entrypoint.…"   nginx      18 minutes ago   Up 18 minutes             127.0.0.1:8083->80/tcp
+lqg-test-postgres   postgres:16-alpine              "docker-entrypoint.s…"   postgres   19 minutes ago   Up 19 minutes (healthy)   127.0.0.1:15432->5432/tcp
+lqg-test-redis      redis:7-alpine                  "docker-entrypoint.s…"   redis      19 minutes ago   Up 19 minutes (healthy)   127.0.0.1:16379->6379/tcp
+
+=== 后端最近日志（20 行）===
+  [36m2026-09-22 16:26:02[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]开始请求 => URL[GET /lqg/sys/ping],无参数
+  [36m2026-09-22 16:26:02[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]结束请求 => URL[GET /lqg/sys/ping],耗时:[1]毫秒
+  [36m2026-09-22 16:26:04[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]开始请求 => URL[GET /lqg/sample/list],参数类型[param],参数:[{"pageSize":["3"]}]
+  [36m2026-09-22 16:26:04[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]结束请求 => URL[GET /lqg/sample/list],耗时:[13]毫秒
+  [36m2026-09-22 16:26:05[0;39m [32m[schedule-pool-1][0;39m [34mINFO [0;39m [1;35mo.d.c.sse.core.SseEmitterManager
+  [0;39m - SSE发送主题订阅消息topic:global:sse session keys:[9000000100] message:下午好，欢迎登录 RuoYi-Vue-Plus 后台管理系统
+  [36m2026-09-22 16:26:05[0;39m [32m[redisson-3-2][0;39m [34mINFO [0;39m [1;35mo.d.c.sse.listener.SseTopicListener
+  [0;39m - SSE主题订阅收到消息session keys=[9000000100] message=下午好，欢迎登录 RuoYi-Vue-Plus 后台管理系统
+  [36m2026-09-22 16:27:20[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]开始请求 => URL[GET /auth/code],无参数
+  [36m2026-09-22 16:27:20[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]结束请求 => URL[GET /auth/code],耗时:[1]毫秒
+  [36m2026-09-22 16:27:23[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]开始请求 => URL[GET /auth/code],无参数
+  [36m2026-09-22 16:27:23[0;39m [32m[XNIO-1 task-2][0;39m [34mINFO [0;39m [1;35mo.d.c.w.i.PlusWebInvokeTimeInterceptor
+  [0;39m - [PLUS]结束请求 => URL[GET /auth/code],耗时:[1]毫秒
+
+=== 宿主 nginx 站点文件（本项目的）===
+-rw-r--r-- 1 root root 3256 Sep 22 16:12 /www/server/panel/vhost/nginx/songjian.tianda.studio.conf
+  (还没证书)
+[36m[deploy][0m 完成：status
