@@ -56,18 +56,24 @@ accept:
       工作台首页和冻存列表各写各的超期 where → 与超期清单长度不等红。
       最近提交没过滤软删 → SJ90000010 出现红。
       两侧不同源：接口 vs 直连库；再由 seed 期望钉住。
-  - name: "前端构建是本次产物；首页五张卡片接的是接口而不是写死的数；为 0 不隐藏；菜单角标与卡片同一个来源（含石蜡包埋）"
+  - name: "前端构建是本次产物；首页五张卡片接的是接口而不是写死的数（**真 DOM 五个数字 == 同一次 /lqg/home/todo 的返回值**）；为 0 不隐藏；菜单角标与卡片同一个来源（含石蜡包埋）"
     form: API
     run: |-
       cd code/plus-ui && rm -rf dist && pnpm build:prod >/dev/null && test -f dist/index.html &&
       grep -q 'home/todo' src/api/lqg/home.ts && grep -c 'TodoCard' src/views/lqg/home/index.vue | awk '{exit !($1 >= 5)}' &&
       ! grep -nE 'v-if="[^"]*(pendingSamples|pendingEmbeds|cryoOverdue|pendingExtUsers|renderFailed)[^"]*> *0"' src/views/lqg/home/index.vue &&
       ! grep -nE 'echarts|el-statistic' src/views/lqg/home/index.vue &&
-      grep -q 'pendingEmbeds' src/store/modules/lqgTodo.ts && grep -rq 'lqgTodo' src/layout/components/Sidebar && ! grep -rq 'home/todo' src/layout/components/Sidebar
+      grep -q 'pendingEmbeds' src/store/modules/lqgTodo.ts && grep -rq 'lqgTodo' src/layout/components/Sidebar && ! grep -rq 'home/todo' src/layout/components/Sidebar &&
+      cd ../.. && bash doc/waves/regression/D7/mutation-assert.sh --verify-only --hotspot H2
     counterfeit: |-
       数为 0 的卡片用 v-if 隐藏 → 第 3 段红：实验室的人会分不清「没有待办」和「功能坏了」。
       顺手加了个送样量趋势图 → 第 4 段红（甲方没要，做了就得维护）。
       侧边栏自己再请求一次 home/todo（两个请求之间数字可能不同）→ 最后一段红；角标漏了石蜡包埋 → pendingEmbeds 那段红。
+      ★ **「数字是读时算的、页面真的展示接口值」不再由源码 grep 判**（旧写法只 grep「卡片接了接口」，D7 r1 L2 证伪 F4：
+      把 `:value="todo.pendingSamples"` 改成写死的 7、`pendingEmbeds` 改成 9（真值 2/1），acc1+acc2 全绿，
+      而工作台首页当众显示 7 / 9）。现在由 `mutation-assert.sh --hotspot H2` 判：
+      真浏览器打开工作台首页，从**真 DOM** 读五张卡片的数字（`.lqg-todo-card__num`），
+      与**同一次** `GET /lqg/home/todo` 的返回值逐个比对；已定义变异 = 把两张卡写死成 7 / 9 → 判据必须变红，还原必须复绿。
 ---
 
 # SYS-HOME-001 · 工作台首页待办与菜单角标：五个数读时计算、同一个来源

@@ -54,18 +54,24 @@ accept:
       完成只改了状态、没触发外部版渲染 → 等 20 秒后 doc_file 里没有 external 的三种产物，集合红。
       重复完成不拒绝（每点一次重置一次完成时间）→ 第 5 段红；文档列表按完成时间排序会乱跳。
       状态断言全部直连库读，不信接口自报。
-  - name: "前端构建是本次产物；预览面板接入编辑页，有内外部版切换、四个下载入口、失败态与重新生成"
+  - name: "前端构建是本次产物；预览面板接入编辑页，有内外部版切换、**真 DOM 恰好四个下载入口且逐个点下去 format/合并位都正确**、失败态与重新生成"
     form: API
     run: |-
       cd code/plus-ui && rm -rf dist && pnpm build:prod >/dev/null && test -f dist/index.html &&
       grep -q 'PreviewPane' src/views/lqg/qc/editor/index.vue &&
       grep -q 'audience' src/views/lqg/qc/components/PreviewPane.vue && grep -q 'merged' src/views/lqg/qc/components/PreviewPane.vue &&
-      grep -cE "format.*(docx|pdf)|'docx'|'pdf'" src/views/lqg/qc/components/PreviewPane.vue | awk '{exit !($1 >= 2)}' &&
       grep -qE 'failed|重新生成' src/views/lqg/qc/components/PreviewPane.vue &&
-      ! grep -nE ':disabled="true"' src/views/lqg/qc/editor/index.vue
+      ! grep -nE ':disabled="true"' src/views/lqg/qc/editor/index.vue &&
+      cd ../.. && bash doc/waves/regression/D7/mutation-assert.sh --verify-only --hotspot H4
     counterfeit: |-
       预览面板直接 iframe 了 PDF 链接 → 和小程序看到的页面图片不是同一份东西；要求用 pages 接口的页面图片。
       「完成并同步」按钮还留着 QC-WEB-001 的写死置灰 → 最后一段红。
+      ★ **「四个下载入口」不再由字面量 grep 判**（旧写法 `grep -cE "format.*(docx|pdf)|'docx'|'pdf'"` 只钉住文里有 docx 与 pdf 两个字面量；
+      D7 r1 L2 证伪 F6：把「下载合并 PDF」整个 el-button 删掉，五段 grep 全绿，而票面 §2 明确要求四个按钮真下载）。
+      现在由 `mutation-assert.sh --hotspot H4` 判：真浏览器打开 1001 的质控文档编辑页 → 点「预览」→
+      在**真 DOM** 上数 `.lqg-preview-pane__downloads-row` 的按钮**恰好 4 个**、文案恰好 [下载 Word / 下载 PDF / 下载合并 Word / 下载合并 PDF]，
+      并**逐个真点一次**，抓真请求断言 `format=docx|pdf` 与 `/merged/` 位都正确（分别命中 `/lqg/doc/9000001001/sample_qc/download` 与 `…/merged/download`）；
+      已定义变异 = 删掉「下载合并 PDF」那一个按钮 → 必须变红，还原必须复绿。
 ---
 
 # DOC-PUBLISH-001 · 完成并同步 / 撤回：两态状态机、改了内容自动回到草稿、工作台预览面板与下载

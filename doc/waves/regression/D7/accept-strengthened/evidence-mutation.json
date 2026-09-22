@@ -1,0 +1,815 @@
+{
+ "ticket": "SYS-ACCEPT-001",
+ "generated_at": "2026-09-22T23:14:55.177197+00:00",
+ "mode": "mutation",
+ "scope": [
+  "H1a",
+  "H1b",
+  "H2",
+  "H3a",
+  "H3b",
+  "H4"
+ ],
+ "all_six_present": true,
+ "missing": [],
+ "tree_green": true,
+ "hotspots": {
+  "H1a": {
+   "ticket": "SYS-EXPORT-001",
+   "accept": "acc2",
+   "criterion": "真发一次「导出 Excel」：请求头必须带 Authorization(Bearer) + clientid，响应 200 且响应体是真 xlsx（ZIP 魔数 PK）",
+   "old_criterion": "grep -E 'Authorization|clientid' src/pages/ledger/export.ts src/utils/fileHandoff.ts（只问两个文件里有没有这两个词）",
+   "mutation": "去掉 src/pages/ledger/index.vue 里 downloadToTemp 的 `header: authHeader(), requireAuth: true`",
+   "behavioral": true,
+   "result": "green",
+   "checked_at": "2026-09-22T23:12:58.238Z",
+   "observed": {
+    "export_url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
+    "export_request_headers": {
+     "authorization": "Bearer eyJhbGciOiJIUzI…（Bearer JWT）",
+     "clientid": "22b2aecd0710671691ec1c07f2542b9d",
+     "all_keys": [
+      "accept",
+      "authorization",
+      "clientid"
+     ]
+    },
+    "export_response": {
+     "status": 200,
+     "bytes": 4117,
+     "magic": "PK"
+    }
+   },
+   "assertions": [
+    {
+     "name": "H1a:内部人员 mock 登录 H5(9204)",
+     "ok": true,
+     "detail": "http://127.0.0.1:9204/#/"
+    },
+    {
+     "name": "H1a:导出请求真的发出（真点一次「导出 Excel」）",
+     "ok": true,
+     "detail": "[\"http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending\"]"
+    },
+    {
+     "name": "H1a:★ 导出请求头带 Authorization（Bearer JWT）",
+     "ok": true,
+     "detail": "{\"hasAuth\":true}"
+    },
+    {
+     "name": "H1a:★ 导出请求头带 clientid",
+     "ok": true,
+     "detail": "{\"clientid\":\"22b2aecd0710671691ec1c07f2542b9d\"}"
+    },
+    {
+     "name": "H1a:★ 导出响应 200",
+     "ok": true,
+     "detail": "200"
+    },
+    {
+     "name": "H1a:★ 响应体是真 xlsx（ZIP 魔数 PK + 有字节数）",
+     "ok": true,
+     "detail": "{\"magic\":\"PK\",\"bytes\":4117}"
+    },
+    {
+     "name": "H1a:地址带上筛选项 verifyStatus=pending（筛了什么导出什么）",
+     "ok": true,
+     "detail": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending"
+    }
+   ]
+  },
+  "H1b": {
+   "ticket": "SYS-EXPORT-001",
+   "accept": "acc2",
+   "criterion": "真点一次单份「下载」：后端签发 OSS 预签名直链后，浏览器对直链的请求头**不含 Authorization**，且 OSS 响应 200",
+   "old_criterion": "同上一条 grep（调用点与目标 URL 零覆盖；这正是 D7 r1 S1 的盲区）",
+   "mutation": "给 src/components/lqg/DownloadBar.vue 的 downloadToTemp 传回 authHeader()",
+   "behavioral": true,
+   "result": "green",
+   "checked_at": "2026-09-22T23:13:40.653Z",
+   "observed": {
+    "backend_signed_url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx?X-Amz-…",
+    "oss_request_headers": [
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx",
+      "header_keys": [
+       "sec-ch-ua-platform",
+       "referer",
+       "user-agent",
+       "sec-ch-ua",
+       "sec-ch-ua-mobile"
+      ],
+      "authorization": "(无)",
+      "clientid": "(无)"
+     }
+    ],
+    "oss_response": [
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx",
+      "status": 200,
+      "ct": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+     }
+    ],
+    "clientid_on_oss_request_count": 0
+   },
+   "assertions": [
+    {
+     "name": "H1b:内部人员 mock 登录 H5(9204)",
+     "ok": true,
+     "detail": "http://127.0.0.1:9204/#/"
+    },
+    {
+     "name": "H1b:进入文档页签",
+     "ok": true,
+     "detail": "http://127.0.0.1:9204/#/pages/doc/index"
+    },
+    {
+     "name": "H1b:第一组卡片上有「下载」入口（渲染产物已就绪）",
+     "ok": true,
+     "detail": "3"
+    },
+    {
+     "name": "H1b:后端签发 OSS 预签名直链（code=200 + url 指向 127.0.0.1:9000）",
+     "ok": true,
+     "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx?X-Amz-Algorithm=AWS4-HMAC-\"}"
+    },
+    {
+     "name": "H1b:★ OSS 直链请求真的发出（真点一次单份下载）",
+     "ok": true,
+     "detail": "[\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx\"]"
+    },
+    {
+     "name": "H1b:★ OSS 直链请求头**没有 Authorization**（API 鉴权头不能塞到预签名直链上）",
+     "ok": true,
+     "detail": "{\"n\":1,\"authHeaders\":[]}"
+    },
+    {
+     "name": "H1b:★ OSS 响应码 = 200（MinIO 没判「multiple authentication types」）",
+     "ok": true,
+     "detail": "[{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx\",\"status\":200,\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
+    },
+    {
+     "name": "H1b:页面没有进失败态（.db__hint 里没有「暂时下不了」）",
+     "ok": true,
+     "detail": "[]"
+    }
+   ]
+  },
+  "H2": {
+   "ticket": "SYS-HOME-001",
+   "accept": "acc2",
+   "criterion": "工作台首页真 DOM 上五张卡片的数字 == 同一次 GET /lqg/home/todo 的返回值",
+   "old_criterion": "grep 'home/todo' src/api/lqg/home.ts + grep -c TodoCard >= 5 …（只问「卡片接了接口」，不看页面显示什么）",
+   "mutation": "把卡片 :value=\"todo.pendingSamples\" → 写死 7、:value=\"todo.pendingEmbeds\" → 写死 9（真值 2 / 1）",
+   "behavioral": true,
+   "result": "green",
+   "checked_at": "2026-09-22T23:13:58.298Z",
+   "observed": {
+    "api_get_lqg_home_todo": {
+     "url": "http://127.0.0.1:8093/dev-api/lqg/home/todo",
+     "status": 200,
+     "data": {
+      "pendingSamples": 2,
+      "pendingEmbeds": 1,
+      "cryoOverdue": 2,
+      "pendingExtUsers": 2,
+      "renderFailed": 0
+     }
+    },
+    "dom_cards": [
+     {
+      "title": "待核验样本",
+      "value": "2"
+     },
+     {
+      "title": "待核验石蜡包埋送样",
+      "value": "1"
+     },
+     {
+      "title": "-80 超期批次",
+      "value": "2"
+     },
+     {
+      "title": "待核验外部用户",
+      "value": "2"
+     },
+     {
+      "title": "文档渲染失败",
+      "value": "0"
+     }
+    ],
+    "dom_vs_api": [
+     {
+      "card": "样本",
+      "field": "pendingSamples",
+      "api_value": "2",
+      "dom_value": "2"
+     },
+     {
+      "card": "石蜡",
+      "field": "pendingEmbeds",
+      "api_value": "1",
+      "dom_value": "1"
+     },
+     {
+      "card": "超期",
+      "field": "cryoOverdue",
+      "api_value": "2",
+      "dom_value": "2"
+     },
+     {
+      "card": "外部",
+      "field": "pendingExtUsers",
+      "api_value": "2",
+      "dom_value": "2"
+     },
+     {
+      "card": "渲染",
+      "field": "renderFailed",
+      "api_value": "0",
+      "dom_value": "0"
+     }
+    ]
+   },
+   "assertions": [
+    {
+     "name": "H2:工作台登录 lqgadmin",
+     "ok": true,
+     "detail": "http://127.0.0.1:8093/index"
+    },
+    {
+     "name": "H2:真 DOM 渲染出五张待办卡片",
+     "ok": true,
+     "detail": "[\"待核验样本\",\"待核验石蜡包埋送样\",\"-80 超期批次\",\"待核验外部用户\",\"文档渲染失败\"]"
+    },
+    {
+     "name": "H2:抓到同一次 /lqg/home/todo 的响应（判据的另一侧是真接口返回值）",
+     "ok": true,
+     "detail": "{\"n\":1,\"data\":{\"pendingSamples\":2,\"pendingEmbeds\":1,\"cryoOverdue\":2,\"pendingExtUsers\":2,\"renderFailed\":0}}"
+    },
+    {
+     "name": "H2:★ 卡片「样本」的 DOM 数字 == /lqg/home/todo.pendingSamples",
+     "ok": true,
+     "detail": "{\"dom\":\"2\",\"api\":\"2\"}"
+    },
+    {
+     "name": "H2:★ 卡片「石蜡」的 DOM 数字 == /lqg/home/todo.pendingEmbeds",
+     "ok": true,
+     "detail": "{\"dom\":\"1\",\"api\":\"1\"}"
+    },
+    {
+     "name": "H2:★ 卡片「超期」的 DOM 数字 == /lqg/home/todo.cryoOverdue",
+     "ok": true,
+     "detail": "{\"dom\":\"2\",\"api\":\"2\"}"
+    },
+    {
+     "name": "H2:★ 卡片「外部」的 DOM 数字 == /lqg/home/todo.pendingExtUsers",
+     "ok": true,
+     "detail": "{\"dom\":\"2\",\"api\":\"2\"}"
+    },
+    {
+     "name": "H2:★ 卡片「渲染」的 DOM 数字 == /lqg/home/todo.renderFailed",
+     "ok": true,
+     "detail": "{\"dom\":\"0\",\"api\":\"0\"}"
+    }
+   ]
+  },
+  "H3a": {
+   "ticket": "DOC-MP-002",
+   "accept": "acc1",
+   "criterion": "剥掉注释后，`showMenu: true` 仍出现在真代码里，且位于 uni.openDocument({filePath, …, showMenu: true}) 的参数位置",
+   "old_criterion": "grep -qE 'showMenu:[[:space:]]*true' src/utils/fileHandoff.ts（注释里的字面量也算命中）",
+   "mutation": "删掉 fileHandoff.ts 里真代码的 `showMenu: true,`，只在注释里保留字面量",
+   "behavioral": false,
+   "behavioral_note": "showMenu 是**平台参数**，H5（本轮验收面，owner 已把真机换成 H5+mock）上 uni.openDocument 不存在、如实退化成 window.open，没有可在 H5 施加的行为变异。按 ticket §2 的显式例外用「剥注释后的真代码位置」判，并证明它与注释无关（本变异即该证明）。",
+   "result": "green",
+   "checked_at": "2026-09-22T23:14:06.607179+00:00",
+   "observed": {
+    "source_file": "code/miniapp/src/utils/fileHandoff.ts",
+    "occurrences_in_raw_file": 1,
+    "occurrences_after_stripping_comments": 1,
+    "file_sha256": "0d23bfdba6d3d52e8e3caea93ddefca426385906e75907eada060a12e2b3b36f",
+    "code_position": {
+     "line": 160,
+     "snippet": "showMenu: true,",
+     "enclosing_object_has_filePath": true
+    }
+   },
+   "assertions": [
+    {
+     "name": "H3a:源码里存在 showMenu: true 字面量（含注释内）",
+     "ok": true,
+     "detail": "raw=1"
+    },
+    {
+     "name": "H3a:★ 剥掉注释后 `showMenu: true` 仍在真代码里（注释满足不了这条）",
+     "ok": true,
+     "detail": "raw=1 code=1"
+    },
+    {
+     "name": "H3a:★ 它出现在 `openDocument({filePath, …, showMenu: true})` 的参数位置（同一对象字面量里有 filePath）",
+     "ok": true,
+     "detail": "{\"line\": 160, \"snippet\": \"showMenu: true,\", \"enclosing_object_has_filePath\": true}"
+    },
+    {
+     "name": "H3a:调用点是 uni.openDocument（平台查看器的菜单开关）",
+     "ok": true,
+     "detail": "openDocument in code = True"
+    }
+   ]
+  },
+  "H3b": {
+   "ticket": "DOC-MP-002",
+   "accept": "acc1",
+   "criterion": "点「文档中的图片」缩略图后，打开层（H5 = wx.previewImage 覆盖层）拿到的 src == pages 接口给的原图 url，且 ≠ previewUrl",
+   "old_criterion": "grep -q 'previewImage' src/components/lqg/ThumbStrip.vue（只看组件里出现过这个词）",
+   "mutation": "把 ThumbStrip.vue#open 的 urls 从「原图 url」换成 usable 的 previewUrl",
+   "behavioral": true,
+   "result": "green",
+   "checked_at": "2026-09-22T23:14:32.804Z",
+   "observed": {
+    "pages_api_images": [
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png",
+      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg"
+     },
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/58fda86a867a4e6b985780549779adc2.png",
+      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/dfc359ca91f54ba2a2131b78ce313a07.jpg"
+     }
+    ],
+    "thumb_click_expected": {
+     "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png",
+     "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg"
+    },
+    "thumb_click_opened_src": [
+     "http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png",
+     "http://127.0.0.1:9000/ruoyi/2026/09/23/58fda86a867a4e6b985780549779adc2.png"
+    ]
+   },
+   "assertions": [
+    {
+     "name": "H3b:内部人员 mock 登录 H5(9204)",
+     "ok": true,
+     "detail": "http://127.0.0.1:9204/#/"
+    },
+    {
+     "name": "H3b:抓到 pages 接口的 images（原图 url / previewUrl 都在里面）",
+     "ok": true,
+     "detail": "{\"n\":2}"
+    },
+    {
+     "name": "H3b:真 DOM 缩略图数 == 可取到链接的图片数",
+     "ok": true,
+     "detail": "{\"thumbs\":2,\"images\":2}"
+    },
+    {
+     "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
+     "ok": true,
+     "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/58fda86a867a4e6b985780549779adc2.png\"]"
+    },
+    {
+     "name": "H3b:★ 打开层拿到的 src == 原图 url",
+     "ok": true,
+     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/58fda86a867a4e6b985780549779adc2.png\"],\"want\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png\"}"
+    },
+    {
+     "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
+     "ok": true,
+     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/58fda86a867a4e6b985780549779adc2.png\"],\"preview\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg\"}"
+    }
+   ]
+  },
+  "H4": {
+   "ticket": "DOC-PUBLISH-001",
+   "accept": "acc2",
+   "criterion": "工作台预览面板真 DOM 渲染出的下载入口恰好 4 个，且逐个点下去真发出 format/合并位正确的下载请求",
+   "old_criterion": "grep -cE \"format.*(docx|pdf)|'docx'|'pdf'\" PreviewPane.vue >= 2（只钉住文里有 docx 与 pdf 两个字面量）",
+   "mutation": "删掉 PreviewPane.vue 里「下载合并 PDF」整个 el-button",
+   "behavioral": true,
+   "result": "green",
+   "checked_at": "2026-09-22T23:14:54.954Z",
+   "observed": {
+    "dom_download_buttons": [
+     "下载 Word",
+     "下载 PDF",
+     "下载合并 Word",
+     "下载合并 PDF"
+    ],
+    "download_button_hits": [
+     {
+      "label": "下载 Word",
+      "found": true,
+      "requested": "/dev-api/lqg/doc/9000001001/sample_qc/download",
+      "query": "format=docx&audience=internal",
+      "format_ok": true,
+      "merged_ok": true,
+      "status": 200
+     },
+     {
+      "label": "下载 PDF",
+      "found": true,
+      "requested": "/dev-api/lqg/doc/9000001001/sample_qc/download",
+      "query": "format=pdf&audience=internal",
+      "format_ok": true,
+      "merged_ok": true,
+      "status": 200
+     },
+     {
+      "label": "下载合并 Word",
+      "found": true,
+      "requested": "/dev-api/lqg/doc/9000001001/merged/download",
+      "query": "format=docx&audience=internal",
+      "format_ok": true,
+      "merged_ok": true,
+      "status": 200
+     },
+     {
+      "label": "下载合并 PDF",
+      "found": true,
+      "requested": "/dev-api/lqg/doc/9000001001/merged/download",
+      "query": "format=pdf&audience=internal",
+      "format_ok": true,
+      "merged_ok": true,
+      "status": 200
+     }
+    ]
+   },
+   "assertions": [
+    {
+     "name": "H4:工作台登录 lqgadmin",
+     "ok": true,
+     "detail": "http://127.0.0.1:8093/index"
+    },
+    {
+     "name": "H4:★ 真 DOM 渲染出的下载入口恰好 4 个",
+     "ok": true,
+     "detail": "{\"count\":4,\"labels\":[\"下载 Word\",\"下载 PDF\",\"下载合并 Word\",\"下载合并 PDF\"]}"
+    },
+    {
+     "name": "H4:★ 「下载 Word」→ 真请求 format=docx",
+     "ok": true,
+     "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/sample_qc/download?format=docx&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+    },
+    {
+     "name": "H4:★ 「下载 PDF」→ 真请求 format=pdf",
+     "ok": true,
+     "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/sample_qc/download?format=pdf&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+    },
+    {
+     "name": "H4:★ 「下载合并 Word」→ 真请求 format=docx + 合并件",
+     "ok": true,
+     "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/merged/download?format=docx&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+    },
+    {
+     "name": "H4:★ 「下载合并 PDF」→ 真请求 format=pdf + 合并件",
+     "ok": true,
+     "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/merged/download?format=pdf&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+    },
+    {
+     "name": "H4:四个入口的文案恰好是 [Word, PDF, 合并 Word, 合并 PDF]",
+     "ok": true,
+     "detail": "{\"labels\":[\"下载 Word\",\"下载 PDF\",\"下载合并 Word\",\"下载合并 PDF\"],\"expectedLabels\":[\"下载 Word\",\"下载 PDF\",\"下载合并 Word\",\"下载合并 PDF\"]}"
+    }
+   ]
+  }
+ },
+ "mutations": {
+  "H1a": {
+   "applied": true,
+   "mutation": {
+    "hotspot": "H1a",
+    "file": "code/miniapp/src/pages/ledger/index.vue",
+    "before_sha256": "25ff88141badccc97d08d42ae8b38ff2d33258887bcd462e820018065b6e3e47",
+    "replacements": 1,
+    "after_sha256": "b0ea3a0cf9e0f84dc07e7428b9c93cebc0a14ba5d171ac487aa4c1d61d290c86",
+    "applied": true
+   },
+   "criterion_red": true,
+   "red_probe_exit": 1,
+   "restored": true,
+   "restore": {
+    "hotspot": "H1a",
+    "file": "code/miniapp/src/pages/ledger/index.vue",
+    "sha_before_restore": "b0ea3a0cf9e0f84dc07e7428b9c93cebc0a14ba5d171ac487aa4c1d61d290c86",
+    "sha_after_restore": "25ff88141badccc97d08d42ae8b38ff2d33258887bcd462e820018065b6e3e47",
+    "diff_vs_HEAD_clean": true,
+    "restored": true
+   },
+   "criterion_green_after_restore": true,
+   "green_probe_exit": 0,
+   "observed_when_mutated": {
+    "export_url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
+    "export_request_headers": {
+     "authorization": "(无)",
+     "clientid": "(无)",
+     "all_keys": [
+      "accept"
+     ]
+    },
+    "export_response": {
+     "status": 200,
+     "bytes": 72,
+     "magic": "{\""
+    }
+   }
+  },
+  "H1b": {
+   "applied": true,
+   "mutation": {
+    "hotspot": "H1b",
+    "file": "code/miniapp/src/components/lqg/DownloadBar.vue",
+    "before_sha256": "3443abd47d409cc72571c5e480756283d96e5748288b8ba4228ebd760f3646c0",
+    "replacements": 2,
+    "after_sha256": "94e25db313694b9e8c2945cc2c1bfcb39eee847bdd4489ab33ce1e616f17ca59",
+    "applied": true
+   },
+   "criterion_red": true,
+   "red_probe_exit": 1,
+   "restored": true,
+   "restore": {
+    "hotspot": "H1b",
+    "file": "code/miniapp/src/components/lqg/DownloadBar.vue",
+    "sha_before_restore": "94e25db313694b9e8c2945cc2c1bfcb39eee847bdd4489ab33ce1e616f17ca59",
+    "sha_after_restore": "3443abd47d409cc72571c5e480756283d96e5748288b8ba4228ebd760f3646c0",
+    "diff_vs_HEAD_clean": true,
+    "restored": true
+   },
+   "criterion_green_after_restore": true,
+   "green_probe_exit": 0,
+   "observed_when_mutated": {
+    "backend_signed_url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx?X-Amz-…",
+    "oss_request_headers": [
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx",
+      "header_keys": [
+       "sec-ch-ua-platform",
+       "authorization",
+       "referer",
+       "user-agent",
+       "sec-ch-ua",
+       "clientid",
+       "sec-ch-ua-mobile"
+      ],
+      "authorization": "(有！)",
+      "clientid": "22b2aecd0710671691ec1c07f2542b9d"
+     }
+    ],
+    "oss_response": [
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/d4fc309b194e.docx",
+      "status": 400,
+      "ct": "application/xml"
+     }
+    ],
+    "clientid_on_oss_request_count": 1
+   }
+  },
+  "H2": {
+   "applied": true,
+   "mutation": {
+    "hotspot": "H2",
+    "file": "code/plus-ui/src/views/lqg/home/index.vue",
+    "before_sha256": "f30465ad254728fbcb0f1e5ad0e4bc08ab08ba83cfebd087b65003edd4655ac4",
+    "replacements": 2,
+    "after_sha256": "35f47afe489f1b219efd2a271511791db6aec61eb5e3c5d6cb2547008b32e613",
+    "applied": true
+   },
+   "criterion_red": true,
+   "red_probe_exit": 1,
+   "restored": true,
+   "restore": {
+    "hotspot": "H2",
+    "file": "code/plus-ui/src/views/lqg/home/index.vue",
+    "sha_before_restore": "35f47afe489f1b219efd2a271511791db6aec61eb5e3c5d6cb2547008b32e613",
+    "sha_after_restore": "f30465ad254728fbcb0f1e5ad0e4bc08ab08ba83cfebd087b65003edd4655ac4",
+    "diff_vs_HEAD_clean": true,
+    "restored": true
+   },
+   "criterion_green_after_restore": true,
+   "green_probe_exit": 0,
+   "observed_when_mutated": {
+    "api_get_lqg_home_todo": {
+     "url": "http://127.0.0.1:8093/dev-api/lqg/home/todo",
+     "status": 200,
+     "data": {
+      "pendingSamples": 2,
+      "pendingEmbeds": 1,
+      "cryoOverdue": 2,
+      "pendingExtUsers": 2,
+      "renderFailed": 0
+     }
+    },
+    "dom_cards": [
+     {
+      "title": "待核验样本",
+      "value": "7"
+     },
+     {
+      "title": "待核验石蜡包埋送样",
+      "value": "9"
+     },
+     {
+      "title": "-80 超期批次",
+      "value": "2"
+     },
+     {
+      "title": "待核验外部用户",
+      "value": "2"
+     },
+     {
+      "title": "文档渲染失败",
+      "value": "0"
+     }
+    ],
+    "dom_vs_api": [
+     {
+      "card": "样本",
+      "field": "pendingSamples",
+      "api_value": "2",
+      "dom_value": "7"
+     },
+     {
+      "card": "石蜡",
+      "field": "pendingEmbeds",
+      "api_value": "1",
+      "dom_value": "9"
+     },
+     {
+      "card": "超期",
+      "field": "cryoOverdue",
+      "api_value": "2",
+      "dom_value": "2"
+     },
+     {
+      "card": "外部",
+      "field": "pendingExtUsers",
+      "api_value": "2",
+      "dom_value": "2"
+     },
+     {
+      "card": "渲染",
+      "field": "renderFailed",
+      "api_value": "0",
+      "dom_value": "0"
+     }
+    ]
+   }
+  },
+  "H3a": {
+   "applied": true,
+   "mutation": {
+    "hotspot": "H3a",
+    "file": "code/miniapp/src/utils/fileHandoff.ts",
+    "before_sha256": "0d23bfdba6d3d52e8e3caea93ddefca426385906e75907eada060a12e2b3b36f",
+    "replacements": 1,
+    "after_sha256": "4832c986cbe226b6e6485ea98eb08c78d98af93ed7c91586adf22128fa8ee92d",
+    "applied": true
+   },
+   "criterion_red": true,
+   "red_probe_exit": 1,
+   "restored": true,
+   "restore": {
+    "hotspot": "H3a",
+    "file": "code/miniapp/src/utils/fileHandoff.ts",
+    "sha_before_restore": "4832c986cbe226b6e6485ea98eb08c78d98af93ed7c91586adf22128fa8ee92d",
+    "sha_after_restore": "0d23bfdba6d3d52e8e3caea93ddefca426385906e75907eada060a12e2b3b36f",
+    "diff_vs_HEAD_clean": true,
+    "restored": true
+   },
+   "criterion_green_after_restore": true,
+   "green_probe_exit": 0,
+   "observed_when_mutated": {
+    "source_file": "code/miniapp/src/utils/fileHandoff.ts",
+    "occurrences_in_raw_file": 1,
+    "occurrences_after_stripping_comments": 0,
+    "file_sha256": "4832c986cbe226b6e6485ea98eb08c78d98af93ed7c91586adf22128fa8ee92d",
+    "code_position": null
+   }
+  },
+  "H3b": {
+   "applied": true,
+   "mutation": {
+    "hotspot": "H3b",
+    "file": "code/miniapp/src/components/lqg/ThumbStrip.vue",
+    "before_sha256": "311e8129c4722c7f2603f7b10de32b11125947f0ff0d8112f23de06dcf1fb862",
+    "replacements": 1,
+    "after_sha256": "efab9f86b6f9e93c7795a0ea2b161155bd1a6ac7bb22cdbc834d19e0ca2f12a7",
+    "applied": true
+   },
+   "criterion_red": true,
+   "red_probe_exit": 1,
+   "restored": true,
+   "restore": {
+    "hotspot": "H3b",
+    "file": "code/miniapp/src/components/lqg/ThumbStrip.vue",
+    "sha_before_restore": "efab9f86b6f9e93c7795a0ea2b161155bd1a6ac7bb22cdbc834d19e0ca2f12a7",
+    "sha_after_restore": "311e8129c4722c7f2603f7b10de32b11125947f0ff0d8112f23de06dcf1fb862",
+    "diff_vs_HEAD_clean": true,
+    "restored": true
+   },
+   "criterion_green_after_restore": true,
+   "green_probe_exit": 0,
+   "observed_when_mutated": {
+    "pages_api_images": [
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png",
+      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg"
+     },
+     {
+      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/58fda86a867a4e6b985780549779adc2.png",
+      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/dfc359ca91f54ba2a2131b78ce313a07.jpg"
+     }
+    ],
+    "thumb_click_expected": {
+     "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2d14a02f0f344211aa6f783d99a2c1ed.png",
+     "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg"
+    },
+    "thumb_click_opened_src": [
+     "http://127.0.0.1:9000/ruoyi/2026/09/23/bdf9e739933540d79081348768064148.jpg",
+     "http://127.0.0.1:9000/ruoyi/2026/09/23/dfc359ca91f54ba2a2131b78ce313a07.jpg"
+    ]
+   }
+  },
+  "H4": {
+   "applied": true,
+   "mutation": {
+    "hotspot": "H4",
+    "file": "code/plus-ui/src/views/lqg/qc/components/PreviewPane.vue",
+    "before_sha256": "5a32edc6b4fb67e97d09b17003fcf5c5335cd873b5eb884a2a8a56cc4f17244a",
+    "removed_lines": [
+     "<el-button",
+     "size=\"small\"",
+     ":disabled=\"status !== 'done'\"",
+     ":loading=\"downloading === 'merged-pdf'\"",
+     "@click=\"downloadMerged('pdf')\"",
+     ">",
+     "{{ t('lqg.qc.preview.downloadMergedPdf') }}",
+     "</el-button>"
+    ],
+    "after_sha256": "9d9fef679c82ec77d14e7ba4fa029635e40b9ebf78982625731d82b39b099dc8",
+    "applied": true
+   },
+   "criterion_red": true,
+   "red_probe_exit": 1,
+   "restored": true,
+   "restore": {
+    "hotspot": "H4",
+    "file": "code/plus-ui/src/views/lqg/qc/components/PreviewPane.vue",
+    "sha_before_restore": "9d9fef679c82ec77d14e7ba4fa029635e40b9ebf78982625731d82b39b099dc8",
+    "sha_after_restore": "5a32edc6b4fb67e97d09b17003fcf5c5335cd873b5eb884a2a8a56cc4f17244a",
+    "diff_vs_HEAD_clean": true,
+    "restored": true
+   },
+   "criterion_green_after_restore": true,
+   "green_probe_exit": 0,
+   "observed_when_mutated": {
+    "dom_download_buttons": [
+     "下载 Word",
+     "下载 PDF",
+     "下载合并 Word"
+    ],
+    "download_button_hits": [
+     {
+      "label": "下载 Word",
+      "found": true,
+      "requested": "/dev-api/lqg/doc/9000001001/sample_qc/download",
+      "query": "format=docx&audience=internal",
+      "format_ok": true,
+      "merged_ok": true,
+      "status": 200
+     },
+     {
+      "label": "下载 PDF",
+      "found": true,
+      "requested": "/dev-api/lqg/doc/9000001001/sample_qc/download",
+      "query": "format=pdf&audience=internal",
+      "format_ok": true,
+      "merged_ok": true,
+      "status": 200
+     },
+     {
+      "label": "下载合并 Word",
+      "found": true,
+      "requested": "/dev-api/lqg/doc/9000001001/merged/download",
+      "query": "format=docx&audience=internal",
+      "format_ok": true,
+      "merged_ok": true,
+      "status": 200
+     },
+     {
+      "label": "下载合并 PDF",
+      "found": false
+     }
+    ]
+   }
+  }
+ },
+ "tree_after": "git diff -- code/ = [] sha=e3b0c44298fc（起点 e3b0c44298fc）; git stash list=空",
+ "env": {
+  "backend_port": 8094,
+  "web_port": 8093,
+  "mp_port": 9204,
+  "verify_env_file": ".tmp/qa-env/8094/verify.env"
+ }
+}

@@ -31,21 +31,30 @@ blueprint_refs:
   - FLOW:F-DOC-02.step3
   - FLOW:F-DOC-02.step4
 accept:
-  - name: "构建是本次产物；预览页用到了两层放大、打开、发送到微信四个平台能力；组件直接路径导入；失败态不泄露内部错误；列表上的下载弹层与预览页顶部三份切换已接上"
+  - name: "构建是本次产物；预览页用到了两层放大、打开、发送到微信四个平台能力；**点缩略图看的是原图（真打开层 src == 原图 url 且 ≠ previewUrl）**、**`showMenu: true` 在真代码里（剥注释后仍命中）**；组件直接路径导入；失败态不泄露内部错误；列表上的下载弹层与预览页顶部三份切换已接上"
     form: API
     run: |-
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/doc/preview.js &&
-      grep -q 'previewImage' src/components/lqg/PageImageViewer.vue && grep -q 'previewImage' src/components/lqg/ThumbStrip.vue &&
-      grep -qE 'showMenu:[[:space:]]*true' src/utils/fileHandoff.ts && grep -q 'shareFileMessage' src/utils/fileHandoff.ts &&
+      grep -q 'previewImage' src/components/lqg/PageImageViewer.vue &&
+      grep -q 'shareFileMessage' src/utils/fileHandoff.ts &&
       grep -c "@/components/lqg/.*\.vue" src/pages/doc/preview.vue | awk '{exit !($1 >= 5)}' &&
       grep -q "@/components/lqg/DownloadSheet.vue" src/components/lqg/DocGroupCard.vue && grep -q "@/components/lqg/DownloadBar.vue" src/components/lqg/DownloadSheet.vue && grep -q 'groupDocs' src/components/lqg/DocTabs.vue &&
       ! grep -nE 'errorMsg|error_msg' src/pages/doc/preview.vue &&
-      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl.json
+      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl.json &&
+      cd ../.. && bash doc/waves/regression/D7/mutation-assert.sh --verify-only --hotspot H3a,H3b
     counterfeit: |-
       「文档中的图片」点开用的还是预览图地址 → 甲方要的「看得更清楚一点」落空；要求 ThumbStrip 用 url（原图）而缩略用 previewUrl，完工报告贴代码片段。
       openDocument 没带 showMenu → 用户打开了文件却没有任何保存 / 转发入口，等于没法「下载」，第 3 段红。
       把后端的 error_msg 原样显示给外部 → 第 5 段红。
       列表上的「下载」另写了一套 downloadFile + openDocument、没复用 DownloadBar → DownloadSheet 里找不到 DownloadBar 红：两处下载迟早一处带 showMenu、一处不带。
+      ★ **H3a / H3b 两条不再由源码 grep 判**（旧写法 `grep -qE 'showMenu:[[:space:]]*true' fileHandoff.ts` 与 `grep -q previewImage ThumbStrip.vue`；
+      D7 r1 L2 证伪 F1/F2：把真代码那行 showMenu 删掉只留注释 → 仍绿；把「看原图」换成看 `previewUrl` → 仍绿）。现在由 `mutation-assert.sh --hotspot H3a,H3b` 判：
+      · H3b（行为型）：真浏览器打开 1001 的样本质控表预览页 → 真 DOM 点「文档中的图片」缩略图 → 读 H5 打开层（对应真机 `wx.previewImage`）拿到的 src，
+        必须 **== pages 接口给的原图 `url`** 且 **≠ `previewUrl`**（夹具先上传 2400×1600 真 PNG，后端另存 .jpg 预览图，两者才可区分）；
+        已定义变异 = 把 `urls` 换成 `previewUrl` → 必须变红。
+      · H3a（本票唯一允许读源码的例外，`showMenu` 是平台参数、H5 上无可施加的行为变异）：把注释（行/块）剥掉后 `showMenu: true` 仍须在真代码里，
+        且位于 `uni.openDocument({filePath, …, showMenu: true})` 的参数位置；已定义变异 = **删掉真代码那一行、只在注释保留字面量** → 必须变红（这就是「与注释无关」的证明）。
+      两条变异后必须变红、还原必须复绿；任一条「改坏了还绿」→ 脚本 exit 1。
   - name: "内部的页面图片接口可用且只给内部；页数与 PDF 一致；外部身份打内部接口被拒"
     form: DATA
     run: |-

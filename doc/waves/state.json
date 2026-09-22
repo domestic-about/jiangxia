@@ -404,12 +404,12 @@
       "note": "code/plus-ui 按 v5.5.3-v2.5.3（commit 5c9c940，与后端 5.5.3 精确配套）干净落盘；品牌『类器官样本管理』、登录页去租户/注册/演示第三方登录、lqg-tokens.scss 主色 #0E7C7B（运行期 getComputedStyle 实测 rgb(14,124,123)）；i18n 按域拆分用 src/lang/index.ts 的 import.meta.glob('./lqg/*.zh_CN.ts',{eager:true}) 合并到 lqg.<域>.*，不碰上游两个大文件。迁移 V202609210830 按上游真实 menu_id 给 101 授系统管理父目录+字典管理/参数设置及按钮（13 行），102 一行不授，插 lqg.ext.show-internal-no=false 与 lqg.cryo.overdue-days=14。坑：① 上游 getChildPerms 建树必须先授父目录，否则子菜单不出现；② 指定的 0830 落在已应用的 0910 之前 + out-of-order=false → FlywayValidateException，本票重建 dev 库解决（D1 后续 0920/0930 都大于已有版本，不再撞）。"
     },
     "SYS-ACCEPT-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D7",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "把四条已放跑过缺陷的 accept 从「源码 grep」改成「行为判据」，并用**变异验证**做成机器可跑的 accept。六个热点全部通过「施加已定义变异 → 对应判据真变红 → 还原 → 复绿」：H1a（去掉导出调用点的 header → 真请求头 authorization/clientid 变无、响应体 72B \"{\" → 红）、H1b（给 DownloadBar 传回 authHeader() → OSS 真请求头带 authorization+clientid、MinIO 真回 400 application/xml——**把一个真 S1 复现出来了** → 红）、H2（卡片写死 7/9 → 真 DOM 7/9 vs 接口 2/1 → 红）、H3a（删真代码只留注释 → 剥注释后命中 1→0 → 红）、H3b（urls 换成 previewUrl → 打开层 src 从 原图.png 变 previewUrl.jpg → 红）、H4（删「下载合并 PDF」→ 真 DOM 入口 4→3 → 红）。四张被改票的 accept 逐字重放 **全部 EXIT=0**（SYS-EXPORT-001-acc2 / DOC-MP-002-acc1 / DOC-PUBLISH-001-acc2 / SYS-HOME-001-acc2）；本票 accept 2/2（acc1 235s：变异全跑；acc2 68s：--verify-only + evidence.json 六热点集合 + 旧弱判据已消失的元断言）。**产品代码零改动**（git diff -- code/ 为空）、无越界。★如实说明：**H3a 是唯一做不到纯行为化的一条**（showMenu 是 wx.openDocument 的平台参数，H5 上没有 openDocument、也没有常驻行为变异可施加）→ 按票面 §2 的例外，用「剥掉注释后的真代码位置」作判据，并以「删真代码只留注释」这个变异证明它与注释无关。你（实现方）还挖到三条会反复咬人的夹具坑，我已入账：①reseed.sh 不清 api.sh 的 token 缓存（缓存在 $TMPDIR/lqg-verify-token-*，macOS 的 TMPDIR 是 /var/folders 不是 /tmp，只有 qa-up.sh 清）→ 夹具直接调 reseed 后所有 --as staff 401 → 假红；②publish 的异步渲染偶发不落库、doc_file 迟迟为 0 → 夹具需在 publish 之外显式 render 兜底；③往 PATH 前塞 /opt/homebrew/bin 会顶掉 pyenv 的 python3 → db.py 缺 psycopg2 只打 stderr、快照读成空串 → 假红。"
     }
   },
   "open_issues": [
@@ -3264,6 +3264,36 @@
       "type": "harness",
       "title": "★ 调度器缺陷：sync 的「回退重跑」判据没把 escalated 当已落定，与 next 的 phase_done 口径不一致 → 含 escalated 票的任务过门后再 sync 就被莫名回退",
       "detail": "复现：本会话给 D7 加了新票 SYS-ACCEPT-001 后跑 python3 ~/claude-config/skills/zhixing/scripts/task_state.py sync → 输出「以下任务已通过 QA 门但又出现未完成 ticket，已回退待重跑 QA: **D5**」，于是 next 从「D7 派新票」变成「D5 重新过门」。根因（读源码确认）：task_state.py 的 cmd_sync 里回退判据是 `undone = [t for t,v in state[\"tickets\"].items() if v[\"phase\"]==ph[\"id\"] and v[\"status\"] != \"done\"]` —— **只认 done**；而 cmd_next 的 phase_done 判据是 `v[\"status\"] not in (\"done\",\"escalated\")` —— **认 escalated 为已落定**。D5 有 OCR-SPIKE-001 escalated（等甲方照片，owner 已确认暂时无法提供），因此每次 sync 都会把 D5 从 qa_passed 打回 pending。影响：①任何含 escalated 票的任务一旦过门，后续每次 sync（加票/改归属都要跑）都会把它回退，导致**重复跑一遍完整的 QA 门**（本轮 D5 门 ≈ 3 个分片）；②D7 有 DOC-PROOF-001 escalated，将来同样会中招；③这是**在 Kevin 的全局 skill 里**（~/claude-config/skills/zhixing/scripts/task_state.py），不只影响本项目。处置（本轮）：我把 D5 手工恢复成 qa_passed（--audit-json doc/waves/qa/D5-r1.json），并在此后避免不必要的 sync。建议修复（一行）：把 cmd_sync 的判据改成 `v[\"status\"] not in (\"done\",\"escalated\")`，与 phase_done 对齐；或在回退前把 phase 里的 escalated 票显式排除。**这需要改全局 skill，我没有擅自改**——请 Kevin 拍板（改全局 / 我在项目内放一份 fork 用）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 286,
+      "ticket": "SYS-ACCEPT-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ reseed.sh 不清 api.sh 的 token 缓存 → 夹具直接调 reseed 后所有 --as staff 401（假红）；缓存路径在 $TMPDIR 而非 /tmp",
+      "detail": "复现（SYS-ACCEPT-001 夹具踩到）：夹具里直接 `bash doc/verify/reseed.sh --yes` 之后立刻用 `api.sh --as staff …` → 一律 401「认证失败」，看起来像权限/产品问题，其实是 token 缓存没清。token 缓存在 `${TMPDIR}/lqg-verify-token-*`，而 **macOS 的 $TMPDIR 是 /var/folders/... 不是 /tmp** —— 所以「删 /tmp/lqg-verify-token-*」这种写法在 macOS 上等于没删。仓里只有 `qa-up.sh` 会清（`rm -f \"${TMPDIR:-/tmp}\"/lqg-verify-token-*`），`reseed.sh` 自己不清。影响：**每个自写夹具的票都会踩一次**（它伪装成认证/权限类产品缺陷），而且因为 macOS 的 TMPDIR 差异，照着直觉写的清理命令还不生效。方案：①把清 token 缓存并进 `reseed.sh`（最彻底：谁 reseed 谁清）；②或在 `doc/verify/README.md` 的「本栈已知的坑」表里写明这条（含 $TMPDIR 的差异）；③夹具模板里预置那一行。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 287,
+      "ticket": "SYS-ACCEPT-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "publish 的异步渲染偶发不落库：夹具需在 publish 之外显式 POST render 兜底",
+      "detail": "复现：夹具调完 publish 后等一会儿查 t_lqg_doc_file 仍为 0（异步渲染那次没落库），于是「下载/预览/入口数」这类判据全红。实现方的处置：在 publish 之外**再显式** `POST /lqg/doc/{sid}/{kind}/render?audience=` 兜底，并把业务码逐条打印（不再吞输出）。影响：夹具的时序脆弱性；将来任何依赖「发布即渲染」的断言都可能偶发假红。方案：①把「发布后必须等到产物就绪」做成一个可复用的等待函数（轮询 doc_file 直到六种产物齐或超时）；②或让 publish 的渲染入队失败也留痕（便于夹具判断是「没渲染」还是「渲染失败」）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 288,
+      "ticket": "SYS-ACCEPT-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "往 PATH 前塞 /opt/homebrew/bin 会顶掉 pyenv 的 python3 → db.py 缺 psycopg2 只打 stderr、退出码却不为 0 之外还读成空串 → 假红",
+      "detail": "复现：探针脚本一度把 /opt/homebrew/bin 前置到 PATH（为了拿某工具）→ `python3 doc/verify/db.py --quiet --sql …` 里的 python3 变成 homebrew 的（没有 psycopg2），db.py 把 ImportError 只打 stderr，而夹具用 `$( … )` 捕获 stdout 得到空串 → 断言里「期望 X 实际空串」→ 看起来像产品没落库，其实是工具链被顶掉。影响：与 issue #1 同类（工具故障伪装成产品红），但这次是 PATH 污染导致。方案：①探针脚本里一律用绝对解释器路径或在脚本头固定 PATH；②`db.py` 在缺依赖时**退出码明确非 0 且在 stdout 也给一行可判别文本**（现在只打 stderr），这样夹具的 `$(…)` 至少能拿到线索。",
       "status": "open",
       "decision": ""
     }

@@ -1,0 +1,57 @@
+{
+ "hotspot": "H3b",
+ "green": true,
+ "ran_at": "2026-09-22T23:15:56.404Z",
+ "results": [
+  {
+   "name": "H3b:内部人员 mock 登录 H5(9204)",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/"
+  },
+  {
+   "name": "H3b:抓到 pages 接口的 images（原图 url / previewUrl 都在里面）",
+   "ok": true,
+   "detail": "{\"n\":2}"
+  },
+  {
+   "name": "H3b:真 DOM 缩略图数 == 可取到链接的图片数",
+   "ok": true,
+   "detail": "{\"thumbs\":2,\"images\":2}"
+  },
+  {
+   "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
+   "ok": true,
+   "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"]"
+  },
+  {
+   "name": "H3b:★ 打开层拿到的 src == 原图 url",
+   "ok": true,
+   "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"],\"want\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\"}"
+  },
+  {
+   "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
+   "ok": true,
+   "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png\"],\"preview\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg\"}"
+  }
+ ],
+ "observed": {
+  "pages_api_images": [
+   {
+    "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
+    "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg"
+   },
+   {
+    "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png",
+    "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/fa4fc2075b1a48e89fa2d1415bd25a17.jpg"
+   }
+  ],
+  "thumb_click_expected": {
+   "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
+   "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/3a1320d4b4e041aba8cdb7688af0c619.jpg"
+  },
+  "thumb_click_opened_src": [
+   "http://127.0.0.1:9000/ruoyi/2026/09/23/6cbd182eb5394c468f73a0c7bc031d51.png",
+   "http://127.0.0.1:9000/ruoyi/2026/09/23/2dfc77268f8645869a52a1457f634dbf.png"
+  ]
+ }
+}

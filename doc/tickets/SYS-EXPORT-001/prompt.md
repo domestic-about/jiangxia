@@ -48,19 +48,25 @@ accept:
       忽略筛选参数、永远导全量 → 带 verifyStatus=pending 那段行数不是 2 红。
       /mp/int/export 忘了角色注解 → extA 拿到 200 红：外部能把全部样本连同供体姓名明文导走。
       sheet 不校验、未知值落到默认表 → 最后一段拿到 200 红。
-  - name: "构建是本次产物；导出与文档下载共用同一段「打开 / 发送到微信」；下载带鉴权头；拼查询串的纯函数过单测；抽公共函数后文档下载的单测仍过"
+  - name: "构建是本次产物；导出与文档下载共用同一段「打开 / 发送到微信」；**导出请求真发一次**必须带 Authorization + clientid（且 200 / 真 xlsx），**文档下载真点一次**必须不带 Authorization（且 OSS 200）；拼查询串的纯函数过单测；抽公共函数后文档下载的单测仍过"
     form: API
     run: |-
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/ledger/index.js &&
       grep -q 'fileHandoff' src/components/lqg/DownloadBar.vue && grep -q 'fileHandoff' src/pages/ledger/index.vue &&
       grep -qE 'showMenu:[[:space:]]*true' src/utils/fileHandoff.ts && grep -q 'shareFileMessage' src/utils/fileHandoff.ts &&
-      grep -qE 'Authorization|clientid' src/pages/ledger/export.ts src/utils/fileHandoff.ts &&
       pnpm vitest run src/pages/ledger/export.spec.ts --reporter=json --outputFile=/tmp/lqg-export.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 3' /tmp/lqg-export.json &&
-      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl2.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl2.json
+      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl2.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl2.json &&
+      cd ../.. && bash doc/waves/regression/D7/mutation-assert.sh --verify-only --hotspot H1a,H1b
     counterfeit: |-
       表格导出另写了一套 downloadFile + openDocument、没带 showMenu → 用户打开了 Excel 却没有保存 / 转发入口，第 3、4 段红。
-      downloadFile 没带 Authorization → 真机上拿到的是一段 401 的 JSON，当成 xlsx 打开失败；第 5 段要求请求头出现在导出链路里，完工报告附真机录屏。
-      抽 fileHandoff 时把文档下载改坏 → 最后一段 DOC-MP-002 的单测红。
+      ★ **这一条不再用源码 grep 判「带没带鉴权头」**（旧写法 `grep -qE 'Authorization|clientid' export.ts fileHandoff.ts` 只问「文件里有没有这两个词」，
+      对**调用点**与**目标 URL** 零覆盖 —— D7 r1 L2 实测：把 `ledger/index.vue` 的调用点改成不传 header，整条 acc2 仍全绿，
+      而同一处错配在文档下载那条链路上制造了 issue #279 的 S1）。现在由 `mutation-assert.sh --hotspot H1a,H1b` 用**真浏览器**判：
+      · H1a：真点一次「导出 Excel」→ `page.route` 抓这一发的**真请求头**，必须 `Authorization: Bearer …` + `clientid`，响应 200 且响应体是 **ZIP 魔数 PK 的真 xlsx**；
+      · H1b：真点一次单份「下载」→ 抓发往 OSS 预签名直链的**真请求头**，必须**没有** `Authorization`，且 OSS 响应 200（多带这个头 MinIO 判「multiple authentication types」回 400）。
+      两条判据各配一个**已定义变异**（H1a 去掉调用点 `header: authHeader()`；H1b 给 `DownloadBar` 传回 `authHeader()`），变异后必须变红、还原后必须复绿；
+      任一条「改坏了还绿」→ 脚本 exit 1。证据落 `doc/waves/regression/D7/accept-strengthened/evidence.json`（含真请求头观测值）。
+      ★ 其余几条仍是源码/单测判据（不在本次强化范围内），但「鉴权头这件事已经验过」的假信心不能再由它们提供。
 ---
 
 # SYS-EXPORT-001 · 小程序 · 内部管理：表格页「导出 Excel」——四张表按当前筛选导出，与工作台同一个导出视图，打开或发送到微信
