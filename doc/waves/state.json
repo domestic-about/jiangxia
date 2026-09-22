@@ -410,8 +410,8 @@
       "type": "harness",
       "title": "api.sh --fresh-module 在本沙箱 ps 被禁（exit 2）",
       "detail": "反 stale 守卫依赖 ps，本沙箱 ps 返回空导致 exit 2；SYS-BASE-001 用 find -newer jar + lsof -ti tcp:8081 + 进程启动时间手工替代。人工/CI 不受影响；后续 ticket 每条 API accept 首调都会撞到。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "mitigated：api.sh 属于只读区（Kevin 的启动约束），不改它；模式 B 在重放层用 NF1 去掉 --fresh-module（accept-run.py），新鲜度改由 gate.sh 的 L0.0 前置检查承担（源码不得新于 jar + 监听进程必须持有该 jar + inode 同一）。实测 51/101 条 accept 含该 token，全部被 NF1 覆盖。残留边界：**手动**跑 api.sh --fresh-module 仍会 exit 2（沙箱 /bin/ps 被禁），文档已在 README-modeB §4 与 api.sh 自身注释里写明。"
     },
     {
       "id": 2,
@@ -460,8 +460,8 @@
       "type": "doc-drift",
       "title": "ticket accept 里的 mvn 命令在本机原样跑必挂（缺 -s/-Dmaven.repo.local/-Duser.home）",
       "detail": "accept 第 3 条与 D1 qa_scope L0 都写 mvn -pl ruoyi-modules/ruoyi-lqg -am install/test；本机 ~/.m2 只读，原样跑 FileSystemException: spring-boot-dependencies: Operation not permitted。必须带 -s .mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome。影响所有 Maven 类 accept 与 QA 门 L0；普通开发机不受影响。方案：ticket 模板加一句，或在仓库根放 mvnw 包装参数。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：票面是只读 ① 侧资产，不动它；改在重放层统一补齐：accept-run.py 新增 NF2 —— 给票面 accept 里的 mvn 调用注入 -s <ws>/.mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome，并逐条打印 NF2。8 条 accept 命中（AUTH-EXT-001/002/003、AUTH-LOGIN-001、CRYO-REMIND-001、DOC-RENDER-001、OCR-IMPL-001、SAMPLE-HINT-001）。机器证据：D4 验证轮 CRYO-REMIND-001 acc1 原先因 mvn 去写 ~/.m2 被沙箱拒 → exit 1 假红；补 NF2 后 15/15 全绿。注：单跑票面原文（不经 gate）仍会挂，这是已知边界。"
     },
     {
       "id": 7,
@@ -1224,8 +1224,8 @@
       "type": "harness",
       "title": "D1 回归包把 flyway 迁移总数写死成 7，D2 起每加一支迁移就假红一条",
       "detail": "D2 r1 L0+L1 片重放 doc/waves/regression/D1/verify.sh：41 绿 / 1 红，唯一红是 SELECT count(*) FROM flyway_schema_history --eq 7（D1 时代硬编码总数；D2 又加 3 支 → 实际 10）。D1 的 7 支逐个点名、无失败行、迁移文件在源码树全绿 → 是 harness 缺陷，不是『以前好的坏了』。方案：回归包改成断『D1 那 7 支版本号逐个存在且无 success=false』，别断总数。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：模式 B（D5 起）把它变成常驻闸门，先修掉这条噪音：D1 回归包 L1.1 原先断**全库**迁移总数 --eq 7（D2 起每加一支迁移就恒红一条，D4 时库里 17 支）。改成按版本号精确点名 D1 那 7 支（'202609210800'..'202609210930' AND success --eq 7）—— 意图（D1 的 7 支都在）保住，全库总数不再被锁死。机器证据：gate.sh 重放 D1 回归包 → 42✓/0✗（此前 41✓/1✗）。"
     },
     {
       "id": 83,

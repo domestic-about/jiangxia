@@ -221,8 +221,11 @@ fi
 head1 "L1.1 Flyway 历史 · 26 个字典 · 评分分值在 remark · 角色 role_key"
 db_assert "L1.1 flyway 无失败行（success IS NOT TRUE 的行 = 0）" \
   --sql "SELECT count(*) FROM flyway_schema_history WHERE success IS NOT TRUE" --eq 0
-db_assert "L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001）" \
-  --sql "SELECT count(*) FROM flyway_schema_history" --eq 7
+# ★ issue #82 修复（2026-09-22，D5 起模式 B 把它变成常驻闸门）：原先这里断**全库**迁移总数
+#   `--eq 7`，D2 起每加一支迁移就恒红一条，于是「回归包有 1 条红」成了背景噪音，淹没真回归。
+#   改成按版本号精确点名 D1 那 7 支（后续任务天天加迁移，全库总数不该被锁死）。
+db_assert "L1.1 D1 的 7 支迁移全部记录在案（按版本号点名，不锁全库总数）" \
+  --sql "SELECT count(*) FROM flyway_schema_history WHERE success AND version IN ('202609210800','202609210810','202609210820','202609210830','202609210910','202609210920','202609210930')" --eq 7
 for v in 202609210800 202609210810 202609210820 202609210830 202609210910 202609210920 202609210930; do
   db_assert "L1.1 flyway 有 V${v}" --sql "SELECT count(*) FROM flyway_schema_history WHERE version='${v}' AND success" --eq 1
 done
