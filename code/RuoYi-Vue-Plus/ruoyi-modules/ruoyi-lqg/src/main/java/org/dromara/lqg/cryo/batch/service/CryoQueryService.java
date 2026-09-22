@@ -129,6 +129,80 @@ public class CryoQueryService {
     }
 
     /**
+     * 导出用的整批行（{@code POST /lqg/cryo/batch/export}，CRYO-WEB-001）。
+     *
+     * <p>★★ <b>与列表同一份 wrapper + 同一份装配</b>：拉掉分页，筛选 / 排序 / 每行的
+     * {@code remainingQty} 口径逐条一致 —— 「带筛选导出只出筛选结果」靠它，
+     * 而不是在导出侧再写一份 WHERE（另写一份就是两处口径打架）。
+     *
+     * <p>★ <b>行数 = 未删批次数，且所挂样本未删</b>（accept 1 最后一段：直连库
+     * {@code JOIN t_lqg_sample s ON s.id = b.sample_id AND s.del_flag='0'} 的 count）：
+     * 批次自身的软删由实体 {@code @TableLogic} 兜住；所挂样本软删的行由
+     * {@link #missingSampleIds} 剔掉（{@code CryoBatchVo.internalNo} 为 null 就说明样本查不到）。
+     *
+     * <p>★ 导出**不**受 {@code mine} 收窄影响：那是小程序「只看我提交的」的开关，
+     * 工作台导出按当前筛选走。
+     */
+    public List<CryoBatchVo> exportRows(CryoQueryBo query) {
+        CryoQueryBo q = query == null ? new CryoQueryBo() : query;
+        int days = cryoOverdueService.days();
+        return DataPermissionHelper.ignore(() -> {
+            List<Long> sampleIds = null;
+            if (StringUtils.isNotBlank(q.getInternalNo())) {
+                sampleIds = sampleIdsOfInternalNo(q.getInternalNo());
+                if (sampleIds.isEmpty()) {
+                    return List.of();
+                }
+            }
+            List<CryoBatchVo> rows = assemble(cryoBatchMapper.selectList(
+                buildWrapper(q, sampleIds, currentUserId(), days)), days);
+            Set<Long> missing = missingSampleIds(rows);
+            if (missing.isEmpty()) {
+                return rows;
+            }
+            return rows.stream()
+                .filter(row -> row.getSampleId() == null || !missing.contains(row.getSampleId()))
+                .toList();
+        });
+    }
+
+    /**
+     * 这一批行里，哪些行的<b>所挂样本已经查不到</b>（软删或不存在）。
+     *
+     * <p>给 {@link #exportRows} 用：{@link #assemble} 对查不到样本的行只留 {@code sampleId}
+     * （{@code internalNo} / {@code submitNo} 都是 {@code null}）。列表页照旧显示这些行，
+     * 但导出按 accept 口径要剔掉 —— 「行数 = 未删批次数，<b>且所挂样本未删</b>」。
+     */
+    private Set<Long> missingSampleIds(Collection<CryoBatchVo> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return Set.of();
+        }
+        Set<Long> wanted = new LinkedHashSet<>();
+        for (CryoBatchVo row : rows) {
+            if (row.getSampleId() != null) {
+                wanted.add(row.getSampleId());
+            }
+        }
+        if (wanted.isEmpty()) {
+            return Set.of();
+        }
+        List<Sample> found = sampleMapper.selectBatchIds(wanted);
+        Set<Long> alive = new LinkedHashSet<>();
+        if (found != null) {
+            for (Sample sample : found) {
+                alive.add(sample.getId());
+            }
+        }
+        Set<Long> missing = new LinkedHashSet<>();
+        for (Long id : wanted) {
+            if (!alive.contains(id)) {
+                missing.add(id);
+            }
+        }
+        return missing;
+    }
+
+    /**
      * 单条详情；不存在 / 已软删 → {@code null}（调用方回「不存在」语义，不泄露存在性）。
      */
     public CryoBatchVo detail(Long id) {

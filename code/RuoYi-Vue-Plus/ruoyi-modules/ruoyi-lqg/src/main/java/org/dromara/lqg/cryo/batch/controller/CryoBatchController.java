@@ -1,6 +1,7 @@
 package org.dromara.lqg.cryo.batch.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
@@ -11,6 +12,7 @@ import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchPageVo;
 import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchVo;
 import org.dromara.lqg.cryo.batch.service.CryoBatchService;
 import org.dromara.lqg.cryo.batch.service.CryoQueryService;
+import org.dromara.lqg.cryo.export.CryoExportService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,12 +45,12 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li><b>超期判定</b>与 {@code GET /lqg/cryo/overdue} → CRYO-REMIND-001（列表上的
  *       {@code overdue / overdueDays / tabCounts / overdueOnly} 与「默认排序超期置顶」
  *       由它在本控制器的响应体 {@link CryoBatchPageVo} 上补齐）；</li>
- *   <li>导出（{@code POST /lqg/cryo/batch/export}）→ CRYO-WEB-001（本票只落了权限行
- *       {@code lqg:cryo:export}；{@code lqg:cryo:flow} 同理是给 CRYO-FLOW-001 落的权限行）；</li>
+ *   <li>导出（{@code POST /lqg/cryo/batch/export}）→ <b>CRYO-WEB-001 落的端点</b>，
+ *       权限串 {@code lqg:cryo:export} 的权限行由 CRYO-MODEL-001 的 5406 落好；</li>
  *   <li>页面（工作台 / 小程序）→ CRYO-WEB-001 / CRYO-MP-001。</li>
  * </ul>
  *
- * @author CRYO-MODEL-001
+ * @author CRYO-MODEL-001 / CRYO-WEB-001（只加了 {@code POST /export} 一个方法）
  */
 @RequiredArgsConstructor
 @RestController
@@ -57,6 +59,7 @@ public class CryoBatchController {
 
     private final CryoBatchService cryoBatchService;
     private final CryoQueryService cryoQueryService;
+    private final CryoExportService cryoExportService;
 
     /**
      * 列表（分页）。
@@ -111,6 +114,28 @@ public class CryoBatchController {
     public R<Void> remove(@PathVariable String ids) {
         cryoBatchService.remove(ids);
         return R.ok();
+    }
+
+    /**
+     * 按模板导出「-80 冻存」xlsx（FLOW:F-CRYO-01.step5，CRYO-WEB-001）。
+     *
+     * <pre>
+     * POST /lqg/cryo/batch/export?internalNo&amp;cryoName&amp;sampleId&amp;location
+     *                            &amp;overdueOnly&amp;freezeTimeBegin&amp;freezeTimeEnd   lqg:cryo:export
+     *      → xlsx 文件流；筛选走 <b>query 参数</b>（不是 JSON body）；
+     *        表头 = 模板 9 列 + 追加「代数」「当前剩余/支」，逐字同序
+     * </pre>
+     *
+     * ★ 与 {@code GET /lqg/cryo/batch/list} 同一份 wrapper + 同一份装配
+     * （{@code CryoExportService} → {@code CryoQueryService#exportRows}）：
+     * 带筛选导出只出筛选结果，行数 = 未删批次数且所挂样本未删。
+     * ★ 小程序表格页的 {@code GET /mp/int/export/cryo}（SYS-EXPORT-001）复用同一个
+     * {@code CryoExportService}，两处文件逐列一致。
+     */
+    @SaCheckPermission("lqg:cryo:export")
+    @PostMapping("/export")
+    public void export(CryoQueryBo query, HttpServletResponse response) {
+        cryoExportService.export(query, response);
     }
 
 }

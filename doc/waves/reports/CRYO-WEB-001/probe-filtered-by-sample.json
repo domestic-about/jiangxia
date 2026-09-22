@@ -1,0 +1,75 @@
+{
+  "sample": "T-hli01 SJ90000001 A 医院 组织样本 外部 有效 测试供体甲 男 56 ZY0000001 肝组织 ",
+  "table": {
+    "url": "/cryo?sampleId=9000001001",
+    "title": "-80 冻存管理",
+    "tabs": [
+      "全部 7",
+      "-80 超期 2",
+      "液氮 2"
+    ],
+    "headers": [
+      "冻存时间",
+      "冻存样品",
+      "冻存数量/支",
+      "冻存密度",
+      "暂存-80度超低温冰箱",
+      "冻存人",
+      "-80度超低温冰箱转移至液氮时间",
+      "液氮储存位置",
+      "备注",
+      "内部编号",
+      "代数",
+      "当前剩余/支",
+      "当前位置",
+      "最后修改",
+      "操作"
+    ],
+    "headerCount": 15,
+    "rowCount": 2,
+    "rows": [
+      {
+        "freezeTime": "2026-09-02 已超 6 天",
+        "cryoName": "T-hli01-GZ-N-P2-EM2-2e5",
+        "initQty": "8",
+        "inMinus80": "是",
+        "toLn2Time": "转液氮",
+        "internalNo": "T-hli01",
+        "passage": "P2",
+        "remainingQty": "6",
+        "location": "-80 冰箱",
+        "rowBg": "rgb(251, 228, 225)",
+        "rowClass": "el-table__row lqg-cryo__row-overdue",
+        "actions": [
+          "取走",
+          "补入",
+          "盘点调整",
+          "流水",
+          "编辑",
+          ""
+        ]
+      },
+      {
+        "freezeTime": "2026-09-08",
+        "cryoName": "T-hli01-GZ-N-P5-EM2-1e5",
+        "initQty": "3",
+        "inMinus80": "是",
+        "toLn2Time": "转液氮",
+        "internalNo": "T-hli01",
+        "passage": "P5",
+        "remainingQty": "0",
+        "location": "-80 冰箱",
+        "rowBg": "rgb(255, 255, 255)",
+        "rowClass": "el-table__row",
+        "actions": [
+          "取走",
+          "补入",
+          "盘点调整",
+          "流水",
+          "编辑",
+          ""
+        ]
+      }
+    ]
+  }
+}
