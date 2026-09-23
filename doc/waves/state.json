@@ -3205,8 +3205,8 @@
       "type": "arch",
       "title": "★ S1：小程序文档下载把 API 鉴权头带到了 OSS 预签名直链上 → MinIO 400 多重认证 → H5 单份/合并下载 0/4 全失败",
       "detail": "复现（D7 r1 L2 独立 QA，逐头隔离）：小程序文档页签的单份「下载」（Word/PDF）与「合并下载」在 H5（owner 指定的本轮验收面）**0/4 全失败**，页面只显示「暂时下不了，请稍后再试」。逐头实测：不带任何头 → 200；只 clientid → 200；**只 Authorization → 400**；两个都带（= 产品代码现状 authHeader()）→ **400**，MinIO 回 `400 InvalidRequest: request has multiple authentication types`。**同环境对照**：工作台预览面板的四个下载按钮走 window.open(res.data.url) 不带任何头 → OSS 全 200（pdf/word 内容类型都对）⇒ 签名链接本身可用，只有小程序这条链路多带了头。根因：utils/fileHandoff.ts 的 downloadToTemp 把「必须带 Authorization」写成**所有调用方**的硬前提（缺头还 throw），而两个调用方的目标不是一类东西——文档下载的 URL 是**后端签发的 OSS 预签名直链**（不该带头），表格导出的 URL 是**后端域名上的鉴权端点**（必须带 Authorization+clientid）。影响：**主路径**（CR-20260917-04 明确要求「列表上直接能下」）在验收面上完全不可用；小程序分支把同一个 authHeader() 塞进 uni.downloadFile({url: 同一条预签名链接})，机理相同（真机未覆盖，缺 appid，已如实标注）。定级依据：主流程「拿不到东西」，S1。处置：D7 门 r1 判定后即刻派返工单修复（鉴权头只跟后端端点走，共享段保留一份实现、把差异做成参数）。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：已修并 A/B 判别式复验。`code/miniapp/src/utils/fileHandoff.ts` 的 downloadToTemp 增 opts{header?,requireAuth?}：文档下载走 OSS 预签名直链**不带任何鉴权头**，导出走 API 带 authHeader()+requireAuth:true。复验（D7 r1 L2 独立 QA，逐头隔离）：修复前 带 Authorization → MinIO 400 multiple authentication types、H5 单份/合并下载 0/4；修复后 不带头 → 200 且内容类型正确、单份/合并 4/4 绿，导出仍 200 且带头。工作台预览面板四按钮作同环境对照始终 200。：D7 收口时补记：证据在 doc/waves/qa/D7-r1-L2.json（S1 复验段）与 doc/waves/reports/DOC-MP-002/**"
     },
     {
       "id": 280,
@@ -3325,8 +3325,8 @@
       "type": "arch",
       "title": "★ S1：外部账号（小程序 token）可读 /lqg/home/recent —— 跨单位送检单号+单位名+核验状态；/todo 五数亦可读（升格 #270）",
       "detail": "复现（D7 r1 L3 片实测，已记证据在 doc/waves/qa/D7-r1-L3.json）：`--as extA/extB/extC/extE/extF` 打 `GET /lqg/home/todo` → **全部 200**，拿到 {pendingSamples:2,pendingEmbeds:1,cryoOverdue:2,pendingExtUsers:2,renderFailed:0}；打 `GET /lqg/home/recent` → **全部 200、9 行**，字段 {submitTime, submitNo, sourceUnitName, submitSource, verifyStatus} —— **跨 A 医院/B 大学/本中心**。极端对照：extC 的可见集合只有 {1005}，却能读到 **B 大学的 SJ90000006 与本中心的 SJ90000008**。★**我在 #270 里给的两个缓解论证都被实测推翻**：①「只有 5 个聚合数、无患者明细」→ 错，/recent 吐的是明细（单号+单位+核验状态）；②「要拿到工作台会话才行」→ 错，**小程序（mp client）签发的 token 就够**；唯一还成立的对照是「extB 走 pc 密码登录会被拒（500 该账号无权登录工作台）」，也就是说**只有 pc 那条路被挡住了**。根因：HomeController 的两个 handler 只挂 @SaCheckLogin（类注释还把票面 §2 的「登录即可调（101/102）」当成依据写死了），与 AUTH-STAFF-001 §2.2「工作台拒外部」以及本项目的外部隔离不变量（ADR-0004 / ExtChokepoint 体系）冲突。定级依据：**外部隔离是本项目被甲方明确要求、且由 ExtChokepointContractTest 守着的不变量**，而这个新端点绕过了咽喉并把别家单位的数据给了外部角色——不是 cosmetic；L3 片按它自己的窄口径（「老师用不了 ∪ 下游跑不通」）判了 S2，我按「甲方明示的隔离要求被破坏 + 无特权的外部角色可触发」升为 **S1**。修法（一行 + 注释）：HomeController 两个端点改挂 `@SaCheckRole({\"lqg_admin\",\"lqg_internal\"})`（**必须两个角色都放**——101 是 lqg_admin、102 是 lqg_internal，只写 lqg_internal 会把工作台超管的首页一起打 403）。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：已修并复验。`HomeController` 的 /lqg/home/todo 与 /lqg/home/recent 加 @SaCheckRole({\"lqg_admin\",\"lqg_internal\",\"superadmin\"}, mode = SaMode.OR)（注意 Sa-Token @SaCheckRole 默认 SaMode.AND，最初写成 {a,b} 会把 admin+内部人员一起 403，已改 OR）。复验（D7 r1 L3 独立 QA）：外部身份 extA/extB/extC/extE/extF 打 /todo 与 /recent 全 403；内部 admin/内部人员 32/32 仍 200；同类隔离扫描 61 个 /lqg/** + 全部 /mp/ext/** 共 164 次外部身份调用全 403。`HomeCounterContractTest` 已改为断言「角色集合 == StaffGrantRules.INTERNAL_ROLE_KEYS 且 mode==OR」，原先第⑥条把缺陷本身（@SaCheckLogin）当预期，已删。：D7 收口时补记：升格自 #270；证据在 doc/waves/qa/D7-r1-L3.json 与 doc/waves/reports/SYS-HOME-001/**"
     },
     {
       "id": 292,
