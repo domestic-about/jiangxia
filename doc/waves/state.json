@@ -3507,6 +3507,16 @@
       "detail": "影响范围：任何想在测试环境上演示 D6/D7 功能的人都会撞上；SYS-MANUAL-001 因此改用本地模式 B 环境截图。另 /mp/ 前缀被 nginx 转给后端返回 404 JSON（不是小程序 H5 入口）——部署文档里若写 /mp/ 是小程序入口是错的。方案 a)（推荐）不动：SYS-PROD-001 / SYS-RELEASE-001 在 D8 就绪后本来就要重部署；b) 若要在 D8 之前给甲方看，重跑 SYS-STAGING-001 的 deploy（会覆盖测试机）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 310,
+      "ticket": "SYS-MANUAL-001",
+      "severity": "S2",
+      "type": "doc-drift",
+      "title": "两份操作说明里没有生产访问地址（SYS-PROD-001 / SYS-RELEASE-001 还没落地，真实工作台域名与小程序名称未知）",
+      "detail": "影响范围：doc/manual/内部人员操作说明.md §1.1 只写「打开工作台地址」、doc/manual/外部用户操作说明.md 只写「打开小程序」——发甲方做培训前必须回填，否则甲方第一个问题就是「地址是什么」。方案 a)（推荐）等 SYS-RELEASE-001 出正式地址后回填内部版 §1.1 一行 + 外部版页脚一行，并按 doc/manual/README.md 重导两份 PDF（约半小时）；b) 由 Kevin 培训时口头给地址，材料里留空。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
