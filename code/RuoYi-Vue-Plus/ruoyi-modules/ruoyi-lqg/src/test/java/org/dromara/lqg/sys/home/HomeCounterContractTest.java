@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.annotation.SaMode;
+import org.dromara.lqg.auth.staff.guard.StaffGrantRules;
 import org.dromara.lqg.doc.render.mapper.DocFileMapper;
 import org.dromara.lqg.sys.home.controller.HomeController;
 import org.dromara.lqg.sys.home.domain.vo.HomeRecentVo;
@@ -44,14 +45,18 @@ import java.util.stream.Collectors;
  *   <li><b>渲染失败数是「组数」不是「行数」</b>：DOC 域的读口必须 {@code DISTINCT}
  *       样本 / 文档种类 / 受众三键，且手写 {@code del_flag='0'}（自定义 SQL 不吃
  *       {@code @TableLogic}）；</li>
- *   <li><b>两个端点是内部角色闸</b>：{@code @SaCheckRole(value = {"lqg_admin", "lqg_internal"},
+ *   <li><b>两个端点是内部角色闸，且角色集与 {@code StaffGrantRules.INTERNAL_ROLE_KEYS} 一致</b>：
+ *       {@code @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"},
  *       mode = SaMode.OR)}，<b>没有</b> {@link SaCheckPermission} ——「少一行菜单权限就 403」会让
  *       「没有待办」与「功能坏了」分不清。★ 必须是<b>角色闸</b>而不是 {@code @SaCheckLogin}：
  *       小程序 token 同样算「已登录」，只挂登录门时五个外部身份都读得到五个数与跨单位送检单号
  *       （D7 r1 L3 的 S1），而内外部隔离是 ADR-0004 由 {@code ExtChokepointContractTest}
  *       守着的不变量 —— 所以第 ⑥ 条从「登录即可调」改成「内部角色闸」。
  *       ★★ {@code mode} 必须是 {@code OR}：Sa-Token 默认 {@code AND}，漏了它 admin（只有 101）
- *       与 staff（只有 102）会<b>一起</b> 403 —— 实测踩过，见下。</li>
+ *       与 staff（只有 102）会<b>一起</b> 403 —— 实测踩过，见下。
+ *       ★★ 角色集<b>不逐字钉字面量</b>，而是断言「恰等于 {@link StaffGrantRules#INTERNAL_ROLE_KEYS}」：
+ *       注解不能引用 {@code List.of(...)} 常量（不是编译期常量），一致性只能靠这条测试守
+ *       —— 谁改了那条常量（例如再加一个内部角色），这里立刻红。</li>
  * </ol>
  *
  * @author SYS-HOME-001
@@ -134,7 +139,7 @@ class HomeCounterContractTest {
     // ── ⑥ 内部角色闸（D7 r1 L3 的 S1 修复）────────────────────────────────────
 
     @Test
-    @DisplayName("⑥ 两个端点挂内部角色闸 {lqg_admin|lqg_internal, OR}（不是 @SaCheckLogin），无权限串")
+    @DisplayName("⑥ 两个端点挂内部角色闸 = StaffGrantRules.INTERNAL_ROLE_KEYS（OR，不是 @SaCheckLogin），无权限串")
     void bothEndpointsRequireAnInternalRoleGate() {
         assertInternalRoleGate("todo", "/todo");
         assertInternalRoleGate("recent", "/recent");
@@ -150,12 +155,16 @@ class HomeCounterContractTest {
         SaCheckRole role = AnnotatedElementUtils.findMergedAnnotation(method, SaCheckRole.class);
         assertTrue(role != null,
             methodName + " 必须挂 @SaCheckRole —— 只挂 @SaCheckLogin 时小程序 token 也能调，外部就读得到");
-        assertEquals(Set.of("lqg_admin", "lqg_internal"), Set.of(role.value()),
-            methodName + " 的角色闸必须恰好放行 101 lqg_admin 与 102 lqg_internal"
-                + "（只放 lqg_internal 会把工作台管理员首页打 403，那是本票的主场景）");
+        // ★ 不逐字钉字面量：注解引用不了 List.of(...) 常量，一致性只能由这条断言守。
+        //   改 StaffGrantRules.INTERNAL_ROLE_KEYS（例如新增一个内部角色）时必须同步改注解，否则这里红。
+        assertEquals(Set.copyOf(StaffGrantRules.INTERNAL_ROLE_KEYS), Set.of(role.value()),
+            methodName + " 的角色闸必须恰等于 StaffGrantRules.INTERNAL_ROLE_KEYS = "
+                + StaffGrantRules.INTERNAL_ROLE_KEYS + "（工作台准入的唯一口径来源，"
+                + "见 WorkbenchLoginGuardAspect）—— 少了 superadmin 会出现「超管能登工作台、"
+                + "却打不开首页」；少了 lqg_admin / lqg_internal 会打红本票主场景");
         assertEquals(SaMode.OR, role.mode(),
             methodName + " 的 @SaCheckRole 必须是 SaMode.OR —— Sa-Token 默认 AND 时"
-                + "「同时具备 101 和 102」才放行，而 seed 里 lqgadmin 只有 101、内部人员只有 102，"
+                + "「同时具备全部角色」才放行，而 seed 里 lqgadmin 只有 101、内部人员只有 102，"
                 + "结果 admin 与 staff 会一起 403（D7 r1 返工实测踩过）");
         for (String allowed : role.value()) {
             assertFalse(allowed.contains("external"),

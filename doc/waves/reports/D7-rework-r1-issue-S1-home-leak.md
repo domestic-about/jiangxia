@@ -4,8 +4,9 @@
 - 缺陷来源：`doc/waves/qa/D7-r1-L3.json` 的 issues[0]（L3 第 7 条额外条，把 issue #270 从「理论上可读」升级为「实测可读且带跨单位明细」），由 owner 定级为 **S1**
 - 分支：`task/D7`（已确认，未切分支 / 未 push / 未合分支 / 未动 `state.json` 与 `_manifest.json`）
 - 环境：`qa-up.sh --backend-port 8094 --no-web --no-mp`；`LQG_VERIFY_ENV_FILE=.tmp/qa-env/8094/verify.env`
-- 结论：**已堵住**。admin(101) / staff(102) 两个端点 200；extA/extB/extC/extE/extF 两个端点一律 403（`data:null`）；pc 密码登录护栏未受影响（extB → 500）。
-- ★ 返工中发现一个**必须记账的坑**：照票面/返工单字面写的 `@SaCheckRole({"lqg_admin","lqg_internal"})` **会让 admin 和 staff 一起 403**（Sa-Token 默认 `SaMode.AND`）。见第 5 节。
+- 结论：**已堵住**。admin(101) / staff(102) / 上游 superadmin 两个端点 200；extA/extB/extC/extE/extF 两个端点一律 403（`data:null`）；pc 密码登录护栏未受影响（extB → 500）。
+- ★ 返工中发现一个**必须记账的坑**：照票面/返工单字面写的 `@SaCheckRole({"lqg_admin","lqg_internal"})` **会让 admin 和 staff 一起 403**（Sa-Token 默认 `SaMode.AND`）。见第 4 节。
+- ★ **补记（同返工单收尾）**：角色集最终扩成 `{lqg_admin, lqg_internal, superadmin}`，与 `StaffGrantRules.INTERNAL_ROLE_KEYS` 对齐，并由契约测试守一致性 —— 见**第 10 节**（含 superadmin 实测）。
 
 ---
 
@@ -48,11 +49,12 @@
      /**
       * 五个待办数（卡片与侧边菜单角标共用这一次请求的结果）。
 +     *
-+     * <p>内部角色闸（{@code mode = SaMode.OR}）：101 {@code lqg_admin} <b>或</b> 102
-+     * {@code lqg_internal} 放行，外部 403。
++     * <p>内部角色闸（{@code mode = SaMode.OR}）：101 {@code lqg_admin} / 102
++     * {@code lqg_internal} / 上游 {@code superadmin} 任一即可（= {@code INTERNAL_ROLE_KEYS}），
++     * 外部 403。
       */
 -    @SaCheckLogin
-+    @SaCheckRole(value = {"lqg_admin", "lqg_internal"}, mode = SaMode.OR)
++    @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
      @GetMapping("/todo")
      public R<HomeTodoVo> todo() { … }
 
@@ -60,17 +62,20 @@
       * 最近提交 10 条（送检时间倒序；不含软删的样本）。
       */
 -    @SaCheckLogin
-+    @SaCheckRole(value = {"lqg_admin", "lqg_internal"}, mode = SaMode.OR)
++    @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
      @GetMapping("/recent")
      public R<List<HomeRecentVo>> recent() { … }
 ```
 
 类注释：删掉把「登录即可调」当依据的那段，改成三段**为什么**：
 
-1. **鉴权是「内部角色闸」，不是「登录门」** —— 101 / 102，103 `lqg_external` 一律 403；
+1. **鉴权是「内部角色闸」，不是「登录门」** —— 101 / 102 / 上游 `superadmin`，103 `lqg_external` 一律 403；
 2. **为什么不能只挂 `@SaCheckLogin`** —— mp token 也是「已登录」；AUTH-STAFF-001 §2.2 那条护栏只拦 pc 密码登录，mp token 不经过它，所以「登录门 ⇒ 内部」前提不成立；这两个端点绕过了 `ExtChokepointContractTest`（ADR-0004）守着的咽喉，所以是隔离缺陷；
 3. **保留原设计决定**：仍然**不挂权限串、不新建菜单/权限行**（否则会因缺一行 `sys_menu` 而 403，把「功能坏了」和「没有待办」混起来），并写明**角色闸与权限串是两件事**（角色闸答「你是不是内部的人」，权限串答「这个菜单有没有授权」；上游 admin 的 `*:*:*` 答得了后者、答不了前者）。
-4. 另外新增一段 ★★ 记录 `SaMode.OR` 不能省（防后人照字面改回去）。
+4. **与 `StaffGrantRules.INTERNAL_ROLE_KEYS` 对齐**：写明这三个角色键必须与那条常量逐字一致
+   （`WorkbenchLoginGuardAspect` 用它判「能不能登工作台」），**注解引用不了 `List.of(...)` 常量**，
+   所以一致性由契约测试守 —— 见第 10 节；
+5. 另外新增一段 ★★ 记录 `SaMode.OR` 不能省（防后人照字面改回去）。
 
 ### 2.2 `.../sys/home/service/HomeCounterService.java`（只改注释，逻辑一行未动）
 
@@ -91,8 +96,8 @@
 改法（**不是删断言，是把断言换成更强的**）：
 
 - `@SaCheckLogin` 断言 → `@SaCheckRole` 必须存在；
-- **新增** `role.mode() == SaMode.OR` 断言（把第 5 节的坑钉死）；
-- 角色集合必须**恰好** `{lqg_admin, lqg_internal}`（只放 internal 会打红管理员）；
+- **新增** `role.mode() == SaMode.OR` 断言（把第 4 节的坑钉死）；
+- 角色集合必须**恰等于** `StaffGrantRules.INTERNAL_ROLE_KEYS`（不逐字钉字面量 —— 一致性靠测试守，见第 10 节）；
 - 任一角色都不得含 `external`；
 - **保留**「不许挂 `@SaCheckPermission`」（原票「不因缺菜单行而 403」的设计决定不丢）；
 - GET 路径断言不变。
@@ -112,6 +117,8 @@
 | `admin` | `["lqg_admin"]` | `/lqg/home/recent` | 200 | **200** ✅ |
 | `staff`（13800000001，mp，102） | `["lqg_internal"]` | `/lqg/home/todo` | 200 | **200** ✅ |
 | `staff` | `["lqg_internal"]` | `/lqg/home/recent` | 200 | **200** ✅ |
+| `superadmin`（**上游超管 `admin`，user_id=1**，pc 密码登录） | `["superadmin"]` | `/lqg/home/todo` | 200 | **200** ✅（见第 10 节） |
+| `superadmin` | `["superadmin"]` | `/lqg/home/recent` | 200 | **200** ✅ |
 | `extA`（13800000011） | `["lqg_external"]` | `/lqg/home/todo` | 200 | **403** ✅ |
 | `extA` | | `/lqg/home/recent` | 200 | **403** ✅ |
 | `extB`（13800000012） | `lqg_external` | `/lqg/home/todo` | 200 | **403** ✅ |
@@ -176,10 +183,10 @@ extA…extF                 403	（同上）
 **最终修法**：显式 `mode = SaMode.OR`：
 
 ```java
-@SaCheckRole(value = {"lqg_admin", "lqg_internal"}, mode = SaMode.OR)
+@SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
 ```
 
-并把它钉进契约测试（第 2.3 节）。**这是相对返工单字面指令的唯一偏离，理由是实测证据：字面写法无法满足返工单自己写死的验收（admin 200 + staff 200）。** 角色集合仍严格是 `{lqg_admin, lqg_internal}`，未加也未减。
+并把它钉进契约测试（第 2.3 节）。**`mode = SaMode.OR` 是相对返工单字面指令的偏离，理由是实测证据：字面写法无法满足返工单自己写死的验收（admin 200 + staff 200）。** 角色集合后经同单收尾扩为 `INTERNAL_ROLE_KEYS` 全量（加 `superadmin`，见第 10 节），仍不放行任何外部角色。
 
 ---
 
@@ -201,6 +208,8 @@ python3 doc/waves/tools/accept-run.py --ticket SYS-HOME-001 --run --json .tmp/fi
 ```
 
 ### 5.1 acc1 = 绿（`exit 0`，归一化仅 NF1）
+
+**最终 build（含第 10 节的三角色对齐）复跑一次，结果不变**：`✓ acc1 … (6.0s)`、`✗ acc2 … exit 1 (10.4s)`，acc2 红因仍是同一条起点守卫（`.tmp/fix-syshome-logs-final/`、`.tmp/fix-syshome-final.json`）。即角色集扩成 `INTERNAL_ROLE_KEYS` 全量后，acc1（全程 `--as staff`）仍绿。
 
 acc1 自带「短暂停 gotenberg 造真失败」，跑完已自愈：`lqg-dev-gotenberg Up (healthy)`、`/health → 200`。日志（`.tmp/fix-syshome-logs/SYS-HOME-001-acc1.sh.log`）末段逐断言 `true`：
 
@@ -280,17 +289,20 @@ mvn -pl ruoyi-modules/ruoyi-lqg -am test -Dtest='ExtChokepointContractTest,*Home
 ```
 
 - **`ExtChokepointContractTest` 4/4 绿**（I1–I4 不变量未被破坏；该文件一字未改）；
-- `HomeCounterContractTest` **6/6 绿**（含改写后的第 ⑥ 条内部角色闸 + `SaMode.OR` 断言）。
+- `HomeCounterContractTest` **6/6 绿**（含改写后的第 ⑥ 条：内部角色闸 + `SaMode.OR` + **角色集恰等于 `StaffGrantRules.INTERNAL_ROLE_KEYS`**）。
 
 ---
 
 ## 7. 越界 / WARN
 
-- **WARN-1（口径，需 owner/D7 门裁决）**：角色白名单**只有** `{lqg_admin, lqg_internal}`，不含上游 `superadmin`。而 AUTH-STAFF-001 §2.2 明确「不含 `lqg_internal` / `lqg_admin` / 上游 `superadmin` → 登录失败」，`StaffGrantRules.INTERNAL_ROLE_KEYS` 也把 `superadmin` 算内部 —— 即上游超管 **能登进工作台**，但按本修复访问这两个端点会 **403**（seed 的 `lqgadmin` 是 user_id 9000000100 / 101，不是 superadmin，所以本环境测不出来）。返工单字面点名两个角色，我未擅自扩白名单；**若生产会有上游 superadmin 用工作台，建议由 owner 决定是否补 `superadmin`**（追加一个枚举值即可，不影响已测行为）。
+- **WARN-1（★ 已按调度器裁定消掉，见第 10 节）**：角色白名单初版只有 `{lqg_admin, lqg_internal}`，不含上游 `superadmin`。AUTH-STAFF-001 §2.2 明确「不含 `lqg_internal` / `lqg_admin` / 上游 `superadmin` → 登录失败」，`StaffGrantRules.INTERNAL_ROLE_KEYS` 也把 `superadmin` 算内部 —— 即上游超管 **能登进工作台**，却会在首页 **403**（首页是登录后第一屏 = 坏页）。**已把注解角色集扩成与 `INTERNAL_ROLE_KEYS` 一致，并加实测（`roles:["superadmin"]` 的纯超管 token → 200）与防漂移测试。**
 - **WARN-2（必要改动，非越界）**：改了 `HomeCounterContractTest` 第 ⑥ 条。理由见第 2.3 节：它原本逐字钉住 S1 缺陷本身，不改则单测必红且留回退陷阱。文件在 SYS-HOME-001 的 `touches` 内，且没有任何 accept 对它做 `cmp`/字面量断言（已 grep 确认：只有 AUTH-EXT-00x 对 `ExtChokepointContractTest` 做 `cmp`，我没有碰它）。
 - **WARN-3（非本单，仅记录，未改）**：`ocr/controller/OcrStatusController.java` 的类注释写「实测工作台 token 的 `rolePermission` 里没有 `lqg_admin`，用角色判会把 admin 挡在 403」。**本环境实测该说法对 seed 的 `lqgadmin` 不成立**：`--as admin GET /system/user/getInfo` → `roles:["lqg_admin"]`（pc 密码登录，`SysLoginService:161` 灌 `permissionService.getRolePermission(userId)`）。该注释很可能是拿 **user_id=1 的上游超管**（`SysPermissionServiceImpl:37` 对超管只回 `superadmin`）测出来的 —— 两者不是同一个账号。该文件**不在本单范围，未改**；但 D7 门/后续票据若依赖那条注释做鉴权选型，会走错（正是 WARN-1 的同源问题）。
 - **未越界声明**：`ExtChokepoint` 体系、`/mp/**`、`doc/api-contract.md`、票面 front-matter、`doc/waves/state.json`、`_manifest.json`、`code/miniapp/src/pages.json` 全部未动。
-- 实验残留：无。`git diff -- code/` 只有上面三个文件；probe 覆写的 `observations/H2.json` 已还原。
+- 实验残留：无。probe 覆写的 `observations/H2.json` 已还原（sha `7280c2999c60ac23`，与运行前一致）。
+  ★ 轮次状态：第 1 轮（S1 修复 + 报告）已由调度器提交为 `a19763f`（含 `HomeCounterService` 的注释改动）；
+  第 10 节的收尾改动（`HomeController` 三角色 + `HomeCounterContractTest` 第 ⑥ 条 + 本报告）在本报告写成时
+  仍是工作区未提交改动 —— 因此此刻 `git diff -- code/` = `HomeController.java` + `HomeCounterContractTest.java`（2 个文件）。
 
 ---
 
@@ -310,14 +322,121 @@ mvn -pl ruoyi-modules/ruoyi-lqg -am test -Dtest='ExtChokepointContractTest,*Home
    ```
    期望：`admin`/`staff` 6 个格子 200，`ext*` 10 个格子 403（`data:null`），`anon` 401。
 3. **pc 登录对照不能丢**：`extB`（`wx_13800000012`/`admin123`，clientid=pc）→ `code:500`「该账号无权登录工作台，请使用小程序登录」。
-4. **别照字面改回 `@SaCheckRole({...})`**：漏 `mode = SaMode.OR` 会让 admin + staff 一起 403（第 4 节）。契约测试第 ⑥ 条已把这个坑钉住。
+4. **别照字面改回 `@SaCheckRole({...})`**：漏 `mode = SaMode.OR` 会让 admin + staff 一起 403（第 4 节）；角色集也**别删 `superadmin`**（会打红上游超管的首页，第 10 节）。契约测试第 ⑥ 条把这两条都钉住了（`mode == OR` + 角色集恰等于 `INTERNAL_ROLE_KEYS`）。
 5. **越权面复核**：`/lqg/home/*` 之外，本次没有改动任何其它 `/lqg/**` 或 `/mp/**` 的鉴权 —— L3 的其余结论（外部下载带 `audience=internal`、桶匿名可读等）不受本修复影响，仍按各自 issue 处理。
+6. **superadmin 复测**（可选，零改库）：dev 库里 `user_id=1 / admin` 是**纯 `superadmin`**（口令 `admin123`），把 `LQG_ADMIN_USER` / `LQG_ADMIN_PASSWORD` 换成它即可复现 —— 注意 `api.sh` 会 `source` env 文件、**导出的变量会被文件覆盖**，所以要改文件而不是只 export（第 10.3 节踩过）。
 
 ---
 
 ## 9. 环境收尾
 
-- 后端 8094：本次收尾 `qa-up.sh --down --backend-port 8094 --no-web --no-mp`（**按 PID**）。
+- 后端 8094：两轮验证各起停一次，收尾均 `qa-up.sh --down --backend-port 8094 --no-web --no-mp`
+  （**按 PID**：第一轮 pid 15163、第二轮 pid 35386、最终 accept 复跑 pid 47410）；8094 / 8093 / 9202 均已释放。
 - 8093（plus-ui dev，手工起的 H2 探针用）：已按 PID `kill 21083` 关停，端口已释放。
-- 严禁项遵守：**未**执行 `pkill -f 'ruoyi-admin.jar'`；8080/5432/6379 未触碰。
+- 严禁项遵守：**未**执行 `pkill -f 'ruoyi-admin.jar'`；8080/5432/6379 未触碰（收尾复核 8080 仍空闲）。
 - `lqg-dev-gotenberg`：acc1 自行 stop/start 后已回到 `Up (healthy)`，`/health → 200`，未停它。
+- 数据库：本单**零写入**（第 10.3 节）；QA 期间为核对身份/角色只用 `SELECT`。
+
+---
+
+## 10. 与 `INTERNAL_ROLE_KEYS` 对齐（WARN-1 收尾 · 同返工单）
+
+调度器核了 WARN-1 并确认成立：`StaffGrantRules.INTERNAL_ROLE_KEYS` 是项目「内部角色」的唯一口径来源，
+`WorkbenchLoginGuardAspect` 正是用它判「能不能登工作台」。初版白名单少了 `superadmin` → 「超管能登工作台、却打不开首页」的不一致。本节是消掉该不一致的改动与实测。
+
+### 10.1 改了什么
+
+1. **`HomeController` 注解角色集扩成与 `INTERNAL_ROLE_KEYS` 一致**（`mode = SaMode.OR` 不变）：
+
+   ```java
+   @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
+   ```
+
+   ★ 注解**不能引用 `List.of(...)` 常量**（不是编译期常量），所以只能硬写这三个字符串 → **防漂移靠测试**（下一条）。
+
+2. **类注释新增一段 ★★**：写明这三个角色键必须与 `StaffGrantRules.INTERNAL_ROLE_KEYS` 逐字一致、
+   口径来源是 `WorkbenchLoginGuardAspect`、少 `superadmin` 的后果（超管坏首页）、
+   以及「注解引用不了常量，所以一致性由 `HomeCounterContractTest` 第 ⑥ 条守」。
+
+3. **契约测试第 ⑥ 条从「钉字面量」改成「守一致性」**（不再写死 `{lqg_admin, lqg_internal}`）：
+
+   ```java
+   assertEquals(Set.copyOf(StaffGrantRules.INTERNAL_ROLE_KEYS), Set.of(role.value()), …);
+   assertEquals(SaMode.OR, role.mode(), …);
+   assertFalse(AnnotatedElementUtils.hasAnnotation(method, SaCheckPermission.class), …);
+   ```
+
+   → 将来谁改了 `INTERNAL_ROLE_KEYS`（例如再加一个内部角色），这条测试**立刻红**；`mode` 与「不许挂权限串」也一并钉住。
+
+### 10.2 逐身份实测（对齐后，重打包重启 + reseed 后）
+
+| 身份 | 实测角色（`/system/user/getInfo`） | `/lqg/home/todo` | `/lqg/home/recent` |
+|---|---|---|---|
+| `admin`（lqgadmin 9000000100，pc 密码登录） | `["lqg_admin"]` | **200** ✅ | **200** ✅ |
+| `staff`（13800000001，mp） | `["lqg_internal"]` | **200** ✅ | **200** ✅ |
+| **`superadmin`（`admin` user_id=1，pc 密码登录）** | **`["superadmin"]`** | **200** ✅ | **200** ✅ |
+| `extA` | `["lqg_external"]` | **403** ✅ | **403** ✅ |
+| `extB` | `["lqg_external"]` | **403** ✅ | **403** ✅ |
+| `extC` | `["lqg_external"]` | **403** ✅ | **403** ✅ |
+| `extE` | `["lqg_external"]` | **403** ✅ | **403** ✅ |
+| `extF` | `["lqg_external"]` | **403** ✅ | **403** ✅ |
+
+- admin / staff 未被打回 403（**8 个身份 16 个格子**：3 个内部身份 6 格 200、5 个外部身份 10 格 403）；
+- superadmin 的载荷也是契约形状：`{"pendingSamples":2,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":0}`；
+- 收尾把身份切回 `lqgadmin` 再测一次：`roles:["lqg_admin"]`、两端点 200、`extC` 仍 403（确认没有把身份/缓存留在超管态）。
+
+### 10.3 ★ superadmin 实测：**没有改库**（比返工单建议的做法更干净）
+
+返工单建议「临时给 `lqgadmin` 加 `superadmin` 角色（或临时建一个），测完删掉」。核查 dev 库后发现**不需要动库**：
+
+```sql
+-- 只读核查
+SELECT user_id,user_name,user_type,(password<>'') FROM sys_user WHERE user_id<=2;
+--  1|admin|sys_user|t          ← 上游超管真实存在，且带口令
+SELECT role_id,role_key FROM sys_role WHERE role_key='superadmin';
+--  1|superadmin                ← 角色行本来就有
+SELECT user_id,role_id FROM sys_user_role WHERE user_id=1;
+--  1|1                         ← admin 本来就挂着 superadmin
+```
+
+于是直接用**真实的纯超管账号**登录（`user_id=1 / admin`，口令 = 上游 dev 默认 `admin123`）：
+
+```
+identity: {"code":200,"userId":1,"userName":"admin","roles":["superadmin"]}
+/lqg/home/todo           200	操作成功
+/lqg/home/recent         200	操作成功
+```
+
+这比「借用 lqgadmin 加角色」更强：那是**纯 `superadmin`**（不含 `lqg_admin` / `lqg_internal`），
+唯一角色就是白名单里新增的那个 → 200 只可能来自 `superadmin` 这一项。
+**因此本次对数据库零写入**（只有 `SELECT`），没有临时角色需要还原，也不存在残留风险。
+
+> 副作用记录：`sys_user_role` 里 `9000000100` 始终只有 `101`（对齐前后各查一次，一致）；
+> 库里另有 `user_id=1`、`3 test`、`4 test1`（上游默认行）与 `wx_13800000099`（**D7 r1 L3 那轮**为「外部新号」造的账号，非本轮产生）—— 均非本次写入。
+
+### 10.4 坑：`api.sh` 会 `source` env 文件，导出的 `LQG_ADMIN_USER` 会被覆盖
+
+第一次尝试用 `export LQG_ADMIN_USER=admin` 直接跑，`api.sh` 的
+`set -a && . "${ENV_FILE}"` 又把文件里的 `LQG_ADMIN_USER=lqgadmin` 灌了回来 → 实际仍是 lqgadmin
+（`getInfo` 回 `userId:9000000100`）。正确做法：**改文件**（本轮用 `.tmp/qa-env/8094/verify-superadmin.env`，
+指向 8094、只替换这两行，跑完删除），并 `rm -f "${TMPDIR:-/tmp}"/lqg-verify-token-*` 防止
+admin 身份的 token 缓存串用（缓存键只含 `<身份>-<BASE>`，不含用户名）。
+
+### 10.5 单测（对齐后重跑）
+
+```
+[INFO] Running org.dromara.lqg.ext.ExtChokepointContractTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running org.dromara.lqg.sys.home.HomeCounterContractTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+第 ⑥ 条现在断的是「角色集恰等于 `INTERNAL_ROLE_KEYS`」——它绿即证明注解与常量当前一致。
+
+### 10.6 同单性质
+
+本节是对**同一条 S1 返工单**的收尾（消掉本次引入的角色集不一致），不是新 ticket：不新增缺陷、不改票面、
+不改 `staff` 授权逻辑与 `WorkbenchLoginGuardAspect`；只动 `HomeController` 注解/注释与
+`HomeCounterContractTest` 第 ⑥ 条，均在 SYS-HOME-001 的 `touches` 内。

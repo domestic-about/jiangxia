@@ -23,9 +23,18 @@ import java.util.List;
  * </pre>
  *
  * <p>★ <b>鉴权是「内部角色闸」，不是「登录门」</b>：两个端点都挂
- * {@code @SaCheckRole(value = {"lqg_admin", "lqg_internal"}, mode = SaMode.OR)}
- * （101 / 102，见 {@code V202609210820__SYS-BASE-001-lqg-roles.sql}），
+ * {@code @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)}
+ * （101 / 102 / 上游超管，见 {@code V202609210820__SYS-BASE-001-lqg-roles.sql}），
  * 103 {@code lqg_external} 一律 403。
+ *
+ * <p>★★ <b>这三个角色键必须与 {@code StaffGrantRules.INTERNAL_ROLE_KEYS}
+ * （项目「内部角色」的唯一口径来源）逐字一致</b> —— 口径来源指过去：
+ * {@code WorkbenchLoginGuardAspect} 正是用那条常量判「能不能登工作台」（AUTH-STAFF-001 §2.2）。
+ * 少了 {@code superadmin} 就会出现「上游超管能登进工作台、却打不开首页」的不一致
+ * （首页是登录后的第一屏，那就是坏页）。<b>注解里不能引用 {@code List.of(...)} 常量</b>
+ * （它不是编译期常量），所以只能硬写这三个字符串，<b>防漂移靠契约测试</b>：
+ * {@code HomeCounterContractTest} 第 ⑥ 条断言这个集合<b>恰等于</b>
+ * {@code INTERNAL_ROLE_KEYS} —— 将来谁改了常量，那条测试立刻红。
  *
  * <p>★★ <b>{@code mode = SaMode.OR} 不能省</b>：Sa-Token 的 {@code @SaCheckRole} 默认
  * {@code SaMode.AND}（实测本机 sa-token-core 1.45.0 的注解默认值），写成
@@ -65,10 +74,11 @@ public class HomeController {
     /**
      * 五个待办数（卡片与侧边菜单角标共用这一次请求的结果）。
      *
-     * <p>内部角色闸（{@code mode = SaMode.OR}）：101 {@code lqg_admin} <b>或</b> 102
-     * {@code lqg_internal} 放行，外部 403。
+     * <p>内部角色闸（{@code mode = SaMode.OR}）：101 {@code lqg_admin} / 102
+     * {@code lqg_internal} / 上游 {@code superadmin} 任一即可（= {@code INTERNAL_ROLE_KEYS}），
+     * 外部 403。
      */
-    @SaCheckRole(value = {"lqg_admin", "lqg_internal"}, mode = SaMode.OR)
+    @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
     @GetMapping("/todo")
     public R<HomeTodoVo> todo() {
         return R.ok(homeCounterService.todo());
@@ -77,10 +87,11 @@ public class HomeController {
     /**
      * 最近提交 10 条（送检时间倒序；不含软删的样本）。
      *
-     * <p>内部角色闸（{@code mode = SaMode.OR}）：101 {@code lqg_admin} <b>或</b> 102
-     * {@code lqg_internal} 放行，外部 403 —— 这一条带跨单位送检单号，比待办数更敏感。
+     * <p>内部角色闸（{@code mode = SaMode.OR}）：101 {@code lqg_admin} / 102
+     * {@code lqg_internal} / 上游 {@code superadmin} 任一即可（= {@code INTERNAL_ROLE_KEYS}），
+     * 外部 403 —— 这一条带跨单位送检单号，比待办数更敏感。
      */
-    @SaCheckRole(value = {"lqg_admin", "lqg_internal"}, mode = SaMode.OR)
+    @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
     @GetMapping("/recent")
     public R<List<HomeRecentVo>> recent() {
         return R.ok(homeCounterService.recent());

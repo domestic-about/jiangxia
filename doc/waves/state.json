@@ -3386,6 +3386,16 @@
       "detail": "复现（D7 返工 r1）：`SYS-HOME-001 acc2` 调 `mutation-assert.sh`，其第 157 行的 `tree_ok` 守卫要求 `git diff -- code/` 只含 `pages.json`（即工作树干净）。而**返工单的工作树按定义是脏的**（改动还没提交）→ 守卫在起点就退出、H2 探针根本没跑 → acc2 红。实现方补证：手工起 8093 跑 `node probe.mjs H2` → 8/8 PASS GREEN（产品侧没问题）。影响：**SYS-ACCEPT-001 引入的「变异验证」在返工轮不可用**——而返工轮恰恰是最需要它的时候（要证明强化后的断言仍能抓红）。方案 a) 给脚本加 `--allow-dirty`，或把「干净」判据改成「除本次拟改的文件外无其它改动」（用 `git diff --name-only` 与一个白名单比对）；b) 或在门里约定「返工单先提交、再跑 acc2」。默认模式仍应保持严格（防止把未提交的实验带进变异验证）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 298,
+      "ticket": "SYS-HOME-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "api.sh 的 set -a; . verify.env 会覆盖你 export 的身份变量（LQG_ADMIN_USER）→ 换身份测试会静默用错账号",
+      "detail": "复现（D7 返工 r1 实测）：想用上游纯超管测端点，于是 `export LQG_ADMIN_USER=admin LQG_ADMIN_PASSWORD=admin123` 再调 api.sh → **实际登录的仍是 verify.env 里的 lqgadmin**（getInfo 回 userId=9000000100），因为 api.sh 里是 `set -a; . \"${ENV_FILE}\"`，**文件里的赋值会覆盖调用方 export 的环境变量**。处置：实现方改用一份临时 env 文件（`.tmp/qa-env/8094/verify-superadmin.env`）跑完即删，并清了 `$TMPDIR/lqg-verify-token-*`（★ 注意 token 缓存的键只含身份代号 + BASE，**不含用户名**，所以换了用户名但不清缓存会拿到上一个身份的旧 token）。影响：**任何「换身份重测」的做法都可能静默测错账号**，而且结论看起来完全正常（会用 lqgadmin 的权限得出 200，让人以为超管也 200）。方案 a) 让 api.sh 支持命令行覆盖（如 `--admin-user`）或改成「环境变量优先于文件」；b) 至少在 README 的已知坑表里写明「换身份要改 env 文件 + 清 token 缓存」。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
