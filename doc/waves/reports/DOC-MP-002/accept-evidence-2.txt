@@ -1,0 +1,35 @@
+# DOC-MP-002 · accept 2（DATA）逐段重放 —— 票面 run 逐字，唯一差别 = NF1（见文末）
+
+## 1) reseed 到确定性快照
+  reseed exit=0
+
+## 2) 触发内部版渲染（票面：--fresh-module ruoyi-lqg POST /lqg/doc/9000001006/organoid_score/render?audience=internal）
+{"code":200,"docKind":"organoid_score","audience":"internal","status":"done","cached":false}
+
+## 3) 取内部下载链接（format=pdf）—— 这一段的形状 = {url, fileName}
+{"code":200,"fileName":"类器官质量评分表-T-hco04.pdf","urlHead":"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001006/organoid_score/internal/e2a380f"}
+
+## 4) curl -sSf 真下载 PDF 并用 pdfinfo 数页
+  curl exit=0
+-rw-r--r--  1 wkui  wheel  49860 Sep 22 21:34 /tmp/lqg-mp.pdf
+/tmp/lqg-mp.pdf: PDF document, version 1.7, 2 pages
+  pdfinfo Pages = 2
+
+## 5) pages 的页数必须与 PDF 一致（两侧不同源：一侧 pages 接口，一侧真 PDF 用 pdfinfo 数）
+{"code":200,"status":"done","pages":2,"pageNos":[1,2]}
+true
+  jq -e exit=0
+
+## 6) 外部身份打内部端点必须 403（类级 @SaCheckRole("lqg_internal")）
+403	没有访问权限，请联系管理员授权
+  grep ^403 exit=0
+
+## 7) 同一个 403 在「下载」那条路上也成立（票面只断 pages，这里补一条）
+403	没有访问权限，请联系管理员授权
+
+# NF1：票面 acc2 的 `--fresh-module ruoyi-lqg` 在本沙箱恒 exit 2（api.sh 用 `ps -o lstart=`，
+#      本沙箱 /bin/ps: Operation not permitted）—— accept-run 自动去掉它，本票用下面的等价证据覆盖那道守卫：
+  jar mtime        : 2026-09-22 21:26:39
+  find lqg/src -newer jar : []
+  8094 listener    : PID 79146（.tmp/qa-env/8094/state.json 的 backend_pid=79146）
+  嵌套 jar 复核     : 8 个 doc/mp/MpDoc* 类在嵌套 jar 里

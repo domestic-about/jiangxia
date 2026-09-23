@@ -1,0 +1,33 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "SYS-EXPORT-001",
+   "index": 1,
+   "form": "DATA",
+   "name": "小程序导出的四个文件与甲方模板原件逐字对表头、行数与库内独立计数一致；带筛选只出筛选结果；外部角色 403、未知工作表被拒",
+   "exit": 0,
+   "seconds": 1.9,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-EXPORT-001-acc1.sh",
+   "log": ".tmp/sys-export-accept-logs/SYS-EXPORT-001-acc1.sh.log"
+  },
+  {
+   "ticket": "SYS-EXPORT-001",
+   "index": 2,
+   "form": "API",
+   "name": "构建是本次产物；导出与文档下载共用同一段「打开 / 发送到微信」；下载带鉴权头；拼查询串的纯函数过单测；抽公共函数后文档下载的单测仍过",
+   "exit": 0,
+   "seconds": 5.9,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-EXPORT-001-acc2.sh",
+   "log": ".tmp/sys-export-accept-logs/SYS-EXPORT-001-acc2.sh.log"
+  }
+ ]
+}

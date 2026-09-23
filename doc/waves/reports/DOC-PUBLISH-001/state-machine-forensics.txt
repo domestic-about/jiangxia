@@ -1,0 +1,64 @@
+════════ DOC-PUBLISH-001 · 状态机 / 渲染产物 / 合并件 取证 ════════
+生成时间：2026-09-22 19:49:31
+
+── A) seed 快照（reseed 之后）：三张质控表各自的 doc_status / 完成人 / 完成时间 ──
+organoid 9000001001  published | 9000000101 | 2026-09-10 10:00:00
+organoid 9000001004  draft | - | -
+sample   9000001001  published | 9000000101 | 2026-08-31 10:00:00
+sample   9000001004  published | 9000000101 | 2026-09-07 10:00:00
+sample   9000001005  draft | - | -
+score    9000001001  published | 9000000101 | 2026-09-13 10:00:00
+score    9000001006  published | 9000000101 | 2026-09-18 10:00:00
+
+── B) 状态机逐段（就是 accept1 的段 3/5/8/10/12/15）──
+① GET 之后（自动建草稿）             : draft|-|false
+② 对草稿撤回（应 400）               : 400	这份文档还没完成，没什么可撤回的
+③ 完成并同步之后                     : published|9000000101|true
+④ 重复完成（应 400）                 : 400	这份文档已经完成并同步过了，不用再点一次
+⑤ 重复完成之后（完成时间没被重置）   : published|9000000101|true
+⑥ 改内容保存 → 回草稿                : draft|-|false
+⑦ 同一样本的评分表（不受影响）       : published|9000000101|true
+⑧ 改评分 → 评分表回草稿              : draft|-|false
+⑨ 1001 类器官质控表（seed 已完成）   : published|9000000101|true
+⑩ 加一张图 → 类器官质控表回草稿      : draft|-|false
+
+── C) 「完成并同步」触发的渲染产物（accept1 第 6 段判据 + 全量清单）──
+{"code":200,"msg":"操作成功","data":null}
+
+★ accept1 第 6 段：sample_qc 且 render_status=done 且 page_no IN (0,1)
+external:docx
+external:pdf
+external:png
+internal:docx
+internal:pdf
+internal:png
+
+★ 该样本此刻的全部产物行（含 merged：成员 = 已完成的样本质控表 + 评分表）
+external | merged | docx | page 0 | done | -
+external | merged | pdf | page 0 | done | -
+external | merged | png | page 1 | done | -
+external | merged | png | page 2 | done | -
+external | merged | png | page 3 | done | -
+external | sample_qc | docx | page 0 | done | -
+external | sample_qc | pdf | page 0 | done | -
+external | sample_qc | png | page 1 | done | -
+external | sample_qc | png | page 2 | done | -
+internal | merged | docx | page 0 | done | -
+internal | merged | pdf | page 0 | done | -
+internal | merged | png | page 1 | done | -
+internal | merged | png | page 2 | done | -
+internal | merged | png | page 3 | done | -
+internal | sample_qc | docx | page 0 | done | -
+internal | sample_qc | pdf | page 0 | done | -
+internal | sample_qc | png | page 1 | done | -
+internal | sample_qc | png | page 2 | done | -
+
+── D) 合并件失效：改内容之后旧合并件的指纹被换掉（口径复述 4）──
+（改内容前 / 后 各读一次 merged header 行的 content_hash）
+改内容前 merged/internal/docx content_hash = 468f8766721f0508721343ffd27934565a310c85649de398ce628ccb7e54dede
+改内容后 merged/internal/docx content_hash = 5324360e52113b3fa13b76638047e84cc27e5234bbf59a48bbb8781635e760b0
+✅ 指纹已变（旧合并件不再被当成最新返回）
+
+★ 同一次改内容把 sample_qc 打回草稿（撤回的连带效果）
+sample_qc doc_status = draft
+（探针跑完已 reseed 回快照）

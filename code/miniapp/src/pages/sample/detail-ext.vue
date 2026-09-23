@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import type { DocListRow } from '@/api/doc'
+import { fetchExtDocList } from '@/api/doc'
 import type { EmbedRow, SampleDetail } from '@/api/sample'
 import { fetchExtSampleDetail } from '@/api/sample'
 import EmbedCard from '@/components/lqg/EmbedCard.vue'
@@ -7,14 +9,19 @@ import NoteBar from '@/components/lqg/NoteBar.vue'
 import ErrorState from '@/components/lqg/ErrorState.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
+import { docKindLabel } from '@/pages/doc/group'
 import { goPage } from '@/router/config'
 
-// 样本详情（外部版）· UI:mp.sample.detail.ext（SAMPLE-MP-001 做第①段，AUTH-EXT-002 接第②段）。
+// 样本详情（外部版）· UI:mp.sample.detail.ext（SAMPLE-MP-001 做第①段，AUTH-EXT-002 接第②段，
+// DOC-MP-001 接第③段）。
 //
 // 三段（① 送检信息 ② 石蜡包埋情况 ③ 质控文档）：
-//   ② 本票接上：该样本名下每条石蜡包埋记录一张 `EmbedCard`，**含外部提交还没核验的送样**
+//   ② 该样本名下每条石蜡包埋记录一张 `EmbedCard`，**含外部提交还没核验的送样**
 //      （没编号、标「待核验」或「无效 · 原因」）；没有则「暂无包埋记录」。
-//   ③ 的文档在 AUTH-EXT-003，仍是空状态。
+//   ③ 本票（DOC-MP-001）接上：走**外部**清单接口 `GET /mp/ext/doc/list?sampleId=`（AUTH-EXT-003），
+//      只列「可见 ∩ 已完成 ∩ 外部版渲染成功」的那几份；点条目进预览占位页
+//      （真正的预览/下载在 DOC-MP-002）。
+//      ★ **不**调内部的 `/lqg/doc/**`：那条路会带内部专用字段，是外部隔离守住的咽喉。
 //
 // ★ 五条硬口径：
 //   1. **内部编号一行照接口给的渲染**（CR-20260918-07）：外部接口在开关关着时
@@ -36,6 +43,8 @@ const detail = ref<SampleDetail | null>(null)
 const loading = ref(true)
 const failed = ref(false)
 const sampleId = ref<string>('')
+/** 第③段：外部可见的质控文档（清单接口给的行，title / subtitle 由后端按身份给） */
+const docs = ref<DocListRow[]>([])
 
 onLoad((options) => {
   sampleId.value = String(options?.id ?? '')
@@ -52,6 +61,14 @@ async function load() {
   failed.value = false
   try {
     detail.value = await fetchExtSampleDetail(sampleId.value)
+    // 第③段：外部文档清单（与详情同一个样本；失败不把整页打红——详情还能看）
+    try {
+      const res = await fetchExtDocList({ sampleId: sampleId.value, pageSize: 100 })
+      docs.value = res.rows ?? []
+    }
+    catch {
+      docs.value = []
+    }
   }
   catch {
     failed.value = true
@@ -74,6 +91,11 @@ const internalNo = computed(() => (detail.value as Record<string, unknown> | nul
  * **含外部自己提交还没核验的送样**（`paraffinBlockNo` 空）。空数组 / 缺键都按空处理。
  */
 const embeds = computed<EmbedRow[]>(() => detail.value?.embeds ?? [])
+
+/** 点条目进预览页（DOC-MP-002 换真页；本张是占位页，参数带 sampleId + docKind） */
+function openDoc(docKind?: string | null) {
+  goPage(`/pages/doc/preview?sampleId=${sampleId.value}&docKind=${docKind ?? ''}`)
+}
 
 function resubmit() {
   goPage(`/pages/sample/form?id=${sampleId.value}&mode=edit`)
@@ -161,9 +183,23 @@ function ynText(value: unknown): string {
         </view>
       </view>
 
-      <!-- ③ 质控文档（三份 Word 在 AUTH-EXT-003，本张空状态） -->
+      <!-- ③ 质控文档（DOC-MP-001 接外部清单；点条目进预览占位页） -->
       <view class="lqg-gl">质控文档</view>
-      <view class="lqg-card">
+      <view v-if="docs.length" class="lqg-card lqg-card--flush">
+        <view
+          v-for="doc in docs"
+          :key="String(doc.docKind)"
+          class="det__doc"
+          @click="openDoc(doc.docKind)"
+        >
+          <view class="det__docmain">
+            <text class="det__docname">{{ docKindLabel(doc.docKind) }}</text>
+            <text class="det__doctime">{{ doc.publishedTime }}</text>
+          </view>
+          <text class="det__arrow">›</text>
+        </view>
+      </view>
+      <view v-else class="lqg-card">
         <text class="det__empty">结果出具后会显示在这里</text>
       </view>
     </template>
@@ -177,6 +213,44 @@ function ynText(value: unknown): string {
 
 .det__bar {
   margin-top: var(--lqg-sp-5);
+}
+
+/* 第③段：每份文档一行（点一行进预览占位页） */
+.det__doc {
+  display: flex;
+  align-items: center;
+  gap: var(--lqg-sp-4);
+  min-height: var(--lqg-cell-h);
+  padding: var(--lqg-sp-5) var(--lqg-sp-6);
+  border-top: 1px solid var(--lqg-line);
+}
+
+.det__doc:first-child {
+  border-top: none;
+}
+
+.det__docmain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.det__docname {
+  font-size: var(--lqg-fs-body);
+  color: var(--lqg-ink);
+}
+
+.det__doctime {
+  font-size: var(--lqg-fs-sm);
+  color: var(--lqg-ink-3);
+}
+
+.det__arrow {
+  flex: none;
+  font-size: var(--lqg-fs-title);
+  color: var(--lqg-ink-3);
 }
 
 /* 第②段：一叠包埋卡片（每条一张），左右留 gutter、卡片之间留间距 */

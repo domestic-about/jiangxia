@@ -1,0 +1,20 @@
+{
+ "phase": "D7",
+ "round": 1,
+ "auditor": "independent",
+ "generated_by": "doc/waves/tools/gate.sh + gate-audit.py（模式 B：L0+L1 脚本化，非 LLM 审计）",
+ "levels": {
+  "L0": {
+   "status": "pass",
+   "evidence": "【L0 编译/单测/前端 build｜gate.sh 机械产出，非 LLM 审计】head=f27ab9e 后端=http://127.0.0.1:8094 日志根=.tmp/gate/D7\npass L0.0 后端监听 — 后端在 http://127.0.0.1:8094 监听（pid 54042）\npass L0.0 产物新鲜度 — L0.0 产物新鲜：lqg/admin 源码没有比 jar 新的文件\npass L0.0 进程持 jar — L0.0 进程 54042 持有该 jar（inode 同一）\npass L0.0b reseed — reseed 完成（7 段 seed）\npass L0.0b 清孤儿账号 — 孤儿账号已清（非 seed 段 wx_*/lqg_*）\npass L0.1 单测 — L0.1 BUILD SUCCESS，Tests run: 274, Failures: 0, Errors: 0, Skipped: 0\npass L0.2 plus-ui build:prod — L0.2 plus-ui build:prod 通过，产物 dist/index.html 已重建（517 个文件）\npass L0.2 miniapp build:mp-weixin — L0.2 miniapp build:mp-weixin 通过，产物 dist/build/mp-weixin/app.json 已重建（326 个文件）\n（NF1 归一化：7 条 accept 去掉了 --fresh-module，新鲜度由 L0.0 承担；逐条写过 .tmp/gate/D7/accept.json）\n⚠️ 本任务有未实现项（escalated，accept 重放按状态跳过、**不**算产品缺陷）：DOC-PROOF-001"
+  },
+  "L1": {
+   "status": "pass",
+   "evidence": "【L1 reseed/ddl_vs_ssot/accept 重放/D1 回归/收尾｜gate.sh 机械产出，非 LLM 审计】head=f27ab9e 后端=http://127.0.0.1:8094 日志根=.tmp/gate/D7\npass L1.2 accept 重放 — L1.2 票面 accept 全部成立（14/14）\npass L1.3 D1 回归包 — L1.3 D1 回归包全绿（42✓）\npass L1.4 收尾 reseed — 收尾 reseed 完成\n（NF1 归一化：7 条 accept 去掉了 --fresh-module，新鲜度由 L0.0 承担；逐条写过 .tmp/gate/D7/accept.json）\n⚠️ 本任务有未实现项（escalated，accept 重放按状态跳过、**不**算产品缺陷）：DOC-PROOF-001"
+  }
+ },
+ "escalated_noted": [
+  "DOC-PROOF-001"
+ ],
+ "issues": []
+}

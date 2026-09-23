@@ -1,0 +1,30 @@
+PASS  ①进入态 页签徽标（样本质控表=草稿） — 样本质控表 草稿 / 类器官质控表 草稿 / 类器官质量评分表 已完成
+PASS  ①进入态 库内 doc_status=draft — draft|-|false
+PASS  ①进入态 页脚按钮=「完成并同步给送检方」
+PASS  ①进入态 页脚提示=「预览只看不发布…」 — 「预览」只看不发布；「完成并同步」之后送检方才看得到
+PASS  ②预览 触发了 POST render — POST 9000001006/sample_qc/render?audience=internal
+PASS  ②预览 轮询了 GET pages — 轮询 1 次
+PASS  ②预览 逐页页面图渲染出来 — 2 页
+PASS  ②预览 页面图是真签名地址（不是 seed.invalid） — http://127.0.0.1:9000/ruoyi/lqg/doc/9000001006/sample_qc/internal/b7914884482d-p1.png?X-Am
+PASS  ③切外部版 重新取了 pages — +1 次
+PASS  ③切外部版 提示语=「外部版里内部编号一格为空」
+PASS  ④下载入口存在「下载 Word」
+PASS  ④下载入口存在「下载 PDF」
+PASS  ④下载入口存在「下载合并 Word」
+PASS  ④下载入口存在「下载合并 PDF」
+PASS  ④四个下载按钮都不是置灰的 — 4/4 可点
+PASS  ⑤完成并同步 库内=published|9000000100|true — published|9000000100|true
+PASS  ⑤完成并同步 页签徽标变「已完成」 — 样本质控表 已完成 / 类器官质控表 草稿 / 类器官质量评分表 已完成
+PASS  ⑤完成并同步 页脚按钮变「撤回」
+PASS  ⑤完成并同步 页脚提示=已同步给送检方·修改后需重新同步 — 已同步给送检方 · 修改后需重新同步
+PASS  ⑤完成并同步 外部版页面图也能出来 — 2 页
+PASS  ⑥改内容保存 库内回草稿 draft|-|false — draft|-|false
+PASS  ⑥改内容保存 页签徽标回「草稿」 — 样本质控表 草稿 / 类器官质控表 草稿 / 类器官质量评分表 已完成
+PASS  ⑥改内容保存 页脚恢复「完成并同步给送检方」
+PASS  ⑥改内容保存 评分表仍是已完成（只回受影响那一份） — 样本质控表 草稿 / 类器官质控表 草稿 / 类器官质量评分表 已完成
+PASS  ⑦重新完成并同步 = published|9000000100|true — published|9000000100|true
+PASS  ⑦撤回 = draft|-|false — draft|-|false
+PASS  ⑦撤回后页签徽标回「草稿」
+PASS  ⑧无未捕获 JS 异常
+
+28/28 PASS

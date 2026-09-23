@@ -7,7 +7,12 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AttachmentList: typeof import('./../components/lqg/AttachmentList.vue')['default']
     CryoBatchSheet: typeof import('./../components/lqg/CryoBatchSheet.vue')['default']
+    DocGroupCard: typeof import('./../components/lqg/DocGroupCard.vue')['default']
+    DocTabs: typeof import('./../components/lqg/DocTabs.vue')['default']
+    DownloadBar: typeof import('./../components/lqg/DownloadBar.vue')['default']
+    DownloadSheet: typeof import('./../components/lqg/DownloadSheet.vue')['default']
     EmbedCard: typeof import('./../components/lqg/EmbedCard.vue')['default']
     EmptyState: typeof import('./../components/lqg/EmptyState.vue')['default']
     EntryGrid: typeof import('./../components/biz/EntryGrid.vue')['default']
@@ -25,6 +30,7 @@ declare module 'vue' {
     MeSectionTitle: typeof import('./../components/biz/MeSectionTitle.vue')['default']
     NoteBar: typeof import('./../components/lqg/NoteBar.vue')['default']
     OcrBar: typeof import('./../components/lqg/OcrBar.vue')['default']
+    PageImageViewer: typeof import('./../components/lqg/PageImageViewer.vue')['default']
     PlaceholderPage: typeof import('./../components/ui/PlaceholderPage.vue')['default']
     SampleCard: typeof import('./../components/lqg/SampleCard.vue')['default']
     SamplePicker: typeof import('./../components/lqg/SamplePicker.vue')['default']
@@ -32,6 +38,7 @@ declare module 'vue' {
     SegButtons: typeof import('./../components/lqg/SegButtons.vue')['default']
     StainButtons: typeof import('./../components/lqg/StainButtons.vue')['default']
     StatusChip: typeof import('./../components/lqg/StatusChip.vue')['default']
+    ThumbStrip: typeof import('./../components/lqg/ThumbStrip.vue')['default']
     UnitGroupPicker: typeof import('./../components/biz/UnitGroupPicker.vue')['default']
     WdMessageBox: typeof import('wot-design-uni/components/wd-message-box/wd-message-box.vue')['default']
     WdPopup: typeof import('wot-design-uni/components/wd-popup/wd-popup.vue')['default']

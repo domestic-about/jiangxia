@@ -1,0 +1,23 @@
+{
+ "hotspot": "H1b",
+ "green": false,
+ "ran_at": "2026-09-23T00:47:15.633Z",
+ "results": [
+  {
+   "name": "H1b:内部人员 mock 登录 H5(9204)",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/"
+  },
+  {
+   "name": "H1b:进入文档页签",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/pages/doc/index"
+  },
+  {
+   "name": "H1b:第一组卡片上有「下载」入口（渲染产物已就绪）",
+   "ok": false,
+   "detail": "0"
+  }
+ ],
+ "observed": {}
+}

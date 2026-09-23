@@ -55,7 +55,7 @@ export default {
 
     previewTitle: 'Preview',
     previewPlaceholder: 'Save the draft, then click "Preview"',
-    previewPlaceholderSub: 'Page images and downloads land in DOC-PUBLISH-001',
+    previewPlaceholderSub: 'Click "Preview" to generate page images; same artifact as the Word / PDF download',
     renderFailed: 'This document failed to render',
     renderNoReason: '(the backend gave no reason)',
     regenerate: 'Regenerate',
@@ -67,8 +67,7 @@ export default {
     saveDraft: 'Save draft',
     preview: 'Preview',
     publish: 'Complete & sync to submitter',
-    footerHint: '"Preview" and "Complete & sync" land in DOC-PUBLISH-001 and are disabled here',
-    notYet: 'lands in DOC-PUBLISH-001',
+    footerHint: '"Preview" only looks; the submitter sees the document after "Complete & sync"',
 
     saved: 'Draft saved',
     loadFailed: 'Failed to load the QC document',

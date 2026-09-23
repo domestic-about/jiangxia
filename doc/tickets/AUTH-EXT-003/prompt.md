@@ -30,20 +30,21 @@ accept:
       bash doc/verify/reseed.sh --yes >/dev/null &&
       for K in "9000001001/sample_qc" "9000001001/organoid_qc" "9000001001/organoid_score" "9000001004/sample_qc"; do bash doc/verify/api.sh --as staff POST "/lqg/doc/${K}/render?audience=external" >/dev/null; done &&
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg GET /lqg/sys/ping >/dev/null && sleep 5 &&
-      python3 doc/verify/db.py --sql "SELECT doc_kind || ':' || render_status FROM t_lqg_doc_file WHERE sample_id=9000001001 AND audience='external' AND file_format='docx' AND del_flag='0'" --col-set "sample_qc:failed,organoid_qc:failed,organoid_score:done" &&
-      bash doc/verify/api.sh --as extB GET '/mp/ext/doc/list?pageSize=100' | jq -e '([.rows[] | "\(.sampleId|tostring):\(.docKind)"] | sort) == ["9000001001:organoid_score","9000001004:sample_qc"] and ([.rows[]|select(.docKind=="organoid_score")|.totalScore]==[85]) and ([.rows[]|keys[]]|unique|index("internalNo")==null)' &&
+      python3 doc/verify/db.py --sql "SELECT doc_kind || ':' || render_status FROM t_lqg_doc_file WHERE sample_id=9000001001 AND audience='external' AND file_format='docx' AND del_flag='0'" --col-set "organoid_qc:done,organoid_score:done,sample_qc:done" &&
+      bash doc/verify/api.sh --as extB GET '/mp/ext/doc/list?pageSize=100' | jq -e '([.rows[] | "\(.sampleId|tostring):\(.docKind)"] | sort) == ["9000001001:organoid_qc","9000001001:organoid_score","9000001001:sample_qc","9000001004:sample_qc"] and ([.rows[]|select(.docKind=="organoid_score")|.totalScore]==[85]) and ([.rows[]|keys[]]|unique|index("internalNo")==null)' &&
       bash doc/verify/api.sh --as extC GET '/mp/ext/doc/list?pageSize=100' | jq -e '.rows==[]' &&
-      bash doc/verify/api.sh --as extB GET '/mp/ext/doc/list?pageSize=100&sampleId=9000001001' | jq -e '[.rows[].docKind]==["organoid_score"]' &&
+      bash doc/verify/api.sh --as extB GET '/mp/ext/doc/list?pageSize=100&sampleId=9000001001' | jq -e '[.rows[].docKind]==["sample_qc","organoid_qc","organoid_score"]' &&
       bash doc/verify/api.sh --as extC GET '/mp/ext/doc/list?pageSize=100&sampleId=9000001001' | jq -e '.rows==[]' &&
       bash doc/verify/api.sh --as extC GET /mp/ext/doc/9000001001/organoid_score/pages | jq -e '.code==404' &&
       bash doc/verify/api.sh --as extA GET /mp/ext/doc/9000001004/organoid_qc/pages | jq -e '.code==404' &&
-      bash doc/verify/api.sh --as extA GET /mp/ext/doc/9000001001/sample_qc/pages | jq -e '.code==404' &&
+      bash doc/verify/api.sh --as extA GET /mp/ext/doc/9000001001/sample_qc/pages | jq -e '.code==200' &&
       URL="$(bash doc/verify/api.sh --as extA GET '/mp/ext/doc/9000001001/organoid_score/download?format=pdf&audience=internal' | jq -r '.data.url')" &&
       printf '%s' "${URL}" | grep -q '/external/' && ! printf '%s' "${URL}" | grep -q '/internal/' &&
       curl -sSf -o /tmp/lqg-ext-score.pdf "${URL}" && pdftotext /tmp/lqg-ext-score.pdf - | tr -d ' \n' | grep -q '类器官质量评分表' &&
-      bash doc/verify/api.sh --as extA GET /mp/ext/sample/9000001001 | jq -e '[.data.docs[].docKind]==["organoid_score"]'
+      bash doc/verify/api.sh --as extA GET /mp/ext/sample/9000001001 | jq -e '[.data.docs[].docKind]==["sample_qc","organoid_qc","organoid_score"]'
     counterfeit: |-
-      清单只按「已完成」过滤、不看外部版渲染成没成 → 会多出 1001 的 sample_qc 与 organoid_qc（seed 里它俩的图片是假地址，外部版渲染必然失败——第 4 段先确认这个病灶真的在），集合红。送检方点进去是一片空白。
+      清单只按「已完成」过滤、不看外部版渲染成没成 → 集合红、送检方点进去一片空白。★ 可控制的病灶：先按第 4 段把三份渲染成 done，再用 psql 把其中一份的外部版置成 failed（UPDATE t_lqg_doc_file SET render_status='failed' WHERE sample_id=… AND doc_kind=… AND audience='external' AND file_format='docx'），断「它仍出现在清单里」为红，最后恢复。
+      （★ 2026-09-22 更正：本行原写「seed 里它俩的图片是假地址，外部版渲染必然失败」——该前提已不成立。按 issue #217 的裁定，docx 阶段个别图取不到是**跳过 + WARN、文档照出 done**，所以三份都是 done。别再用旧前提构造病灶。）
       清单把 1004 的类器官质控表草稿也给了 → 红。
       pages / download 只校验了样本可见、没校验文档状态 → extA 取 1004 草稿拿到 200 红。
       audience 从请求参数里读 → 带 audience=internal 的下载链接里出现 /internal/ 红：外部拿到了带内部编号的那一份。
@@ -55,8 +56,8 @@ accept:
     run: |-
       cmp doc/verify/fixtures/java/ExtChokepointContractTest.java code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/test/java/org/dromara/lqg/ext/ExtChokepointContractTest.java &&
       (cd code/RuoYi-Vue-Plus && mvn -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest=ExtChokepointContractTest -Dsurefire.failIfNoSpecifiedTests=true) &&
-      test -f code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/ExtDocController.java &&
-      ! grep -nE 'publishedBy|errorMsg|contentHash|internalNo' code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/ExtDocVo.java code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/ExtDocPagesVo.java &&
+      test -f code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/controller/ExtDocController.java &&
+      ! grep -nE 'publishedBy|errorMsg|contentHash|internalNo' code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/domain/vo/ExtDocVo.java code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/domain/vo/ExtDocPagesVo.java &&
       bash doc/verify/api.sh --as extA --bizcode GET '/lqg/doc/9000001001/organoid_score/pages?audience=internal' | grep -qE '^403'
     counterfeit: |-
       ExtDocController 为了省事直接返回内部的 DocPagesVo → I2 红。

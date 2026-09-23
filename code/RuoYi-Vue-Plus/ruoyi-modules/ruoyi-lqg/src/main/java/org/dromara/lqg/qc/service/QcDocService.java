@@ -3,6 +3,7 @@ package org.dromara.lqg.qc.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.domain.model.LoginUser;
 import org.dromara.common.core.exception.ServiceException;
@@ -28,6 +29,7 @@ import org.dromara.lqg.qc.domain.vo.QcOrganoidDocVo;
 import org.dromara.lqg.qc.domain.vo.QcSampleDocVo;
 import org.dromara.lqg.qc.domain.vo.QcSampleRefVo;
 import org.dromara.lqg.qc.domain.vo.QcScoreDocVo;
+import org.dromara.lqg.doc.publish.DocPublishService;
 import org.dromara.lqg.qc.mapper.DocAttachmentMapper;
 import org.dromara.lqg.qc.mapper.DocImageMapper;
 import org.dromara.lqg.qc.mapper.QcOrganoidDocMapper;
@@ -40,6 +42,7 @@ import org.dromara.lqg.sample.verify.VerifyTransitions;
 import org.dromara.system.domain.SysOss;
 import org.dromara.system.domain.SysOssExt;
 import org.dromara.system.mapper.SysOssMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -70,11 +73,15 @@ import java.util.Set;
  * <p>★ <b>所有校验在任何写操作之前</b>：样本必须已核验有效、图片位必须属于该文档类型、
  * 每位至多 3 张 —— 被拒时库里不变（accept 3 第 5~7 段）。
  *
- * <p>★ <b>doc_status 本票一个字都不动</b>：新建是 {@code draft}，
- * 「完成并同步 / 撤回」在 DOC-PUBLISH-001（ticket §3 明确不做）。
- * 因此对一份 {@code published} 的文档保存内容，本票里它仍然是 published。
+ * <p>★ <b>{@code doc_status} 的口径（DOC-PUBLISH-001 收口 issue #228）</b>：
+ * 新建是 {@code draft}；「完成并同步 / 撤回」两条显式转移在
+ * {@link DocPublishService}；而<b>任何内容改动</b>（三个 PUT + 图片 / 附件的增删排序）
+ * 都会把一份 {@code published} 的文档打回 {@code draft} 并清掉完成人 / 完成时间
+ * （{@link #afterChange}，FLOW:F-QC-01.step7）。
+ * 这采的是 {@code V202609261300} DDL 注释那一侧（「published 后再保存内容 → 回到 draft」），
+ * 不是 QC-MODEL-001 类注释里「本票一个字都不动」那句 —— 后者只说明那张票的范围。
  *
- * @author QC-MODEL-001
+ * @author QC-MODEL-001 · DOC-PUBLISH-001（内容改动回 draft 的钩子）
  */
 @Slf4j
 @Service
@@ -91,6 +98,21 @@ public class QcDocService {
     private final QcScoreDictionary scoreDictionary;
     private final QcImagePreviewResolver previewResolver;
     private final SampleFieldCipher fieldCipher;
+
+    /**
+     * ★★ <b>发布状态机</b>（DOC-PUBLISH-001）：本类每个写接口保存成功后调
+     * {@link DocPublishService#onContentChanged} —— 已完成的文档一旦内容被改就自动回到草稿
+     * （FLOW:F-QC-01.step7）。
+     *
+     * <p>为什么用「字段 + setter / 字段注入」而不是构造器注入：{@link DocPublishService} 要读三张质控表，
+     * 而本类是写这三张表的人，构造器互相注入会成环。setter 注入把环断开
+     * （Spring 先构造再回填），依赖方向仍是 qc → doc.publish 一条直线。
+     *
+     * @see #afterChange(Long, String)
+     */
+    @Setter
+    @Autowired
+    private DocPublishService docPublishService;
 
     // ══════════════════════════════════════════════════════════════════════
     // 读：GET /lqg/qc/{sampleId}
@@ -173,6 +195,8 @@ public class QcDocService {
                 }
             }
             sampleDocMapper.update(null, patch);
+            // ★★ 内容改了 → 已完成的文档自动回到草稿（FLOW:F-QC-01.step7；ticket §2 的钩子）
+            afterChange(sampleId, QcDocRules.DOC_TYPE_PATH_SAMPLE_QC);
             log.info("保存样本质控表：sampleId={} docId={} operator={}", sampleId, doc.getId(), userId);
         });
     }
@@ -208,6 +232,8 @@ public class QcDocService {
                 patch.set(QcOrganoidDoc::getFeedbackTime, trimToNull(bo.getFeedbackTime()));
             }
             organoidDocMapper.update(null, patch);
+            // ★★ 同上：改类器官质控表的内容 → 这一份回草稿
+            afterChange(sampleId, QcDocRules.DOC_TYPE_PATH_ORGANOID_QC);
             log.info("保存类器官质控表：sampleId={} docId={} operator={}", sampleId, doc.getId(), userId);
         });
     }
@@ -244,6 +270,8 @@ public class QcDocService {
                 .set(QcScoreDoc::getDiameterScore, snapshot.getDiameterScore())
                 .set(QcScoreDoc::getTotalScore, snapshot.getTotalScore());
             scoreDocMapper.update(null, patch);
+            // ★★ 改评分档位 → 已完成的评分表回草稿（accept 1 第 7 段）
+            afterChange(sampleId, QcDocRules.DOC_TYPE_PATH_SCORE);
             log.info("保存评分表：sampleId={} docId={} levels={}/{}/{}/{} scores={}/{}/{}/{} total={} operator={}",
                 sampleId, doc.getId(), bo.getPreCultureLevel(), bo.getCultureDaysLevel(),
                 bo.getOrganoidCountLevel(), bo.getDiameterLevel(), snapshot.getPreCultureScore(),
@@ -290,6 +318,8 @@ public class QcDocService {
             docImageMapper.insert(entity);
             log.info("图片位新增：sampleId={} docType={} docId={} slot={} ossId={} preview={}",
                 sampleId, docType, docId, slot, bo.getOssId(), entity.getPreviewOssId());
+            // ★★ 增删图片也是内容改动（accept 1 最后一段：加一张图 → 回草稿）
+            afterChange(sampleId, docType);
             return entity.getId();
         });
     }
@@ -315,6 +345,7 @@ public class QcDocService {
             // @TableLogic：deleteById 是软删，与 accept 3 断言里的 del_flag='0' 一致
             docImageMapper.deleteById(row.getId());
             log.info("图片位删除：sampleId={} docType={} docId={} imageId={}", sampleId, docType, docId, imageId);
+            afterChange(sampleId, docType);
         });
     }
 
@@ -360,6 +391,8 @@ public class QcDocService {
                 index++;
             }
             log.info("图片位排序：sampleId={} docType={} docId={} slot={} ids={}", sampleId, docType, docId, slot, ids);
+            // 重排也是内容改动（文档里图的顺序变了 → 指纹变 → 已完成的文档回草稿）
+            afterChange(sampleId, docType);
         });
     }
 
@@ -409,6 +442,8 @@ public class QcDocService {
             docAttachmentMapper.insert(entity);
             log.info("附件新增：sampleId={} docType={} docId={} ossId={} fileName={} fileSize={}",
                 sampleId, docType, docId, bo.getOssId(), fileName, entity.getFileSize());
+            // ★★ 附件增删同样算内容改动（ticket §0 口径复述 1 明写「含增删图片、附件」）
+            afterChange(sampleId, docType);
             return entity.getId();
         });
     }
@@ -433,6 +468,7 @@ public class QcDocService {
             }
             docAttachmentMapper.deleteById(row.getId());
             log.info("附件删除：sampleId={} docType={} docId={} attachmentId={}", sampleId, docType, docId, attachmentId);
+            afterChange(sampleId, docType);
         });
     }
 
@@ -718,6 +754,27 @@ public class QcDocService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * ★★ 内容写成功后的统一收口：文档若已完成（published）→ 自动回到草稿（清完成人 / 完成时间）。
+     *
+     * <p><b>只读不改</b>：文档本来就是草稿时 {@link DocPublishService#onContentChanged} 什么都不做，
+     * 所以「第一次打开质控页建三份空草稿」这类读路径不会被误算成内容改动。
+     *
+     * <p><b>为什么放在 service 而不是 controller</b>（ticket §2 原话「在 qc 包的 service 里接这个钩子，
+     * 别靠 controller 记得调」）：本类的每个写方法自己收口 —— 将来多一个写入口（或别的控制器
+     * 复用本类的方法）也不会漏。controller 层的 {@code DocPublishController} 只管显式的
+     * 「完成并同步 / 撤回」。
+     */
+    private void afterChange(Long sampleId, String docType) {
+        if (docPublishService == null) {
+            // 单测里手工 new 本类时没有 Spring 上下文：状态机缺席不该让写接口挂掉
+            log.warn("DocPublishService 未注入（单测？），跳过内容改动后的状态收口：sampleId={} docType={}",
+                sampleId, docType);
+            return;
+        }
+        docPublishService.onContentChanged(sampleId, docType);
     }
 
     private static String trimToNull(String value) {

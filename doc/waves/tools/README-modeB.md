@@ -93,6 +93,11 @@ bash doc/waves/tools/qa-up.sh --down --backend-port 8092 --web-port 8093 --mp-po
 - **只有一级**：分片名 `L2` 或 `L3`，`levels` 只写自己那级，**不写 `verdict`**，`auditor: "independent"`。
 - **禁读**：`doc/waves/reports/**`（实现方报告）与**同伴分片的 audit**。
 - **绝对不要把 PNG 读进上下文**（截图只落盘、报告里写路径；历史上多任 agent 因此整轮报废）。
+- ★ **`code/miniapp/src/pages.json` 的还原规则要分情况**（它是 uni-pages 生成物、且 merge 是 **old 优先**，tabBar 顺序由上次生成结果决定）：
+  · **改了 tabBar / 页面注册的票**：**不要** `git checkout` 它——那会把 tabBar 退回旧页面（实测：还原后 tabBar 从 `[index,doc,me]` 退回 `[index,me,doc]`，含旧页 `pages/docs/index`，相关 accept 必红）。这类票**有意保留**重生成的版本，并在报告里写明「不是漏还原」。
+  · **没改 tabBar 的票**：仍照旧 `git checkout -- code/miniapp/src/pages.json` 还原 dev server 的噪音改写。
+  · **QA / 后续票要重生成时**：先 `rm code/miniapp/src/pages.json` 再 build，**不要**用 `git checkout`。
+  （见 issue：DOC-MP-001 的 pages.json 顺序陷阱。）
 - **Playwright 的 require 锚点用 `code/miniapp/package.json`**（`createRequire(path.join(WS,'code/miniapp/package.json'))` 再 `require('playwright')`）。
   用 `code/plus-ui/package.json` 作锚点会 `MODULE_NOT_FOUND`（plus-ui 的 package.json 里没声明 playwright 依赖；
   QC-WEB-001 实测踩到并改用小程序那份，见 issue #228）。浏览器已在 `~/Library/Caches/ms-playwright`，**别下载**。

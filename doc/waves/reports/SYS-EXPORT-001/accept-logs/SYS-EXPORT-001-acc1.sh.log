@@ -1,0 +1,19 @@
+# SYS-EXPORT-001 accept[1] 小程序导出的四个文件与甲方模板原件逐字对表头、行数与库内独立计数一致；带筛选只出筛选结果；外部角色 403、未知工作表被拒
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 14 列与模板逐字一致；数据 8 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 7 列与模板逐字一致；数据 1 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 11 列与模板逐字一致；数据 7 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 14 列与模板逐字一致；数据 2 行

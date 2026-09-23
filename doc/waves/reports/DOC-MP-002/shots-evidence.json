@@ -1,0 +1,129 @@
+{
+  "list": {
+    "groups": [
+      "T-hli01",
+      "T-hco04"
+    ],
+    "rows": [
+      "样本质控表",
+      "类器官质控表",
+      "类器官质量评分表",
+      "类器官质量评分表"
+    ],
+    "downloadBtns": 4,
+    "mergePreview": 1,
+    "mergeDownload": 1,
+    "sheet": {
+      "title": "类器官质量评分表",
+      "closeText": "关闭",
+      "formatChips": [
+        "Word",
+        "PDF"
+      ],
+      "buttons": [
+        "打开",
+        "发送到微信"
+      ],
+      "sheetHead": true
+    }
+  },
+  "internalPreview": {
+    "tabs": [
+      "样本质控表",
+      "类器官质控表",
+      "类器官质量评分表",
+      "合并"
+    ],
+    "activeTab": "样本质控表",
+    "pageImgs": [
+      "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/47ef44387360-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133938Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=2bccdf0d37648d3eaeb2931fa3b2d183ac4ff407abc2f326638079fa553571cf",
+      "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/47ef44387360-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133938Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=3bc78347f5358abca07dc5f92a48a69450a3ec79862ab401d45f655c7de19b1a"
+    ],
+    "thumbImgs": [
+      "http://127.0.0.1:9000/ruoyi/2026/09/22/5b7877935c17419d9b7bd9927c12e9bf.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133938Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=cebf842c9955515d6b68acf95216016999fb6d3de5c9d7c447254134ec6848c4",
+      "http://127.0.0.1:9000/ruoyi/2026/09/22/14ea59df16144982bfd59dd2a4ef4e9a.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133938Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=a566d89bdc45513e9a52c7e4e13b1d6b3b5d0bc545895e2eda2d1cd432f5a965"
+    ],
+    "thumbSectionTitle": "文档中的图片 点开看原图",
+    "attachments": [
+      "阅片原图.png"
+    ],
+    "attSectionTitle": "附件",
+    "formatChips": [
+      "Word",
+      "PDF"
+    ],
+    "barButtons": [
+      "打开",
+      "发送到微信"
+    ],
+    "barNote": "小程序不能直接存进手机文件夹：「打开」后可用右上角菜单保存或用其他应用打开，也可以「发送到微信」。",
+    "stateText": "",
+    "hasRetry": false,
+    "zoom": {
+      "thumbShown": "http://127.0.0.1:9000/ruoyi/2026/09/22/5b7877935c17419d9b7bd9927c12e9bf.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133938Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=cebf842c9955515d6b68acf95216016999fb6d3de5c9d7c447254134ec6848c4",
+      "originalOpened": "http://127.0.0.1:9000/ruoyi/2026/09/22/918d27d63afa4f60a3755104dcba12c9.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133938Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=5362fc0e23daba04bfa4f0a00303b1fd687b0c38a8a06c5e1e791ef03b823074",
+      "differs": true,
+      "pageOpened": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/47ef44387360-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133938Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=2bccdf0d37648d3eaeb2931fa3b2d183ac4ff407abc2f326638079fa553571cf",
+      "pageMatchesFirstPage": true
+    },
+    "mergedTab": {
+      "tabs": [
+        "样本质控表",
+        "类器官质控表",
+        "类器官质量评分表",
+        "合并"
+      ],
+      "activeTab": "合并",
+      "pageImgs": 5
+    },
+    "downloadCalls": {
+      "afterOpen": [
+        "/mp/int/doc/list?sampleId=9000001001&pageSize=100",
+        "/mp/int/doc/9000001001/merged/download?format=pdf"
+      ],
+      "afterShare": [
+        "/mp/int/doc/list?sampleId=9000001001&pageSize=100",
+        "/mp/int/doc/9000001001/merged/download?format=pdf",
+        "/mp/int/doc/list?sampleId=9000001001&pageSize=100",
+        "/mp/int/doc/9000001001/merged/download?format=pdf"
+      ],
+      "toastText": "「发送到微信」要在微信里用",
+      "barHint": "正在准备下载…"
+    }
+  },
+  "externalPreview": {
+    "tabs": [
+      "样本质控表",
+      "类器官质控表",
+      "类器官质量评分表",
+      "合并"
+    ],
+    "activeTab": "样本质控表",
+    "pageImgs": [
+      "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/585e883b776a-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133947Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=9650cc984fa61e193e50989c19f6fbf7018267a6cde3b2f46b7cfeb73d354b73",
+      "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/585e883b776a-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T133947Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=62c7d58fb15e6fb88dbaffd0dfe930a6537d1c005cf1463eb78358fe2defac89"
+    ],
+    "thumbImgs": [],
+    "thumbSectionTitle": "",
+    "attachments": [],
+    "attSectionTitle": "",
+    "formatChips": [
+      "Word",
+      "PDF"
+    ],
+    "barButtons": [
+      "打开",
+      "发送到微信"
+    ],
+    "barNote": "小程序不能直接存进手机文件夹：「打开」后可用右上角菜单保存或用其他应用打开，也可以「发送到微信」。",
+    "stateText": "",
+    "hasRetry": false,
+    "bodyHasInternalNo": false
+  },
+  "mergedGenerating": {
+    "generatingText": "文档生成中",
+    "generatingHasRetry": true,
+    "recovered": true,
+    "recoveredPageImgs": 5
+  }
+}

@@ -77,34 +77,17 @@
         <div class="lqg-qc-editor__right">
           <div class="lqg-qc-editor__pane-title">{{ t('lqg.qc.editor.previewTitle') }}</div>
 
-          <!-- failed 时看得见原因、点「重新生成」重试（FLOW:F-DOC-01.step6；
-               页面图 / 下载 / 完成并同步是 DOC-PUBLISH-001） -->
-          <el-alert v-if="renderState.status === 'failed'" type="error" :closable="false" show-icon :title="t('lqg.qc.editor.renderFailed')">
-            <div class="lqg-qc-editor__reason">{{ renderState.errorMsg || t('lqg.qc.editor.renderNoReason') }}</div>
-            <el-button type="primary" size="small" :loading="rendering" class="mt-2" @click="handleRegenerate">
-              {{ t('lqg.qc.editor.regenerate') }}
-            </el-button>
-          </el-alert>
-          <el-alert
-            v-else-if="renderState.status === 'pending'"
-            type="warning"
-            :closable="false"
-            show-icon
-            :title="t('lqg.qc.editor.renderPending')"
+          <!-- ★ 预览面板（UI:admin.doc.preview / FLOW:F-QC-01.step5，DOC-PUBLISH-001）：
+               内外部版切换、逐页页面图、四个下载入口、渲染中 / 失败 + 重新生成。
+               ★ **单个实例**（不是 v-for 里每页签一个）：`v-for` 里的 ref 会变成数组，
+                 `previewPaneRef.value?.render()` 就调不到了（点「预览」没反应的那种坏法）。 -->
+          <PreviewPane
+            ref="previewPaneRef"
+            :sample-id="sampleId"
+            :doc-kind="currentTab.docKind"
+            :doc-status="docStatusOf(currentTab)"
+            @busy="(value: boolean) => (previewing = value)"
           />
-          <el-alert
-            v-else-if="renderState.status === 'done'"
-            type="success"
-            :closable="false"
-            show-icon
-            :title="t('lqg.qc.editor.renderDone', { pages: renderState.pages })"
-          />
-
-          <div class="lqg-qc-editor__placeholder">
-            <el-icon class="lqg-qc-editor__placeholder-icon"><Document /></el-icon>
-            <p class="lqg-qc-editor__placeholder-text">{{ t('lqg.qc.editor.previewPlaceholder') }}</p>
-            <p class="lqg-qc-editor__placeholder-sub">{{ t('lqg.qc.editor.previewPlaceholderSub') }}</p>
-          </div>
         </div>
       </div>
 
@@ -113,17 +96,19 @@
         <el-button type="primary" :loading="saving" :disabled="!bundle || !canEdit" @click="handleSaveDraft">
           {{ t('lqg.qc.editor.saveDraft') }}
         </el-button>
-        <el-tooltip :content="t('lqg.qc.editor.notYet')" placement="top">
-          <span
-            ><el-button disabled>{{ t('lqg.qc.editor.preview') }}</el-button></span
-          >
-        </el-tooltip>
-        <el-tooltip :content="t('lqg.qc.editor.notYet')" placement="top">
-          <span
-            ><el-button disabled>{{ t('lqg.qc.editor.publish') }}</el-button></span
-          >
-        </el-tooltip>
-        <span class="lqg-qc-editor__footer-hint">{{ t('lqg.qc.editor.footerHint') }}</span>
+        <!-- ★ 两个按钮在 DOC-PUBLISH-001 点亮（QC-WEB-001 里是写死置灰的占位） -->
+        <el-button :loading="previewing" :disabled="!bundle" @click="handlePreview">
+          {{ t('lqg.qc.editor.preview') }}
+        </el-button>
+        <el-button
+          :type="currentPublished ? 'default' : 'success'"
+          :loading="publishing"
+          :disabled="!bundle || !canEdit || currentTabDirty"
+          @click="handlePublish"
+        >
+          {{ currentPublished ? t('lqg.qc.preview.unpublish') : t('lqg.qc.editor.publish') }}
+        </el-button>
+        <span class="lqg-qc-editor__footer-hint">{{ footerHint }}</span>
       </div>
     </el-card>
   </div>
@@ -131,10 +116,11 @@
 
 <script setup name="LqgQcEditor" lang="ts">
 import { getQcBundle, type QcDocBundleVO, type QcDocKind } from '@/api/lqg/qc';
-import { getDocPages, renderDoc } from '@/api/lqg/doc';
+import { publishQcDoc, unpublishQcDoc } from '@/api/lqg/doc';
 import SampleQcTab from './SampleQcTab.vue';
 import OrganoidQcTab from './OrganoidQcTab.vue';
 import ScoreTab from './ScoreTab.vue';
+import PreviewPane from '../components/PreviewPane.vue';
 import { useI18n } from 'vue-i18n';
 
 // ============================================================================
@@ -148,8 +134,10 @@ import { useI18n } from 'vue-i18n';
 //   内部编号）从样本主档带出，**只读**——不进表单（accept 2 第 4 段断这个）。
 // ★ 三份文档都能编辑了（QC-WEB-002）：脏标记**按页签各记一份**，页头/路由离开的拦截
 //   用「任一页签脏」。保存按钮只保存当前页签（各页签的 save() 自己发各自的 PUT）。
-// ★ 右栏预览面板本张仍是占位（页面图 / 下载 / 完成并同步 = DOC-PUBLISH-001）；
-//   只有「渲染失败 → 重新生成」这一条先接上（FLOW:F-DOC-01.step6）。
+// ★ 右栏是**真的预览面板**（PreviewPane.vue，DOC-PUBLISH-001）：点「预览」触发内部版渲染 →
+//   轮询页面图 → 逐页显示；内外部版切换、四个下载入口、渲染中 / 失败 +「重新生成」。
+// ★ 页脚「预览」「完成并同步」已点亮；已完成状态下按钮变「撤回」，
+//   页脚提示「已同步给送检方 · 修改后需重新同步」（FLOW:F-QC-01.step6 / step7）。
 // ============================================================================
 
 type TabName = 'sample-qc' | 'organoid-qc' | 'score';
@@ -169,13 +157,15 @@ const sampleId = ref<string>((route.query.sampleId as string) || '');
 const activeTab = ref<TabName>('sample-qc');
 const loading = ref(false);
 const saving = ref(false);
-const rendering = ref(false);
+const previewing = ref(false);
+const publishing = ref(false);
 const dirtyTabs = reactive<Record<TabName, boolean>>({ 'sample-qc': false, 'organoid-qc': false, score: false });
 /** 任一页签有未保存改动 → 离开页面时拦一次 */
 const dirty = computed(() => Object.values(dirtyTabs).some(Boolean));
 const loadError = ref('');
 const bundle = ref<QcDocBundleVO | null>(null);
-const renderState = ref<{ status: string; errorMsg?: string | null; pages: number }>({ status: 'none', pages: 0 });
+/** 右栏预览面板（页面图 / 下载 / 重新生成都在它里面，见 components/PreviewPane.vue） */
+const previewPaneRef = ref<InstanceType<typeof PreviewPane>>();
 const sampleTabRef = ref<InstanceType<typeof SampleQcTab>>();
 const organoidTabRef = ref<InstanceType<typeof OrganoidQcTab>>();
 const scoreTabRef = ref<InstanceType<typeof ScoreTab>>();
@@ -228,49 +218,87 @@ const reload = async () => {
   } finally {
     loading.value = false;
   }
-  await loadRenderState();
 };
 
-/** 渲染状态（只有 failed 会在右栏亮出来；从没渲染过时后端 400 → 当成「还没生成」） */
-const loadRenderState = async () => {
+/** 当前页签的这份文档此刻是不是「已完成」（页脚按钮 / 提示按它变） */
+const currentPublished = computed(() => bundle.value !== null && docStatusOf(currentTab.value) === 'published');
+
+/** 当前页签有没有没保存的改动（有 → 「完成并同步」先别点，免得同步了半份改动） */
+const currentTabDirty = computed(() => dirtyTabs[activeTab.value]);
+
+/** 页脚提示：已完成 → 「已同步给送检方 · 修改后需重新同步」；否则还是原来的说明 */
+const footerHint = computed(() =>
+  currentPublished.value ? t('lqg.qc.preview.syncedFooter') : t('lqg.qc.editor.footerHint')
+);
+
+/**
+ * 「预览」= 让右栏面板触发一次**当前页签**的内部版渲染并逐页显示
+ * （FLOW:F-QC-01.step5：点预览 → 触发渲染 → 显示页面图，与将要下载的 Word / PDF 同源）。
+ *
+ * ★ 有未保存的改动时先提醒保存：预览是拿**库里**的内容渲染的，
+ *   不保存就预览会看到旧内容（页面上改了字、预览图没改 —— 用户会以为渲染坏了）。
+ */
+const handlePreview = async () => {
+  if (currentTabDirty.value) {
+    proxy?.$modal.msgWarning(t('lqg.qc.preview.saveFirst'));
+    return;
+  }
+  // 渲染是异步的：render() 内部会轮询到 done / failed，loading 由面板的 @busy 驱动
+  await previewPaneRef.value?.render();
+};
+
+/**
+ * 「完成并同步」/「撤回」（POST …/publish · …/unpublish，DOC-PUBLISH-001）。
+ *
+ * 已完成 → 这个按钮是「撤回」；草稿 → 是「完成并同步」（后端异步触发内外部版 + 合并件渲染）。
+ * 两条转移都是**状态机**的合法转移，非法方向后端一律 400（这里也先按当前状态分流）。
+ */
+const handlePublish = async () => {
   if (!sampleId.value) return;
+  const docType = docTypeOf(currentTab.value);
+  const published = currentPublished.value;
   try {
-    const res = await getDocPages(sampleId.value, currentTab.value.docKind, 'internal');
-    renderState.value = {
-      status: res.data.status || 'none',
-      errorMsg: res.data.errorMsg,
-      pages: (res.data.pages || []).length
-    };
+    await ElMessageBox.confirm(
+      published ? t('lqg.qc.preview.unpublishConfirm') : t('lqg.qc.preview.publishConfirm'),
+      published ? t('lqg.qc.preview.unpublish') : t('lqg.qc.editor.publish'),
+      { confirmButtonText: published ? t('lqg.qc.preview.unpublish') : t('lqg.qc.editor.publish'), type: 'warning' }
+    );
+  } catch {
+    return;
+  }
+  publishing.value = true;
+  try {
+    if (published) {
+      await unpublishQcDoc(sampleId.value, docType);
+      proxy?.$modal.msgSuccess(t('lqg.qc.preview.unpublishDone'));
+    } else {
+      await publishQcDoc(sampleId.value, docType);
+      proxy?.$modal.msgSuccess(t('lqg.qc.preview.publishDone'));
+    }
+    await reload();
+    // 完成并同步是异步渲染：面板自己轮询，不用等它
+    previewPaneRef.value?.loadPages();
   } catch (e: any) {
-    renderState.value = { status: 'none', errorMsg: e?.message };
+    proxy?.$modal.msgError(
+      (published ? t('lqg.qc.preview.unpublishFailed') : t('lqg.qc.preview.publishFailed')) + (e?.message || String(e))
+    );
+  } finally {
+    publishing.value = false;
   }
 };
 
-/** 「重新生成」= 再调一次 render（幂等：指纹没变直接返回 done；失败拿回新的 errorMsg） */
-const handleRegenerate = async () => {
-  rendering.value = true;
-  try {
-    const res = await renderDoc(sampleId.value, currentTab.value.docKind, 'internal');
-    if (res.data.status === 'done') {
-      proxy?.$modal.msgSuccess(t('lqg.qc.editor.regenerated'));
-    } else if (res.data.status === 'failed') {
-      proxy?.$modal.msgError(t('lqg.qc.editor.renderStillFailed') + (res.data.errorMsg || t('lqg.qc.editor.renderNoReason')));
-    }
-  } catch (e: any) {
-    proxy?.$modal.msgError(e?.message || String(e));
-  } finally {
-    rendering.value = false;
-    await loadRenderState();
-  }
-};
+/** 页签名（连字符）→ docType（连字符，与后端路径段一致） */
+const docTypeOf = (tab: (typeof TABS)[number]): 'sample-qc' | 'organoid-qc' | 'score' => tab.name;
 
 /** 页签各自的脏标记（子组件 `@dirty` 上报；保存成功后子组件自己置 false） */
 const setTabDirty = (tab: TabName, value: boolean) => {
   dirtyTabs[tab] = value;
 };
 
+/** 换页签：右栏的面板按新的 docKind 重新读一次状态（页面图不自动重渲染，等用户点「预览」） */
 const handleTabChange = async () => {
-  await loadRenderState();
+  await nextTick();
+  previewPaneRef.value?.loadPages();
 };
 
 /** 保存草稿：只保存**当前页签**（各页签的 save() 自己发各自的 PUT，见 api/lqg/qc/index.ts） */

@@ -1,0 +1,32 @@
+# DOC-MP-001 · 两条 accept 的 run 逐段重放（票面逐字，唯一差别 = NF1 去掉 --fresh-module）
+# env: LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+########## ACCEPT 1（STATE）逐段 ##########
+$ grep -q 'doc/verify/fixtures/doc-group-cases.json' src/pages/doc/group.fixture.spec.ts
+  -> 命中（exit 0）
+$ ! grep -nE '\.(skip|todo|only)\(' src/pages/doc/group.fixture.spec.ts
+  -> 无 skip/todo/only（exit 0）
+$ pnpm vitest run src/pages/doc/group.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-docgroup.json
+$ jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-docgroup.json
+true
+{"numPassedTests":7,"numFailedTests":0}
+$ node -e "...c.length!==4||!c.some(x=>x.rows.some(r=>r.docKind==='merged'))..."
+  -> fixture 4 例且有 merged 病灶例（exit 0）
+
+########## ACCEPT 2（API）逐段 ##########
+$ (cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin && jq -e '.tabBar.list[1].pagePath=="pages/doc/index"' dist/build/mp-weixin/app.json && grep -q '合并下载' src/components/lqg/DocGroupCard.vue && grep -q '合并预览' src/components/lqg/DocGroupCard.vue && grep -q 'DOC_TAB_NAME' src/config/app.ts && grep -q '@/components/lqg/DocGroupCard.vue' src/pages/doc/index.vue && ! grep -n 'internalNo' src/pages/doc/index.vue src/components/lqg/DocGroupCard.vue)
+true
+  -> true（整段 exit 0）
+  app.json tabBar[1] = {"pagePath":"pages/doc/index","text":"文档","iconPath":"static/tabbar/docs.png","selectedIconPath":"static/tabbar/docsHL.png"}
+
+$ bash doc/verify/reseed.sh --yes
+  -> 快照已回
+$ bash doc/verify/api.sh --as staff POST '/lqg/doc/9000001006/organoid_score/render?audience=internal'
+{"code":200,"msg":"操作成功","data":{"sampleId":9000001006,"docKind":"organoid_score","audience":"internal","status":"done","ossId":"2102386187661504514","contentHash":"e2a380fdcf8966936fd3fdc7608e9c6623e6bbba3e1563b6528dbefa013f3586","templateVersion":"2","errorMsg":null,"renderedTime":"2026-09-22 21:15:02","cached":false}}
+$ bash doc/verify/api.sh --as staff GET '/mp/int/doc/list?pageSize=100' | jq -e '[.rows[]|select((.sampleId|tostring)=="9000001006")|[.title,.subtitle,.docKind,.totalScore]]==[["T-hco04","B 大学","organoid_score",18]]'
+true
+  实际行（同一个 select 的原样输出）：
+[["T-hco04","B 大学","organoid_score",18]]
+$ bash doc/verify/api.sh --as extD --bizcode GET '/mp/int/doc/list' | grep -qE '^403'
+403	没有访问权限，请联系管理员授权
+  -> extD 403（整段 exit 0）

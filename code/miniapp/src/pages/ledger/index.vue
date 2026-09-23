@@ -10,6 +10,9 @@ import LoadingState from '@/components/lqg/LoadingState.vue'
 import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
+import { downloadToTemp, openFile, shareFile } from '@/utils/fileHandoff'
+import { openDocumentType } from '@/pages/doc/download'
+import { authHeader, exportFileName, exportUrl, isExportSheet } from './export'
 import type { LedgerFilterKey, LedgerFilterSpec, LedgerSheet, LedgerTableRow } from './sheets'
 import { columnsOf, ledgerTableWidth, sheetOf, sheetsFor, toTableRows } from './sheets'
 
@@ -159,9 +162,78 @@ function onRowTap(row: LedgerTableRow) {
   goPage(sheet.value.target(raw))
 }
 
-/** 「导出 Excel」：本张置灰，SYS-EXPORT-001 点亮（按当前筛选导出） */
-function exportNotYet() {
-  uni.showToast({ title: '导出在后续版本开放', icon: 'none' })
+// ── ④ 底部「导出 Excel」（SYS-EXPORT-001 / REQ-SYS-017 / FLOW:F-SAMPLE-02.step7）──────
+//
+// 三步（UI:mp.ledger ④）：按当前筛选导出 → 生成中提示 → 弹出「打开 / 发送到微信」。
+// ★ 「临时文件 → 打开 / 发送到微信」是**公共段**（`utils/fileHandoff.ts`），与文档下载同一份；
+//   本页与 `DownloadBar.vue` 都不自己写平台调用。
+// ★ 地址里的筛选参数与表格页当前筛选逐字一致（`export.ts#exportUrl`，空值不带）——
+//   「用户筛了什么就导出什么」；不筛就是全部（不带任何查询串）。
+
+const exporting = ref(false)
+
+/** 把「导出 / 打开 / 发送到微信」这一串的失败统一成一句人话（不显示后端的 msg） */
+function exportFailed() {
+  uni.showToast({ title: '导出失败，请稍后再试', icon: 'none' })
+}
+
+/**
+ * 「导出 Excel」：下载当前筛选的 xlsx，再让用户选「打开 / 发送到微信」。
+ *
+ * ★ 下载**必须带鉴权头**（`authHeader()`：Authorization + clientid）—— 导出是**后端域名上的
+ *   鉴权端点**（`/mp/int/export/{sheet}`），不像文档下载那样是 OSS 预签名直链。
+ *   ★ 「要不要头」在调用点**显式声明**（`requireAuth: true`）：公共段 `downloadToTemp` 不再
+ *     把「必须带 Authorization」当成所有调用方的前提（D7 返工单 r1-S1）。
+ */
+async function exportExcel() {
+  if (exporting.value || !isExportSheet(sheet.value.key)) {
+    return
+  }
+  exporting.value = true
+  uni.showLoading({ title: '正在导出…', mask: true })
+  try {
+    const path = await downloadToTemp(exportUrl(sheet.value.key, filters.value), {
+      header: authHeader(),
+      requireAuth: true,
+    })
+    uni.hideLoading()
+    exporting.value = false
+    if (!path) {
+      exportFailed()
+      return
+    }
+    await askHandoff(path, exportFileName(sheet.value.key))
+  }
+  catch {
+    uni.hideLoading()
+    exporting.value = false
+    exportFailed()
+  }
+}
+
+/** 生成中提示之后的那一次选择：打开（微信查看器，右上角可存 / 转发）或发送到微信 */
+function askHandoff(path: string, fileName: string) {
+  return new Promise<void>((resolve) => {
+    uni.showActionSheet({
+      itemList: ['打开', '发送到微信'],
+      success: async (res) => {
+        try {
+          if (res.tapIndex === 0) {
+            await openFile(path, openDocumentType(fileName))
+          }
+          else {
+            await shareFile(path, fileName)
+          }
+        }
+        catch {
+          exportFailed()
+        }
+        resolve()
+      },
+      // 用户点空白关掉选择器：不是失败，什么都不做
+      fail: () => resolve(),
+    })
+  })
 }
 
 onLoad((options) => {
@@ -248,10 +320,11 @@ onShow(start)
 
     <view class="lqg-bar-spacer" />
 
-    <!-- ④ 底部只有「导出 Excel」：本张置灰（SYS-EXPORT-001 点亮） -->
+    <!-- ④ 底部只有「导出 Excel」：按当前筛选导出，导出后选「打开 / 发送到微信」
+         （SYS-EXPORT-001 点亮；页底小字仍是 CR-20260918-07 的新口径，没有「修改」二字） -->
     <view class="lqg-bar ledger-page__bar">
-      <button class="ledger-page__export" disabled @click="exportNotYet">
-        导出 Excel
+      <button class="ledger-page__export" :disabled="exporting" @click="exportExcel">
+        {{ exporting ? '正在导出…' : '导出 Excel' }}
       </button>
       <text class="ledger-page__note">{{ INTERNAL_ADMIN_NOTE }}</text>
     </view>

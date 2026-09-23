@@ -1,0 +1,4 @@
+# AUTH-EXT-003 accept[2] 四条结构性不变量在加了文档接口之后仍然成立；新增的 VO 不带内部专用字段
+# 归一化 NF2
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+

@@ -2,16 +2,16 @@
  "skill": "zhixing",
  "status": "needs_human",
  "task": {
-  "current": "D7",
+  "current": "D8",
   "status": "pending",
   "qa_rounds": 0,
-  "progress": "ticket 31/43 done, 任务 6/8 通过 QA 门",
+  "progress": "ticket 38/44 done, 任务 7/8 通过 QA 门",
   "branch_model": "integration 集成分支 + 每任务一条 task/D<N>；不 push、不合 main（push 与部署留给 Kevin）"
  },
  "tickets": {
   "AUTH-EXT-001": "done",
   "AUTH-EXT-002": "done",
-  "AUTH-EXT-003": "pending",
+  "AUTH-EXT-003": "done",
   "AUTH-GROUP-001": "done",
   "AUTH-LOGIN-001": "done",
   "AUTH-STAFF-001": "done",
@@ -20,11 +20,11 @@
   "CRYO-MP-001": "done",
   "CRYO-REMIND-001": "done",
   "CRYO-WEB-001": "done",
-  "DOC-MP-001": "pending",
-  "DOC-MP-002": "pending",
+  "DOC-MP-001": "done",
+  "DOC-MP-002": "done",
   "DOC-PDF-001": "done",
-  "DOC-PROOF-001": "pending",
-  "DOC-PUBLISH-001": "pending",
+  "DOC-PROOF-001": "escalated",
+  "DOC-PUBLISH-001": "done",
   "DOC-RENDER-001": "done",
   "EMBED-MODEL-001": "done",
   "EMBED-MP-001": "done",
@@ -42,10 +42,11 @@
   "SAMPLE-MP-002": "done",
   "SAMPLE-VERIFY-001": "done",
   "SAMPLE-WEB-001": "done",
+  "SYS-ACCEPT-001": "done",
   "SYS-BACKUP-001": "pending",
   "SYS-BASE-001": "done",
-  "SYS-EXPORT-001": "pending",
-  "SYS-HOME-001": "pending",
+  "SYS-EXPORT-001": "done",
+  "SYS-HOME-001": "done",
   "SYS-MANUAL-001": "pending",
   "SYS-MP-001": "done",
   "SYS-PROD-001": "pending",
@@ -58,29 +59,33 @@
   "L1": "pass",
   "L2": "pass",
   "L3": "pass",
-  "note": "DD1,D2,D3,D4,D5,D6 的 QA 门 已通过"
+  "note": "DD1,D2,D3,D4,D5,D6,D7 的 QA 门 已通过"
  },
  "exception": null,
  "open_issues": {
-  "total": 246,
+  "total": 307,
   "by_severity": {
-   "S2": 92,
-   "S3": 144,
-   "S1": 6,
+   "S2": 120,
+   "S3": 174,
+   "S1": 9,
    "S0": 4
   },
   "escalated_tickets": [
+   "DOC-PROOF-001",
    "OCR-SPIKE-001"
   ],
   "s0_s1_unresolved": [
-   "OCR-SPIKE-001 被挂起（escalated）"
+   "OCR-SPIKE-001 被挂起（escalated）",
+   "DOC-PROOF-001 被挂起（escalated）",
+   "★ S1：小程序文档下载把 API 鉴权头带到了 OSS 预签名直链上 → MinIO 400 多重认证 → H5 单份/合并下载 0/4 全失败",
+   "★ S1：外部账号（小程序 token）可读 /lqg/home/recent —— 跨单位送检单号+单位名+核验状态；/todo 五数亦可读（升格 #270）"
   ],
   "note": "S0/S1 会在 qa_gate 的 pending_issues 里被拦；S2/S3 推到 all_done 一起清（载体是 doc/waves/state.json 的 open_issues，勿另建台账）"
  },
- "summary": "ticket 31/43 done；已通过 QA 门的任务：D1,D2,D3,D4,D5,D6。当前 D7（pending，QA 第 0 轮）。未决台账 246 条（S0/S1 1 条）。",
+ "summary": "ticket 38/44 done；已通过 QA 门的任务：D1,D2,D3,D4,D5,D6,D7。当前 D8（pending，QA 第 0 轮）。未决台账 307 条（S0/S1 4 条）。",
  "needs_human": {
   "route": "kevin",
-  "why": "zhixing 停在等人：escalated 票 OCR-SPIKE-001",
+  "why": "zhixing 停在等人：escalated 票 DOC-PROOF-001,OCR-SPIKE-001",
   "what": "① 设计稿 v3（14 张图）与确认单是否发甲方：这一版含 9-18 的 5 条改动；② 图廊链接要不要继续给甲方（已清内部话术，但它仍是内部视觉基准，每次改都会即时对外可见）；③ 计费：CR-20260918-07 估约 1.3 人日，加上 CR-04 的 2.5-3、CR-05 的 1.5，累计约 5.3-5.8 人日，算不算二次开发（合同第六条第 5 款）；④ 新开的 OQ-17：中心内部人员之间能否互改对方录的记录，现按不分级做，已写进确认单第 5 条请甲方答；⑤ 外部版质控文档里的内部编号仍留空（开关只作用于页面），已写进确认单 05，甲方若要一并放开需另记变更；⑥ 过目 8 份 proposed ADR（0004 本次更新了 decision）"
  },
  "known_gaps": [

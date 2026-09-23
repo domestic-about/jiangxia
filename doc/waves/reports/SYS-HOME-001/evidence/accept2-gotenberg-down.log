@@ -1,0 +1,8 @@
+# SYS-HOME-001 accept[2] 前端构建是本次产物；首页五张卡片接的是接口而不是写死的数；为 0 不隐藏；菜单角标与卡片同一个来源（含石蜡包埋）
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

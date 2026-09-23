@@ -1,0 +1,32 @@
+# 为什么 src/pages.json **不能**按任务书收尾要求 git checkout 还原 —— 实测
+
+## 机理（@uni-helper/vite-plugin-uni-pages@0.3.19 的 dist/index.mjs）
+  genratePagesJSON() 读盘上**已有**的 src/pages.json，把新扫到的页面与它 merge：
+    pageJson.pages   = mergePlatformItems(oldPages, platform, this.pageMetaData, 'path')
+    pageJson.tabBar  = { ...others, list: mergePlatformItems(oldTabBar.list, platform, list, 'pagePath') }
+  mergePlatformItems 是 **old 优先**：tmpMap 按 old 的插入顺序建，new 里多出来的才 append。
+  ⇒ 页顺序与 tabBar 顺序由**盘上那份 pages.json 的历史顺序**决定，不是由 pages.config.ts 决定。
+
+## 两个方向都实跑过（cwd=code/miniapp，命令 = accept 2 的那一段）
+
+### A) 保留本次 build 重新生成的干净 pages.json（doc 在 me 之前）—— 期望顺序成立
+  $ jq -c '[.tabBar.list[].pagePath]' dist/build/mp-weixin/app.json
+    ["pages/index/index","pages/doc/index","pages/me/index"]
+  $ jq -e '.tabBar.list[1].pagePath=="pages/doc/index"' dist/build/mp-weixin/app.json
+    true        ← accept 2 那一段绿
+
+### B) 按任务书收尾要求 git checkout -- code/miniapp/src/pages.json（退回 069801e 里那份被增量合并污染的旧文件）
+  $ git checkout -- code/miniapp/src/pages.json && (rm -rf dist/build/mp-weixin && pnpm build:mp-weixin)
+  $ jq -c '[.tabBar.list[].pagePath]' dist/build/mp-weixin/app.json
+    ["pages/index/index","pages/me/index","pages/doc/index"]
+  $ jq -e '.tabBar.list[1].pagePath=="pages/doc/index"' dist/build/mp-weixin/app.json
+    false   exit=1   ← accept 2 当场红
+
+## 结论 / 处置
+  · 本票**保留** build 重新生成的那份 src/pages.json（唯一改动是：doc 两个页面插到正确位置、
+    ledger 与 sample 顺序对齐扫描序、platform 注释随最后一次 build 变）。
+  · ★ 若 QA / 下游把 src/pages.json 还原成 HEAD，请先删掉 code/miniapp/src/pages.json 再构建
+    （缺文件时 old 为空 → 顺序完全由 pages.config.ts 决定，实测 [index, doc, me]），否则 accept 2 必红。
+  · 根因是「生成产物入库」：unibest 模板本身把 src/pages.json 当产物。建议后续票把
+    code/miniapp/src/pages.json 移出 git（或加 .gitignore + 保留 src/manifest.json 那个种子），
+    这类「顺序取决于上次生成结果」的假红才不会一张张票重复出现。

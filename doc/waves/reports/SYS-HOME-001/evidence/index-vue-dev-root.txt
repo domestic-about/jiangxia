@@ -1,0 +1,10 @@
+== views/index.vue 在 vite dev 下吐给浏览器的编译产物（根节点）==
+function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
+  return _openBlock(), _createElementBlock("div", _hoisted_1, [
+    _createVNode($setup["LqgHome"], { "data-v-inspector": "src/views/index.vue:3:5" })
+  ]);
+}
+
+== 有没有 Fragment 根的痕迹（D1 S1 的扳机）==
+0
+0（无命中）

@@ -1,0 +1,55 @@
+### AUTH-EXT-003 accept（回归：DocExternalQueryService 已改为委托 DocAvailabilityService）
+[run] 2 条 accept，单条超时 900s
+  [32m✓[0m AUTH-EXT-003 acc1 [API] 外部文档清单钉死在 seed 上：同组可见、草稿不给、外部版没渲染成功的不给、异组按不存在返回；带 audience=inter (7.7s)
+  [32m✓[0m AUTH-EXT-003 acc2 [STATE] 四条结构性不变量在加了文档接口之后仍然成立；新增的 VO 不带内部专用字段 (4.2s)
+[ok] 结果落盘 .tmp/auth-ext003-accept-regression.json
+[run] 通过 2/2
+
+### AUTH-EXT-003 probes（上游回归 46 条）
+PASS P1-staff打外部文档清单-403 — 403
+PASS P2-admin打外部文档清单-403 — 403
+PASS P3-extA打内部渲染接口-403 — 403
+PASS P4-extB打内部预览-403 — 403
+PASS P5-extE未核验-列表空 — []
+PASS P6-extF待核验-列表空 — []
+PASS P7-extE取1001文档-404 — 404
+PASS P8-软删1010不在清单 — null
+PASS P9-软删1010预览-404 — 404
+PASS P10-不认识的docKind-400 — 400
+PASS P11-不认识的docKind-列表空 — []
+PASS P12-不认识的format-400 — 400
+PASS P13-不存在的样本id-404 — 404
+PASS P14-不存在的样本id-列表空 — []
+PASS P15-1004草稿预览-404 — 404
+PASS P16-1004草稿下载-404 — 404
+PASS P17-1005草稿(extC)预览-404 — 404
+PASS P18-1005草稿(extC)列表空 — []
+PASS P19-库内1004档确实是草稿 — draft
+PASS P20-外部版failed-清单少这一行 — null
+PASS P21-外部版failed-预览404 — 404
+PASS P22-外部版failed-下载404 — 404
+PASS P23-库内同一行确实failed — failed
+PASS P24-重新渲染后清单恢复 — 2
+PASS P25-合并件渲染后进清单 — true
+PASS P26-合并件库内是done — done
+PASS P27-撤回一份后该份消失 — null
+PASS P28-★撤回一份后合并件立刻消失(不靠异步invalidate) — null
+PASS P29-★过期合并件预览404 — 404
+PASS P30-★过期合并件下载404 — 404
+PASS P31-库内合并件仍是done(只被标记过期) — done
+PASS P32-重新完成后合并件回来 — 1
+PASS P33-publishedEnd=当天含当天 — true
+PASS P34-publishedEnd=前一天不含当天 — null
+PASS P35-时间格式写错-400 — 400
+PASS P36-清单行没有内部键 — []
+PASS P37-totalScore只在评分表行 — [false]
+PASS P38-详情docs与清单同源 — ["sample_qc","organoid_qc","organoid_score","merged"]
+PASS P39-pages带audience=internal仍只出/external/ — 1/0
+PASS P40-download带audience=internal仍只出/external/ — 1/0
+PASS P41-文件名用送检单号不用内部编号 — 类器官质量评分表-SJ90000001.docx
+PASS P42-样本内部编号开了也不进文档接口 — 1
+PASS P43-docx真下载且是zip(OOXML) — 504b
+PASS P44-pdf真下载且含表名 — 1
+PASS P45-内部版下载键含/internal/ — 1
+PASS P46-内部版与外部版不是同一个对象 — diff
+PROBE EXT003 PASS=46 FAIL=0

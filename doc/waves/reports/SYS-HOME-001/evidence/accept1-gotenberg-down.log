@@ -1,0 +1,13 @@
+# SYS-HOME-001 accept[1] 五个数与库里独立数的一致并钉在 seed 上；外部新交一条类器官收样、一条石蜡包埋送样后两个待核验数各加一；超期数与超期清单同源；渲染失败数会随真实失败变化
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true
+2|1|2
+true
+true
+true
+1|2
+1
+true
+true

@@ -1,0 +1,5 @@
+# DOC-PUBLISH-001 accept[1] 两态状态机：重复完成、对草稿撤回被拒；完成后记下完成人与时间并触发内外部版渲染；改内容、加图片、改评分任何一种都让已完成的文档回到草稿
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true

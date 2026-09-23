@@ -157,6 +157,55 @@ public class DocRenderService {
     }
 
     // ══════════════════════════════════════════════════════════════════════
+    // 合并件的失效（DOC-PUBLISH-001 的「任何一份变化都让该样本的 merged 失效」）
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * ★ <b>把该样本的合并件产物标记成过期</b>（不软删、不删 OSS 对象）：成员集合
+     * （{@code doc_status='published'} 的那几份）一变，合并件就不是最新的了。
+     *
+     * <p>「怎么算过期」不去猜：直接复用指纹 —— 用合并件自己的
+     * {@link DocRenderModel#merged} 算出<b>此刻</b>该有的指纹，与库里 header 行上的
+     * {@code content_hash} 比。一致 = 没事；不一致 = 把 header 行的指纹换成新的，
+     * 于是「页面图 / 下载只认当前指纹」那几道过滤自然不再返回旧产物，
+     * 下一次「预览」会重新渲染（ticket §2 的口径复述 4）。
+     *
+     * <p>★ 一份成员都没有（全部撤回）时也要标记：合并件无从拼起，旧产物更不能露出去。
+     */
+    public void invalidateMerged(Long sampleId) {
+        modelFactory.requireSample(sampleId);
+        DataPermissionHelper.ignore(() -> {
+            for (String aud : DocAudiences.ALL) {
+                DocFile header = rows.header(sampleId, DocKinds.MERGED, aud);
+                if (header == null) {
+                    continue;
+                }
+                String hash = mergedHash(sampleId, aud);
+                if (hash.equals(header.getContentHash())) {
+                    continue;
+                }
+                rows.markStale(header.getId(), hash);
+                log.info("合并件已标记过期：sampleId={} audience={} 旧指纹={} 新指纹={}",
+                    sampleId, aud, header.getContentHash(), hash);
+            }
+        });
+    }
+
+    /**
+     * 合并件此刻该有的指纹；<b>一份成员都没有</b>时返回一个稳定的哨兵值
+     * （不能让 {@code invalidateMerged} 抛 400 —— 撤回最后一份文档也要把旧合并件标记成过期）。
+     */
+    private String mergedHash(Long sampleId, String audience) {
+        try {
+            List<DocRenderModel> members = modelFactory.mergedMembers(sampleId, audience);
+            return DocRenderModel.merged(audience, DocTemplate.version(), members).contentHash();
+        } catch (Exception e) {
+            log.info("合并件没有可用成员（旧产物标记成过期）：sampleId={} audience={}", sampleId, audience);
+            return "merged-empty";
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
     // GET /lqg/doc/{sampleId}/{docKind}/download
     // ══════════════════════════════════════════════════════════════════════
 

@@ -1,6 +1,7 @@
 package org.dromara.lqg.ext.domain.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -45,7 +46,8 @@ public class ExtDocVo implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date publishedTime;
 
-    @Schema(description = "评分表合计分")
+    @Schema(description = "评分表合计分（只在评分表那一行上有；别的行连键都不出）")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer totalScore;
 
 }

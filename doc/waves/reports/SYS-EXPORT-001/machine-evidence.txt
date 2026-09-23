@@ -1,0 +1,66 @@
+# SYS-EXPORT-001 · 机器证据（进程 / jar / 迁移 / 四端点 / 文件名 / 平台能力）
+
+## 1) 后端进程与 jar（反 stale 的等价证据，替代 --fresh-module 那个恒挂的守卫）
+jar mtime            : 2026-09-22 22:11:32
+jar sha256           : 75df51080789c1b4fc93b6d3bee8a9625c3a31bb64e30e8b5c686b67a76ca20d
+lqg src newer than jar : []
+admin src newer      : []
+8094 listener        : PID 4963
+该 PID 持有 jar 行数  : 2   ← /bin/ps 在本沙箱被禁（Operation not permitted），用 lsof 替代
+8080（Kevin 的本机服务）: []  ← 全程没碰
+嵌套 jar 复核         : BOOT-INF/lib/ruoyi-lqg-5.5.3.jar 内含 sys/export 条目 ->
+    org/dromara/lqg/sys/export/
+    org/dromara/lqg/sys/export/SysExportService$ContentDispositionResponse.class
+    org/dromara/lqg/sys/export/ExcelSheet.class
+    org/dromara/lqg/sys/export/SysExportService.class
+    org/dromara/lqg/sys/export/SysExportService$ContentDispositionResponse__Javadoc.json
+    org/dromara/lqg/sys/export/MpExportController.class
+    org/dromara/lqg/sys/export/MpExportController__Javadoc.json
+    org/dromara/lqg/sys/export/SysExportService__Javadoc.json
+    org/dromara/lqg/sys/export/ExcelSheet__Javadoc.json
+
+## 2) Flyway 迁移号：本票一支都没加（依据）
+库里已应用最大版本：202609261430
+jar 内迁移支数      ：23
+理由：本票只加四个**读端点**（不建表 / 不加菜单 / 不授权）——角色闸是既有的 lqg_internal
+     （SAMPLE-MP-001 建，DOC-MP-001/002、EMBED-MP-001、CRYO-MP-001 都在用），所以不需要任何迁移行；
+     没有取号 → 没有 V202609261440__SYS-EXPORT-001-*.sql。
+     （若以后要加：版本号必须 > 202609261430，spring.flyway.out-of-order=false，见 DOC-MP-002 §2.1）
+
+## 3) 四个导出端点（真后端 8094 + 真库 5433；原始 curl 头）
+--- GET /mp/int/export/tissue ---
+    HTTP/1.1 200 OK
+    Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8
+    Content-Disposition: attachment; filename=export.xlsx;filename*=utf-8''%E6%A0%B7%E6%9C%AC%E8%AE%B0%E5%BD%95%E4%BF%A1%E6%81%AF%E8%A1%A8-20260922221957.xlsx
+    bytes=4620  magic=504b  (=PK, xlsx zip)
+--- GET /mp/int/export/organoid ---
+    HTTP/1.1 200 OK
+    Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8
+    Content-Disposition: attachment; filename=export.xlsx;filename*=utf-8''%E7%B1%BB%E5%99%A8%E5%AE%98%E6%94%B6%E6%A0%B7%E8%AE%B0%E5%BD%95-20260922221957.xlsx
+    bytes=3906  magic=504b  (=PK, xlsx zip)
+--- GET /mp/int/export/embed ---
+    HTTP/1.1 200 OK
+    Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8
+    Content-Disposition: attachment; filename=export.xlsx;filename*=utf-8''%E7%9F%B3%E8%9C%A1%E5%8C%85%E5%9F%8B%E9%80%81%E6%A0%B7%E8%AE%B0%E5%BD%95-20260922221957.xlsx
+    bytes=4432  magic=504b  (=PK, xlsx zip)
+--- GET /mp/int/export/cryo ---
+    HTTP/1.1 200 OK
+    Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8
+    Content-Disposition: attachment; filename=export.xlsx;filename*=utf-8''-80%E5%86%BB%E5%AD%98-20260922221957.xlsx
+    bytes=4485  magic=504b  (=PK, xlsx zip)
+
+## 4) 错误面（业务码，不是 HTTP 码 —— 若依把 403/404 全包进响应体）
+    extA GET /mp/int/export/tissue  -> 403	没有访问权限，请联系管理员授权
+    anon GET /mp/int/export/tissue  -> 401	认证失败，无法访问系统资源
+    qc   GET /mp/int/export/qc      -> 404	No endpoint GET /mp/int/export/qc.
+
+## 5) H5 侧（小程序 mock 口径）：导出真的走 vite 代理 /lqg-api → 8094
+    utils/baseUrl.ts#resolveBaseUrl 是根地址唯一来源（utils/request.ts re-export 保持既有调用面）
+    H5 代理探测：HTTP 200
+    详见 shots-evidence.json：请求 URL = http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending
+                              Authorization / clientid 都在；响应 content-type = spreadsheetml；blob 4117 字节
+
+## 6) ★ 平台专属能力在 H5 上不可验（如实标注，不是遗漏）
+    uni.shareFileMessage 在 H5：DOC-MP-002 实测 typeof undefined（本票沿用它的结论）
+    uni.downloadFile 在 uni-h5 不认鉴权头 / 不认相对路径 → 公共段在 H5 退化成 fetch + blob
+    真机 / 微信里未覆盖：openDocument 右上角保存/转发、shareFileMessage、downloadFile 合法域名

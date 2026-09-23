@@ -451,6 +451,11 @@ onMounted(async () => {
   if (sampleId) {
     queryParams.sampleId = String(sampleId);
   }
+  // 工作台首页「-80 超期批次」卡片带 ?overdueOnly=true 进来（SYS-HOME-001）→ 直接落在「超期」页签。
+  // ★ 页签是高亮**派生**值（activeTab 由 overdueOnly 算出来），所以设这一个字段就够了。
+  if (route.query.overdueOnly === 'true' || route.query.overdueOnly === '1') {
+    queryParams.overdueOnly = true;
+  }
   await getList();
 });
 </script>

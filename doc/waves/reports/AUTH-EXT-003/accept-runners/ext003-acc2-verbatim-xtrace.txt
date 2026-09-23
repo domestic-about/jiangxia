@@ -1,0 +1,5 @@
++ set -euo pipefail
++ cmp doc/verify/fixtures/java/ExtChokepointContractTest.java code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/test/java/org/dromara/lqg/ext/ExtChokepointContractTest.java
++ cd code/RuoYi-Vue-Plus
++ mvn -s /Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.mvn-settings.xml -Dmaven.repo.local=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.m2repo -Duser.home=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.buildhome -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest=ExtChokepointContractTest -Dsurefire.failIfNoSpecifiedTests=true
++ test -f code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ext/ExtDocController.java

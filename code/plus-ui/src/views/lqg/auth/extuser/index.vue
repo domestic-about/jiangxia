@@ -172,6 +172,7 @@ import { useI18n } from 'vue-i18n';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
+const route = useRoute();
 
 const loading = ref(false);
 const rows = ref<ExtUserVO[]>([]);
@@ -311,6 +312,11 @@ const submitVerify = async () => {
 };
 
 onMounted(async () => {
+  // 工作台首页「待核验外部用户」卡片带 ?bindStatus=pending 进来（SYS-HOME-001）→ 自动套上筛选
+  const bindStatus = route.query.bindStatus;
+  if (typeof bindStatus === 'string' && ['unbound', 'pending', 'verified', 'rejected'].includes(bindStatus)) {
+    query.bindStatus = bindStatus;
+  }
   await getUnits();
   await getList();
 });

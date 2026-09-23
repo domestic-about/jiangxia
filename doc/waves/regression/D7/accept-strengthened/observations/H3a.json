@@ -1,0 +1,38 @@
+{
+ "hotspot": "H3a",
+ "green": true,
+ "ran_at": "2026-09-23T00:46:09.602754+00:00",
+ "results": [
+  {
+   "name": "H3a:源码里存在 showMenu: true 字面量（含注释内）",
+   "ok": true,
+   "detail": "raw=1"
+  },
+  {
+   "name": "H3a:★ 剥掉注释后 `showMenu: true` 仍在真代码里（注释满足不了这条）",
+   "ok": true,
+   "detail": "raw=1 code=1"
+  },
+  {
+   "name": "H3a:★ 它出现在 `openDocument({filePath, …, showMenu: true})` 的参数位置（同一对象字面量里有 filePath）",
+   "ok": true,
+   "detail": "{\"line\": 160, \"snippet\": \"showMenu: true,\", \"enclosing_object_has_filePath\": true}"
+  },
+  {
+   "name": "H3a:调用点是 uni.openDocument（平台查看器的菜单开关）",
+   "ok": true,
+   "detail": "openDocument in code = True"
+  }
+ ],
+ "observed": {
+  "source_file": "code/miniapp/src/utils/fileHandoff.ts",
+  "occurrences_in_raw_file": 1,
+  "occurrences_after_stripping_comments": 1,
+  "file_sha256": "0d23bfdba6d3d52e8e3caea93ddefca426385906e75907eada060a12e2b3b36f",
+  "code_position": {
+   "line": 160,
+   "snippet": "showMenu: true,",
+   "enclosing_object_has_filePath": true
+  }
+ }
+}

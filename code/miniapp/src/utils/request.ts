@@ -8,6 +8,16 @@
 // 小程序端 `uni.request` 的 statusCode 与业务 code 都可能表达 401，两条都要处理。
 import { LOGIN_PAGE } from '@/router/config'
 import { TOKEN_KEY, clearToken, getToken } from '@/utils/auth'
+import { resolveBaseUrl } from '@/utils/baseUrl'
+
+/**
+ * 请求根地址：实现在 `utils/baseUrl.ts`（SYS-EXPORT-001 抽出去，让 `fileHandoff` 能在
+ * node 单测里用到它而**不**把本文件（`uni.*` / `import.meta.env`）拉进加载图）。
+ *
+ * ★ 这里 re-export 保持既有调用面（`api/ocr.ts` 一直 `import { resolveBaseUrl } from '@/utils/request'`），
+ *   根地址仍然只有一处判据 —— 两处各拼一次就是「H5 代理开着、上传却直连后端」的经典事故。
+ */
+export { resolveBaseUrl }
 
 interface ApiResponse<T> {
   code: number
@@ -41,19 +51,8 @@ let redirecting = false
 // - 小程序 / App：直连 `VITE_SERVER_BASEURL`（真机调试时它是 LAN IP，见栈包 gotchas §6.6）
 // - H5：走 vite dev server 代理前缀，绕开浏览器跨域
 //
-// ★ 导出给 `api/ocr.ts` 的 `uni.uploadFile` 用（OCR-MP-001）：`uni.request` 那条路由本文件
-//   统一拼根地址，但 `uploadFile` 是**另一个 API**、不走这里 —— 两处各拼一次就是
-//   「H5 代理开着、上传却直连 8081」的经典事故。根地址只能有一个来源。
-export function resolveBaseUrl(): string {
-  const direct = (import.meta.env.VITE_SERVER_BASEURL as string) || ''
-  // #ifdef H5
-  if (import.meta.env.DEV && import.meta.env.VITE_APP_PROXY_ENABLE === 'true') {
-    return (import.meta.env.VITE_APP_PROXY_PREFIX as string) || ''
-  }
-  // #endif
-  return direct
-}
-
+// ★ 判据已挪到 `utils/baseUrl.ts`（本文件顶部 re-export）；`api/ocr.ts` 的 `uni.uploadFile`
+//   仍旧从本文件拿 —— 根地址只能有一个来源。
 function buildQuery(params?: Record<string, unknown>): string {
   if (!params) {
     return ''

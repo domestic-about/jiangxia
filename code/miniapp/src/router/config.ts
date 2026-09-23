@@ -4,7 +4,7 @@ export const LOGIN_PAGE = '/pages/login/index'
 /** 登录后的落地页（首页是 tab 页，只能 reLaunch / switchTab） */
 export const HOME_PAGE = '/pages/index/index'
 
-export const TAB_PAGES = ['/pages/index/index', '/pages/docs/index', '/pages/me/index']
+export const TAB_PAGES = ['/pages/index/index', '/pages/doc/index', '/pages/me/index']
 
 /** 是不是 tab 页：跳 tab 页要走 switchTab，否则 navigateTo 会失败 */
 export function isTabPage(path: string): boolean {

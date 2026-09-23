@@ -26,6 +26,12 @@ public final class DocAudiences {
     public static final String EXTERNAL = "external";
 
     /**
+     * 两个版本的顺序（DOC-PUBLISH-001「完成并同步」要一次把内部版与外部版都排进渲染，
+     * 顺序固定便于日志与探针复读）。
+     */
+    public static final java.util.List<String> ALL = java.util.List.of(INTERNAL, EXTERNAL);
+
+    /**
      * 校验；不认识的一律 400。
      */
     public static String require(String audience) {
