@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-09-23T09:02:57",
+  "generated_at": "2026-09-23T09:47:28",
   "workspace": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid",
   "git": {
     "branch": "task/D8",
-    "head": "2321c8ea99bc1460dea218f9a929da41954b1cce",
-    "head_subject": "chore(qa): 台账补记两条已修 S1 —— #279（OSS 直链带鉴权头）/ #291（home 接口外部越权）按惯例记为 decided=fixed 并附判别式证据",
+    "head": "e250f78922046c290d68104c7c6f386ae2b3987b",
+    "head_subject": "chore(qa): SYS-PROD-001 台账 +3（.env 断言冲突 / acc1 在生产跑不通 / 资源缺口）+ blocked 记账",
     "integration": "ef248f9e8496be00eea917e461ac40323a8cb748",
     "task_branches": [
       "task/D1",
@@ -16,16 +16,17 @@
       "task/D7",
       "task/D8"
     ],
-    "commits_total": 137,
+    "commits_total": 142,
     "worktree_clean": false
   },
   "state_file": "doc/waves/state.json",
   "tickets": {
     "total": 44,
     "by_status": {
-      "done": 38,
+      "done": 39,
       "escalated": 2,
-      "pending": 4
+      "pending": 2,
+      "blocked": 1
     },
     "by_phase": {
       "D1": {
@@ -183,8 +184,8 @@
         ],
         "ticket_statuses": {
           "SYS-BACKUP-001": "pending",
-          "SYS-MANUAL-001": "pending",
-          "SYS-PROD-001": "pending",
+          "SYS-MANUAL-001": "done",
+          "SYS-PROD-001": "blocked",
           "SYS-RELEASE-001": "pending"
         }
       }
@@ -978,16 +979,16 @@
     }
   },
   "issues": {
-    "total": 307,
+    "total": 313,
     "by_severity": {
-      "S2": 120,
-      "S3": 174,
+      "S2": 123,
+      "S3": 177,
       "S1": 9,
       "S0": 4
     },
     "by_status": {
       "decided": 18,
-      "open": 289
+      "open": 295
     },
     "s0_s1": [
       {
@@ -1154,5 +1155,6 @@
       "SYS-MANUAL-001 两份操作说明 + 截图 + PDF（纯本地，正在实现）"
     ]
   },
-  "handover_report": "doc/handover/交接与验收报告.md"
+  "handover_report": "doc/handover/交接与验收报告.md",
+  "_frozen_body_at": "4d15ab7（§0–§12）；D8 增量见报告 §13"
 }
