@@ -49,8 +49,9 @@
     },
     {
       "id": "D7",
-      "status": "pending",
-      "qa_rounds": 0
+      "status": "qa_passed",
+      "qa_rounds": 1,
+      "qa_seq": 1
     },
     {
       "id": "D8",
@@ -3414,6 +3415,76 @@
       "type": "clarify",
       "title": "/mp/ext/sample/list 的 sampleId 参数不是 BO 字段、被 Spring 静默忽略（回全量可见集）",
       "detail": "复现（D7 r1 L3 同类扫描的附注）：`GET /mp/ext/sample/list?sampleId=…` 里 `sampleId` **不是 ExtSampleQueryBo 的字段** → Spring 静默忽略它，接口返回**该外部身份的全量可见集**（extC 仍只有 {1005}，**无泄漏**）。影响：①前端若以为它按 sampleId 过滤，会显示「筛选后」的错结果（当前无泄漏，但语义是错的）；②契约里没写这个端点支持 sampleId 过滤（也没写不支持）。方案：要么在 BO 里加上该字段并实现过滤，要么在契约里明确「不支持 sampleId 过滤」，并考虑给「未知查询参数」加一条统一的告警/拒绝策略（本项目多处依赖 Spring 的宽松绑定）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 301,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "acc1 的「改内容回草稿」只覆盖三个 PUT + 加图；附件/删图/重排零覆盖（摘掉 addAttachment 的 afterChange 后整条仍绿）",
+      "detail": "复现（D7 r1 L2 修复后重跑的证伪 F6）：把 `addAttachment` 写完后的 `afterChange()`（触发重建/回草稿）**摘掉**并重建重启 → **DOC-PUBLISH-001 acc1 全段绿**；而同一变异下实测「publish 之后再挂附件 → doc_status 仍是 published」，还原实现后才是 draft。也就是说这条真缺陷（完成后写附件不回草稿）**accept 抓不到**。覆盖盘点：票面的三个 PUT（内容/类器官/评分）+ 加图 有断言，而**附件新增/删除、图片删除、排序**这四个写入口零覆盖（实现其实在这 7 个写入口都挂了钩子，只是断言只打了 3+1）。影响：票面 counterfeit 自称的覆盖比实际宽；七个写入口里四个没有机器护栏。方案：按 L2 给出的一句话修法——把 acc1 补上「挂一个附件 → 断 draft」「删一张图 → 断 draft」「重排图片 → 断 draft」（L2 的探针可直接改造成 accept 段）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 302,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "acc2 对「内外部版切换真的换了产物」零覆盖（把 PreviewPane 的 audience 写死 internal 后 grep 段与 H4 探针全绿）",
+      "detail": "复现（D7 r1 L2 证伪 F3）：把 `PreviewPane` 取页面图/下载时的 `audience` 写死成 `internal` → **DOC-PUBLISH-001 acc2 的 grep 段与 SYS-ACCEPT-001 的 H4 探针全绿**。而 H4 探针只数「下载入口恰好四个」，**从不切到外部版**。影响：内外部版切换是本票的核心卖点之一（外部只能拿 external 版），但「切了之后产物真的换了」这件事没有任何断言；如果哪天把 audience 传错，外部会看到内部版（含内部编号）——那正是 #279 同级的隔离问题。方案：按 L2 的一句话修法——在 H4 探针里加一步「切到外部版 → 断言取到的对象键含 `/external/`（且与内部版不是同一对象）」。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 303,
+      "ticket": "DOC-MP-002",
+      "severity": "S2",
+      "type": "harness",
+      "title": "acc1 的「顶部三份切换」只由「组件 import 计数 ≥5」代表（把 <DocTabs/> 整块从模板删掉、import 留着 → acc1 全绿）",
+      "detail": "复现（D7 r1 L2 证伪 F2）：把 `<DocTabs/>` 从模板里整块删掉、**只保留 import 语句** → acc1 全绿。而「顶部在三份之间切换」是票面 §2 与口径复述点名的核心交互之一。影响：断言用「import 计数」代表「渲染出来并可用」，删掉组件实体抓不到（同族的「文件级/字面量级 grep」问题，见 #264/#275/#280/#282）。方案：按 L2 的一句话修法——改成行为判据（H5 真 DOM 里数出三个页签并可逐个切换、切换后请求/产物跟着变）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 304,
+      "ticket": "SYS-HOME-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "acc2 的「菜单角标与卡片数字一致」只 grep「Sidebar 里有 lqgTodo」（去掉石蜡包埋分支后仍绿）",
+      "detail": "复现（D7 r1 L2 证伪 F4）：把 `badgeOf()` 里的 `/embed` 分支去掉（石蜡包埋角标恒不显示）→ **SYS-HOME-001 acc2 全绿**。而票面明确要求「菜单角标（含石蜡包埋）与卡片数字一致」。影响：角标这条在断言层面形同虚设（只证明 Sidebar 引用了 store）。缓解：SYS-ACCEPT-001 的 H2 探针已覆盖「卡片数字 == 接口值」但不覆盖角标。方案：把角标也做成行为判据（真 DOM 里读四个菜单项的角标数并与接口值比对；0 时不显示）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 305,
+      "ticket": "DOC-MP-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "acc2 的「分组卡片上有单份下载」只由两个字面量代表（摘掉行内「下载」后仍绿；★ 被 SYS-EXPORT-001 的 H1b 跨票兜住）",
+      "detail": "复现（D7 r1 L2 证伪 F1）：把每行右侧的「下载」摘掉 → **DOC-MP-001 acc2 仍绿**（它只 grep「合并下载」「合并预览」两个字面量）。★ 但同一变异被 **SYS-EXPORT-001 acc2 的 H1b 探针打红**（跨票网兜住）→ 故降为 S3。影响：单票内无护栏，靠另一张票的强化探针兜底；跨票依赖是脆的（若哪天 H1b 改了范围，这里就无网）。方案：把「行内单份下载」也做成行为判据（点一次、抓请求与响应）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 306,
+      "ticket": "DOC-MP-002",
+      "severity": "S3",
+      "type": "ux",
+      "title": "同一张卡片「单份下载」与「合并下载」共用 DownloadBar 实例 → 格式选择跨弹层留存（合并下载可能下到 PDF）",
+      "detail": "复现（D7 r1 L2 独立探针复现，与早先那轮同一观察）：在一张卡上先选 PDF 触发「下载」，再点「合并下载」，实际下到的是 **PDF**（默认应是 Word）。根因：两个入口共用同一个 DownloadBar 实例，格式选择状态没按入口重置。影响：老师会拿到与预期不符的格式（只能从文件名后缀看出来）。方案：打开弹层时按入口重置格式（或每个入口给独立默认值）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 307,
+      "ticket": "DOC-PUBLISH-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "plus-ui dev server 会重写 tracked 的 .eslintrc-auto-import.json → 连带触发 SYS-ACCEPT-001 变异脚本的「干净树」守卫（#297）",
+      "detail": "复现（D7 r1 L2 交接）：起过 plus-ui dev（8093）之后，`code/plus-ui/.eslintrc-auto-import.json`（**tracked 的生成物**）被 vite auto-import 插件重写 → `git diff -- code/` 里出现 pages.json 以外的文件 → `mutation-assert.sh` 的 tree_ok 守卫直接退出（L2 因此改为直跑探针本体 probe.mjs/probe-h3a.py）。影响：**#297 那条守卫的实际触发面比想象的宽**——不只是「返工树脏」，只要起过 plus-ui dev 就会踩；而 `SYS-HOME-001 acc2` 依赖它。方案：①把「干净」判据改成白名单式（允许 `pages.json`、`.eslintrc-auto-import.json`、`types/components.d.ts` 这类**已知的生成物**）；②或把这两个生成物加进 .gitignore / 改成不落盘。",
       "status": "open",
       "decision": ""
     }
