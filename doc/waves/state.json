@@ -3537,6 +3537,16 @@
       "detail": "影响范围：SYS-PROD-001 acc1 全部与 acc2 段1/段4 无法执行；SYS-BACKUP-001 与 SYS-RELEASE-001 也卡在这里（B1/B2/B3–B6 见 doc/handover/d8-blockers.json）。方案 a：owner 补齐后重跑 bash code/deploy/prod/deploy.sh all，断言即可执行；b）本票维持 blocked，资产留在仓库等资源；c）用测试环境输出冒充——明确禁止（118.178.109.11 上是 profile=test，这样做就是伪造证据）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 313,
+      "ticket": "SYS-PROD-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "SYS-PROD-001 acc2 的 .env 子断言与既有前端 vite 模板 code/miniapp/env/.env 冲突 → 必然红，非产品缺陷",
+      "detail": "复现：git ls-files 过滤 .env 结尾者，全仓只命中 code/miniapp/env/.env。该文件 32 行全是 VITE_* 前端公共变量（VITE_APP_TITLE / VITE_UNI_APPID / VITE_WX_APPID 占位 / VITE_APP_CLIENT_ID 等），用 LTAI|AKID|secret|_key|token|password 扫它，唯一命中一行注释文字（md5 mp client_secret）。它是 unibest/vite 的 envDir 约定文件，改名会破坏构建。方案 a（推荐）：把断言收窄为只查 verify.prod.env 与 deploy 目录下的 .env——保住真实意图（生产密钥文件不被跟踪），放过前端模板；b）显式白名单该路径；c）改名（不建议，破坏 vite 约定）。★ 属验收口径调整，需调度方与 owner 决策；实现方按规矩未动票面。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
