@@ -1,0 +1,227 @@
+/* SYS-MANUAL-001 · 两份操作说明共用的排版样式
+ *
+ * 导出：pandoc → HTML（-f gfm+implicit_figures）→ weasyprint
+ * 中文字体必须用本机已装的 Noto Serif SC / Songti SC：
+ *   · 用 LibreOffice 走 md→pdf 会出方框、pdftotext 抽不出中文；
+ *   · weasyprint + Noto Serif SC 才能把中文按真字抽出（accept 断言 pdftotext | grep 送检）。
+ */
+
+@page {
+  size: A4;
+  margin: 15mm 14mm 13mm 14mm;
+
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font-family: "Noto Serif SC", "Songti SC", serif;
+    font-size: 8pt;
+    color: #8a8f8d;
+  }
+}
+
+html {
+  font-size: 10.5pt;
+}
+
+body {
+  font-family: "Noto Serif SC", "Songti SC", "Heiti SC", serif;
+  color: #1b1d1c;
+  line-height: 1.62;
+  margin: 0;
+  -weasy-hyphens: none;
+}
+
+h1 {
+  font-size: 18pt;
+  line-height: 1.3;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 2.5px solid #0f766e;
+  color: #0b3d38;
+}
+
+h2 {
+  font-size: 13pt;
+  margin: 16px 0 6px;
+  padding-left: 8px;
+  border-left: 4px solid #0f766e;
+  color: #0b3d38;
+  break-after: avoid;
+}
+
+h3 {
+  font-size: 11pt;
+  margin: 12px 0 4px;
+  color: #12564f;
+  break-after: avoid;
+}
+
+p {
+  margin: 0 0 6px;
+}
+
+strong {
+  color: #0b3d38;
+}
+
+ul,
+ol {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+li {
+  margin: 0 0 2px;
+}
+
+/* ── 表格 ─────────────────────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+  margin: 6px 0 10px;
+}
+
+th,
+td {
+  border: 1px solid #cbd6d3;
+  padding: 3.5px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #eef4f2;
+  color: #0b3d38;
+}
+
+tr {
+  break-inside: avoid;
+}
+
+/* ── 图片与图注 ───────────────────────────────────────────────────────── */
+figure {
+  margin: 6px 0 10px;
+  break-inside: avoid;
+}
+
+figure img {
+  display: block;
+  width: 100%;
+  border: 1px solid #ccd6d4;
+  border-radius: 3px;
+}
+
+figcaption {
+  font-size: 8.5pt;
+  color: #52605d;
+  text-align: center;
+  margin-top: 3px;
+  line-height: 1.35;
+}
+
+/* 两栏 / 三栏：用表格布局而不是 flex —— weasyprint 对 table-cell 最稳 */
+.grid2,
+.grid3 {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  border-spacing: 5px 0;
+  margin: 8px 0 10px;
+  break-inside: avoid;
+}
+
+.grid2 > figure {
+  display: table-cell;
+  width: 50%;
+  vertical-align: top;
+  margin: 0;
+}
+
+.grid3 > figure {
+  display: table-cell;
+  width: 33.33%;
+  vertical-align: top;
+  margin: 0;
+}
+
+blockquote {
+  margin: 8px 0;
+  padding: 6px 10px;
+  background: #f4f8f7;
+  border-left: 3px solid #7fb3ab;
+  color: #33403d;
+}
+
+blockquote p {
+  margin: 0;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #dde5e3;
+  margin: 14px 0;
+}
+
+em {
+  color: #52605d;
+}
+
+/* ── 外部用户版：一页，收紧字号与间距 ───────────────────────────────────── */
+.ext {
+  font-size: 8.5pt;
+  line-height: 1.32;
+}
+
+.ext h1 {
+  font-size: 14pt;
+  border-bottom-width: 2px;
+  margin-bottom: 4px;
+}
+
+.ext h2 {
+  font-size: 10.2pt;
+  margin: 4px 0 2px;
+  padding-left: 6px;
+  border-left-width: 3px;
+}
+
+.ext p {
+  margin: 0 0 2px;
+}
+
+.ext ul {
+  margin: 0 0 2px;
+  padding-left: 15px;
+}
+
+.ext .grid3 {
+  margin: 3px 0 2px;
+  border-spacing: 4px 0;
+}
+
+.ext figcaption {
+  font-size: 7.4pt;
+  margin-top: 2px;
+}
+
+.ext .lead {
+  font-size: 8.8pt;
+  color: #33403d;
+}
+
+.ext .foot {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #dde5e3;
+  font-size: 7.6pt;
+  color: #52605d;
+}
+
+/* 外部版走一个窄边距的命名页：一页装得下（accept 目标 1 页，硬上限 2 页） */
+@page ext {
+  margin: 10mm 12mm 8mm 12mm;
+}
+
+.ext {
+  page: ext;
+}

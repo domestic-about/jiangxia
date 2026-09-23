@@ -357,12 +357,12 @@
       "note": "工作台首页：五张待办卡片（待核验样本/待核验送样/超期/待核验外部用户/渲染失败）+ 最近提交 10 条 + 侧边菜单角标。后端 org.dromara.lqg.sys.home 的 HomeCounterService + GET /lqg/home/todo 与 /lqg/home/recent（登录即可调，101/102）；前端 views/lqg/home/**、api/lqg/home.ts、store/modules/lqgTodo.ts（唯一取数处）、views/index.vue、Sidebar/SidebarItem.vue。accept 2/2 绿（**我改完票面后在 gotenberg 正常运行的默认环境下独立重跑**）；ruoyi-lqg 全模块单测 263/263；D1 菜单回归 9/9；pnpm build:prod EXIT=0。**无迁移**（不建表/列/菜单）。★五条关键：①**渲染失败数按「组」不按「行」**：DocRenderService 的 catch 会 markFailed 两次（docx header + pdf），读口写 COUNT(DISTINCT sample_id,doc_kind,audience)；反证实测「库里失败行数=2、组数=1 时接口=1」。②**超期一个字节没重写**：只调 CryoOverdueService#countOverdue()，并用**源码级白名单单测**钉住（不许出现 in_minus80/to_ln2_time/freeze_time/CryoOverdueMapper/CryoOverdueSqlProvider）——这正是本项目「超期只有一个真相源」的纪律。③**卡片与角标同源**：前端唯一调接口的地方是 store/modules/lqgTodo.ts（in-flight Promise 去重）→ 探针实测登录到首页整轮 **todo 请求数=1**，四个角标与卡片同数；Sidebar 里没有任何接口路径。④★**顺手拆掉了 D1 那次 S1 的地雷**：views/index.vue 的顶层模板注释已挪进 script setup；dev 编译产物根节点实测为 _createElementBlock(\"div\")、Fragment 痕迹 0 命中；D1 原探针 9/9 绿（四跳 app-main 无一为 7），并修掉 issue #41（进入首页录到 animate__fadeIn）。**需要 dev server 才能验，不能只看 build**。⑤五张卡为 0 也显示 + is-zero 变灰（不用 v-if）；角标 0 时 :hidden；另加 4 个目标页认领 route.query，否则卡片跳转的筛选会丢。★**acc1 的票面字面缺陷由我改**（同形态第 3 次）：原第 42 段「渲染 1001/sample_qc 造失败」的前提（seed 假图 → 渲染必败）已被 #217 裁定推翻（取不到的图跳过+WARN、文档照出 done），于是第 44 段 .data.renderFailed>=1 在默认环境下永不成立。我按 DOC-PDF-001 acc2 的**先例**把它改成显式 docker stop/start gotenberg 造**真失败**（并等 /health 就绪再继续），同时更正了 counterfeit 里同样陈旧的那句；改完在默认环境重跑得 2/2、收尾 gotenberg healthy。★越界 5 处：DOC 域 DocFileMapper +1 读口（§0.1 硬要求授权）、plus-ui 四个列表页 onMounted 认领 route.query。"
     },
     "SYS-MANUAL-001": {
-      "status": "pending",
+      "status": "done",
       "phase": "D8",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "两份操作说明（内部人员版 16 页 / 外部用户版 1 页）+ 34 张真浏览器截图 + 两份中文 PDF；accept 1/1 绿，且调度方独立复跑 + 独立读数复核（17 必含词全含、编号表格行 22、配图 25、外部版禁词 0 命中、页数 1/16、pdf -nt md、pdftotext 抽得出中文、PDF 内嵌图数与 md 引用一致、31 处图引用全部存在）。坑与解法：①测试环境 /mp/ 不是小程序 H5 且部署停在 D5、D7 端点 404 → 改本地模式 B；②mock 登录必须点 .login__box（.login__agree 中心会落协议文字上跳走）；③抽屉截图必须 .el-drawer:visible；渲染状态页不吃 URL query 要手填 id 并选「样本质控表」；④pandoc gfm 默认关 implicit_figures 要写 -f gfm+implicit_figures，PDF 必须 weasyprint -u + -s style.css 中文才抽得出；⑤外部版压一页靠专裁 290px 窄图 + .ext 8.5pt/行高1.32/窄边距，改一行 md 就可能溢到两页，必须 pdfinfo 实测。导出步骤已落 doc/manual/README.md 可复现。"
     },
     "SYS-MP-001": {
       "status": "done",
@@ -3485,6 +3485,26 @@
       "type": "debt",
       "title": "plus-ui dev server 会重写 tracked 的 .eslintrc-auto-import.json → 连带触发 SYS-ACCEPT-001 变异脚本的「干净树」守卫（#297）",
       "detail": "复现（D7 r1 L2 交接）：起过 plus-ui dev（8093）之后，`code/plus-ui/.eslintrc-auto-import.json`（**tracked 的生成物**）被 vite auto-import 插件重写 → `git diff -- code/` 里出现 pages.json 以外的文件 → `mutation-assert.sh` 的 tree_ok 守卫直接退出（L2 因此改为直跑探针本体 probe.mjs/probe-h3a.py）。影响：**#297 那条守卫的实际触发面比想象的宽**——不只是「返工树脏」，只要起过 plus-ui dev 就会踩；而 `SYS-HOME-001 acc2` 依赖它。方案：①把「干净」判据改成白名单式（允许 `pages.json`、`.eslintrc-auto-import.json`、`types/components.d.ts` 这类**已知的生成物**）；②或把这两个生成物加进 .gitignore / 改成不落盘。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 308,
+      "ticket": "SYS-MANUAL-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "seed 的质控图片指向 seed.invalid，配图上出现「图片加载失败」占位（非产品缺陷，是种子没有真实对象）",
+      "detail": "影响范围：doc/verify/gen_seed.py 把 sys_oss.url 写成 https://seed.invalid/...，所以 wb-09-qc-editor.png / wb-10-qc-preview-publish.png 两张配图里的图片槽是失败态。这不是产品 bug——与台账 #217 同源（取不到的图只跳过+WARN）。方案 a)（推荐）接受现状，在交付说明里解释一句；b) 让 gen_seed 造一张真图上传 MinIO 后重拍这两张（要改 doc/verify/gen_seed.py，超出 SYS-MANUAL-001 的 touches）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 309,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "测试环境部署停在 D5：D7 端点在 songjian.tianda.studio 上 404（/lqg/home/todo、/mp/int/doc/list、/mp/int/export/*）",
+      "detail": "影响范围：任何想在测试环境上演示 D6/D7 功能的人都会撞上；SYS-MANUAL-001 因此改用本地模式 B 环境截图。另 /mp/ 前缀被 nginx 转给后端返回 404 JSON（不是小程序 H5 入口）——部署文档里若写 /mp/ 是小程序入口是错的。方案 a)（推荐）不动：SYS-PROD-001 / SYS-RELEASE-001 在 D8 就绪后本来就要重部署；b) 若要在 D8 之前给甲方看，重跑 SYS-STAGING-001 的 deploy（会覆盖测试机）。",
       "status": "open",
       "decision": ""
     }
