@@ -3396,6 +3396,26 @@
       "detail": "复现（D7 返工 r1 实测）：想用上游纯超管测端点，于是 `export LQG_ADMIN_USER=admin LQG_ADMIN_PASSWORD=admin123` 再调 api.sh → **实际登录的仍是 verify.env 里的 lqgadmin**（getInfo 回 userId=9000000100），因为 api.sh 里是 `set -a; . \"${ENV_FILE}\"`，**文件里的赋值会覆盖调用方 export 的环境变量**。处置：实现方改用一份临时 env 文件（`.tmp/qa-env/8094/verify-superadmin.env`）跑完即删，并清了 `$TMPDIR/lqg-verify-token-*`（★ 注意 token 缓存的键只含身份代号 + BASE，**不含用户名**，所以换了用户名但不清缓存会拿到上一个身份的旧 token）。影响：**任何「换身份重测」的做法都可能静默测错账号**，而且结论看起来完全正常（会用 lqgadmin 的权限得出 200，让人以为超管也 200）。方案 a) 让 api.sh 支持命令行覆盖（如 `--admin-user`）或改成「环境变量优先于文件」；b) 至少在 README 的已知坑表里写明「换身份要改 env 文件 + 清 token 缓存」。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 299,
+      "ticket": "EMBED-MODEL-001",
+      "severity": "S2",
+      "type": "arch",
+      "title": "外部石蜡包埋写口用 400/404 之差暴露「他人记录是否存在」：绕开 ExtScope 的「不可见一律 404」不变量（同类扫描挖出）",
+      "detail": "复现（D7 r1 L3 重跑的「同类扫描」条，证据 doc/waves/qa/D7-r1-L3.json）：①`PUT /mp/ext/embed/{id}` 用 extC（甚至零可见性的 extF）打**真实存在但非本人**的 9000002001/9000002002/9000002003/9000002006 → **400**「只能修改重提本人提交的送样」；打**软删**的 9000002005 与**不存在**的 999999999 → **404**「石蜡包埋记录不存在」。两者之差构成**存在性预言机**，可枚举他人记录 id。②同类：`POST /mp/ext/embed`（body.sampleId）对 9000001001 → 400、对 999999999 → 404。③**对照**：`PUT /mp/ext/sample/{id}` 与 `PUT /mp/ext/organoid/{id}` 都走 `ExtScopeService.assertVisible` → 一律 404，**无预言机**。根因（我核实过源码）：`embed/service/EmbedExternalService.java:98`（resubmit 里的 `embedMapper.selectById(embedId)`）与 `:148`（requireUsableSample 里的 `sampleMapper.selectById(sampleId)`）都是**直接 selectById**（外面裹 `DataPermissionHelper.ignore`），**没有过 ExtScopeService** —— 而这个类在 `embed` 包，ext 包的隔离不变量扫描（ExtChokepoint 那一套）**扫不到它**。定级依据：**只泄存在性、不泄内容**（400 的 msg 不透露记录内容），且需要外部角色主动猜 id → S2，不拦门。★归属修正：L3 报的 ticket 号 `EMBED-EXT-004` 不存在；该文件由 `d9d2608`（EMBED-MODEL-001）引入，故归 **EMBED-MODEL-001**（外部端点本身由 AUTH-EXT-002 提供，此处交叉引用）。方案 a)（推荐）把这两处的「可见性判定」也收口到 ExtScopeService（或在 ext 侧加一个「不可见→404」的统一前置），保持「不可见一律 404」这条不变量在**所有** /mp/ext 写口上都成立；b) 至少在 embed 包加一条同类契约测试（让不变量扫到 embed 包）。★顺带值得记的正面结论：L3 这次**全量扫了 61 个 /lqg/** + 全部 /mp/int/** 端点，外部身份 120+44 次调用全部 403**（唯一例外 /lqg/sys/ping 是契约明写的「登录即可调」且无业务数据）→ 说明外部隔离咽喉**其余部分是健全的**，r1 那条 S1 是个别端点绕过，不是体系性问题。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 300,
+      "ticket": "AUTH-EXT-002",
+      "severity": "S3",
+      "type": "clarify",
+      "title": "/mp/ext/sample/list 的 sampleId 参数不是 BO 字段、被 Spring 静默忽略（回全量可见集）",
+      "detail": "复现（D7 r1 L3 同类扫描的附注）：`GET /mp/ext/sample/list?sampleId=…` 里 `sampleId` **不是 ExtSampleQueryBo 的字段** → Spring 静默忽略它，接口返回**该外部身份的全量可见集**（extC 仍只有 {1005}，**无泄漏**）。影响：①前端若以为它按 sampleId 过滤，会显示「筛选后」的错结果（当前无泄漏，但语义是错的）；②契约里没写这个端点支持 sampleId 过滤（也没写不支持）。方案：要么在 BO 里加上该字段并实现过滤，要么在契约里明确「不支持 sampleId 过滤」，并考虑给「未知查询参数」加一条统一的告警/拒绝策略（本项目多处依赖 Spring 的宽松绑定）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
