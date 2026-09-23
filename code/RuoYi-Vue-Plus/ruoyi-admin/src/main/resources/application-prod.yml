@@ -1,8 +1,39 @@
 --- # 临时文件存储位置 避免临时文件被系统清理报错
+# ★ 生产由 compose 把它挂到数据盘（${LQG_DATA_DIR}/tmp → /ruoyi/server/temp，
+#   见 code/deploy/prod/docker-compose.yml 的 backend.volumes）：docx 渲染的中间产物有几十 MB，
+#   容器可写层（/var/lib/docker）在系统盘上，落那儿容易把系统盘写满。
 spring.servlet.multipart.location: /ruoyi/server/temp
 
+# ── SYS-PROD-001 · 生产环境（一台代购的云服务器上的 docker compose）──────────────────────
+#
+# ★★ 本文件的**硬契约**（accept 2 最后一段就是 grep 这一点，别在这里「以示安全」地写开关）：
+#   SYS-PROD-001 票面点名的**三个危险开关**（分别管：小程序测试登录入口 / 识别按次收费通道 /
+#   识别测试桩实现）**在本文件里一个字都不出现**，连注释里也不写它们的键名。
+#   ⚠️ 「连注释里也不写」是刻意的：那条 accept 是字面 grep 三个键名，键名哪怕只出现在解释性
+#   注释里，断言同样会红。想看这三个键的名字与来由，去读 `application-test.yml` 的页首契约段
+#   与 `doc/_adr/0008-*.md`（文件名里带键名的那个 ADR —— 本行刻意不写全名）。
+#   理由（ADR-0008 及同批护栏的同一思路）：写一行「关」看起来更安全，实际是把它变成
+#   「离被改成 true 只差一次手滑」，而且会让 `application-test.yml` 页首那条
+#   「test 出现 / prod 不出现」的分界契约失效。缺省值在代码里已经在安全的那一侧：
+#     小程序测试登录       缺省 false（WxIdentityResolver / SysPingController 都读这个缺省）
+#     识别 provider        缺省 none（OcrProperties → NoneOcrProvider：提示「请手动填写」）
+#     识别按次收费通道     缺省 false
+#   真要在生产打开按次收费通道，由部署方在环境变量 / 外部配置里显式注入并留下甲方书面同意
+#   （合同第二条第 5 款）——那是一条有签字的变更，不是一行「顺手写上」的配置。
+#
+# ★ 与 `application-test.yml` 的差别（三处，都是刻意为之）：
+#   1. `mybatis-encryptor.password` 从**环境变量**取（生产口令 ≠ 测试的 LqgTestAesKey#01）；
+#   2. `captcha.enable` **不关**（test 关它只是为了 doc/verify/api.sh 的裸 curl 能登录；
+#      生产该开着——谁都能对着 /auth/login 撞口令是不可接受的）。verify.prod.env 里配的是
+#      真实管理员，线上冒烟走工作台登录（带验证码），api.sh 的账号密码登录在生产会被验证码挡住，
+#      这是**预期行为**，不是缺陷（见 doc/verify/verify.prod.env.example 的说明）。
+#   3. 库 / Redis / Gotenberg 走 compose 内网**服务名**，不是宿主端口。
+#
+# ★ 其他键（mail / sms / justauth / api-decrypt / snail-job 的其余项）保持与上游同构：
+#   被显式关掉的开关越多，越容易出现「配置文件与代码缺省不一致」这类只有上线才发现的坑。
+
 --- # 监控中心配置
-# 本项目不起 Spring Boot Admin（SYS-STAGING-001 / SYS-PROD-001 再谈监控）
+# 本项目不起 Spring Boot Admin（不接第三方 APM，见票面 §3 边界）
 spring.boot.admin.client:
   # 增加客户端开关
   enabled: false
@@ -26,8 +57,11 @@ snail-job:
   # 客户端ip指定
   host:
 
---- # 数据源配置（PostgreSQL 16，ADR-0002）
-# ★ 口令一律从环境变量取，**不进仓库**；变量名与 code/deploy/dev/.env.example 一致，生产由部署侧注入。
+--- # 数据源配置（PostgreSQL 16，ADR-0002：同机 Docker 里的 PG，不买 RDS）
+# ★ 口令一律从环境变量取，**不进仓库**；变量名与 code/deploy/prod/docker-compose.yml 一致，
+#   由部署侧注入（服务器上的 ${LQG_DATA_DIR}/.env，600）。
+# ★ 默认值 host=postgres：正常运行时 compose 会显式给 LQG_DB_HOST=postgres（compose 网络的服务名），
+#   这里不写宿主端口 —— 生产的 5432 不在宿主上监听。
 spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
@@ -40,43 +74,19 @@ spring:
       # 严格模式 匹配不到数据源则报错
       strict: true
       datasource:
-        # 主库数据源
+        # 主库数据源（生产库名固定 lqg，**不含 test** —— doc/verify/reseed.sh 的护栏靠这个字符串
+        # 挡住「误对生产灌 seed」）
         master:
           type: ${spring.datasource.type}
           driverClassName: org.postgresql.Driver
-          url: jdbc:postgresql://${LQG_DB_HOST:127.0.0.1}:${LQG_DB_PORT:5432}/${LQG_DB_NAME:lqg}?reWriteBatchedInserts=true&stringtype=unspecified
+          url: jdbc:postgresql://${LQG_DB_HOST:postgres}:${LQG_DB_PORT:5432}/${LQG_DB_NAME:lqg}?reWriteBatchedInserts=true&stringtype=unspecified
           username: ${LQG_DB_USER:lqg}
           password: ${LQG_DB_PASSWORD}
-#        # 从库数据源
-#        slave:
-#          lazy: true
-#          type: ${spring.datasource.type}
-#          driverClassName: com.mysql.cj.jdbc.Driver
-#          url: jdbc:mysql://localhost:3306/ry-vue?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&autoReconnect=true&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
-#          username:
-#          password:
-#        oracle:
-#          type: ${spring.datasource.type}
-#          driverClassName: oracle.jdbc.OracleDriver
-#          url: jdbc:oracle:thin:@//localhost:1521/XE
-#          username: ROOT
-#          password: root
-#        postgres:
-#          type: ${spring.datasource.type}
-#          driverClassName: org.postgresql.Driver
-#          url: jdbc:postgresql://localhost:5432/postgres?useUnicode=true&characterEncoding=utf8&useSSL=true&autoReconnect=true&reWriteBatchedInserts=true
-#          username: root
-#          password: root
-#        sqlserver:
-#          type: ${spring.datasource.type}
-#          driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
-#          url: jdbc:sqlserver://localhost:1433;DatabaseName=tempdb;SelectMethod=cursor;encrypt=false;rewriteBatchedStatements=true
-#          username: SA
-#          password: root
       hikari:
-        # 最大连接池数量
+        # 最大连接池数量。★ 与 postgres 的 max_connections=100 对齐着看：
+        #   20（后端连接池）+ pg_dump / 运维几条 + 预留，60 以内，留足余量。
         maxPoolSize: 20
-        # 最小空闲线程数量
+        # 最小空闲线程数量（2 核 4G：不要按 4 核模板给 10 以上的常驻连接）
         minIdle: 10
         # 配置获取连接等待超时的时间
         connectionTimeout: 30000
@@ -90,10 +100,12 @@ spring:
         keepaliveTime: 30000
 
 --- # redis 单机配置(单机与集群只能开启一个另一个需要注释掉)
+# Redis 只放会话 / 锁 / 缓存（生产数据以 PostgreSQL 为准，ADR-0002）；
+# compose 里给了 256MB + allkeys-lru 且**关掉快照**，所以这里不做持久化相关的假设。
 spring.data:
   redis:
-    # 地址
-    host: ${LQG_REDIS_HOST:127.0.0.1}
+    # 地址：compose 网络的服务名
+    host: ${LQG_REDIS_HOST:redis}
     # 端口
     port: ${LQG_REDIS_PORT:6379}
     # 数据库索引
@@ -109,18 +121,18 @@ spring.data:
 redisson:
   # redis key前缀
   keyPrefix:
-  # 线程池数量
-  threads: 16
+  # 线程池数量（2 核机器：与 test 同一档；照 4 核模板给 16/32 只会让 GC 更抖）
+  threads: 4
   # Netty线程池数量
-  nettyThreads: 32
+  nettyThreads: 8
   # 单节点配置
   singleServerConfig:
     # 客户端名称 不能用中文
     clientName: RuoYi-Vue-Plus
     # 最小空闲连接数
-    connectionMinimumIdleSize: 32
+    connectionMinimumIdleSize: 8
     # 连接池大小
-    connectionPoolSize: 64
+    connectionPoolSize: 32
     # 连接空闲超时，单位：毫秒
     idleConnectionTimeout: 10000
     # 命令等待超时，单位：毫秒
@@ -129,138 +141,38 @@ redisson:
     subscriptionConnectionPoolSize: 50
 
 --- # mail 邮件发送
+# 本项目不发邮件（通知走飞书机器人，见 code/deploy/prod/healthcheck.sh）。保持上游同构、关着。
 mail:
   enabled: false
-  host: smtp.163.com
-  port: 465
-  # 是否需要用户名密码验证
-  auth: true
-  # 发送方，遵循RFC-822标准
-  from: xxx@163.com
-  # 用户名（注意：如果使用foxmail邮箱，此处user为qq号）
-  user: xxx@163.com
-  # 密码（注意，某些邮箱需要为SMTP服务单独设置密码，详情查看相关帮助）
-  pass: xxxxxxxxxx
-  # 使用 STARTTLS安全连接，STARTTLS是对纯文本通信协议的扩展。
-  starttlsEnable: true
-  # 使用SSL安全连接
-  sslEnable: true
-  # SMTP超时时长，单位毫秒，缺省值不超时
-  timeout: 0
-  # Socket连接超时值，单位毫秒，缺省值不超时
-  connectionTimeout: 0
 
---- # sms 短信 支持 阿里云 腾讯云 云片 等等各式各样的短信服务商
-# https://sms4j.com/doc3/ 差异配置文档地址 支持单厂商多配置，可以配置多个同时使用
-sms:
-  # 配置源类型用于标定配置来源(interface,yaml)
-  config-type: yaml
-  # 用于标定yml中的配置是否开启短信拦截，接口配置不受此限制
-  restricted: true
-  # 短信拦截限制单手机号每分钟最大发送，只对开启了拦截的配置有效
-  minute-max: 1
-  # 短信拦截限制单手机号每日最大发送量，只对开启了拦截的配置有效
-  account-max: 30
-  # 以下配置来自于 org.dromara.sms4j.provider.config.BaseConfig类中
-  blends:
-    # 唯一ID 用于发送短信寻找具体配置 随便定义别用中文即可
-    # 可以同时存在两个相同厂商 例如: ali1 ali2 两个不同的阿里短信账号 也可用于区分租户
-    config1:
-      # 框架定义的厂商名称标识，标定此配置是哪个厂商，详细请看厂商标识介绍部分
-      supplier: alibaba
-      # 有些称为accessKey有些称之为apiKey，也有称为sdkKey或者appId。
-      access-key-id: 您的accessKey
-      # 称为accessSecret有些称之为apiSecret
-      access-key-secret: 您的accessKeySecret
-      signature: 您的短信签名
-      sdk-app-id: 您的sdkAppId
-    config2:
-      # 厂商标识，标定此配置是哪个厂商，详细请看厂商标识介绍部分
-      supplier: tencent
-      access-key-id: 您的accessKey
-      access-key-secret: 您的accessKeySecret
-      signature: 您的短信签名
-      sdk-app-id: 您的sdkAppId
+--- # 数据加密（@EncryptField / SampleFieldCipher）
+# ADR-0006：供体姓名、住院号、患者编号三列加密落库。**生产口令 ≠ 测试的 LqgTestAesKey#01。**
+# ★ 口令只从环境变量取（compose 注入服务器 .env 里的 LQG_ENCRYPT_PASSWORD，600 权限）。
+# ★ 口令丢了 = 这三列永远读不出来（AES 无后门）→ 上线当天另存一份给 Kevin，记进交接单
+#   （doc/ops/部署手册.md §8）。
+# ★ enable 保持 true：accept 1 第 2 段要 /lqg/sys/ping 报 encryptEnabled==true。
+# ★ algorithm / encode 与 dev / test 同口径（AES + BASE64），否则同一列在新旧环境之间不可读。
+mybatis-encryptor:
+  enable: true
+  algorithm: AES
+  encode: BASE64
+  password: ${LQG_ENCRYPT_PASSWORD}
 
---- # 三方授权
-justauth:
-  # 前端外网访问地址
-  address: http://localhost:80
-  type:
-    maxkey:
-      # maxkey 服务器地址
-      # 注意 如下均配置均不需要修改 maxkey 已经内置好了数据
-      server-url: http://sso.maxkey.top
-      client-id: 876892492581044224
-      client-secret: x1Y5MTMwNzIwMjMxNTM4NDc3Mzche8
-      redirect-uri: ${justauth.address}/social-callback?source=maxkey
-    topiam:
-      # topiam 服务器地址
-      server-url: http://127.0.0.1:1989/api/v1/authorize/y0q************spq***********8ol
-      client-id: 449c4*********937************759
-      client-secret: ac7***********1e0************28d
-      redirect-uri: ${justauth.address}/social-callback?source=topiam
-      scopes: [ openid, email, phone, profile ]
-    qq:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=qq
-      union-id: false
-    weibo:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=weibo
-    gitee:
-      client-id: 91436b7940090d09c72c7daf85b959cfd5f215d67eea73acbf61b6b590751a98
-      client-secret: 02c6fcfd70342980cd8dd2f2c06c1a350645d76c754d7a264c4e125f9ba915ac
-      redirect-uri: ${justauth.address}/social-callback?source=gitee
-    dingtalk:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=dingtalk
-    baidu:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=baidu
-    csdn:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=csdn
-    coding:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=coding
-      coding-group-name: xx
-    oschina:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=oschina
-    alipay_wallet:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=alipay_wallet
-      alipay-public-key: MIIB**************DAQAB
-    wechat_open:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=wechat_open
-    wechat_mp:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=wechat_mp
-    wechat_enterprise:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=wechat_enterprise
-      agent-id: 1000002
-    gitlab:
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=gitlab
-    gitea:
-      # 前端改动 https://gitee.com/JavaLionLi/plus-ui/pulls/204
-      # gitea 服务器地址
-      server-url: https://demo.gitea.com
-      client-id: 10**********6
-      client-secret: 1f7d08**********5b7**********29e
-      redirect-uri: ${justauth.address}/social-callback?source=gitea
+--- # 本项目（ruoyi-lqg）自有配置
+# ★ 只写「必须显式给」的键。票面点名的那三个危险开关**故意不出现**（键名见页首契约的说明），
+#   它们缺省就在安全的那一侧。这个 `lqg:` 块下面只有 doc / wx 两组，不需要再加别的组。
+lqg:
+  # 文档渲染（DOC-PDF-001 / ADR-0005）：docx → PDF 的转换容器（Gotenberg）。
+  #   生产里 backend 与 gotenberg 在同一个 compose 网络 → 走**服务名**（宿主上一个端口都不映射）。
+  #   timeout-seconds 与容器的 `--api-timeout=60s` 一致；超时 = 整体 failed + 原因，可重试。
+  doc:
+    gotenberg:
+      url: ${LQG_GOTENBERG_URL:http://gotenberg:3000}
+      timeout-seconds: 60
+  wx:
+    # 真实微信小程序：appid / secret 走环境变量注入（服务器 .env，600），**不进仓库**。
+    # 甲方主体 appid 未提供（SYS-RELEASE-001）→ 到位前留空：登录接口会明确报「未配置」，
+    # 而不是静默走 mock（prod 下 mock 被 MockLoginGuard 在启动时就拒了，ADR-0008）。
+    miniapp:
+      appid: ${LQG_WX_APPID:}
+      secret: ${LQG_WX_SECRET:}

@@ -373,12 +373,12 @@
       "note": "code/miniapp 从 unibest base-wot-ui @3.18.11（wot-design-uni 1.14.0）起建，99 文件/37 源文件 2462 行。三条 accept 全绿：build:mp-weixin + jq 页签【首页/文档/我的】+ biz 桶口与 :not()/* 两条 grep 空 + 生产包无 mock:ext；vitest entries.fixture.spec.ts 25/25 且 fixture(6/10/6) 未改；tokens 变量名集合 75=75 相等 + 两条 @import + 色值字面量 grep 空。口径：entriesFor/entryTarget/meSections 只认字面量 internal/external（INTERNAL/''/null/admin → 空），页面 v-else 兜底重新登录；点哪格都是 /pages/<key>/form；内部管理板块 v-if（外部不进 DOM）；小字常量逐字『核验、冻存取用请到网页工作台』。坑：① uni CLI 的 initEnv 先读 src/manifest.json（必须留空壳种子）；② SFC 模板里禁止写 <!-- #ifdef/#ifndef -->（与 @uni-ku/root 根节点注入打架 → Cannot destructure property tabBar of this.meta）；③ dev 判定别只用 import.meta.env.DEV，用 MODE==='development' && VITE_MOCK_LOGIN；④ App.ku.vue 不能删（uni-ku/root 从 main.ts 注入引用）；⑤ 本机 pnpm/npm 全局缓存只读 → .npmrc 的 store-dir 与 XDG_CACHE_HOME 都要指到工作区内。"
     },
     "SYS-PROD-001": {
-      "status": "pending",
+      "status": "blocked",
       "phase": "D8",
       "track": "SYS",
       "system": "",
       "fix_attempts": 0,
-      "note": ""
+      "note": "生产资源未到位（owner 未提供生产主机/域名/ICP/私有 OSS 桶与 RAM AK），acc1 全部 + acc2 段1/段4 无法执行 → blocked。★ 本地产出已全部落盘：code/deploy/prod/**（docker-compose 仅 nginx 暴露 80/443，其余四服务不写 ports；deploy.sh preflight 六道；healthcheck.sh 容器/磁盘/证书三查 + 飞书 webhook；oss-init.sql 不进 Flyway；nginx/{workspace,proxy-headers,security-headers}；remote/00-host,01-up,03-cert,04-oss-init,05-cron）、application-prod.yml（口令全取环境变量、库名固定 lqg 不含 test、三危险开关连注释都不写）、doc/ops/部署手册.md（含回滚与 SSH 隧道连库与首个管理员授权）、doc/ops/运维手册.md、doc/verify/verify.prod.env.example（无真值）。acc2 本地可验 4 条：3 绿 1 必红（那条红是票面断言与既有前端 vite 模板冲突，见 issue）。★ 实现方额外用本机真 nginx 1.27.0 实跑生产配置：nginx -t 过、HTTP 301→https、HTTPS 200、SPA 深链 200、5 条安全头齐、/prod-api 剥前缀转发生效、ACME 挑战 200 text/plain。调度方独立复核：未创建 verify.prod.env、无 AK 形态命中、无裸密钥赋值、8080 上是 Kevin 侧微信进程（非残留）、无 nginx 残留。keng: ①端口纪律检查不能用 grep -B 固定行数回溯（服务段落不等长，会误报），要 awk 回溯服务名；②证书天数别解析日期，用 openssl x509 -checkend $((DAYS*86400))；③gotenberg 限内存必须 mem_limit 不能 deploy.resources.limits（普通 compose 静默忽略）；④-Xmx1g 靠 compose environment 重复给 JAVA_TOOL_OPTIONS 覆盖镜像里的 MaxRAMPercentage；⑤证书续期 reload 三处联动（acme --reloadcmd → 先写 .tmp 再 mv → docker exec nginx -t && reload），webroot 的 location 必须带 ^~；⑥首次部署鸡生蛋：证书不存在 nginx -t 失败 → 先用 openssl req -x509 -days 3 自签占位再换真证书。"
     },
     "SYS-RELEASE-001": {
       "status": "pending",
@@ -3515,6 +3515,26 @@
       "type": "doc-drift",
       "title": "两份操作说明里没有生产访问地址（SYS-PROD-001 / SYS-RELEASE-001 还没落地，真实工作台域名与小程序名称未知）",
       "detail": "影响范围：doc/manual/内部人员操作说明.md §1.1 只写「打开工作台地址」、doc/manual/外部用户操作说明.md 只写「打开小程序」——发甲方做培训前必须回填，否则甲方第一个问题就是「地址是什么」。方案 a)（推荐）等 SYS-RELEASE-001 出正式地址后回填内部版 §1.1 一行 + 外部版页脚一行，并按 doc/manual/README.md 重导两份 PDF（约半小时）；b) 由 Kevin 培训时口头给地址，材料里留空。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 311,
+      "ticket": "SYS-PROD-001",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ SYS-PROD-001 acc1 段2/段3 即便生产资源到位也跑不通：api.sh 是裸 curl，而生产 api-decrypt.enabled 与 captcha.enable 都吃缺省 true",
+      "detail": "复现：application.yml:187 api-decrypt.enabled 缺省 true、application.yml:25 captcha.enable 缺省 true；application-prod.yml 刻意都不覆盖（test 才把两者关掉，正是 test/prod 的分界契约）。doc/verify/api.sh 不带 encrypt-key 头、不做 RSA/AES、不带验证码 code/uuid → 生产登录必然失败。影响：acc1 段2（ping 的 profile/buildCommit/加密开关）与段3（生产 mock 登录必须被拒）用的是 api.sh --as admin，属票面断言与环境设计的冲突。方案 a（推荐）：给 api.sh 加一条仅内网/白名单生效的旁路（另开票，验收期用）；b）收窄 acc1：改成在生产机上带 token 打 ping（需要一条取 token 的路径）；c）接受该段在生产不可执行并改写票面。实现方已把三段手工替代命令写进 doc/verify/verify.prod.env.example 的说明段，未动票面。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 312,
+      "ticket": "SYS-PROD-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "真实生产资源缺口 B1/B2：OSS 私有桶 + RAM 子账号 AK + 匿名探针裸地址；生产主机 + 域名 + ICP 名义",
+      "detail": "影响范围：SYS-PROD-001 acc1 全部与 acc2 段1/段4 无法执行；SYS-BACKUP-001 与 SYS-RELEASE-001 也卡在这里（B1/B2/B3–B6 见 doc/handover/d8-blockers.json）。方案 a：owner 补齐后重跑 bash code/deploy/prod/deploy.sh all，断言即可执行；b）本票维持 blocked，资产留在仓库等资源；c）用测试环境输出冒充——明确禁止（118.178.109.11 上是 profile=test，这样做就是伪造证据）。",
       "status": "open",
       "decision": ""
     }
