@@ -3547,6 +3547,36 @@
       "detail": "复现：git ls-files 过滤 .env 结尾者，全仓只命中 code/miniapp/env/.env。该文件 32 行全是 VITE_* 前端公共变量（VITE_APP_TITLE / VITE_UNI_APPID / VITE_WX_APPID 占位 / VITE_APP_CLIENT_ID 等），用 LTAI|AKID|secret|_key|token|password 扫它，唯一命中一行注释文字（md5 mp client_secret）。它是 unibest/vite 的 envDir 约定文件，改名会破坏构建。方案 a（推荐）：把断言收窄为只查 verify.prod.env 与 deploy 目录下的 .env——保住真实意图（生产密钥文件不被跟踪），放过前端模板；b）显式白名单该路径；c）改名（不建议，破坏 vite 约定）。★ 属验收口径调整，需调度方与 owner 决策；实现方按规矩未动票面。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 314,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S1",
+      "type": "arch",
+      "title": "V08 公网测试环境裸奔：mock 登录开着 + 管理员口令 admin123，任何人拿到网址即可拿到管理员 token",
+      "detail": "活体证实（2026-09-26）：https://songjian.tianda.studio 根路径 200，POST /prod-api/auth/login 用 lqgadmin/admin123 换到有效 access_token（独立验收报告 V08 已预警，当时未连测试机）。处置：已 ssh 到 118.178.109.11 执行 docker compose stop（/opt/lqg-test），只停本项目 5 个容器，未动宝塔与同机其它项目、未删数据卷；复验根路径与登录接口均 502、token 不可得。★ 止血不等于修复：重新上线前必须改管理员口令、关 mock 登录、加访问控制，并按 Kevin 口径先本地测试。",
+      "status": "decided",
+      "decision": "已止血（2026-09-26，执行 owner 亲自处置并复验）。剩余修复动作（改口令 / 关 mock / 访问控制 / 重新部署）归入部署改造，不在本目标（本地测试优先）内。"
+    },
+    {
+      "id": 315,
+      "ticket": "SYS-ACCEPT-001",
+      "severity": "S3",
+      "type": "harness",
+      "title": "上一轮台账两处失实更正：#96/#105 的「修复 commit 号」实为 subagent UUID 前缀；#217 被当成「已裁定」",
+      "detail": "① #96 的 decision 写 b8b160fe、#105 写 c6c6371a，二者在仓库中不存在（git cat-file -t 均无）——它们是派单时的 subagent UUID 前缀（b8b160fe-13ee-45a1-a7a7-b54ecee5d8b9「Fix D2 #96 source-unit filter」、c6c6371a-1ae5-45dc-9f11-062606c2d9f4「Fix D2 #105 final rework」），被我误当 commit 号抄入台账；真实修复 commit 为 7200248 与 3cbe0cf。机制：把不可靠来源（代理 ID）当证据。② AUTH-EXT-003 的期望反转援引「issue #217 已裁定」，实测 #217 是 status=open、decision=\"\"（detail 里只有一条「裁定建议」）→ 属虚报；按我自己在交接报告里立的标准，AUTH-EXT-003 的 D7 门结论作废；真裁定是 CR-20260923-09。③ 更正规则：就地标注、保留历史原值不改写。分诊全表见 doc/handover/V轮分诊-20260926.md。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 316,
+      "ticket": "SYS-PROD-001",
+      "severity": "S3",
+      "type": "debt",
+      "title": "仓库卫生：add9444 把 .playwright-mcp 浏览器调试杂物提交进 git（console 日志 7488 行、空 page yml）",
+      "detail": "影响：仓库体积与可读性；未来 bisect 与 diff 噪音。处置：从工作树删除并加 .gitignore；不重写历史（Kevin 口径：不 rewrite history）。同批还带进 _input/feedback/2026-09-24-shots（12 张甲方意见截图，属正常留档，保留）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
