@@ -3,18 +3,19 @@
 // 契约：`doc/api-contract.md` 第 73 行。
 //   内部：`GET /mp/int/cryo/batch/list`（工作表三个页签 + 历史编辑记录 `sort=recent[&mine=true]`）、
 //         `GET /mp/int/cryo/batch/{id}`、`POST /mp/int/cryo/batch`、`PUT /mp/int/cryo/batch`、
-//         `GET /mp/int/cryo/batch/{id}/flows`（**只读**的取用登记）
-//   ★ `/mp/int/cryo/**` 上**没有**取走 / 补入 / 转液氮 / 改删登记 / 删批次的接口
-//     （CR-20260917-05：那些只在网页工作台）。本文件因此也**不提供**它们的封装
-//     —— 不是「页面不放按钮」，是接口根本不存在（accept 2 会真调那些路径要求 404）。
+//         `GET /mp/int/cryo/batch/{id}/flows`（取用登记的读口）
+//   ★ `/mp/int/cryo/**` 上**没有**取走 / 补入 / 转液氮 / 改删登记 / 删批次的接口。2026-09-24 起
+//     小程序内部人员也能在批次详情弹层里登记（甲方「小程序和工作台界面都能操作」），走的是工作台
+//     那一份写口 `/lqg/cryo/batch/{id}/**`，封装在 `pages/cryo/flow.ts`（本文件不放）。
 //
 // ★ 分页响应是 `{code,msg,rows,total,tabCounts}`（没有 `data` 键）→ 一律带 `raw: true`（SAMPLE-MP-001 坑 3）。
-// ★ **超期、剩余、位置全部照实显示后端给的键**（`overdue` / `overdueDays` / `remainingQty` /
-//   `location` / `tabCounts`）：判定只有一处（CRYO-REMIND-001 的 `CryoOverdueService`），
-//   前端不自己按天数算、也不拿当前页 rows 去数页签数字。
+// ★ **超期、剩余、位置、取空全部照实显示后端给的键**（`overdue` / `overdueDays` / `remainingQty` /
+//   `location` / `emptied` / `frozenDays` / `tabCounts`）：判定只有一处（CRYO-REMIND-001 的
+//   `CryoOverdueService`，取空是同一份剩余算式），前端不自己按天数算、也不拿当前页 rows 去数页签数字。
 // ★ `sort=recent`（历史编辑记录那一档）**不带** `mine` 就是「中心全部内部人员」；
 //   `mine=true` 只在顶部「只看我提交的」开关打开时才带（CR-20260918-07）。
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
+import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
 
 // ── 行 / 详情形状 ────────────────────────────────────────────────────────────
@@ -54,6 +55,10 @@ export interface CryoBatchRow extends LedgerRow {
   mine?: boolean | null
   overdue?: boolean | null
   overdueDays?: number | null
+  /** 已取空（读时算：剩余 ≤ 0；2026-09-24 甲方「支数取空的要提示」） */
+  emptied?: boolean | null
+  /** 冻存到今天几天（读时算，后端按服务器日期算一次） */
+  frozenDays?: number | null
 }
 
 /** 冻存记录填写页的表单值（UI:mp.cryo.form 的九格 + 选样本那一格的显示值） */
@@ -71,6 +76,11 @@ export interface CryoFormValue {
   ln2Location: string
   frozenBy: string
   remark: string
+  /**
+   * -80度超低温冰箱转移至液氮时间（`yyyy-MM-dd`）：**只显示、不提交**。
+   * 登记转液氮走批次详情弹层的「转液氮」，本页保存不带这个键 = 不动它。
+   */
+  toLn2Time: string
 }
 
 /** 空表单（新增时用） */
@@ -88,6 +98,7 @@ export function emptyCryoForm(): CryoFormValue {
     ln2Location: '',
     frozenBy: '',
     remark: '',
+    toLn2Time: '',
   }
 }
 
@@ -119,6 +130,7 @@ export function toCryoFormValue(detail: Partial<CryoBatchRow> | null | undefined
     ln2Location: str(detail.ln2Location),
     frozenBy: str(detail.frozenBy),
     remark: str(detail.remark),
+    toLn2Time: dayOf(detail.toLn2Time),
   }
 }
 
@@ -128,7 +140,7 @@ export function toCryoFormValue(detail: Partial<CryoBatchRow> | null | undefined
  * ★ `initQty` 是**冻存数量 = 初始支数**，修改模式下**可改**（CR-20260917-04）；
  *   改小到让某一步剩余为负时后端 400，前端把提示原样显示、**不自己算**。
  * ★ **不带 `remainingQty`**（后端入参里没有这个键，剩余永远读时算 —— ADR-0010）。
- * ★ **不带 `toLn2Time`**：转液氮在工作台做（本页不碰它，patch 语义下不传 = 不动）。
+ * ★ **不带 `toLn2Time`**：转液氮在批次详情弹层的「转液氮」里登记（本页只显示它，patch 语义下不传 = 不动）。
  */
 export function cryoPayload(form: CryoFormValue): Record<string, unknown> {
   return {
@@ -174,24 +186,31 @@ export function cryoFormProblem(form: CryoFormValue): string {
   if (form.inMinus80 === 'N' && !form.ln2Location.trim()) {
     return '直接进液氮，请填液氮储存位置'
   }
+  // 已登记转液氮的批次不能把位置清掉（后端同一条：东西进了液氮罐却没人知道在哪）
+  if (form.toLn2Time && !form.ln2Location.trim()) {
+    return '已转液氮，请填液氮储存位置'
+  }
   return ''
 }
 
 // ── 内部（小程序 · 内部人员）─────────────────────────────────────────────────
 
 /**
- * 内部管理「-80 冻存」工作表的取数（UI:mp.cryo.list 的三个页签）。
+ * 内部管理「-80 冻存」工作表的取数（UI:mp.cryo.list 的四个页签）。
  *
- * ★ 三个页签 = 三个后端参数：全部（都不带）/ -80 超期（`overdueOnly=true`）/
- *   液氮（`location=ln2`）—— **在前端筛是错的**（分页 + 页签数字都是整表口径）。
+ * ★ 四个页签 = 四个后端参数：全部（都不带）/ -80 超期（`overdueOnly=true`）/
+ *   液氮（`location=ln2`）/ 已取空（`emptiedOnly=true`，2026-09-24）——
+ *   **在前端筛是错的**（分页 + 页签数字都是整表口径）。
  * ★ 响应顶层的 `tabCounts` 原样带回给页面（页签上的数字只认它，不数 rows）。
  */
-export function fetchCryoLedgerRows(filters: LedgerFilters, pageSize = 100) {
+export function fetchCryoLedgerRows(filters: LedgerFilters, pageNum = 1, pageSize = PAGE_SIZE) {
   return http.get<{ rows: CryoBatchRow[], total: number, tabCounts?: Record<string, number> | null }>(
     '/mp/int/cryo/batch/list',
     {
       overdueOnly: filters.cryoView === 'overdue' ? true : undefined,
       location: filters.cryoView === 'ln2' ? 'ln2' : undefined,
+      emptiedOnly: filters.cryoView === 'emptied' ? true : undefined,
+      pageNum,
       pageSize,
     },
     // 分页接口的形状是 `{code,msg,rows,total,tabCounts}`（没有 data 键）
@@ -205,14 +224,15 @@ export function fetchCryoLedgerRows(filters: LedgerFilters, pageSize = 100) {
  * ★ **默认不带 `mine`**（= 中心全部内部人员新增 / 修改过的记录，CR-20260918-07）；
  *   顶部「只看我提交的」开关打开时才**另外**带 `mine=true`。
  */
-export function fetchIntCryoList(params: { sort?: string, mine?: boolean, pageSize?: number }) {
+export function fetchIntCryoList(params: { sort?: string, mine?: boolean, pageNum?: number, pageSize?: number }) {
   return http.get<{ rows: CryoBatchRow[], total: number }>(
     '/mp/int/cryo/batch/list',
     {
       sort: params.sort,
       // 开关关着时不带这个参数（不带 = 中心全员）
       mine: params.mine ? true : undefined,
-      pageSize: params.pageSize ?? 100,
+      pageNum: params.pageNum ?? 1,
+      pageSize: params.pageSize ?? PAGE_SIZE,
     },
     // 分页接口的形状是 `{code,msg,rows,total}`（没有 data 键）
     { raw: true },
@@ -267,6 +287,10 @@ export function cryoLedgerCell(row: LedgerRow, key: string): string {
   if (field === 'freezeTime' || field === 'toLn2Time') {
     return dayOf(r[field]) || '—'
   }
+  if (field === 'remainingQty' && r.emptied === true) {
+    // 取空了在「当前剩余/支」这一格也写明（2026-09-24 甲方「支数取空的要提示」）
+    return `${r.remainingQty ?? 0} · 已取空`
+  }
   if (field === 'initQty' || field === 'remainingQty') {
     const value = r[field]
     return value === null || value === undefined ? '—' : String(value)
@@ -279,9 +303,17 @@ export function cryoLedgerFrozen(row: LedgerRow): string {
   return str(asCryoRow(row).cryoName).trim() || '—'
 }
 
-/** 「剩 N / 初始 M 支」：超期的行再加「已超 N 天」（UI:mp.cryo.list 的冻结格第二行） */
+/**
+ * 冻结格第二行：「剩 N / 初始 M 支」，超期的行再加「已超 N 天」（UI:mp.cryo.list）；
+ * **已取空的行把「已取空」放在最前**（冻结格窄，放在句尾会被挤到看不见）。
+ */
 export function cryoLedgerSub(row: LedgerRow): string {
-  return cryoQtyText(asCryoRow(row), true)
+  const r = asCryoRow(row)
+  if (r.emptied === true) {
+    const init = r.initQty === null || r.initQty === undefined ? '—' : String(r.initQty)
+    return `已取空 · 初始 ${init} 支`
+  }
+  return cryoQtyText(r, true)
 }
 
 /** 剩余 / 初始那一句；`withOverdue` = 是否带上「已超 N 天」 */
@@ -298,16 +330,21 @@ export function cryoQtyText(row: Partial<CryoBatchRow>, withOverdue = false): st
 }
 
 /**
- * 行底色：超期浅红（UI:mp.cryo.list：超期行浅红底、置顶）。
+ * 行底色：超期浅红（UI:mp.cryo.list：超期行浅红底、置顶）；已取空的行冻结格小字醒目标出。
  *
- * ★ 判据只认后端行上的 `overdue` —— 前端不按冻存时间自己算天数。
+ * ★ 判据只认后端行上的 `overdue` / `emptied` —— 前端不按冻存时间自己算天数、不自己拿剩余判。
+ *   两者互斥（取空的永不超期）。
  */
-export function cryoLedgerTone(row: LedgerRow): '' | 'overdue' {
-  return asCryoRow(row).overdue === true ? 'overdue' : ''
+export function cryoLedgerTone(row: LedgerRow): '' | 'overdue' | 'emptied' {
+  const r = asCryoRow(row)
+  if (r.overdue === true) {
+    return 'overdue'
+  }
+  return r.emptied === true ? 'emptied' : ''
 }
 
 /**
- * 三个页签的文案（数字 = 接口顶层的 `tabCounts`，**不数当前页 rows**）。
+ * 四个页签的文案（数字 = 接口顶层的 `tabCounts`，**不数当前页 rows**）。
  *
  * 拿不到 `tabCounts`（老后端 / 请求失败）时退回不带数字的短名 —— 数字宁可缺，
  * 也不能拿页面上的行数冒充（那正是 ticket 的 counterfeit）。
@@ -317,7 +354,17 @@ export function cryoTabText(counts: Record<string, number> | null | undefined): 
     '': counts ? `全部 ${counts.all ?? '—'}` : '全部',
     overdue: counts ? `-80 超期 ${counts.overdue ?? '—'}` : '-80 超期',
     ln2: counts ? `液氮 ${counts.ln2 ?? '—'}` : '液氮',
+    emptied: counts ? `已取空 ${counts.emptied ?? '—'}` : '已取空',
   }
+}
+
+/**
+ * 表格页 `?tab=` → 冻存那一档的视图值（首页「-80 超期」跳 `?sheet=cryo&tab=overdue`）。
+ *
+ * `all` / 缺省 / 不认识的值 → `''`（全部）；只认 `overdue` / `ln2` / `emptied`。
+ */
+export function cryoViewOfTab(raw: unknown): '' | 'overdue' | 'ln2' | 'emptied' {
+  return raw === 'overdue' || raw === 'ln2' || raw === 'emptied' ? raw : ''
 }
 
 // ── 批次详情弹层 / 历史页签：几段纯文案 ──────────────────────────────────────
@@ -325,6 +372,25 @@ export function cryoTabText(counts: Record<string, number> | null | undefined): 
 /** 当前位置的中文：`minus80` → -80℃，`ln2` → 液氮（读时算的 `location`） */
 export function cryoLocationText(row: LedgerRow): string {
   return str(asCryoRow(row).location) === 'ln2' ? '液氮' : '-80℃'
+}
+
+/**
+ * 批次详情弹层上方「放在哪」那一句（2026-09-24 甲方：-80 是暂存、液氮是长期存放）：
+ *   还在 -80 → 「-80℃ 暂存 · 冻存 N 天」（天数 = 后端的 `frozenDays`）；
+ *   已转液氮 → 「液氮 · 位置 xxx · 转入 yyyy-mm-dd」；
+ *   冻存当天直接进液氮 → 「液氮 · 位置 xxx · 直接进液氮」。
+ */
+export function cryoPlaceText(row: Partial<CryoBatchRow>): string {
+  if (str(row.location) === 'ln2') {
+    const where = `液氮 · 位置 ${str(row.ln2Location).trim() || '—'}`
+    const moved = dayOf(row.toLn2Time)
+    if (moved) {
+      return `${where} · 转入 ${moved}`
+    }
+    return str(row.inMinus80).toUpperCase() === 'N' ? `${where} · 直接进液氮` : where
+  }
+  const days = row.frozenDays
+  return days === null || days === undefined ? '-80℃ 暂存' : `-80℃ 暂存 · 冻存 ${days} 天`
 }
 
 /** 历史页签的编号列 = 冻存样品（等宽） */

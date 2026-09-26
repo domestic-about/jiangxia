@@ -5,21 +5,25 @@ import ErrorState from '@/components/lqg/ErrorState.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import SampleCard from '@/components/lqg/SampleCard.vue'
 import type { EntryKey } from '@/pages/index/entries'
-import { ENTRY_TITLE, entriesFor } from '@/pages/index/entries'
+import { ENTRY_SHORT, entriesFor } from '@/pages/index/entries'
 import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
+import { pagingFooterText, usePagedList } from '@/utils/paging'
 import WdSwitch from 'wot-design-uni/components/wd-switch/wd-switch.vue'
-import type { HistoryRow } from './sources'
+import type { HistoryRaw, HistoryRow } from './sources'
 import { UNREGISTERED_TEXT, sourceOf } from './sources'
 
 // 「我的 → 历史编辑记录」· UI:mp.history（SAMPLE-MP-001）。
 //
 // ★ 页签清单**直接用 `entriesFor(identity)`**（ticket 口径复述 6）：不另写一份，
 //   内部四张、外部三张，全部由 SYS-MP-001 那个纯函数给。
+// ★ 页签文字用**短名**（`ENTRY_SHORT`：样本记录 / 类器官收样 / 石蜡包埋 / -80 冻存，与内部管理表格页、
+//   待核验同一份）：Kevin 2026-09-24 本机验收「顶部 tab 文字不要换行」—— 390 宽下四个全称必折成两行。
 // ★ 顶部「只看我提交的」开关**内外部共用同一个**（CR-20260918-07，默认关）：
 //   外部打开 → 取数时带 `onlyMine`；内部打开 → 取数时带 `mine=true`。
 //   **默认（关）时内部不传 mine = 中心全部内部人员经手的记录**（甲方 9-18 的原话）。
-// ★ 还没注册数据源的页签显示空状态（本张只有样本记录这一档）。
+// ★ 查不到数据源的页签显示空状态（四档都已注册，这一支只是兜底）。
+// ★ 触底分页（V27）：先取一页，滑到底再取下一页；底部一行写「共 N 条」（N 只认后端 total）。
 definePage({
   style: {
     navigationBarTitleText: '历史编辑记录',
@@ -29,9 +33,6 @@ definePage({
 const store = useUserStore()
 const active = ref<EntryKey>('sample')
 const onlyMine = ref(false)
-const rows = ref<HistoryRow[]>([])
-const loading = ref(false)
-const failed = ref(false)
 
 const identity = computed(() => store.identity)
 /** 页签清单：同一个纯函数，不另写一份 */
@@ -39,39 +40,72 @@ const tabs = computed<EntryKey[]>(() => entriesFor(store.identity))
 
 const source = computed(() => sourceOf(active.value))
 
+/** 页签文字：短名（全称并排放不下，见上面的口径） */
 function titleOf(key: EntryKey): string {
-  return ENTRY_TITLE[key]
+  return ENTRY_SHORT[key]
 }
 
-async function load() {
+/** 当前身份（只认 `/mp/me`；缺失 / 不认识 → null，不取数） */
+function currentWho(): 'internal' | 'external' | null {
+  return store.identity === 'internal' ? 'internal' : store.identity === 'external' ? 'external' : null
+}
+
+const pager = usePagedList<HistoryRaw>({
+  fetchPage: (pageNum, pageSize) => {
+    const src = source.value
+    const who = currentWho()
+    if (!src || !who) {
+      return Promise.resolve({ rows: [], total: 0 })
+    }
+    return src.fetch(who, onlyMine.value, pageNum, pageSize)
+  },
+  keyOf: row => String(row.id),
+})
+
+const loading = pager.loading
+const failed = pager.failed
+/** 页面行：取回来的原始行按当前页签的数据源转一遍 */
+const rows = computed<HistoryRow[]>(() => {
   const src = source.value
-  if (!src) {
-    rows.value = []
+  return src ? pager.rows.value.map(item => src.toRow(item)) : []
+})
+const footerText = computed(() => pagingFooterText({
+  loadingMore: pager.loadingMore.value,
+  moreFailed: pager.moreFailed.value,
+  finished: pager.finished.value,
+  total: pager.total.value,
+  count: rows.value.length,
+}))
+
+async function load() {
+  if (!source.value) {
+    pager.clear()
     return
   }
-  loading.value = true
-  failed.value = false
-  try {
-    // ★ 身份的唯一来源是 `/mp/me`：本页可能是冷启动直接进来的（H5 深链 / 小程序分享），
-    //   这时 store 里还没有 me —— 必须先把它拉回来，否则 entriesFor(undefined) 出空页签、
-    //   取数也没有身份可用（实测踩过：页面渲染出来了，但一个请求都没发）。
-    if (!store.me) {
+  // ★ 身份的唯一来源是 `/mp/me`：本页可能是冷启动直接进来的（H5 深链 / 小程序分享），
+  //   这时 store 里还没有 me —— 必须先把它拉回来，否则 entriesFor(undefined) 出空页签、
+  //   取数也没有身份可用（实测踩过：页面渲染出来了，但一个请求都没发）。
+  if (!store.me) {
+    try {
       await store.loadMe()
     }
-    const who = store.identity === 'internal' ? 'internal' : store.identity === 'external' ? 'external' : null
-    if (!who) {
-      rows.value = []
+    catch {
+      pager.clear()
+      pager.failed.value = true
       return
     }
-    const list = await src.fetch(who, onlyMine.value)
-    rows.value = list.map(item => src.toRow(item))
   }
-  catch {
-    failed.value = true
-    rows.value = []
+  if (!currentWho()) {
+    pager.clear()
+    return
   }
-  finally {
-    loading.value = false
+  await pager.reload()
+}
+
+/** 底部那一行：取下一页失败时点它重试 */
+function onFooterTap() {
+  if (pager.moreFailed.value) {
+    pager.loadMore()
   }
 }
 
@@ -109,6 +143,11 @@ function start() {
 
 onMounted(start)
 onShow(start)
+
+// 滑到底取下一页（取完、正在取、第一页没成功时 loadMore 自己什么都不做）
+onReachBottom(() => {
+  pager.loadMore()
+})
 </script>
 
 <template>
@@ -134,10 +173,10 @@ onShow(start)
 
     <ErrorState v-else-if="failed" text="没能加载历史编辑记录" @retry="load" />
 
-    <!-- 这一档还没有数据源（后续 ticket 注册） -->
-    <EmptyState v-else-if="!source" :text="UNREGISTERED_TEXT" />
+    <!-- 查不到数据源的页签（兜底） -->
+    <EmptyState v-else-if="!source" state="empty" :text="UNREGISTERED_TEXT" />
 
-    <EmptyState v-else-if="rows.length === 0" :text="source.emptyText" />
+    <EmptyState v-else-if="rows.length === 0" state="empty" :text="source.emptyText" />
 
     <view v-else class="lqg-card lqg-card--flush his__list">
       <view
@@ -158,6 +197,11 @@ onShow(start)
           :reason="row.reason"
         />
       </view>
+    </view>
+
+    <!-- 触底分页的底部一行：正在加载 / 失败点这里重试 / 共 N 条（N = 后端 total） -->
+    <view v-if="!loading && !failed && rows.length > 0" class="his__more" @click="onFooterTap">
+      <text class="his__more-t">{{ footerText }}</text>
     </view>
   </view>
 </template>
@@ -189,5 +233,15 @@ onShow(start)
 
 .his__item--line {
   border-top: 1px solid var(--lqg-line);
+}
+
+.his__more {
+  padding: var(--lqg-sp-6) var(--lqg-gutter) 0;
+  text-align: center;
+}
+
+.his__more-t {
+  font-size: var(--lqg-fs-sm);
+  color: var(--lqg-ink-3);
 }
 </style>

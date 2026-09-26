@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
+/*
+ * 实现备注（给维护的人看，不进接口文档 / Swagger）：
+ *
  * 「完成并同步 / 撤回」两个端点（doc/api-contract.md 的 QC 一节，ticket §2）。
  *
  * <pre>
@@ -28,6 +30,16 @@ import org.springframework.web.bind.annotation.RestController;
  * 混进 CRUD 控制器里迟早会被后来的写接口绕过去。
  *
  * @author DOC-PUBLISH-001
+ */
+/**
+ * 质控文档的「完成并同步」与「撤回」。
+ *
+ * <pre>
+ *   POST /lqg/qc/{sampleId}/{docType}/publish     完成并同步（草稿 → 已完成，并生成内部版、外部版与合并件）
+ *   POST /lqg/qc/{sampleId}/{docType}/unpublish   撤回（已完成 → 草稿，送检方立即看不到）
+ * </pre>
+ *
+ * <p>docType 取 sample-qc / organoid-qc / score。已完成的再点完成、对草稿点撤回都返回 400。
  */
 @RequiredArgsConstructor
 @RestController

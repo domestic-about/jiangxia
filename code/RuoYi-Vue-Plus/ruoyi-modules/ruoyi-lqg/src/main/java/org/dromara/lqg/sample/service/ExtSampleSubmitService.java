@@ -3,15 +3,18 @@ package org.dromara.lqg.sample.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.exception.ServiceException;
-import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.auth.group.domain.SourceUnit;
-import org.dromara.lqg.auth.group.service.UnitQueryService;
+import org.dromara.lqg.auth.service.ExtProfileQueryService;
 import org.dromara.lqg.ext.domain.bo.ExtOrganoidSubmitBo;
 import org.dromara.lqg.ext.domain.bo.ExtSampleSubmitBo;
 import org.dromara.lqg.ext.service.ExtScopeService;
 import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.domain.bo.SampleSubmitSegmentBo;
 import org.dromara.lqg.sample.guard.SampleKindRules;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules.UnitRef;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules.Writer;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.verify.SampleResubmitBo;
 import org.dromara.lqg.sample.verify.SampleVerifyService;
@@ -44,6 +47,14 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li><b>被拒时库里一个字都不变</b>：全部校验在任何写操作之前，整段一个事务。</li>
  * </ol>
  *
+ * <p>★ FIX V03（issue #88 / #111）：写库之前先过 {@link SubmitSegmentRules}（必填、字典、长度），
+ * 缺字段 / 非法值一律 {@code code=400} + 字段级提示，不再走到数据库约束上把 SQL 与整行数据回吐给外部。
+ * 重提的校验放在「可见 → 本人 → 状态 → 类别」<b>之后</b>：不可见的样本永远先得到 404。
+ *
+ * <p>★ FIX V01（issue #112）：来源单位 id 由后端按「提交人可用的单位 + 表单单位名」定
+ * （{@link SubmitSegmentRules#attributeExternalUnit}）——小程序组织样本表单只发单位名也能挂上 id；
+ * 发来的 id 不是自己可用的单位 → 400，外部不能把样本挂到别的单位。
+ *
  * @author AUTH-EXT-001
  */
 @Slf4j
@@ -52,12 +63,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExtSampleSubmitService {
 
     private final SampleMapper sampleMapper;
-    private final SampleFieldCipher fieldCipher;
     private final SampleSubmitNoGenerator submitNoGenerator;
-    private final SampleQueryService sampleQueryService;
     private final SampleVerifyService sampleVerifyService;
-    private final UnitQueryService unitQueryService;
     private final ExtScopeService extScopeService;
+    private final ExtProfileQueryService extProfileQueryService;
+    private final SampleSubmitSegmentWriter segmentWriter;
 
     /**
      * 外部提交组织样本（{@code POST /mp/ext/sample}）。
@@ -68,31 +78,31 @@ public class ExtSampleSubmitService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Long submitTissue(Long userId, ExtSampleSubmitBo bo) {
-        ExtSampleSubmitBo fields = bo == null ? new ExtSampleSubmitBo() : bo;
         requireLogin(userId);
-        if (StringUtils.isBlank(fields.getTissueType())) {
-            throw new ServiceException("「组织」类样本缺少必填项：组织类型");
-        }
-        String unitName = resolveUnitName(fields.getSourceUnitId(), fields.getSourceUnitName());
-        return insertExternalTissue(userId, fields, unitName);
+        SampleSubmitSegmentBo seg = segmentOf(bo == null ? new ExtSampleSubmitBo() : bo);
+        // ① 必填与格式（任何写库之前；违规 400 + 字段级提示）
+        SubmitSegmentRules.throwIfAny(
+            SubmitSegmentRules.submitViolations(SampleKindRules.KIND_TISSUE, seg, Writer.EXTERNAL));
+        // ② 来源单位归属：只能是提交人可用的单位（前端不发 id 也按单位名对上）
+        UnitRef unit = attributeUnit(userId, seg, null);
+        return insertExternal(userId, SampleKindRules.KIND_TISSUE, seg, unit);
     }
 
     /**
      * 外部提交类器官收样记录（{@code POST /mp/ext/organoid}，CR-20260917-05）。
      *
      * @param userId 当前登录的外部人员
-     * @param bo     来源单位 + 类器官类型 + 备注
+     * @param bo     来源单位 + 类器官类型 + 代数（CR-20260924-10，选填）+ 备注
      * @return 新建样本 id
      */
     @Transactional(rollbackFor = Exception.class)
     public Long submitOrganoid(Long userId, ExtOrganoidSubmitBo bo) {
-        ExtOrganoidSubmitBo fields = bo == null ? new ExtOrganoidSubmitBo() : bo;
         requireLogin(userId);
-        if (StringUtils.isBlank(fields.getOrganoidType())) {
-            throw new ServiceException("「类器官」类样本缺少必填项：类器官类型");
-        }
-        String unitName = resolveUnitName(fields.getSourceUnitId(), fields.getSourceUnitName());
-        return insertExternalOrganoid(userId, fields, unitName);
+        SampleSubmitSegmentBo seg = segmentOf(bo == null ? new ExtOrganoidSubmitBo() : bo);
+        SubmitSegmentRules.throwIfAny(
+            SubmitSegmentRules.submitViolations(SampleKindRules.KIND_ORGANOID, seg, Writer.EXTERNAL));
+        UnitRef unit = attributeUnit(userId, seg, null);
+        return insertExternal(userId, SampleKindRules.KIND_ORGANOID, seg, unit);
     }
 
     /**
@@ -113,6 +123,7 @@ public class ExtSampleSubmitService {
     @Transactional(rollbackFor = Exception.class)
     public void resubmitExternal(Long userId, Long sampleId, String expectedKind, SampleResubmitBo resubmitFields) {
         requireLogin(userId);
+        SampleResubmitBo fields = resubmitFields == null ? new SampleResubmitBo() : resubmitFields;
         // ① 可见性（不可见按「不存在」回 404，不泄露存在性）
         extScopeService.assertVisible(userId, sampleId);
         // ② 本人 + 状态（同组别人的 / 已核验有效的 → 拒）
@@ -125,16 +136,23 @@ public class ExtSampleSubmitService {
         // ③ 类别必须与路径一致（组织样本的 PUT 不许改类器官样本，反之亦然）
         Sample sample = DataPermissionHelper.ignore(() -> sampleMapper.selectById(sampleId));
         if (sample == null) {
-            throw new ServiceException("样本不存在", 404);
+            throw new ServiceException(ExtScopeService.SAMPLE_NOT_FOUND, 404);
         }
         String actualKind = SampleKindRules.normalize(sample.getSampleKind());
         if (!SampleKindRules.normalize(expectedKind).equals(actualKind)) {
             throw new ServiceException(String.format("这条记录是「%s」类样本，不能从「%s」的入口修改",
                 kindName(actualKind), kindName(expectedKind)), 400);
         }
-        // ④ 送检段写入 + 无效→待核验（清 invalid_reason）——状态机是唯一判据，本类不另写转移规则
-        sampleVerifyService.resubmitByExternal(sampleId, userId, resubmitFields);
-        log.info("外部重提：id={} userId={} kind={}", sampleId, userId, actualKind);
+        // ④ 必填与格式（FIX V03）——放在范围 / 归属 / 状态之后：不可见的样本永远先得到 404
+        SubmitSegmentRules.throwIfAny(SubmitSegmentRules.submitViolations(actualKind, fields, Writer.EXTERNAL));
+        // ⑤ 来源单位归属（FIX V01）：可用单位 / 名称没改就沿用这条样本已挂的单位 / 否则只存名称
+        UnitRef unit = attributeUnit(userId, fields,
+            new UnitRef(sample.getSourceUnitId(), sample.getSourceUnitName()));
+        fields.setSourceUnitId(unit.id());
+        fields.setSourceUnitName(unit.name());
+        // ⑥ 送检段写入 + 无效→待核验（清 invalid_reason）——状态机是唯一判据，本类不另写转移规则
+        sampleVerifyService.resubmitByExternal(sampleId, userId, fields);
+        log.info("外部重提：id={} userId={} kind={} 来源单位 id={}", sampleId, userId, actualKind, unit.id());
     }
 
     /**
@@ -164,7 +182,8 @@ public class ExtSampleSubmitService {
     /**
      * 类器官收样的修改重提（{@code PUT /mp/ext/organoid/{id}}）。
      *
-     * <p>只拷「来源单位 + 类器官类型 + 备注」三项：类器官入参里根本没有别的键。
+     * <p>只拷「来源单位 + 类器官类型 + 代数 + 备注」四项：类器官入参里根本没有别的键
+     * （代数是 CR-20260924-10 加的；外部改自己待核验 / 无效的记录时也能改代数）。
      */
     @Transactional(rollbackFor = Exception.class)
     public void resubmitOrganoid(Long userId, Long sampleId, ExtOrganoidSubmitBo bo) {
@@ -173,6 +192,7 @@ public class ExtSampleSubmitService {
         fields.setSourceUnitId(src.getSourceUnitId());
         fields.setSourceUnitName(src.getSourceUnitName());
         fields.setOrganoidType(src.getOrganoidType());
+        fields.setPassage(src.getPassage());
         fields.setRemark(src.getRemark());
         resubmitExternal(userId, sampleId, SampleKindRules.KIND_ORGANOID, fields);
     }
@@ -181,79 +201,77 @@ public class ExtSampleSubmitService {
 
     private void requireLogin(Long userId) {
         if (userId == null) {
-            throw new ServiceException("未登录");
+            throw new ServiceException("未登录", 401);
         }
     }
 
     /**
-     * 新建组织样本：{@code sample_kind='tissue'}、{@code submit_source='external'}、
-     * {@code verify_status='pending'}、{@code submitter_id=本人}，收样段全空。
+     * 来源单位归属（FIX V01）：提交人可用的单位 = 档案里绑定的单位（pending / verified），
+     * 判定规则全在纯函数 {@link SubmitSegmentRules#attributeExternalUnit}；
+     * 挂上已有单位时名称刷新成单位表的当前名称。
+     *
+     * @param existing 重提时这条样本当前挂的单位（新建时 null）
      */
-    private Long insertExternalTissue(Long userId, ExtSampleSubmitBo fields, String unitName) {
+    private UnitRef attributeUnit(Long userId, SampleSubmitSegmentBo seg, UnitRef existing) {
+        SourceUnit bound = extProfileQueryService.boundUnitOf(userId);
+        UnitRef boundRef = bound == null ? null : new UnitRef(bound.getId(), bound.getUnitName());
+        UnitRef unit = SubmitSegmentRules.attributeExternalUnit(boundRef, seg.getSourceUnitId(),
+            seg.getSourceUnitName(), existing);
+        return segmentWriter.refresh(unit);
+    }
+
+    /**
+     * 新建外部样本：{@code submit_source='external'}、{@code verify_status='pending'}、
+     * {@code submitter_id=本人}，送检段经 {@link SampleSubmitSegmentWriter}（与内部同一组列），收样段全空。
+     */
+    private Long insertExternal(Long userId, String kind, SampleSubmitSegmentBo seg, UnitRef unit) {
         return DataPermissionHelper.ignore(() -> {
             Sample entity = new Sample();
             entity.setSubmitNo(submitNoGenerator.next());
-            entity.setSampleKind(SampleKindRules.KIND_TISSUE);
+            entity.setSampleKind(kind);
             entity.setSubmitSource("external");
             entity.setSubmitterId(userId);
             entity.setVerifyStatus(VerifyTransitions.PENDING);
-            entity.setSourceUnitId(fields.getSourceUnitId());
-            entity.setSourceUnitName(unitName);
-            entity.setDonorName(fieldCipher.encrypt(fields.getDonorName()));
-            entity.setGender(trimToNull(fields.getGender()));
-            entity.setAge(trimToNull(fields.getAge()));
-            entity.setHospitalNo(fieldCipher.encrypt(fields.getHospitalNo()));
-            entity.setTissueType(trimToNull(fields.getTissueType()));
-            entity.setHasPathology(trimToNull(fields.getHasPathology()));
-            entity.setRemark(trimToNull(fields.getRemark()));
+            segmentWriter.applyTo(entity, kind, seg, unit);
             sampleMapper.insert(entity);
-            log.info("外部提交组织样本：id={} submitNo={} submitter={} 单位={}",
-                entity.getId(), entity.getSubmitNo(), userId, unitName);
+            log.info("外部提交{}：id={} submitNo={} submitter={} 单位 id={} 名称={}",
+                kindName(kind), entity.getId(), entity.getSubmitNo(), userId, unit.id(), unit.name());
             return entity.getId();
         });
     }
 
     /**
-     * 新建类器官收样记录：只写「来源单位 / 类器官类型 / 备注」，其余列（含供体姓名、收样段）全空。
+     * 外部组织样本入参 → 送检段（逐字段手工拷：外部能写什么永远是显式的）。
      */
-    private Long insertExternalOrganoid(Long userId, ExtOrganoidSubmitBo fields, String unitName) {
-        return DataPermissionHelper.ignore(() -> {
-            Sample entity = new Sample();
-            entity.setSubmitNo(submitNoGenerator.next());
-            entity.setSampleKind(SampleKindRules.KIND_ORGANOID);
-            entity.setSubmitSource("external");
-            entity.setSubmitterId(userId);
-            entity.setVerifyStatus(VerifyTransitions.PENDING);
-            entity.setSourceUnitId(fields.getSourceUnitId());
-            entity.setSourceUnitName(unitName);
-            entity.setOrganoidType(trimToNull(fields.getOrganoidType()));
-            entity.setRemark(trimToNull(fields.getRemark()));
-            sampleMapper.insert(entity);
-            log.info("外部提交类器官收样：id={} submitNo={} submitter={} 单位={}",
-                entity.getId(), entity.getSubmitNo(), userId, unitName);
-            return entity.getId();
-        });
+    static SampleSubmitSegmentBo segmentOf(ExtSampleSubmitBo src) {
+        SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
+        seg.setSourceUnitId(src.getSourceUnitId());
+        seg.setSourceUnitName(src.getSourceUnitName());
+        seg.setDonorName(src.getDonorName());
+        seg.setGender(src.getGender());
+        seg.setAge(src.getAge());
+        seg.setHospitalNo(src.getHospitalNo());
+        seg.setTissueType(src.getTissueType());
+        seg.setHasPathology(src.getHasPathology());
+        seg.setRemark(src.getRemark());
+        return seg;
     }
 
     /**
-     * 来源单位名称快照：选了单位就取单位表的当前名称，否则用请求里的名称（同 SAMPLE-MODEL-001）。
+     * 外部类器官入参 → 送检段（只有来源单位、类器官类型、代数、备注四项）。
      */
-    private String resolveUnitName(Long sourceUnitId, String sourceUnitName) {
-        if (sourceUnitId != null) {
-            SourceUnit unit = unitQueryService.findUnit(sourceUnitId);
-            if (unit == null) {
-                throw new ServiceException("来源单位不存在");
-            }
-            return unit.getUnitName();
-        }
-        return trimToNull(sourceUnitName);
+    static SampleSubmitSegmentBo segmentOf(ExtOrganoidSubmitBo src) {
+        SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
+        seg.setSourceUnitId(src.getSourceUnitId());
+        seg.setSourceUnitName(src.getSourceUnitName());
+        seg.setOrganoidType(src.getOrganoidType());
+        seg.setPassage(src.getPassage());
+        seg.setRemark(src.getRemark());
+        return seg;
     }
 
     private static String kindName(String kind) {
         return SampleKindRules.KIND_ORGANOID.equals(kind) ? "类器官" : "组织";
     }
 
-    private static String trimToNull(String value) {
-        return StringUtils.isBlank(value) ? null : value.trim();
-    }
 }

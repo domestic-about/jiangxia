@@ -52,7 +52,7 @@
 <script setup name="LqgCryoFlowDialog" lang="ts">
 import { addFlow, updateFlow } from '@/api/lqg/cryo';
 import type { CryoBatchVO, CryoFlowVO } from '@/api/lqg/cryo';
-import { failText, isFlowKind, purposeProblem, qtyProblem, editableQtyOf } from './flow';
+import { failText, isFlowKind, needsEmptyConfirm, purposeProblem, qtyProblem, editableQtyOf } from './flow';
 import type { FlowKind } from './flow';
 import { useI18n } from 'vue-i18n';
 
@@ -62,6 +62,8 @@ import { useI18n } from 'vue-i18n';
  *
  * ★ 类型在打开时定死、界面上只显示不可编辑（要换类型只能删掉重登）。
  * ★ 被拒时把**后端原话**弹出来（「已取走 N 支…」「会让后面某一步剩余为负…」），不静默。
+ * ★ 取走让这一批从有变成 0 支时，提交前多问一句「登记后这一批就取空了（剩 0 支），确定吗？」
+ *   （2026-09-24 甲方「支数取空的要提示」；判据 needsEmptyConfirm 与小程序同一组用例）。
  */
 const emit = defineEmits<{ (e: 'saved'): void }>();
 
@@ -75,6 +77,10 @@ const kind = ref<FlowKind>('take');
 const batchId = ref<string | number | null>(null);
 const flowId = ref<string | number | null>(null);
 const remaining = ref<number | null>(null);
+/** 批次**现在**的剩余（取空确认用；修改时由流水抽屉把最新的传进来） */
+const currentRemaining = ref<number | null>(null);
+/** 改一笔时，那一笔原来的带符号支数（新登记为 0） */
+const oldDelta = ref(0);
 
 const formRef = ref<ElFormInstance>();
 const form = reactive<{ qty: number | null; purpose: string | null; operatorName: string | null; flowTime: string | null }>({
@@ -123,6 +129,8 @@ const openCreate = (next: FlowKind, batch: CryoBatchVO, presetPurpose?: string |
   batchId.value = batch?.id ?? null;
   flowId.value = null;
   remaining.value = batch?.remainingQty ?? null;
+  currentRemaining.value = batch?.remainingQty ?? null;
+  oldDelta.value = 0;
   form.qty = null;
   form.purpose = presetPurpose ?? null;
   form.operatorName = null;
@@ -130,13 +138,19 @@ const openCreate = (next: FlowKind, batch: CryoBatchVO, presetPurpose?: string |
   visible.value = true;
 };
 
-/** 打开「修改」（类型不可改；qty 按原类型解释） */
-const openEdit = (batch: CryoBatchVO, flow: CryoFlowVO) => {
+/**
+ * 打开「修改」（类型不可改；qty 按原类型解释）。
+ *
+ * @param nowRemaining 批次现在的剩余（流水抽屉拿最新一次 flows 响应里的；取空确认用，不做超取判断）
+ */
+const openEdit = (batch: CryoBatchVO, flow: CryoFlowVO, nowRemaining?: number | null) => {
   editing.value = true;
   kind.value = isFlowKind(flow?.flowType) ? flow.flowType : 'adjust';
   batchId.value = batch?.id ?? null;
   flowId.value = flow?.id ?? null;
   remaining.value = null; // 改的是历史账，「那一刻的余额」只有后端算得出来
+  currentRemaining.value = nowRemaining ?? batch?.remainingQty ?? null;
+  oldDelta.value = flow?.delta ?? 0;
   form.qty = editableQtyOf(flow);
   form.purpose = flow?.purpose ?? null;
   form.operatorName = flow?.operatorName ?? null;
@@ -154,6 +168,14 @@ const submit = async () => {
   if (reasonProblem) {
     proxy?.$modal.msgWarning(t('lqg.cryo.flow.' + reasonProblem));
     return;
+  }
+  // ★ 这一笔会让批次从有变成 0 支 → 提交前多问一句（点「取消」就停在弹窗里）
+  if (needsEmptyConfirm(kind.value, form.qty, currentRemaining.value, oldDelta.value)) {
+    try {
+      await proxy?.$modal.confirm(t('lqg.cryo.flow.emptyConfirm'));
+    } catch {
+      return;
+    }
   }
   submitting.value = true;
   try {

@@ -6,7 +6,7 @@
 
 export default {
   title: 'Paraffin embedding records',
-  subtitle: 'Internal and external submissions in one table: pending external ones are pinned on top with a pale row; export matches the client template column by column.',
+  subtitle: 'One row per paraffin block, attached to a sample (a sample can have several); click "Sample no." to go back to the sample. Partner submissions are verified here: pending ones are pinned on top with a pale row — "Partner submissions to verify" filters them in one click.',
   search: 'Search',
   reset: 'Reset',
   loading: 'Loading…',
@@ -24,12 +24,22 @@ export default {
     verifyStatus: 'Verify status',
     submitSource: 'Source',
     submitSourceAll: 'All',
-    sampleFilter: 'Only embedding records of sample {id}'
+    sourceExternal: 'Partner (external)',
+    sourceInternal: 'Center internal'
+  },
+
+  scope: {
+    only: 'Only paraffin embedding records of {sample}',
+    total: '{n} in total',
+    showAll: 'Show all',
+    openSample: 'Open sample',
+    sampleFallback: 'sample {id}'
   },
 
   toolbar: {
     add: 'New embedding record',
     refresh: 'Refresh',
+    partnerPending: 'Partner submissions to verify',
     export: 'Export paraffin embedding records',
     exporting: 'Exporting…',
     exportDone: 'Export finished',
@@ -80,7 +90,9 @@ export default {
     stainOtherFull: 'Other ({name})',
     noStain: '—',
     markerColon: ': ',
-    markerSeparator: '; '
+    markerSeparator: '; ',
+    openSample: 'Back to this sample',
+    openSampleBySubmitNo: 'Not verified yet and has no internal no., so the submission no. is shown; click to go back to this sample'
   },
 
   drawer: {

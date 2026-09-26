@@ -1,0 +1,55 @@
+{
+  "_doc": "小程序内部首页「待处理」块的验收用例（甲方 2026-09-24 测试问题记录表第 17 行：内部人员的小程序首页和网页台首页都要显示待核验、冻存超期这些要处理的事；Kevin 定这次一起做，推翻 CR-20260917-05 的「首页没有数字」——只对内部，外部首页不变）。被测纯函数在 code/miniapp/src/pages/index/todo.ts：showTodo(identity) → 只有 identity='internal' 才显示（外部、缺失、空、不认识的值一律不显示，绝不默认当内部）；todoItems(todo) → 固定三项、固定顺序：待核验样本 pendingSamples / 待核验石蜡包埋送样 pendingEmbeds / -80 超期未转液氮 cryoOverdue，数为 0 的项 muted=true 但不隐藏；todoAllClear(todo) → 三项都是 0 时整块只剩一行「暂无待处理」。缺键、null、负数、非数字按 0；接口多给的键（pendingExtUsers、renderFailed，以及 A 组新加的 pendingTissue / pendingOrganoid）一律不读——pendingSamples 仍是组织与类器官之和。targets = 点一项去哪：样本 → 待核验列表页的样本记录页签；石蜡包埋 → 同一页的石蜡包埋页签；-80 超期 → 内部管理表格页冻存表的超期页签（tab 参数由冻存那边的表格页认）。seed 的期望（工作台首页同一口径）：待核验样本 2、待核验石蜡包埋送样 1、-80 超期 2。",
+  "labels": ["待核验样本", "待核验石蜡包埋送样", "-80 超期未转液氮"],
+  "emptyText": "暂无待处理",
+  "targets": {
+    "pendingSamples": "/pages/verify/index?tab=tissue",
+    "pendingEmbeds": "/pages/verify/index?tab=embed",
+    "cryoOverdue": "/pages/ledger/index?sheet=cryo&tab=overdue"
+  },
+  "showCases": [
+    { "identity": "internal", "expect": true },
+    { "identity": "external", "expect": false },
+    { "identity": "", "expect": false },
+    { "identity": null, "expect": false },
+    { "identity": "admin", "expect": false },
+    { "identity": "INTERNAL", "expect": false }
+  ],
+  "itemCases": [
+    {
+      "name": "seed：2 / 1 / 2，接口多给的两个数不读",
+      "todo": { "pendingSamples": 2, "pendingEmbeds": 1, "cryoOverdue": 2, "pendingExtUsers": 2, "renderFailed": 0 },
+      "expect": { "counts": [2, 1, 2], "muted": [false, false, false], "allClear": false }
+    },
+    {
+      "name": "某一项是 0：弱化但不隐藏，其余照常",
+      "todo": { "pendingSamples": 0, "pendingEmbeds": 3, "cryoOverdue": 0 },
+      "expect": { "counts": [0, 3, 0], "muted": [true, false, true], "allClear": false }
+    },
+    {
+      "name": "三项都是 0：整块一行「暂无待处理」（外部用户待核验不算这里的事）",
+      "todo": { "pendingSamples": 0, "pendingEmbeds": 0, "cryoOverdue": 0, "pendingExtUsers": 5, "renderFailed": 1 },
+      "expect": { "counts": [0, 0, 0], "muted": [true, true, true], "allClear": true }
+    },
+    {
+      "name": "A 组拆出的两个数不读：只认 pendingSamples（= 两者之和）",
+      "todo": { "pendingSamples": 5, "pendingTissue": 3, "pendingOrganoid": 2, "pendingEmbeds": 0, "cryoOverdue": 1 },
+      "expect": { "counts": [5, 0, 1], "muted": [false, true, false], "allClear": false }
+    },
+    {
+      "name": "缺键、null、负数、非数字按 0",
+      "todo": { "pendingSamples": null, "pendingEmbeds": -1, "cryoOverdue": "abc" },
+      "expect": { "counts": [0, 0, 0], "muted": [true, true, true], "allClear": true }
+    },
+    {
+      "name": "字符串数字按数字读",
+      "todo": { "pendingSamples": "4", "pendingEmbeds": 0, "cryoOverdue": 0 },
+      "expect": { "counts": [4, 0, 0], "muted": [false, true, true], "allClear": false }
+    },
+    {
+      "name": "整个对象缺失：三项都是 0",
+      "todo": null,
+      "expect": { "counts": [0, 0, 0], "muted": [true, true, true], "allClear": true }
+    }
+  ]
+}

@@ -273,7 +273,8 @@ class MpExportContractTest {
     @DisplayName("两张样本导出视图仍在上游 SampleExportService（本包只有分派）")
     void sampleViewsComeFromUpstream() {
         assertEquals(14, SampleExportService.tissueHeaderIndex().size());
-        assertEquals(7, SampleExportService.organoidHeaderIndex().size());
+        // 类器官 = 模板 7 列 + 插入的「代数」（CR-20260924-10；列名只在上游 SampleExportService 手上）
+        assertEquals(7 + SampleExportService.ORGANOID_INSERTED_AFTER.size(), SampleExportService.organoidHeaderIndex().size());
         assertEquals(String.class, fieldType(SampleTissueExportVo.class, "donorName"));
         assertEquals(String.class, fieldType(SampleOrganoidExportVo.class, "organoidType"));
     }
@@ -322,6 +323,16 @@ class MpExportContractTest {
      * （调用方退化成只断上游常量 —— 「文件不在」不许伪装成「口径对」）。
      */
     private static List<String> firstRowOf(String fileName) {
+        // V31（F4）：先读本模块测试资源里的副本（classpath 的 export-templates/，与 _input/templates/ 逐字节一致，
+        // FixtureCopiesSyncTest 比对），只检出后端目录也能对账；找不到再按老办法往上找 _input/templates/
+        java.net.URL copy = MpExportContractTest.class.getClassLoader().getResource("export-templates/" + fileName);
+        if (copy != null) {
+            try {
+                return readFirstRow(java.nio.file.Path.of(copy.toURI()));
+            } catch (Exception e) {
+                System.out.println("[SYS-EXPORT-001] 模板副本打不开，改找 _input/templates/：" + e.getMessage());
+            }
+        }
         java.nio.file.Path p = java.nio.file.Path.of("").toAbsolutePath();
         for (int i = 0; i < 6 && p != null; i++) {
             java.nio.file.Path candidate = p.resolve("_input").resolve("templates").resolve(fileName);

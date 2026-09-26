@@ -1,5 +1,7 @@
 package org.dromara.lqg.sys.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.lqg.sys.domain.vo.SysPingVo;
@@ -14,7 +16,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 
 /**
- * 后端健康探针：GET /lqg/sys/ping（登录即可调，doc/api-contract.md「SYS」一节）。
+ * 后端健康探针：GET /lqg/sys/ping（<b>只给内部角色</b>，doc/api-contract.md「SYS」一节）。
  *
  * <p>这个接口存在的唯一目的，是让验收执行器能证明三件事、而且证明的是**运行期事实**：
  * <ol>
@@ -26,6 +28,13 @@ import java.sql.DatabaseMetaData;
  *
  * <p>不加 {@code @SaIgnore}：匿名访问落在若依的 Sa-Token 全局拦截器上（401），
  * 这也是 accept 第 3 段要的。接口组 {@code /lqg/**} 的鉴权口径见 api-contract.md。
+ *
+ * <p>★ <b>内部角色闸</b>（独立验收 V20，2026-09-23）：原先登录即可调，外部账号（小程序 mp token）
+ * 也能读到 profile、mock 登录开关、加密开关、数据库版本 —— 这些是给验收与运维看的环境指纹，
+ * 不该给送检方。现在与首页同一个闸：{@code lqg_admin / lqg_internal / superadmin} 任一即可，
+ * 外部 403。<b>{@code mode = SaMode.OR} 不能省</b>（Sa-Token 缺省 AND：要求三个角色同时具备，
+ * 管理员与内部人员会一起 403，见 {@code HomeController} 的注释）。角色集合必须与
+ * {@code StaffGrantRules.INTERNAL_ROLE_KEYS} 逐字一致，由 {@code SysPingControllerContractTest} 钉住。
  *
  * @author SYS-BASE-001
  */
@@ -57,6 +66,7 @@ public class SysPingController {
     @Value("${lqg.auth.mock-login:false}")
     private boolean mockLogin;
 
+    @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
     @GetMapping("/ping")
     public R<SysPingVo> ping() {
         SysPingVo vo = new SysPingVo();

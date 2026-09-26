@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import org.dromara.lqg.sample.domain.bo.SampleSubmitSegmentBo;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -22,6 +23,11 @@ import java.util.Date;
  *
  * <p>★ 这个 BO 里**没有** {@code verifyStatus}：目标状态只能由 {@code action} 经
  * {@link VerifyTransitions} 推出来，请求体里夹带 {@code verifyStatus} 不生效。
+ *
+ * <p>★ FIX V02（issue #147）：可选的 {@link #submitSegment} —— 核验抽屉里送检段是可编辑的，
+ * 「判为有效并保存」/「判为无效」时把整份送检段一起带上，与核验结论<b>同一个事务</b>落库
+ * （规则与工作台修改 {@code PUT /lqg/sample} 同一份：{@code SubmitSegmentRules} +
+ * {@code SampleSubmitSegmentWriter}）。不带这个键 = 送检段一个字都不动（老调用方不受影响）。
  *
  * @author SAMPLE-VERIFY-001
  */
@@ -88,5 +94,12 @@ public class SampleVerifyBo implements Serializable {
      */
     @Schema(description = "判无效的原因（判无效必填）")
     private String reason;
+
+    /**
+     * 送检段（可选，整段替换；不带 = 不动）。核验抽屉里改过的来源单位、供体姓名、性别、年龄、住院号、
+     * 组织类型 / 类器官类型、代数（类器官，CR-20260924-10）、有无病理、备注随核验一起保存（FIX V02 / issue #147）。
+     */
+    @Schema(description = "送检段（可选；带了就与核验结论同一事务整段保存，不带 = 送检段不动）")
+    private SampleSubmitSegmentBo submitSegment;
 
 }

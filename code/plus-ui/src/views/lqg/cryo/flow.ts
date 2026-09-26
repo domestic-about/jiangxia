@@ -64,6 +64,43 @@ export function qtyProblem(kind: FlowKind, qty: number | null | undefined, remai
 }
 
 /**
+ * 保存后批次还剩几支（2026-09-24 甲方「支数取空的要提示」，G 批 B2）。
+ *
+ * @param kind      本次操作的类型
+ * @param qty       弹窗里填的支数（take / add 正整数；adjust 带符号）
+ * @param remaining 批次**现在**的剩余（接口读时算的 remainingQty）
+ * @param oldDelta  改一笔时，被改那一笔原来的带符号支数（新登记为 0）
+ * @returns qty 不合法 → null
+ */
+export function remainingAfter(kind: FlowKind, qty: number | null | undefined, remaining: number, oldDelta = 0): number | null {
+  if (qty === null || qty === undefined || !Number.isInteger(qty)) {
+    return null;
+  }
+  if (kind === 'adjust') {
+    return qty === 0 ? null : remaining - oldDelta + qty;
+  }
+  if (qty <= 0) {
+    return null;
+  }
+  return remaining - oldDelta + (kind === 'take' ? -qty : qty);
+}
+
+/**
+ * 提交前要不要多问一句「登记后这一批就取空了（剩 0 支），确定吗？」——
+ * 只有**取走**、且这一笔让剩余**从大于 0 变成恰好 0** 时才问（批次本来就是 0 的不问；补入不问）。
+ *
+ * ★ 与小程序 `pages/cryo/flow.ts` 的同名函数是**同一组用例**钉住的
+ *   （`doc/verify/fixtures/cryo-take-cases.json`，两边的 spec 都读它），两端只能一起改。
+ * ★ 后端的逐笔校验不因此放松：这里只是取空前多确认一下。
+ */
+export function needsEmptyConfirm(kind: FlowKind, qty: number | null | undefined, remaining: number | null | undefined, oldDelta = 0): boolean {
+  if (kind !== 'take' || remaining === null || remaining === undefined || remaining <= 0) {
+    return false;
+  }
+  return remainingAfter(kind, qty, remaining, oldDelta) === 0;
+}
+
+/**
  * 盘点调整必填原因（权威 FLOW:F-CRYO-02.step3）；take / add 的用途可空。
  */
 export function purposeProblem(kind: FlowKind, purpose?: string | null): string | null {

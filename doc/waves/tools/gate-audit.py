@@ -12,6 +12,14 @@
     （不拦门 —— 工具故障不该伪装成产品缺陷）。
   · 轮次 = 已合并的 `<PHASE>-r<n>.json` 个数 + 1：同轮内重跑覆盖本片，合过之后再跑才进下一轮。
 
+2026-09-23 按 CR-20260923-09 更新（独立验收查实：环境类失败被记成该级 pass，D7-r1-L01 mvn exit 1 照记 L0 pass）：
+  · 级的状态**算**出来：该级有 fail → fail；否则有 env（环境 / 工具坏，含编译失败、前端构建失败、reseed 失败）→ blocked；
+    该级一步都没跑（例如 L0 环境不对提前收工，L1 根本没开始）→ blocked；全 pass（known 不算红）才是 pass。
+    blocked 不是 pass 也不是 fail：`task_state.py qa merge` 只认 pass / fail，blocked 的级不会被当成「跑过了」。
+  · **门退出码不为 0、或任一级不是 pass → 不写正式审计文件**（doc/waves/qa/<PHASE>-r<n>-L01.json），
+    只写草稿 `<logdir>/<PHASE>-r<n>-L01.draft.json` 供人看；`--audit` 指到 doc/waves/qa/ 里同样拒写。
+    gate.json 里 `audit_formal` 标明这次有没有写正式审计。
+
 用法（通常由 gate.sh 调用）：
   python3 doc/waves/tools/gate-audit.py --gate .tmp/gate/D5/gate.json --tsv .tmp/gate/D5/steps.tsv \
       --phase D5 --head <sha> --started <iso> --finished <iso> --exit 0 --logdir .tmp/gate/D5
@@ -93,13 +101,20 @@ def main():
 
     l0 = [s for s in steps if level_of(s["id"]) == "L0"]
     l1 = [s for s in steps if level_of(s["id"]) == "L1"]
-    # 只有 fail（未登记的红）才把级判红；known（已登记的非产品缺陷红）不算红。
-    l0_status = "fail" if any(s["status"] == "fail" for s in l0) else "pass"
-    l1_status = "fail" if any(s["status"] == "fail" for s in l1) else "pass"
-    # 环境坏（env）不改级的红绿 —— 它是工具问题，由 issues 里的 S2/harness 记账，
-    # 但**整轮该级仍然如实标 pass/fail**，绝不由「环境没准备好」冒充通过。
-    if any(s["status"] == "env" for s in steps) and not any(s["status"] == "fail" for s in steps):
-        pass  # 级状态保持 pass；env 记 issue，供人判断这轮是否可信
+
+    def level_status(ss):
+        """fail（有未登记的红）> blocked（有环境 / 工具坏，或这一级一步都没跑）> pass。
+        known（已登记的非产品缺陷红）不算红。★ 环境坏绝不能让这一级记 pass：「没验成」不是「验过了」。"""
+        if not ss:
+            return "blocked"
+        if any(s["status"] == "fail" for s in ss):
+            return "fail"
+        if any(s["status"] == "env" for s in ss):
+            return "blocked"
+        return "pass"
+
+    l0_status = level_status(l0)
+    l1_status = level_status(l1)
     _esc = escalated_in_phase(a.phase)
     _esc_note = ("\n⚠️ 本任务有未实现项（escalated，accept 重放按状态跳过、**不**算产品缺陷）："
                  + ", ".join(_esc)) if _esc else ""
@@ -178,7 +193,17 @@ def main():
                           "但它使这一轮 gate 结论不可信，需修好环境后重跑。",
             })
 
-    audit_path = a.audit or os.path.join(QA_DIR, f"{a.phase}-r{rnd}-L01.json")
+    # ── 正式审计只在「门退出码 0 且两级都 pass」时写 ─────────────────────────
+    formal_ok = (a.exit == 0 and l0_status == "pass" and l1_status == "pass")
+    refused = ""
+    default_formal = os.path.join(QA_DIR, f"{a.phase}-r{rnd}-L01.json")
+    audit_path = a.audit or default_formal
+    in_qa_dir = os.path.abspath(audit_path).startswith(os.path.abspath(QA_DIR) + os.sep)
+    if not formal_ok and in_qa_dir:
+        refused = (f"门退出码 {a.exit}、L0={l0_status}、L1={l1_status} —— 不是全绿，禁止写正式审计文件 "
+                   f"{os.path.relpath(audit_path, ROOT)}")
+        draft_dir = a.logdir or os.path.dirname(os.path.abspath(a.gate))
+        audit_path = os.path.join(draft_dir, f"{a.phase}-r{rnd}-L01.draft.json")
     os.makedirs(os.path.dirname(audit_path), exist_ok=True)
     audit = {
         "phase": a.phase, "round": rnd, "auditor": "independent",
@@ -190,6 +215,11 @@ def main():
         "escalated_noted": escalated_in_phase(a.phase),
         "issues": issues,
     }
+    if not formal_ok:
+        # 草稿：auditor 不写 independent（qa merge 会拒收），并写明为什么不是正式审计
+        audit["auditor"] = "draft-not-for-merge"
+        audit["draft_reason"] = refused or (f"门退出码 {a.exit}、L0={l0_status}、L1={l1_status} —— 不是全绿；"
+                                            f"按 --audit 写到非正式位置，不能拿去 qa merge")
     with open(audit_path, "w", encoding="utf-8") as f:
         json.dump(audit, f, ensure_ascii=False, indent=1)
 
@@ -203,14 +233,21 @@ def main():
                               for r in (accept.get("failed") or [])]},
         "steps": steps,
         "audit": os.path.relpath(audit_path, ROOT),
+        "audit_formal": bool(formal_ok and in_qa_dir),
+        "audit_refused": refused,
     }
     os.makedirs(os.path.dirname(os.path.abspath(a.gate)), exist_ok=True)
     with open(a.gate, "w", encoding="utf-8") as f:
         json.dump(gate, f, ensure_ascii=False, indent=1)
 
     print(f"[ok] gate.json → {os.path.relpath(a.gate, ROOT)}")
-    print(f"[ok] 审计 → {os.path.relpath(audit_path, ROOT)}（{a.phase} r{rnd}；L0={l0_status} L1={l1_status}；"
-          f"步骤 {len(steps)}，issue {len(issues)}）")
+    if refused:
+        print(f"[refuse] {refused}")
+        print(f"[draft] 审计草稿 → {os.path.relpath(audit_path, ROOT)}（{a.phase} r{rnd}；L0={l0_status} L1={l1_status}；"
+              f"步骤 {len(steps)}，issue {len(issues)}；auditor=draft-not-for-merge，qa merge 不收）")
+    else:
+        print(f"[ok] 审计 → {os.path.relpath(audit_path, ROOT)}（{a.phase} r{rnd}；L0={l0_status} L1={l1_status}；"
+              f"步骤 {len(steps)}，issue {len(issues)}）")
     return 0
 
 

@@ -11,13 +11,13 @@ import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.domain.EmbedMarker;
-import org.dromara.lqg.embed.domain.bo.EmbedMarkerBo;
 import org.dromara.lqg.embed.domain.bo.EmbedSubmitBo;
-import org.dromara.lqg.embed.guard.MarkerExprRules;
+import org.dromara.lqg.embed.guard.EmbedFillRules;
 import org.dromara.lqg.embed.guard.StainRules;
 import org.dromara.lqg.embed.mapper.EmbedMapper;
 import org.dromara.lqg.embed.mapper.EmbedMarkerMapper;
 import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.domain.bo.PatchBody;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.verify.VerifyTransitions;
 import org.springframework.stereotype.Service;
@@ -28,6 +28,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -55,6 +56,10 @@ import java.util.List;
  * <p>★ <b>所有校验在任何写操作之前</b>：accept 的每条「被拒」后面都跟一句库内断言
  * （「先落盘再报错」是它要抓的假绿形态）。
  *
+ * <p>★ FIX V02b（issue #147）：补填段（{@code EmbedFillBo} 那 15 项：样本类型、类器官来源类型、七个工序时间、包埋人、
+ * 染色、marker、操作人、备注）的校验与落库列收口到 {@link EmbedFillWriter} —— 本类的新增 / 修改与核验抽屉
+ * 「判为有效并保存」时一并保存的 {@code fill}（{@code EmbedVerifyService}）走<b>同一份规则</b>。
+ *
  * @author EMBED-MODEL-001
  */
 @Slf4j
@@ -66,7 +71,8 @@ public class EmbedService {
     private final EmbedMarkerMapper embedMarkerMapper;
     private final SampleMapper sampleMapper;
     private final EmbedBlockNoGuard blockNoGuard;
-    private final EmbedDictService dictService;
+    /** 补填段唯一的校验与落库列（与核验抽屉一并保存的 fill 同一份，FIX V02b） */
+    private final EmbedFillWriter fillWriter;
 
     /**
      * 内部新增（{@code POST /lqg/embed}）。
@@ -89,9 +95,9 @@ public class EmbedService {
             throw new ServiceException("内部录入石蜡包埋必须填石蜡块编号");
         }
         blockNoGuard.requireUnique(blockNo, null);
-        // ③ 染色组合 + marker 表达（字典外的值一律拒）
-        List<String> stains = StainRules.normalize(bo.getStainTypes(), dictService.stainValues(), bo.getStainOther());
-        validateMarkers(bo.getMarkers());
+        // ③ 补填段：长度、染色组合 + marker 表达（字典外的值一律拒）—— 与修改、核验时补填同一份规则（EmbedFillWriter）
+        EmbedFillWriter.Prepared fill = fillWriter.prepare(PatchBody.of(bo, new LinkedHashSet<>(EmbedFillRules.ALL_KEYS)));
+        List<String> stains = fill.stains();
         Long userId = currentUserId();
         if (userId == null) {
             throw new ServiceException("取不到当前登录用户，无法落提交人");
@@ -126,7 +132,7 @@ public class EmbedService {
                 ? bo.getOperatorName().trim() : currentNickname());
             entity.setRemark(trimToNull(bo.getRemark()));
             embedMapper.insert(entity);
-            insertMarkers(entity.getId(), bo.getMarkers());
+            fillWriter.insertMarkers(entity.getId(), fill.markers());
             log.info("内部新增石蜡包埋：id={} sampleId={} blockNo={} stains={}",
                 entity.getId(), entity.getSampleId(), blockNo, entity.getStainTypes());
             return entity.getId();
@@ -134,22 +140,29 @@ public class EmbedService {
     }
 
     /**
-     * 内部修改 / 补填（{@code PUT /lqg/embed}）—— <b>patch 语义</b>：只改传了的字段。
+     * 内部修改 / 补填（{@code PUT /lqg/embed}、{@code PUT /mp/int/embed}）—— <b>补丁语义</b>（FIX V33）：
+     * <ul>
+     *   <li>键<b>没出现</b> → 不动（补填：只传做完的那一步工序时间）；</li>
+     *   <li>键出现、值为 {@code null} / 空串 → <b>清空</b>（工序时间填错了能清掉 —— 以前「null = 不动」，
+     *       工作台抽屉里清掉切片时间点保存，提示已保存而库里还在，切片染色提示一直显示「已切片」）；</li>
+     *   <li>清必填项（所挂样本、石蜡块编号）→ 400，不假装成功。</li>
+     * </ul>
      *
      * <p>★ 待核验 / 无效的记录直接 400（ticket §2 第 6 条）：核验是带必填项的状态转移，
      * 不能被一次普通保存绕过去。
      */
     @Transactional(rollbackFor = Exception.class)
-    public void update(EmbedSubmitBo bo) {
+    public void update(PatchBody<EmbedSubmitBo> body) {
+        EmbedSubmitBo bo = body == null ? null : body.value();
         if (bo == null || bo.getId() == null) {
-            throw new ServiceException("缺少石蜡包埋记录 id");
+            throw new ServiceException("缺少石蜡包埋记录 id", 400);
         }
         Long userId = currentUserId();
         DataPermissionHelper.ignore(() -> {
             Embed exists = embedMapper.selectById(bo.getId());
             if (exists == null) {
                 // 已软删的行 selectById 也查不到（@TableLogic）→ 与「不存在」同样处理
-                throw new ServiceException("石蜡包埋记录不存在（或已删除）");
+                throw new ServiceException("石蜡包埋记录不存在（或已删除）", 404);
             }
             if (!VerifyTransitions.VALID.equals(exists.getVerifyStatus())) {
                 throw new ServiceException("待核验 / 无效的送样不能通过普通保存修改"
@@ -163,52 +176,34 @@ public class EmbedService {
                 .set(Embed::getUpdateBy, userId)
                 .set(Embed::getUpdateTime, new Date());
 
-            // 所挂样本：传了且换了人才校验（必须仍是已核验有效的样本）
-            if (bo.getSampleId() != null && !bo.getSampleId().equals(exists.getSampleId())) {
-                requireValidSample(bo.getSampleId());
-                patch.set(Embed::getSampleId, bo.getSampleId());
+            // 所挂样本：必填 —— 传了空值 → 400；传了且换了才校验（必须仍是已核验有效的样本）
+            if (body.has("sampleId")) {
+                if (bo.getSampleId() == null) {
+                    throw new ServiceException("所挂样本不能为空", 400);
+                }
+                if (!bo.getSampleId().equals(exists.getSampleId())) {
+                    requireValidSample(bo.getSampleId());
+                    patch.set(Embed::getSampleId, bo.getSampleId());
+                }
             }
-            // 石蜡块编号：传了才改，且必须全库唯一（排除自己）
-            if (bo.getParaffinBlockNo() != null) {
+            // 石蜡块编号：必填、全库唯一（排除自己）—— 传了空值 → 400
+            if (body.has("paraffinBlockNo")) {
                 String blockNo = EmbedBlockNoGuard.normalized(bo.getParaffinBlockNo());
                 if (blockNo == null) {
-                    throw new ServiceException("石蜡块编号不能为空");
+                    throw new ServiceException("石蜡块编号不能为空", 400);
                 }
                 blockNoGuard.requireUnique(blockNo, exists.getId());
                 patch.set(Embed::getParaffinBlockNo, blockNo);
             }
-            // 染色：传了整组替换（含 stainOther 的置空 / 必填）；只给 stainOther 时单独改
-            if (bo.getStainTypes() != null) {
-                List<String> stains = StainRules.normalize(bo.getStainTypes(), dictService.stainValues(),
-                    bo.getStainOther());
-                patch.set(Embed::getStainTypes, StainRules.toCsv(stains))
-                    .set(Embed::getStainOther, StainRules.hasOther(stains) ? trimToNull(bo.getStainOther()) : null);
-            } else if (bo.getStainOther() != null) {
-                patch.set(Embed::getStainOther, trimToNull(bo.getStainOther()));
-            }
-            // marker：传了就整组替换（先软删旧的、再插新的，同一事务）
-            if (bo.getMarkers() != null) {
-                validateMarkers(bo.getMarkers());
-                embedMarkerMapper.delete(new LambdaQueryWrapper<EmbedMarker>()
-                    .eq(EmbedMarker::getEmbedId, exists.getId()));
-                insertMarkers(exists.getId(), bo.getMarkers());
-            }
-            // 其余标量：null = 不动（补填语义）
-            patch.set(bo.getSampleType() != null, Embed::getSampleType, trimToNull(bo.getSampleType()))
-                .set(bo.getOrganoidSourceType() != null, Embed::getOrganoidSourceType,
-                    trimToNull(bo.getOrganoidSourceType()))
-                .set(bo.getTissueReceiveTime() != null, Embed::getTissueReceiveTime, bo.getTissueReceiveTime())
-                .set(bo.getTissueProcessTime() != null, Embed::getTissueProcessTime, bo.getTissueProcessTime())
-                .set(bo.getAgaroseEmbedTime() != null, Embed::getAgaroseEmbedTime, bo.getAgaroseEmbedTime())
-                .set(bo.getEmbedBy() != null, Embed::getEmbedBy, trimToNull(bo.getEmbedBy()))
-                .set(bo.getDehydrateTime() != null, Embed::getDehydrateTime, bo.getDehydrateTime())
-                .set(bo.getAgaroseSendTime() != null, Embed::getAgaroseSendTime, bo.getAgaroseSendTime())
-                .set(bo.getParaffinEmbedTime() != null, Embed::getParaffinEmbedTime, bo.getParaffinEmbedTime())
-                .set(bo.getSectionTime() != null, Embed::getSectionTime, bo.getSectionTime())
-                .set(bo.getOperatorName() != null, Embed::getOperatorName, trimToNull(bo.getOperatorName()))
-                .set(bo.getRemark() != null, Embed::getRemark, trimToNull(bo.getRemark()));
+            // 补填段（15 项）：长度、染色（传了就整组替换，含 stainOther 的置空 / 必填）、marker（传了就整组替换）
+            // —— 校验全部在写库之前，与核验抽屉一并保存的 fill 同一份（EmbedFillWriter，FIX V02b）
+            EmbedFillWriter.Prepared fill = fillWriter.prepare(body);
+            // 补填段的列拼进同一条 UPDATE：没传 = 不动；传了空值 = 清空（FIX V33：以前 null = 不动，日期清不掉）
+            fillWriter.applyTo(patch, fill);
             embedMapper.update(null, patch);
-            log.info("修改石蜡包埋：id={} blockNo={}", exists.getId(), bo.getParaffinBlockNo());
+            // marker：传了就整组替换（先软删旧的、再插新的，同一事务；传 null / [] = 清空）
+            fillWriter.replaceMarkers(exists.getId(), fill);
+            log.info("修改石蜡包埋：id={} 改动键={}", exists.getId(), body.keys());
             return null;
         });
     }
@@ -254,43 +249,6 @@ public class EmbedService {
         return sample;
     }
 
-    /**
-     * 一整组 marker：每条表达必须落在字典 {@code lqg_marker_expr} 内；{@code markerName} 可空。
-     *
-     * <p>先全组校验、再逐条插 —— 第 2 条不合法时第 1 条也不该落库（事务是第二道保险，不是第一道）。
-     */
-    private void validateMarkers(List<EmbedMarkerBo> markers) {
-        if (markers == null || markers.isEmpty()) {
-            return;
-        }
-        List<String> allowed = dictService.markerExprValues();
-        for (EmbedMarkerBo marker : markers) {
-            if (marker == null) {
-                continue;
-            }
-            MarkerExprRules.normalize(marker.getExpression(), allowed);
-        }
-    }
-
-    private void insertMarkers(Long embedId, List<EmbedMarkerBo> markers) {
-        if (markers == null || markers.isEmpty()) {
-            return;
-        }
-        List<String> allowed = dictService.markerExprValues();
-        int sort = 0;
-        for (EmbedMarkerBo marker : markers) {
-            if (marker == null) {
-                continue;
-            }
-            EmbedMarker entity = new EmbedMarker();
-            entity.setEmbedId(embedId);
-            entity.setMarkerName(trimToNull(marker.getMarkerName()));
-            entity.setExpression(MarkerExprRules.normalize(marker.getExpression(), allowed));
-            entity.setSort(sort++);
-            embedMarkerMapper.insert(entity);
-        }
-    }
-
     // ── 小工具 ───────────────────────────────────────────────────────────────
 
     private static String trimToNull(String value) {
@@ -305,9 +263,16 @@ public class EmbedService {
         return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
+    /**
+     * 当前登录人 id；取不到（没有请求上下文，例如单测、定时任务）时 null —— 与 {@code SampleQueryService.currentUserId} 同口径。
+     */
     private static Long currentUserId() {
-        LoginUser loginUser = LoginHelper.getLoginUser();
-        return loginUser == null ? null : loginUser.getUserId();
+        try {
+            LoginUser loginUser = LoginHelper.getLoginUser();
+            return loginUser == null ? null : loginUser.getUserId();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static String currentNickname() {

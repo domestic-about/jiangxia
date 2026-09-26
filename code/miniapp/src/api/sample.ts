@@ -14,6 +14,7 @@
 //   外部接口的行里带 `donorNameMasked`（列表打码、详情才有全名）。
 // ★ `sort=recent` 是**取数口**不是纯排序：它只给「中心内部人员经手过的」记录，
 //   不带 `mine` = 中心全员；开关打开才另带 `mine=true` 收窄到本人。
+import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
 
 /** 列表行（内部接口；外部接口少了 `internalNo`、多了 `donorNameMasked`） */
@@ -32,6 +33,8 @@ export interface SampleRow {
   donorName?: string | null
   tissueType?: string | null
   organoidType?: string | null
+  /** 代数（只有类器官收样记录有，形如 P3；CR-20260924-10）—— 内部行 / 内外部详情都给 */
+  passage?: string | null
   submitterName?: string | null
   /** 经手人（= 最后修改人，没改过就是创建人）—— 内部行 */
   handlerName?: string | null
@@ -55,6 +58,8 @@ export interface SampleRow {
  * （CR-20260918-07）—— 关着时键本身不存在，页面按 `has(internalNo)` 决定整行渲不渲染。
  */
 export interface SampleDetail extends SampleRow {
+  /** 来源单位 id：**只有内部详情给**（`SampleVo`）；外部详情的 VO 里没有这个键 */
+  sourceUnitId?: string | number | null
   gender?: string | null
   age?: string | null
   hospitalNo?: string | null
@@ -188,6 +193,38 @@ function str(value: unknown): string {
   return value === null || value === undefined ? '' : String(value)
 }
 
+/** 来源单位 id 的一个候选：id 与它对应的单位名（名字对得上才用这个 id） */
+export interface UnitIdCandidate {
+  id?: string | number | null
+  name?: string | null
+}
+
+/**
+ * 来源单位 id（V01）：组织样本表单只有一个可改的「来源单位」文本格，提交时按**当前名字**回找 id。
+ *
+ * 名字（去首尾空白）与某个候选的单位名逐字相同，才带那个候选的 id；改成了别的名字 → `null`
+ * （只按名字落快照，后端按名字兜底）。两种要避开的坏形态：
+ *   - 一律不带 id（V01 的原状）：外部从小程序交的组织样本 `source_unit_id` 为空，
+ *     工作台按单位筛选、按单位导出都查不到；
+ *   - 无条件带档案里的 id：外部把单位改成了别的名字，后端按 id 取单位名，改的名字被静默丢掉。
+ */
+export function sourceUnitIdFor(name: string, candidates: UnitIdCandidate[]): string | number | null {
+  const target = str(name).trim()
+  if (!target) {
+    return null
+  }
+  for (const candidate of candidates) {
+    const id = candidate.id
+    if (id === null || id === undefined || id === '') {
+      continue
+    }
+    if (str(candidate.name).trim() === target) {
+      return id
+    }
+  }
+  return null
+}
+
 /** 只有一个「我」的判定入口：后端行上的 `mine`，缺失按 false（不猜成本人） */
 export function isMine(row: Pick<SampleRow, 'mine'>): boolean {
   return row.mine === true
@@ -224,11 +261,15 @@ export function summaryLabel(row: Partial<SampleRow>): string {
 
 // ── 内部（小程序 · 内部人员）─────────────────────────────────────────────────
 
-/** 内部列表：`sort=recent` = 历史编辑记录取数口；`mine=true` 只在开关打开时带 */
+/**
+ * 内部列表：`sort=recent` = 历史编辑记录取数口；`mine=true` 只在开关打开时带。
+ * 分页：`pageNum` 从 1 起（V27：列表触底再取下一页，不再写死 100 条）。
+ */
 export function fetchIntSampleList(params: {
   sampleKind?: string
   sort?: string
   mine?: boolean
+  pageNum?: number
   pageSize?: number
 }) {
   return http.get<{ rows: SampleRow[], total: number }>(
@@ -238,7 +279,8 @@ export function fetchIntSampleList(params: {
       sort: params.sort,
       // 开关关着时不带这个参数（不带 = 中心全员，CR-20260918-07）
       mine: params.mine ? true : undefined,
-      pageSize: params.pageSize ?? 100,
+      pageNum: params.pageNum ?? 1,
+      pageSize: params.pageSize ?? PAGE_SIZE,
     },
     // 分页接口的形状是 `{code,msg,rows,total}`（没有 data 键）
     { raw: true },
@@ -262,6 +304,7 @@ export function updateIntSample(payload: Record<string, unknown>) {
 export function fetchExtSampleList(params: {
   sampleKind?: string
   onlyMine?: boolean
+  pageNum?: number
   pageSize?: number
 }) {
   return http.get<{ rows: SampleRow[], total: number }>(
@@ -269,7 +312,8 @@ export function fetchExtSampleList(params: {
     {
       sampleKind: params.sampleKind,
       onlyMine: params.onlyMine ? true : undefined,
-      pageSize: params.pageSize ?? 100,
+      pageNum: params.pageNum ?? 1,
+      pageSize: params.pageSize ?? PAGE_SIZE,
     },
     { raw: true },
   )

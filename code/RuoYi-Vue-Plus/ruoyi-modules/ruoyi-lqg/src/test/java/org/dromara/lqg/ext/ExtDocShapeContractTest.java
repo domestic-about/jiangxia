@@ -19,7 +19,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.dromara.lqg.ext.controller.ExtDocController;
 import org.dromara.lqg.ext.domain.bo.ExtDocQueryBo;
+import org.dromara.lqg.ext.domain.vo.ExtDocAttachmentVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocDownloadVo;
+import org.dromara.lqg.ext.domain.vo.ExtDocImageVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocPageItemVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocPagesVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocVo;
@@ -57,9 +59,14 @@ class ExtDocShapeContractTest {
     private static final Set<String> EXT_DOC_VO_KEYS = Set.of(
         "sampleId", "submitNo", "donorNameMasked", "docKind", "publishedTime", "totalScore");
 
-    private static final Set<String> EXT_DOC_PAGES_VO_KEYS = Set.of("docKind", "status", "pages");
+    /** 独立验收 V24：外部预览补上原图与附件（UI:mp.doc.preview 要求），键仍是白名单。 */
+    private static final Set<String> EXT_DOC_PAGES_VO_KEYS = Set.of("docKind", "status", "pages", "images", "attachments");
 
     private static final Set<String> EXT_DOC_PAGE_ITEM_VO_KEYS = Set.of("pageNo", "url");
+
+    private static final Set<String> EXT_DOC_IMAGE_VO_KEYS = Set.of("url", "previewUrl");
+
+    private static final Set<String> EXT_DOC_ATTACHMENT_VO_KEYS = Set.of("fileName", "fileSize", "url");
 
     private static final Set<String> EXT_DOC_DOWNLOAD_VO_KEYS = Set.of("url", "fileName");
 
@@ -134,9 +141,13 @@ class ExtDocShapeContractTest {
     @Test
     void docPagesShapesAreExactlyTheWhitelist() {
         assertEquals(EXT_DOC_PAGES_VO_KEYS, instanceFields(ExtDocPagesVo.class),
-            "ExtDocPagesVo 只许有 docKind / status / pages（失败原因与产物指纹都不对外）");
+            "ExtDocPagesVo 只许有 docKind / status / pages / images / attachments（失败原因与产物指纹都不对外）");
         assertEquals(EXT_DOC_PAGE_ITEM_VO_KEYS, instanceFields(ExtDocPageItemVo.class),
             "ExtDocPageItemVo 只许有 pageNo / url");
+        assertEquals(EXT_DOC_IMAGE_VO_KEYS, instanceFields(ExtDocImageVo.class),
+            "ExtDocImageVo 只许有 url / previewUrl");
+        assertEquals(EXT_DOC_ATTACHMENT_VO_KEYS, instanceFields(ExtDocAttachmentVo.class),
+            "ExtDocAttachmentVo 只许有 fileName / fileSize / url（不带 ossId）");
         assertEquals(EXT_DOC_DOWNLOAD_VO_KEYS, instanceFields(ExtDocDownloadVo.class),
             "ExtDocDownloadVo 只许有 url / fileName");
     }
@@ -144,7 +155,7 @@ class ExtDocShapeContractTest {
     @Test
     void noExtDocVoCarriesInternalOnlyKeys() {
         for (Class<?> type : List.of(ExtDocVo.class, ExtDocPagesVo.class,
-            ExtDocPageItemVo.class, ExtDocDownloadVo.class)) {
+            ExtDocPageItemVo.class, ExtDocDownloadVo.class, ExtDocImageVo.class, ExtDocAttachmentVo.class)) {
             for (String field : instanceFields(type)) {
                 assertFalse(NEVER_EXTERNAL_KEYS.contains(field),
                     type.getSimpleName() + " 声明了 " + field + " —— 这个键不许出现在给外部的文档 VO 里");

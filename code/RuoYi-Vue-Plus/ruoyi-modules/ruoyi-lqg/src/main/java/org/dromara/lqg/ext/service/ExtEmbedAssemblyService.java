@@ -91,17 +91,17 @@ public class ExtEmbedAssemblyService {
     /**
      * 单条石蜡包埋记录。
      *
-     * <p>★ <b>先按记录取出 {@code sampleId} 再 {@code assertVisible}</b>（ticket §0 口径 2）：
-     * 记录不存在 / 已软删 → {@code null}（调用方回 404）；记录存在但所挂样本不可见 →
-     * {@link ExtScopeService#assertVisible} 抛业务码 404。
-     * 两条路都是 404、响应体里不带任何样本字段 —— <b>不泄露存在性</b>。
+     * <p>★ <b>先过 {@link ExtScopeService#assertEmbedVisible}</b>（FIX V17 / issue #299）：
+     * 记录不存在、已软删、存在但所挂样本不可见 —— 三种情况<b>同一个</b>业务码 404、<b>同一句</b>
+     * {@link ExtScopeService#EMBED_NOT_FOUND}（以前「不存在」回「石蜡包埋记录不存在」、「不可见」回
+     * 「样本不存在」，提示不同本身就泄露了存在性）。与写口 {@code PUT /mp/ext/embed/{id}} 同一个判据。
      */
     public ExtEmbedVo detail(Long userId, Long embedId) {
+        extScopeService.assertEmbedVisible(userId, embedId);
         EmbedVo src = embedQueryService.detail(embedId);
         if (src == null) {
             return null;
         }
-        extScopeService.assertVisible(userId, src.getSampleId());
         List<ExtEmbedVo> one = convert(List.of(src), userId);
         return one.isEmpty() ? null : one.get(0);
     }

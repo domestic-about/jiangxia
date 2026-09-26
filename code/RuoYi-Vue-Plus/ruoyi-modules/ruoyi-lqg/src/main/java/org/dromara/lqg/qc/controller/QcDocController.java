@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
+/*
+ * 实现备注（给维护的人看，不进接口文档 / Swagger）：
+ *
  * 三份质控文档的内部读写（doc/api-contract.md 的 QC / DOC 一节）。
  *
  * <pre>
@@ -47,6 +49,11 @@ import org.springframework.web.bind.annotation.RestController;
  * 发布状态机在 DOC-PUBLISH-001。
  *
  * @author QC-MODEL-001
+ */
+/**
+ * 三份质控文档（样本质控表、类器官质控表、类器官质量评分表）的内部读写：读取、保存草稿、图片位与附件。
+ *
+ * <p>docType 取 sample-qc / organoid-qc / score；评分表没有图片位。已完成的文档一旦被改动会自动回到草稿。
  */
 @RequiredArgsConstructor
 @RestController

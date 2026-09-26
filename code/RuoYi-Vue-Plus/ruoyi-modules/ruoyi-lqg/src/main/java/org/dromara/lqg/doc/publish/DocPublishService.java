@@ -56,13 +56,17 @@ import java.util.concurrent.CompletableFuture;
  * 重复完成必须被拒，不能每点一次就重置一次完成时间）。
  *
  * <p>★ <b>合并件的成员按 doc_status 筛</b>（{@code DocRenderModelFactory.mergedMembers}），
- * 所以「改一份 → 回草稿」之后合并件也该跟着重出；这一步由
- * {@link DocRenderService#invalidateMerged} 负责（它拿得到指纹），本类不自己算。
+ * 所以任何一份的状态一变（完成 / 撤回 / 改内容回草稿），合并件就过期了。两步走（独立验收 V04）：
+ * <ol>
+ *   <li><b>同一个请求里</b>：{@link DocRenderService#markMergedStale} 把旧合并件置回 pending ——
+ *       接口返回时，含已撤回文档的旧合并件已经不会再被下载、预览或列进任何清单；</li>
+ *   <li><b>后台</b>：{@link DocRenderService#invalidateMerged} 按此刻的成员重出（一份都不剩就撤下）。</li>
+ * </ol>
  *
  * <p>★ <b>本类不碰外部可见性</b>：真正「送检方能不能看到」在 AUTH-EXT-003 / {@code /mp/ext/**}
  * （ADR-0004 咽喉），它只认 {@code doc_status='published'} + 外部版渲染成功。本类只负责把这两件事做成。
  *
- * @author DOC-PUBLISH-001
+ * @author DOC-PUBLISH-001 · 独立验收 V04 修复（合并件同步失效）
  */
 @Slf4j
 @Service
@@ -102,6 +106,8 @@ public class DocPublishService {
             }
             log.info("完成并同步：sampleId={} docType={} operator={} time={}", sampleId, docType, userId, now);
         });
+        // 成员集合变了（多了一份）：旧合并件当场失效，重出排在本份渲染之后（scheduleRender）
+        renderService.markMergedStale(sampleId);
         scheduleRender(sampleId, docType);
     }
 
@@ -128,6 +134,8 @@ public class DocPublishService {
             }
             log.info("撤回：sampleId={} docType={}", sampleId, docType);
         });
+        // ★ V04：同一个请求里让旧合并件失效（它含着刚撤回的这一份），再在后台按新成员重出
+        renderService.markMergedStale(sampleId);
         scheduleMergedInvalidation(sampleId);
     }
 
@@ -151,15 +159,20 @@ public class DocPublishService {
         //   （sample_qc）—— 一律先用 requireDocType 归一，否则状态机的 switch 会全部落空、
         //   表现为「保存成功但状态没回草稿」（accept 1 第 7 段的红）。
         String docType = QcDocRules.requireDocType(normalizePath(docTypePath));
-        DataPermissionHelper.ignore(() -> {
+        boolean demoted = DataPermissionHelper.ignore(() -> {
             if (!QcDocRules.STATUS_PUBLISHED.equals(statusOf(sampleId, docType))) {
-                return;
+                return false;
             }
             int changed = updateStatus(sampleId, docType, QcDocRules.STATUS_DRAFT, null, null);
             if (changed > 0) {
                 log.info("内容改动 → 已完成文档回到草稿：sampleId={} docType={}", sampleId, docType);
             }
+            return changed > 0;
         });
+        if (demoted) {
+            // 已完成的一份回了草稿 = 合并件少了一个成员：同一个请求里让旧合并件失效
+            renderService.markMergedStale(sampleId);
+        }
         scheduleMergedInvalidation(sampleId);
     }
 
@@ -279,13 +292,18 @@ public class DocPublishService {
         });
     }
 
-    /** 内容改动 / 撤回之后：把该样本的合并件标记成过期（成员变了，旧产物不能再当最新）。 */
+    /**
+     * 内容改动 / 撤回之后：在后台按此刻的成员把合并件重出（一份都不剩就撤下）。
+     *
+     * <p>「旧合并件不再给出去」已经在请求里由 {@link DocRenderService#markMergedStale} 做完了；
+     * 这一步即使失败，旧产物也不会复活 —— 预览 / 下载读到 pending 时还会再补一次渲染。
+     */
     private void scheduleMergedInvalidation(Long sampleId) {
         CompletableFuture.runAsync(() -> {
             try {
                 renderService.invalidateMerged(sampleId);
             } catch (Exception e) {
-                log.warn("合并件标记过期失败（不影响本次保存）：sampleId={}：{}", sampleId, e.toString());
+                log.warn("合并件后台重出失败（不影响本次保存；旧合并件已失效）：sampleId={}：{}", sampleId, e.toString());
             }
         });
     }

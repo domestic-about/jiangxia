@@ -45,6 +45,8 @@ bash doc/waves/tools/qa-up.sh --backend-port 8092 --web-port 8093 --mp-port 9202
 export LQG_VERIFY_ENV_FILE="$PWD/.tmp/qa-env/8092/verify.env"
 bash doc/waves/tools/gate.sh --phase D5 --backend-port 8092
 #    → .tmp/gate/D5/gate.json + doc/waves/qa/D5-r1-L01.json
+#    ★ 只有 gate exit 0 且 L0、L1 都 pass 才写正式审计；否则只写草稿 .tmp/gate/D5/D5-r1-L01.draft.json
+#      （auditor=draft-not-for-merge，qa merge 不收；2026-09-23 按 CR-20260923-09）
 
 # 2) L2 / L3：派两个全新上下文的 QA agent（各只认领自己那级）
 #    L2 跑「一条端到端剧本」；L3 只打库存/并发/权限
@@ -66,8 +68,8 @@ bash doc/waves/tools/qa-up.sh --down --backend-port 8092 --web-port 8093 --mp-po
 | 工具 | 解决什么 |
 |---|---|
 | `gate.sh` | L0+L1 一条命令跑完；带 L0.0 新鲜度前置（**不用 `--fresh-module`**，它在沙箱恒 exit 2） |
-| `accept-run.py` | **逐字重放票面的 accept 断言**（断言是 ① 侧票面资产，不是实现方写的 runner）；归一化只有 NF1 一条，且逐条打印 |
-| `gate-audit.py` | 把机器结果转成合规模的审计；产品断言不成立 = **S1 拦门**，环境坏 = **S2 + harness 不拦门** |
+| `accept-run.py` | **逐字重放票面的 accept 断言**（断言是 ① 侧票面资产，不是实现方写的 runner）；归一化只有 NF1 一条，且逐条打印。known-red 按段登记（`TICKET|accN@段号|#issue|理由`，issue 必须在 state.json 的 open_issues 里）：只豁免登记的那几段、后面的段照跑必须绿；`--segments` 打印切段 |
+| `gate-audit.py` | 把机器结果转成合规模的审计；产品断言不成立 = **S1 拦门**，环境坏 = **S2 + harness**，但**该级记 blocked、不是 pass**（一级一步没跑也是 blocked）；门退出码不为 0 或任一级不是 pass → 不写正式审计，只写草稿 |
 | `qa-up.sh` / `--down` / `--status` | 一条命令起/停/查环境；整个门的三阶段**共用一台后端**，不再三片各建一次 |
 | `detach.sh` | macOS 没有 `setsid`；fork + `os.setsid()` 起真脱离的长进程，并打印**真实 PID**（收尾只按 PID kill） |
 | `classify-parallel.py` | 判「纯前端票」（DB-free）能不能与要 DB 的票并行 |

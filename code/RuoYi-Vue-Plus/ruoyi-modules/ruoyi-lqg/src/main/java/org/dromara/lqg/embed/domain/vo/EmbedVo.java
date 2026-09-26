@@ -56,6 +56,15 @@ public class EmbedVo implements Serializable {
     @Schema(description = "所挂样本的来源单位名称（读时带出）")
     private String sourceUnitName;
 
+    /**
+     * 所挂样本的类别（读时带出；样本软删 / 查不到时为 null）。
+     *
+     * <p>工作台「样本编号」点回样本用：组织样本回「样本记录信息表」、类器官回「类器官收样记录」
+     * （两页的路径只认 {@code views/lqg/sample/pages.ts}，Kevin 本机验收意见：四张表之间要能双向回）。
+     */
+    @Schema(description = "所挂样本的类别 tissue / organoid（读时带出）")
+    private String sampleKind;
+
     @Schema(description = "石蜡块编号；外部送样在核验前为空")
     private String paraffinBlockNo;
 

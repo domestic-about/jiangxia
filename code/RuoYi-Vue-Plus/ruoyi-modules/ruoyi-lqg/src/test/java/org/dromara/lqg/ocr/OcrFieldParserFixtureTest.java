@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 解析规则的**逐例**验收（accept 2 第 3 段点名本类）：
- * 夹具是 {@code doc/verify/fixtures/ocr-cases.json}（构建时由 pom 的 main resources 拷进 classpath）。
+ * 夹具是 {@code doc/verify/fixtures/ocr-cases.json}（验收脚本读的权威那份）在本模块 main resources 里的
+ * 逐字节副本 {@code ocr-cases.json}（V31：构建只靠后端目录；两份一致由 {@code FixtureCopiesSyncTest} 比对）。
  *
  * <p>每条用例两半，缺一不算过：
  * <ul>
@@ -41,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OcrFieldParserFixtureTest {
 
     /**
-     * 夹具名（与 pom 的 main resources 拷进 classpath 的那一份同名）。
+     * 夹具名（本模块 main resources 里的那一份，classpath 根）。
      */
     private static final String FIXTURE = "ocr-cases.json";
 
@@ -64,8 +65,7 @@ class OcrFieldParserFixtureTest {
      */
     private static List<Case> cases() {
         try (InputStream in = OcrFieldParserFixtureTest.class.getClassLoader().getResourceAsStream(FIXTURE)) {
-            assertNotNull(in, "夹具 " + FIXTURE + " 必须在 classpath 上（pom 的 main resources 从 "
-                + "doc/verify/fixtures/ 拷进来）");
+            assertNotNull(in, "夹具 " + FIXTURE + " 必须在 classpath 上（ruoyi-lqg 的 src/main/resources/）");
             String text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             Fixture fixture = MAPPER.readValue(text, Fixture.class);
             assertNotNull(fixture, "夹具 " + FIXTURE + " 解析为空");

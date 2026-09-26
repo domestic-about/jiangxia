@@ -33,9 +33,12 @@ import java.util.List;
  * GET    /lqg/cryo/batch/{id}/flows           未删流水，时间倒序，每行带操作后剩余           lqg:cryo:query
  * </pre>
  *
- * <p>★ <b>这些写接口只在 {@code /lqg/cryo/**}（工作台）</b>（CR-20260917-05：小程序只查看）。
- * 小程序侧的只读口是 {@code GET /mp/int/cryo/batch/{id}/flows}（CRYO-MP-001），
- * 取走 / 补入 / 转液氮 / 改删登记<b>一个都不转发</b>。
+ * <p>★ <b>写接口仍只有这一套</b>，但调用方从 2026-09-24 起是<b>两端</b>：甲方看设计稿 v3 后要求
+ * 「小程序和工作台界面都能操作」冻存取用登记，小程序内部人员的批次详情弹层（取走 / 补入 / 转液氮 /
+ * 改删登记）<b>直接调本类这几个路径</b>，不在 {@code /mp/int/cryo/**} 上另开转发口 —— 同一个
+ * {@code CryoFlowService}、同一把批次行锁、同一套逐笔校验，两端规则一字不差。
+ * 能调通靠的是权限串：小程序内部人员的账号带 {@code lqg_internal}（角色 102），5407 / 5404
+ * 本来就授给它；外部角色（103）没有这些权限串，照旧 403。小程序里<b>不做</b>盘点调整（只在工作台）。
  *
  * <p>★ 权限串的来源：{@code lqg:cryo:flow} = {@code sys_menu} 5407，由上游 CRYO-MODEL-001 的迁移
  * {@code V202609241200__CRYO-MODEL-001-cryo.sql} 落的<b>权限行</b>（本票的 {@code touches} 里没有迁移）。

@@ -37,7 +37,7 @@ import java.util.Map;
  * （内部编号、有无固定等还没填的格子留空）—— ticket §2。
  *
  * <p>★ <b>两张表是同一张 {@code t_lqg_sample} 的两个视图</b>（ADR-0010）：tissue 14 列、
- * organoid 7 列，列集不同（见两个导出 VO）。
+ * organoid 8 列（模板 7 列 + 插入的「代数」，CR-20260924-10），列集不同（见两个导出 VO）。
  *
  * <p>★ <b>格式钉死</b>（accept 1 逐格断的）：
  * <ul>
@@ -106,6 +106,16 @@ public class SampleExportService {
      */
     private static final Map<String, String> GENDER_LABELS = Map.of("male", "男", "female", "女", "unknown", "未知");
 
+    /**
+     * 「类器官收样记录」的<b>插入列</b>：列名 → 插在哪一列后面（CR-20260924-10）。
+     *
+     * <p>★ 列名、列序的唯一来源是甲方模板原件第 1 行；「代数」是甲方 2026-09-24 测试问题记录表第 18 行
+     * <b>自己要求加的</b>、模板原件里没有 —— 所以不去改「模板列」，而是单独记一条插入规则，
+     * 表头 = 模板列在指定列后插入这些列（与 {@code doc/verify/fixtures/ledger-columns-cases.json}
+     * 的 {@code inserted}、{@code doc/verify/xlsx_header.py --insert} 同一条规则）。
+     */
+    public static final Map<String, String> ORGANOID_INSERTED_AFTER = Map.of("代数", "类器官类型");
+
     private final SampleQueryService sampleQueryService;
 
     /**
@@ -171,6 +181,7 @@ public class SampleExportService {
             SampleOrganoidExportVo vo = new SampleOrganoidExportVo();
             vo.setSourceUnitName(row.getSourceUnitName());
             vo.setOrganoidType(row.getOrganoidType());
+            vo.setPassage(row.getPassage());
             vo.setReceiveDate(dateText(row.getReceiveDate()));
             vo.setInternalNo(row.getInternalNo());
             vo.setProcessTime(dateTimeText(row.getProcessTime()));
@@ -186,7 +197,7 @@ public class SampleExportService {
      * {@code /export/organoid} 恒导 organoid 类 —— 调用方传的 {@code sampleKind} 一律覆盖。
      *
      * <p>否则「两列视图同一张表」这件事就守不住：{@code /export/organoid?sampleKind=tissue}
-     * 会用 7 列的表头导组织样本。<b>也保证不带参数时行数 = 该类的未删总数</b>
+     * 会用 8 列的表头导组织样本。<b>也保证不带参数时行数 = 该类的未删总数</b>
      * （accept 1：tissue 全量 8 行 = {@code del_flag='0' AND sample_kind='tissue'}）。
      */
     private static SampleQueryBo forceKind(SampleQueryBo query, String kind) {
@@ -287,17 +298,18 @@ public class SampleExportService {
     }
 
     /**
-     * 「类器官收样记录」的列名清单（{@code 7} 列，与模板逐字同序）。
+     * 「类器官收样记录」的列名清单（{@code 8} 列 = 模板 7 列逐字同序，「类器官类型」后插入「代数」）。
      */
     public static Map<String, Integer> organoidHeaderIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
         out.put("来源单位", 0);
         out.put("类器官类型", 1);
-        out.put("收样日期", 2);
-        out.put("内部编号", 3);
-        out.put("处理时间", 4);
-        out.put("细胞活率报告", 5);
-        out.put("操作人", 6);
+        out.put("代数", 2);
+        out.put("收样日期", 3);
+        out.put("内部编号", 4);
+        out.put("处理时间", 5);
+        out.put("细胞活率报告", 6);
+        out.put("操作人", 7);
         return out;
     }
 

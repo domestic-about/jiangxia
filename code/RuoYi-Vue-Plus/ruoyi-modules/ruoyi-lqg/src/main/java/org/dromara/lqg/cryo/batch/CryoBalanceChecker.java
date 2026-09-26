@@ -100,6 +100,20 @@ public final class CryoBalanceChecker {
     }
 
     /**
+     * 这一批是不是<b>已取空</b>：剩余 ≤ 0（2026-09-24 甲方「支数取空的要提示」）。
+     *
+     * <p>★ 与 SQL 侧 {@code CryoOverdueSqlProvider.EMPTIED_WHERE}（筛选 {@code emptiedOnly} 与
+     * {@code tabCounts.emptied}）逐条对应：两边都是「初始 + 未删流水累计 ≤ 0」。写 {@code ≤ 0} 而不是
+     * {@code == 0}：写侧保证剩余不为负，但历史坏账（若有）也该被当成「没了」而不是「还有」。
+     *
+     * @param remaining 剩余支数（读时算）
+     * @return 剩余 ≤ 0
+     */
+    public static boolean isEmptied(int remaining) {
+        return remaining <= 0;
+    }
+
+    /**
      * 让整条序列合法的<b>最小初始支数</b> = 逐笔累加过程中最大的透支额。
      *
      * @param flows 未删流水

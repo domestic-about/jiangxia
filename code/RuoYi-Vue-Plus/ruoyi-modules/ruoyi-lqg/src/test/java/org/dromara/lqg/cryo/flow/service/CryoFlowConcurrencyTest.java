@@ -1,5 +1,9 @@
 package org.dromara.lqg.cryo.flow.service;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.lqg.cryo.batch.domain.CryoBatch;
 import org.dromara.lqg.cryo.batch.domain.CryoFlow;
@@ -7,6 +11,7 @@ import org.dromara.lqg.cryo.batch.mapper.CryoBatchMapper;
 import org.dromara.lqg.cryo.batch.mapper.CryoFlowMapper;
 import org.dromara.lqg.cryo.flow.domain.bo.CryoFlowEditBo;
 import org.dromara.lqg.cryo.flow.domain.bo.CryoFlowSubmitBo;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -146,6 +151,41 @@ class CryoFlowConcurrencyTest {
         assertEquals("minus80", flow(fake, take).getFromLocation(), "★ 改登记不动 from_location");
         assertEquals("take", flow(fake, take).getFlowType(), "★ 改登记不动 flow_type");
         assertNotNull(flow(fake, take).getUpdateTime(), "★ 记下修改时间");
+    }
+
+    /** 「清空用途」那一条 UPDATE 用了 lambda 列（FIX V33 的新测试），不起容器时要手工注册列缓存。 */
+    @BeforeAll
+    static void initLambdaCache() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), CryoFlow.class);
+    }
+
+    @Test
+    @DisplayName("④b ★ FIX V33：取走登记把用途清空 → 库里真的清空（以前 updateById 跳过 null，提示已保存却没清掉）")
+    void clearingPurposeReallyClearsIt() {
+        FakeCryo fake = new FakeCryo(6);
+        CryoFlowService service = service(fake);
+        Long take = fake.withLock(() -> service.create(BATCH_ID, post("take", 1, "复苏培养")));
+        assertEquals("复苏培养", flow(fake, take).getPurpose());
+
+        CryoFlowEditBo clear = new CryoFlowEditBo();
+        clear.setPurpose("");
+        fake.withLock(() -> service.update(BATCH_ID, take, clear));
+        assertEquals(null, flow(fake, take).getPurpose(), "★ 传了空用途 = 清空");
+        assertEquals(-1, flow(fake, take).getDelta(), "别的列不动");
+
+        // 不传用途 = 不动
+        Long take2 = fake.withLock(() -> service.create(BATCH_ID, post("take", 1, "药敏")));
+        CryoFlowEditBo keep = new CryoFlowEditBo();
+        keep.setQty(2);
+        fake.withLock(() -> service.update(BATCH_ID, take2, keep));
+        assertEquals("药敏", flow(fake, take2).getPurpose(), "不传用途 = 沿用");
+
+        // 盘点调整清空原因 → 400（原因必填），库里不变
+        Long adjust = fake.withLock(() -> service.create(BATCH_ID, post("adjust", -1, "盘点少 1 支")));
+        CryoFlowEditBo clearAdjust = new CryoFlowEditBo();
+        clearAdjust.setPurpose(" ");
+        assertThrows(ServiceException.class, () -> fake.withLock(() -> service.update(BATCH_ID, adjust, clearAdjust)));
+        assertEquals("盘点少 1 支", flow(fake, adjust).getPurpose());
     }
 
     @Test
@@ -348,6 +388,23 @@ class CryoFlowConcurrencyTest {
                             }
                             if (entity.getUpdateBy() != null) {
                                 target.setUpdateBy(entity.getUpdateBy());
+                            }
+                            target.setUpdateTime(new java.util.Date());
+                            return 1;
+                        }
+                        case "update" -> {
+                            // wrapper 路径（FIX V33 只发这一种：把 purpose 显式写成 NULL）
+                            LambdaUpdateWrapper<?> w = (LambdaUpdateWrapper<?>) args[1];
+                            String set = w.getSqlSet();
+                            w.getSqlSegment();   // WHERE 的参数是惰性注册的：先生成一次片段
+                            Long id = w.getParamNameValuePairs().values().stream()
+                                .filter(v -> v instanceof Long)
+                                .map(v -> (Long) v)
+                                .filter(v -> flows.stream().anyMatch(f -> v.equals(f.getId())))
+                                .findFirst().orElseThrow();
+                            CryoFlow target = flows.stream().filter(f -> id.equals(f.getId())).findFirst().orElseThrow();
+                            if (set.contains("purpose=")) {
+                                target.setPurpose(null);
                             }
                             target.setUpdateTime(new java.util.Date());
                             return 1;

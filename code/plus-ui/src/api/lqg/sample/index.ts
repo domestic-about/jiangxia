@@ -2,7 +2,8 @@ import request from '@/utils/request';
 import { AxiosPromise } from 'axios';
 
 // ============================================================================
-// SAMPLE 域 · 工作台样本总表（SAMPLE-WEB-001）
+// SAMPLE 域 · 工作台两张样本表（SAMPLE-WEB-001；CR-20260924-10 起拆成「样本记录信息表」
+//           「类器官收样记录」两页，接口没拆 —— 两页都调这一组 /lqg/sample/*，页面固定带 sampleKind）
 //
 // 后端：code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/.../sample/controller/*.java
 // 契约：doc/api-contract.md「SAMPLE」一节的 /lqg/sample/* 四行
@@ -35,6 +36,20 @@ export interface SampleHintVO {
   stains: string[];
 }
 
+/**
+ * 「石蜡包埋 / 冻存」关联数（样本两页的关联列；Kevin 2026-09-24 本机验收「四种表之间的关系看着有点乱」）。
+ *
+ * ★ 与 hint 同一个做法：后端读时算、整页一次查询，列表每一行都有（零值，不是 null）；详情与导出不带。
+ * ★ 蜡块数不在这里 —— 沿用 `hint.blockCount`（已核验有效的石蜡块），这里只补两个数；
+ *   每个数都对准一张目标页的筛选结果（点过去看到的条数一致）：
+ *   - pendingEmbedCount = 石蜡包埋页按这个样本 + 「待核验」筛出来的条数（合作单位送来、还没核验的）；
+ *   - cryoBatchCount    = 冻存管理页按这个样本筛出来的批次数（未删即生效，冻存没有核验状态）。
+ */
+export interface SampleRelationVO {
+  pendingEmbedCount: number;
+  cryoBatchCount: number;
+}
+
 /** 样本行（GET /lqg/sample/list 的 rows[]） */
 export interface SampleVO {
   id: string | number;
@@ -59,6 +74,8 @@ export interface SampleVO {
   hospitalNo?: string | null;
   tissueType?: string | null;
   organoidType?: string | null;
+  /** 代数（只有类器官收样记录有，形如 P3；CR-20260924-10） */
+  passage?: string | null;
   hasPathology?: string | null;
   receiveDate?: string | null;
   internalNo?: string | null;
@@ -78,14 +95,17 @@ export interface SampleVO {
   editable?: boolean;
   /** ★ 切片染色提示（SAMPLE-HINT-001）：列表每行都有，没有包埋记录也是零值 */
   hint?: SampleHintVO | null;
+  /** ★ 石蜡包埋 / 冻存关联数（列表每行都有，零值不是 null；详情不带） */
+  relation?: SampleRelationVO | null;
 }
 
-/** 总表筛选（字段名与 doc/api-contract.md 第 45 行的参数逐字一致） */
+/** 列表筛选（字段名与 doc/api-contract.md 第 45 行的参数逐字一致） */
 export interface SampleQuery {
   pageNum?: number;
   pageSize?: number;
   sourceUnitId?: string | number | null;
   groupId?: string | number | null;
+  /** ★ 两页都显式带（后端不带 = 两类都查） */
   sampleKind?: string | null;
   submitSource?: string | null;
   verifyStatus?: string | null;
@@ -93,6 +113,8 @@ export interface SampleQuery {
   receiveDateBegin?: string | null;
   receiveDateEnd?: string | null;
   tissueType?: string | null;
+  /** 类器官类型（模糊；类器官收样记录页用，CR-20260924-10） */
+  organoidType?: string | null;
   internalNo?: string | null;
   operatorName?: string | null;
   /** 加密列：只支持精确匹配（框旁边标「精确匹配」） */
@@ -112,6 +134,8 @@ export interface SampleForm {
   hospitalNo?: string | null;
   tissueType?: string | null;
   organoidType?: string | null;
+  /** 代数（类器官选填，形如 P3；组织样本后端一律不落） */
+  passage?: string | null;
   hasPathology?: string | null;
   receiveDate?: string | null;
   internalNo?: string | null;
@@ -120,6 +144,28 @@ export interface SampleForm {
   hasQcSheet?: string | null;
   hasViabilityReport?: string | null;
   operatorName?: string | null;
+  remark?: string | null;
+}
+
+/**
+ * 送检段（整段替换；FIX V02 / issue #147）。
+ *
+ * ★ 与后端 `SampleSubmitSegmentBo` 逐键一致：核验抽屉里送检段可编辑，所以「判为有效并保存」/「判为无效」
+ *   要把整份送检段随 `PUT /lqg/sample/{id}/verify` 一起带上，后端与核验结论**同一个事务**落库；
+ *   规则与 `PUT /lqg/sample`（工作台修改）同一份。不带 `submitSegment` = 送检段不动。
+ */
+export interface SampleSubmitSegment {
+  sourceUnitId?: string | number | null;
+  sourceUnitName?: string | null;
+  donorName?: string | null;
+  gender?: string | null;
+  age?: string | null;
+  hospitalNo?: string | null;
+  tissueType?: string | null;
+  organoidType?: string | null;
+  /** 代数（类器官；核验时实验室能改，CR-20260924-10） */
+  passage?: string | null;
+  hasPathology?: string | null;
   remark?: string | null;
 }
 
@@ -137,9 +183,11 @@ export interface SampleVerifyForm {
   operatorName?: string | null;
   /** action=invalid 必填 */
   reason?: string | null;
+  /** 核验抽屉里的送检段（整段；与核验结论同一事务保存，FIX V02） */
+  submitSegment?: SampleSubmitSegment | null;
 }
 
-/** 总表（分页；待核验置顶，其余按创建时间倒序） */
+/** 列表（分页；待核验置顶，其余按创建时间倒序） */
 export function listSamples(query: SampleQuery): AxiosPromise<SampleVO[]> {
   return request({
     url: '/lqg/sample/list',
@@ -182,7 +230,7 @@ export function delSample(ids: string | number | Array<string | number>) {
   });
 }
 
-/** 核验 / 改判：判有效要收样日期 + 内部编号；判无效要原因 */
+/** 核验 / 改判：判有效要收样日期 + 内部编号；判无效要原因；带 submitSegment 时送检段一并保存 */
 export function verifySample(id: string | number, data: SampleVerifyForm) {
   return request({
     url: '/lqg/sample/' + id + '/verify',

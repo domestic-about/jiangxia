@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.lqg.doc.render.mapper.DocDictMapper;
+import org.dromara.lqg.ext.service.ExtInternalNoSwitch;
 import org.dromara.lqg.qc.domain.DocAttachment;
 import org.dromara.lqg.qc.domain.DocImage;
 import org.dromara.lqg.qc.domain.QcOrganoidDoc;
@@ -41,10 +42,13 @@ import java.util.List;
  * 操作人 / 内部编号）**不在质控表里存**（QC-MODEL-001 的类注释写死了这条），所以只能从这里
  * 读；改了样本主档 → 指纹变 → 文档重出。这正是 accept 2 的「只改来源单位」那条。
  *
- * <p>★ <b>外部版</b>：{@code internal_no} 一份独立的模型里就是空串（不是在下载时抹），
+ * <p>★ <b>外部版</b>：{@code internal_no} 在外部版自己的模型里按系统参数
+ * {@code lqg.ext.show-internal-no} 取值 —— 关着（默认）是空串，开着印内部编号（不是在下载时抹或补），
  * 于是 external 的指纹、对象键、产物都与 internal 完全独立（ticket §0 口径复述 2）。
+ * 开关<b>每次组装只读一次</b>（{@link #mergedMembers} 把同一个值传给三个成员）：
+ * 合并件里不会出现「前一份印了、后一份没印」的半新半旧。
  *
- * @author DOC-RENDER-001
+ * @author DOC-RENDER-001 · G 批 C 组（外部版内部编号随开关）· H 批 H4 组（细胞活率附件嵌进 Word）
  */
 @Slf4j
 @Component
@@ -52,7 +56,11 @@ import java.util.List;
 public class DocRenderModelFactory {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    /**
+     * 「处理时间」印到分钟：那一格很窄（原件列宽约 4.5 个字），带上秒会折成三行（「2026-08-」「25」「14:20:00」），
+     * 到分钟是两行；纸面表格上秒数也没有意义（G 批 C 组，甲方 2026-09-24 意见第 26 行「不太美观」）。
+     */
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final SampleMapper sampleMapper;
     private final QcSampleDocMapper sampleDocMapper;
@@ -62,6 +70,15 @@ public class DocRenderModelFactory {
     private final DocAttachmentMapper docAttachmentMapper;
     private final DocDictMapper dictMapper;
     private final SampleFieldCipher fieldCipher;
+    private final ExtInternalNoSwitch internalNoSwitch;
+
+    /**
+     * 这个版本此刻该不该印内部编号：内部版一直印；外部版看系统参数 {@code lqg.ext.show-internal-no}
+     * （读不到 / 没配 = 关，宁可少印也不漏出去 —— 与外部页面数据同一个读口 {@link ExtInternalNoSwitch}）。
+     */
+    public boolean showsInternalNo(String audience) {
+        return DocAudiences.isInternal(audience) || internalNoSwitch.enabled();
+    }
 
     /** 取样本（软删的查不到 → 400）。 */
     public Sample requireSample(Long sampleId) {
@@ -76,11 +93,19 @@ public class DocRenderModelFactory {
     }
 
     /**
-     * 一份非合并文档的模型。
+     * 一份非合并文档的模型（内部编号开关此刻读一次）。
      */
     public DocRenderModel single(Long sampleId, String docKind, String audience) {
+        return single(sampleId, docKind, audience, showsInternalNo(audience));
+    }
+
+    /**
+     * 一份非合并文档的模型；{@code showInternalNo} = 「内部编号」一格印不印（调用方读好开关传进来）。
+     */
+    public DocRenderModel single(Long sampleId, String docKind, String audience, boolean showInternalNo) {
         Sample sample = requireSample(sampleId);
-        DocRenderModel model = new DocRenderModel(docKind, audience, DocTemplate.version());
+        DocRenderModel model = new DocRenderModel(docKind, audience, DocTemplate.version())
+            .internalNoShown(showInternalNo && DocKinds.hasInternalNoCell(docKind));
         switch (docKind) {
             case DocKinds.SAMPLE_QC -> fillSampleQc(model, sample);
             case DocKinds.ORGANOID_QC -> fillOrganoidQc(model, sample);
@@ -96,15 +121,17 @@ public class DocRenderModelFactory {
      */
     public List<DocRenderModel> mergedMembers(Long sampleId, String audience) {
         requireSample(sampleId);
+        // 开关只读一次，三个成员用同一个值（合并件里不会一份印了、一份没印）
+        boolean showInternalNo = showsInternalNo(audience);
         List<DocRenderModel> members = new ArrayList<>();
         if (isPublished(sampleId, DocKinds.SAMPLE_QC)) {
-            members.add(single(sampleId, DocKinds.SAMPLE_QC, audience));
+            members.add(single(sampleId, DocKinds.SAMPLE_QC, audience, showInternalNo));
         }
         if (isPublished(sampleId, DocKinds.ORGANOID_QC)) {
-            members.add(single(sampleId, DocKinds.ORGANOID_QC, audience));
+            members.add(single(sampleId, DocKinds.ORGANOID_QC, audience, showInternalNo));
         }
         if (isPublished(sampleId, DocKinds.ORGANOID_SCORE)) {
-            members.add(single(sampleId, DocKinds.ORGANOID_SCORE, audience));
+            members.add(single(sampleId, DocKinds.ORGANOID_SCORE, audience, showInternalNo));
         }
         if (members.isEmpty()) {
             throw new ServiceException("这个样本还没有已完成的质控文档，合并件无从拼起", 400);
@@ -112,7 +139,8 @@ public class DocRenderModelFactory {
         return members;
     }
 
-    private boolean isPublished(Long sampleId, String docKind) {
+    /** 这份单文档此刻是不是已完成（{@code doc_status='published'}）；合并件没有自己的状态 → false。 */
+    public boolean isPublished(Long sampleId, String docKind) {
         String status = switch (docKind) {
             case DocKinds.SAMPLE_QC -> {
                 QcSampleDoc doc = sampleDoc(sampleId);
@@ -163,14 +191,15 @@ public class DocRenderModelFactory {
             .text("receive_date", sample.getReceiveDate() == null ? "" : sample.getReceiveDate().format(DATE))
             .text("process_time", dateTime(sample.getProcessTime()))
             .text("operator_name", sample.getOperatorName())
-            // ★ 外部版：内部编号**一格留空**（不是下载时抹，是模型里就没有）
-            .text("internal_no", DocAudiences.isInternal(model.getAudience()) ? sample.getInternalNo() : "")
+            // ★ 内部编号：内部版一直印；外部版按系统参数（关着 = 模型里就没有，不是下载时抹）
+            .text("internal_no", model.isInternalNoShown() ? sample.getInternalNo() : "")
             .text("viability_file_name", doc.getViabilityFileName())
             .text("orig_desc", doc.getOrigDesc())
             .text("observe_desc", blankTo(doc.getObserveDesc(), QcDocRules.OBSERVE_DESC_DEFAULT))
             .text("pretreat_desc", blankTo(doc.getPretreatDesc(), QcDocRules.PRETREAT_DESC_DEFAULT))
-            // 细胞活率附件：印的是文件名（上面那条），但换一张活率附件也必须重出 → oss_id 进指纹
-            .part("viability_oss=" + doc.getViabilityOssId())
+            // ★ 细胞活率附件：作为嵌入对象放进这一格（图标 + 文件名，Word / WPS 里双击打开；Kevin 本机验收「网页工作台」第 5 行）。
+            //   换一个附件 = oss_id 变 = 指纹变 = 重出（DocRenderModel#canonical 的 embed 行）
+            .embed("viability_file_name", doc.getViabilityOssId(), doc.getViabilityFileName())
             .part("doc_status=" + doc.getDocStatus());
         fillImages(model, QcDocRules.DOC_TYPE_SAMPLE_QC, doc.getId());
         fillAttachments(model, QcDocRules.DOC_TYPE_SAMPLE_QC, doc.getId());

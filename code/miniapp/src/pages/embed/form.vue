@@ -44,6 +44,7 @@ import StainButtons from '@/components/lqg/StainButtons.vue'
 import type { EmbedFieldKey, EmbedFieldSpec, EmbedMode } from './layout'
 import {
   embedLayout,
+  fieldMaxlength,
   fieldSpecs,
   groupSpecs,
   normalizeMode,
@@ -59,7 +60,7 @@ import { hasOtherStain, stainProblem, toggleStain } from './stain'
 //
 // 布局只认 `embedLayout(identity, verifyStatus, mine, mode)` 这个纯函数（fixture 驱动）：
 //   - 外部**只渲染三项**、石蜡块编号 / 工序 / 染色 / marker / 包埋人 / 操作人 / 备注一个都不出现；
-//   - 内部看外部送来的待核验 / 无效 = 只读（核验在工作台，后端 PUT 也直接拒）；
+//   - 内部看外部送来的待核验 / 无效 = 只读（核验走核验页 `pages/verify/embed`，后端普通 PUT 也直接拒）；
 //   - 只读页右上角的「修改」= `layout.showEditEntry`，把 mode 换成 `edit` 重算同一个纯函数
 //     —— 「按钮显不显示」与「能不能改」同源（CR-20260918-07）；
 //   - 身份缺失什么都不渲染。
@@ -128,7 +129,8 @@ const topNote = computed(() => {
   if (mode.value !== 'edit' || editable.value) {
     return ''
   }
-  return isInternal.value ? '核验与改判请到网页工作台' : '这条送样现在不能修改'
+  // 内部：待核验 / 无效的外部送样在这一页只读；核验走核验页（甲方 2026-09-24 第 20 行），改判仍在工作台
+  return isInternal.value ? '核验请从首页「待处理」进入，改判请到网页工作台' : '这条送样现在不能修改'
 })
 
 // 修改模式顶部小字：最后修改：某某 · 时间。
@@ -217,6 +219,12 @@ function fieldValue(key: EmbedFieldKey): string {
 }
 
 function setField(key: EmbedFieldKey, value: string) {
+  // ★ V25：「选择样本」那一格的值**只能**从选择器回填（`onSamplePicked` 同时写 sampleId 与显示文字）。
+  //   以前这格是可打字的输入框，打的字经这里原样写进 `sampleId` —— 提交出去就是一个不存在的样本 id。
+  //   FieldRow 的选择格已经不再发 update:modelValue，这里再兜一道：sampleId 不接受手输。
+  if (key === 'sampleId') {
+    return
+  }
   ;(form.value as unknown as Record<string, string>)[key] = value
 }
 
@@ -394,6 +402,7 @@ async function submit() {
                 v-if="showStainOther"
                 label="具体名称"
                 :readonly="!spec.editable"
+                :maxlength="100"
                 :model-value="form.stainOther"
                 placeholder="例如 Masson"
                 @update:model-value="(v: string) => form.stainOther = v"
@@ -415,8 +424,10 @@ async function submit() {
               :control="spec.control"
               :readonly="!spec.editable"
               :required="spec.key === 'sampleId' || (isInternal && spec.key === 'paraffinBlockNo')"
+              :mono="spec.key === 'sampleId' || spec.key === 'paraffinBlockNo'"
+              :maxlength="fieldMaxlength(spec.key)"
               :model-value="spec.control === 'select' ? form.sampleLabel : fieldValue(spec.key)"
-              :placeholder="spec.key === 'sampleType' && hints.length ? `${hints[0]} 等` : '请填写'"
+              :placeholder="spec.key === 'sampleType' && hints.length ? `${hints[0]} 等` : undefined"
               @update:model-value="(v: string) => setField(spec.key, v)"
               @pick="onPick(spec)"
             />
@@ -442,7 +453,11 @@ async function submit() {
       type="date"
       title="选择时间"
       @confirm="onPicked"
-    />
+    >
+      <!-- ★ 给默认插槽放一个空节点（G12）：没有默认插槽时 wd-datetime-picker 会自己渲染一行
+           「值 ›」的 cell，页面底部就多出一行没有标签的「今天日期 ›」。面板开关只靠 open()。 -->
+      <view />
+    </wd-datetime-picker>
   </view>
 </template>
 

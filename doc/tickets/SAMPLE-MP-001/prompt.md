@@ -33,7 +33,7 @@ blueprint_refs:
   - FLOW:F-SAMPLE-01.step4
   - FLOW:F-SAMPLE-02.step1
 accept:
-  - name: "表单布局只认后端给的身份、状态与入口模式：外部永远不渲染收样段、有效样本与同组别人的样本只读；内部改有效样本可写、内部看待核验与无效只读；内部管理进来的一律只读；模式缺失按只读；身份缺失什么都不渲染。外部详情仍不渲染收样段、冻存与核验人，内部编号照接口给的渲染、开关不在前端判（CR-20260918-07）；历史编辑记录内外部共用同一个「只看我提交的」开关，内部页签默认取全中心、行里带经手人"
+  - name: "表单布局只认后端给的身份、状态与入口模式：外部永远不渲染收样段、有效样本与同组别人的样本只读；内部改有效样本可写、内部看待核验与无效只读；内部管理进来的一律只读；模式缺失按只读；身份缺失什么都不渲染。外部详情仍不渲染收样段、冻存与核验人，内部编号照接口给的渲染、开关不在前端判（CR-20260918-07）；历史编辑记录内外部共用同一个「只看我提交的」开关，内部页签默认取全中心、行里带经手人；提交体带上来源单位 id（外部只可能是本人绑定单位的 id，名字改过就不带，CR-20260923-09）"
     form: STATE
     run: |-
       cd code/miniapp &&
@@ -47,7 +47,10 @@ accept:
       ! grep -nE 'lqg.ext.show-internal-no|lqgExtShowInternalNo' src/pages/sample/detail-ext.vue &&
       grep -q 'entriesFor' src/pages/history/index.vue && ! test -e src/pages/sample/mine.vue &&
       grep -rq '只看我提交的' src/pages/history && grep -rq 'handlerName' src/pages/history &&
-      grep -q 'sort=recent' src/pages/history/sources.ts
+      grep -q 'sort=recent' src/pages/history/sources.ts &&
+      pnpm vitest run src/api/sample.spec.ts src/api/unit-group.spec.ts --reporter=json --outputFile=/tmp/lqg-sample-unit.json >/dev/null &&
+      jq -e '.numFailedTests == 0 and .numPassedTests >= 10' /tmp/lqg-sample-unit.json &&
+      grep -q 'sourceUnitId: currentUnitId()' src/pages/sample/form.vue
     counterfeit: |-
       外部视角下把收样段渲染出来再 v-show=false → formLayout 返回的 fields 里带着 receiveDate 等，用例「外部新增」红。
       editable 写成 identity==='external' && status!=='valid'（漏了 mine）→「外部看同组别人的待核验」用例红：页面上会出现一个点了必然被后端拒绝的提交按钮。
@@ -60,7 +63,9 @@ accept:
       「只看我提交的」开关只做在外部页签上（内部还是老口径的「本人」清单）→ 开关那段 grep 红：9-18 甲方要的是「江夏实验室所有的工作人员」（CR-20260918-07）。行里不给经手人 → `handlerName` 那段红：谁录的、谁改的看不出来。
       内部页签仍旧写死 mine=true 取数 → `sort=recent` 那段红：默认得是全中心（`sort=recent` 不带 `mine`），本人是开关打开之后的事。
       删 fixture 里的病灶用例来过关 → node 那段红。
-  - name: "小程序构建通过且是本次产物；内部接口只给内部角色；内部「历史编辑记录」默认 = 中心全部内部人员新增或最后修改过的（CR-20260918-07；与库里独立数的一致，外部自己改的不算经手，改完一条立刻排到最前，行里带经手人与「新增 / 修改」），「只看我提交的」再收窄到本人；内部改得动有效样本、别人录的也改得动并记下修改人，改不动待核验样本（被拒且库里不变）"
+      组织样本表单提交体只发单位名、不发 sourceUnitId（CR-20260923-09 之前的形态）→ 最后一段 grep 红：外部从小程序交的样本 source_unit_id 为空，工作台按单位筛选、按单位导出都查不到。
+      单位 id 回找写成「名字改过也照带旧 id」、或外部的单位候选列了全部启用单位 → sample.spec / unit-group.spec 用例红（外部选到别的单位会被后端 400）；两个 spec 共 10 例，被 skip / only 掉几例 numPassedTests 就不够数。
+  - name: "小程序构建通过且是本次产物；内部接口只给内部角色；内部「历史编辑记录」默认 = 中心全部内部人员新增或最后修改过的（CR-20260918-07；与库里独立数的一致，外部自己改的不算经手，改完一条立刻排到最前，行里带经手人与「新增 / 修改」），「只看我提交的」再收窄到本人；内部改得动有效样本、别人录的也改得动并记下修改人，改不动待核验样本（被拒且库里不变）；内部 PUT 是补丁：没带的键不改、带了空值就清空、清必填项 400 且库里不变（CR-20260923-09）"
     form: API
     run: |-
       (cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/sample/form.js && test -f dist/build/mp-weixin/pages/history/index.js && ! test -e dist/build/mp-weixin/pages/sample/mine.js) &&
@@ -79,6 +84,12 @@ accept:
       bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sort=recent&mine=true' | jq -e '([.rows[].id|tostring]|sort)==["9000001001","9000001004","9000001008","9000001009"]' &&
       bash doc/verify/api.sh --as staff --bizcode PUT /mp/int/sample '{"id":9000001002,"tissueType":"不该改进去"}' | grep -qE '^(400|500)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE tissue_type='不该改进去'" --eq 0 &&
+      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"id":9000001001,"remark":"临时备注"}' | jq -e '.code==200' &&
+      python3 doc/verify/db.py --sql "SELECT COALESCE(remark,'<null>') FROM t_lqg_sample WHERE id=9000001001" --eq "临时备注" &&
+      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"id":9000001001,"remark":""}' | jq -e '.code==200' &&
+      python3 doc/verify/db.py --sql "SELECT COALESCE(remark,'<null>') || '|' || tissue_type FROM t_lqg_sample WHERE id=9000001001" --eq "<null>|肝组织（更正）" &&
+      bash doc/verify/api.sh --as staff --bizcode PUT /mp/int/sample '{"id":9000001001,"tissueType":""}' | grep -qE '^400.*组织类型不能为空' &&
+      python3 doc/verify/db.py --sql "SELECT tissue_type FROM t_lqg_sample WHERE id=9000001001" --eq "肝组织（更正）" &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-
       `sort=recent` 没做、历史编辑记录还是照 9-17 的老口径按本人取数 → 参数不认、接口把全部 9 条都给回来，`sort=recent` 的第一段集合断言红。这正是甲方 9-18 提的那条：「我们内部人员也有多个哦，江夏实验室所有的工作人员」（CR-20260918-07）。
@@ -92,6 +103,9 @@ accept:
       /mp/int/sample 的 PUT 借用了外部那条「只改送检段、改完回到待核验」的 service → 1001 的 verify_status 变成 pending 红；或者没记 update_by → 「yes」红，「最后修改」无从显示，历史编辑记录也找不回来。
       /mp/int/** 忘了加角色注解 → 外部拿到 200 红：外部能看到全部样本连同内部编号。
       先 rm 产物目录再构建：上次剩下的 dist 骗不过去；旧的「我的送检」页产物还在也红。
+      内部 PUT 用 updateById 这类忽略 null 的写法（CR-20260923-09 之前的形态）→ 备注传空串清不掉，第 20 段还是「临时备注」红——页面却提示已保存。先设一个备注再清，是因为 seed 里 1001 的备注本来就是空的，直接清证明不了什么。
+      补丁合并时把没带的键当成清空 → 只改备注却把组织类型写成 NULL，第 20 段同样红（没带的键不改）。
+      清必填项（组织类型传空串）没被拦下 → 第 21 段拿到 200、或第 22 段库里的组织类型被清空，红：以前是提示已保存、库里却留着一条没有组织类型的有效样本。
 ---
 
 # SAMPLE-MP-001 · 小程序 · 样本记录信息表填写页（新增、修改、只读三种模式）、外部样本详情、历史编辑记录页（页签框架与样本记录页签）
@@ -113,7 +127,7 @@ accept:
   1. **外部看不到收样段是「不渲染」，不是置灰**。渲染了再隐藏，字段名就进了外部的包。
   2. **同组别人的样本可看不可改**：`editable` 以后端详情里的为准，前端不自己判断。
   3. **填写页三种模式由入口决定**：首页点进来 = `new`；「历史编辑记录」点进来 = `edit`（外部本人的待核验 / 无效可改后重提；内部改有效样本，**别人录的也进修改模式**，CR-20260918-07）；「内部管理」点进来 = `view`（一律只读，本人录的也只读）。`mode` 缺失或不认识按只读处理，绝不按可改。
-  4. **内部修改模式**：有效样本两段全部可改，**不限本人录的**——内部人员对中心的任何一条有效记录都能改（CR-20260918-07）；**待核验、无效的外部样本只读**，顶部提示「核验与改判请到网页工作台」——核验是带必填项的状态转移，不能被一次普通保存绕过去，后端 `PUT /mp/int/sample` 对这两种状态直接拒绝。
+  4. **内部修改模式**：有效样本两段全部可改，**不限本人录的**——内部人员对中心的任何一条有效记录都能改（CR-20260918-07）；**待核验、无效的外部样本只读**，顶部提示「核验请从首页「待处理」进入，改判请到网页工作台」（CR-20260924-10：小程序也能核验，走核验页 `PUT /lqg/sample/{id}/verify`，改判仍只在工作台）——核验是带必填项的状态转移，不能被一次普通保存绕过去，后端 `PUT /mp/int/sample` 对这两种状态直接拒绝。
   5. **历史编辑记录不是逐次修改日志**：内部 = **中心全部内部人员**新增或最后修改过的记录，默认全列（取数口 `sort=recent`，后端按 `create_by / update_by` 是不是内部账号算），顶部「只看我提交的」开关（默认关）打开才**另外**带 `mine=true` 收窄到本人（CR-20260918-07）；外部 = 可见集合（本人 + 同组）加同一个「只看我提交的」开关（`onlyMine`）。别在前端自己过滤，也别建修改日志表（REQ-SYS-020 的 note：要逐次日志是另一个 CR）。
      「经手过」只认 `create_by / update_by`：外部送来没人动过的（待核验、无效）不进这张清单，外部自己改自己的送检也不算——它们在「内部管理」表格页和工作台的核验清单里。
   6. **历史编辑记录的页签清单直接用 `entriesFor(identity)`**（SYS-MP-001 的同一个函数），不另写一份；还没注册数据源的页签显示空状态。
@@ -140,11 +154,12 @@ accept:
   list 的行补 `handlerName`（经手人 = 最后修改人，没改过就是创建人，取 `sys_user.nick_name`）与布尔 `mine`（前端据此显示「我」）；「新增 / 修改」看行上的 `updateTime` 空不空。
   **`doc/api-contract.md` 那一行只写了 `mine=true` 与详情的 `updateByName / updateTime`**：`sort=recent`、行上的 `handlerName / mine / updateTime` 是本次按 CR-20260918-07 加的（api-contract 由调度侧同步），完工报告里照样 raise 一句。
   内部 `PUT`：样本是待核验或无效 → 400；**有效样本谁录的都能改，不加「只能改本人录的」这条限制**（CR-20260918-07）；详情带 `updateByName / updateTime`。修改模式顶部小字「最后修改：某某 · 时间」，底部「保存」旁两个小链接「给这个样本加石蜡块」「加冻存」（先置灰，EMBED-MP-001 / CRYO-MP-001 接）。
+  内部 `PUT` 是**补丁语义**（CR-20260923-09）：没出现的键不改；出现且值为 null 或空串 = 清空；清必填项（来源单位、组织或类器官类型、内部编号、收样日期）→ 400 并写明是哪一项、库里不变；给本类别没有的字段传非空值（例如组织样本传类器官类型）→ 400。以前走 `updateById`，null 被忽略，清空不生效却提示已保存。
 - `pages/history/index`（按 `UI:mp.history`）：顶部页签 = `entriesFor(identity)`；页头一个「只看我提交的」开关（默认关，**内外部共用同一个**，CR-20260918-07），开关状态传给数据源；每个页签的数据源在 `pages/history/sources.ts` 注册（key → 取数函数、行摘要、点行去哪）。本张注册 `sample`：
   外部 `GET /mp/ext/sample/list?sampleKind=tissue&onlyMine=`（开关值）；行 = 送检单号（等宽）、掩码供体 · 组织类型、「我 / 同组 某某」、状态徽标、日期；
   点行：`mine && editable` → `pages/sample/form?id=&mode=edit`，其余 → `pages/sample/detail-ext?id=`。
   内部 `GET /mp/int/sample/list?sampleKind=tissue&sort=recent`（开关打开再另带 `&mine=true`，CR-20260918-07）；行 = 内部编号（没有则送检单号）、摘要、**经手人**（行上 `mine` 为真显示「我」，否则 `handlerName`）、「新增 / 修改」（看 `updateTime` 空不空）、日期；
-  点行 → `pages/sample/form?id=&mode=edit`，**别人录的也进修改模式**（外部送来还没核验的由后端挡成只读，核验在工作台）。
+  点行 → `pages/sample/form?id=&mode=edit`，**别人录的也进修改模式**（外部送来还没核验的由后端挡成只读；核验走核验页，从首页「待处理」或内部管理表格进，CR-20260924-10）。
   空状态「你填过的记录会出现在这里」。把 SYS-MP-001「我的」里「历史编辑记录」一行的占位目标换成本页。
 - `pages/sample/detail-ext`：按 `UI:mp.sample.detail.ext` 三段；包埋与文档两段此刻是空状态（包埋卡片里对外可见的操作人与包埋人在 AUTH-EXT-002 的 `EmbedCard` 上，本张不做）。
   内部编号一行**照接口给的渲染**：系统参数 `lqg.ext.show-internal-no` 默认 false 时接口不给这个键，页面就不显示这一行；打开后接口给了才显示（CR-20260918-07）——开关的判断全在后端，页面不读系统参数。收样段其余字段、冻存信息与核验人仍然全页不出现。
@@ -167,3 +182,6 @@ accept:
 3. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 4. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 5. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-23 按 CR-20260923-09 更新：accept 1 补 sample.spec / unit-group.spec 两个用例文件与「提交体带 sourceUnitId」的 grep（F3）；accept 2 补内部 PUT 补丁语义的三组断言（备注传空串 → NULL 且没带的组织类型不动；清组织类型 → 400 且库里不变，F1）；§2 写明内部 PUT 的补丁语义。
+- 2026-09-24 按 CR-20260924-10 更新：§0 口径 4 与 §2 历史编辑记录的说明改为「核验走小程序核验页或工作台、改判只在工作台」，填写页只读时的提示换成「核验请从首页「待处理」进入，改判请到网页工作台」；外部详情的类器官多显示「代数」（断言在 AUTH-EXT-002 accept 3）。accept 逐条核过不用改。

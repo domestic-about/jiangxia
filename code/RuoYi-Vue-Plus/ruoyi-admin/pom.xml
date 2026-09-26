@@ -143,6 +143,17 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
+                <configuration>
+                    <!-- mvn spring-boot:run 用：macOS 系统代理会被 JDK 灌成 http.proxyHost，而 JDK 默认的
+                         nonProxyHosts 不含 127.0.0.1，发往本机 MinIO 的请求被丢给代理后卡死、上传 500。
+                         打成 jar 部署不走这里（容器里没有系统代理），qa-up.sh / local.sh 另在命令行上传同一个参数。 -->
+                    <jvmArguments>-Dhttp.nonProxyHosts=localhost|127.0.0.1|*.local|local</jvmArguments>
+                    <!-- 只对 mvn spring-boot:run 生效：本机开发一条命令起 dev。jar 本身仍不带缺省 profile，
+                         启动护栏 StartupSafetyGuard 照旧拒绝「没声明 profile」的 jar。 -->
+                    <profiles>
+                        <profile>dev</profile>
+                    </profiles>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

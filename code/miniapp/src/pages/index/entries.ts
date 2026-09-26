@@ -77,8 +77,13 @@ export function meSections(identity: unknown): MeSectionKey[] {
   return ['history', 'unitGroup']
 }
 
-/** 「内部管理」板块底部小字：逐字照 UI:mp.me —— 没有「修改」二字（CR-20260918-07） */
-export const INTERNAL_ADMIN_NOTE = '核验、冻存取用请到网页工作台'
+/**
+ * 「内部管理」板块底部小字（UI:mp.me）。
+ *
+ * 甲方 2026-09-24 第 20 行：核验、冻存登记小程序和工作台都要能做（Kevin 定）——
+ * 以前那句把人支到网页工作台，现在两边都能做，改成这一句。仍然没有「修改」二字（CR-20260918-07）。
+ */
+export const INTERNAL_ADMIN_NOTE = '核验、冻存登记在小程序和网页工作台都能做'
 
 /** 入口 key → 该表的全称（宫格与内部管理板块共用） */
 export const ENTRY_TITLE: Record<EntryKey, string> = {
@@ -86,6 +91,19 @@ export const ENTRY_TITLE: Record<EntryKey, string> = {
   organoid: '类器官收样记录',
   embed: '石蜡包埋送样记录',
   cryo: '-80 冻存记录',
+}
+
+/**
+ * 入口 key → 该表的短名（页签专用：内部管理表格页的切换条、历史编辑记录、待核验三处都从这里取）。
+ *
+ * Kevin 2026-09-24 本机验收：页签文字不要换行 —— 390 宽下四个全称并排必然折成两行，页签一律用短名；
+ * 短名只在这里写一份，别在页面里再写一套。
+ */
+export const ENTRY_SHORT: Record<EntryKey, string> = {
+  sample: '样本记录',
+  organoid: '类器官收样',
+  embed: '石蜡包埋',
+  cryo: '-80 冻存',
 }
 
 /** 内部管理板块四个入口点进去的表格页（SAMPLE-MP-002 建页；`sheet` 决定进哪个工作表） */

@@ -63,11 +63,13 @@ class SampleRecentFilterContractTest {
     private static final String MINE_GROUP = "(create_by = ? OR update_by = ?)";
 
     /** 不启 Spring：本类只碰 wrapper 组装，用不到 mapper / 档案查询（加密列两个筛选都不传 → 不会真加密）。
-     *  SAMPLE-HINT-001 在构造器末尾补了 {@code SampleHintService}（读侧列表装配用）—— 本类不碰它，传 null。 */
+     *  SAMPLE-HINT-001 在构造器末尾补了 {@code SampleHintService}、2026-09-24 本机验收又补了
+     *  {@code SampleRelationService}（都是读侧列表装配用）—— 本类不碰它们，传 null。 */
     private static SampleQueryService service() {
         return new SampleQueryService(
             null,
             new SampleFieldCipher(new EncryptorProperties()),
+            null,
             null,
             null,
             null);
@@ -166,6 +168,33 @@ class SampleRecentFilterContractTest {
         assertTrue(sql.contains("ORDER BY (verify_status = 'pending') DESC"), "不带 sort=recent 走「待核验置顶」");
         // 顺带钉住「待核验置顶」还在（SAMPLE-WEB-001 accept 1 末段）
         assertTrue(sql.contains("create_time DESC") && sql.contains("id DESC"));
+    }
+
+    /**
+     * FIX #191：{@code mine=true} 与 {@code sort} 无关 —— 不带 {@code sort=recent}（内部管理表格页 /
+     * 工作台总表）时也必须收窄到「我经手的」，以前在这一支里被<b>静默忽略</b>、返回全表
+     * （活体：staff {@code /mp/int/sample/list?mine=true} 返回 total=11，带 sort=recent 才是 3）。
+     * 契约第 49 行只说「开关打开时才带」，没有「只在 sort=recent 下生效」。
+     */
+    @Test
+    void mineNarrowsWithoutRecentSortToo() {
+        SampleQueryBo q = new SampleQueryBo();
+        q.setMine(Boolean.TRUE);
+        q.setSampleKind("tissue");
+        String sql = service().buildWrapper(q, null, 9000000101L).getTargetSql();
+        assertTrue(sql.contains("sample_kind = ? AND " + MINE_GROUP),
+            "★ 不带 sort=recent 时 mine 那一组也必须与筛选相与：" + sql);
+        assertFalse(sql.contains("create_by IN ("), "经手人 ∈ 内部那一组仍只属于 sort=recent：" + sql);
+        assertTrue(sql.contains("ORDER BY (verify_status = 'pending') DESC"), "不带 sort 仍是待核验置顶：" + sql);
+
+        SampleQueryBo mineOff = new SampleQueryBo();
+        mineOff.setSampleKind("tissue");
+        assertFalse(service().buildWrapper(mineOff, null, 9000000101L).getTargetSql().contains(MINE_GROUP),
+            "不带 mine = 中心全部（默认不是本人）");
+        SampleQueryBo noMe = new SampleQueryBo();
+        noMe.setMine(Boolean.TRUE);
+        assertFalse(service().buildWrapper(noMe, null, null).getTargetSql().contains(MINE_GROUP),
+            "取不到登录人时不许凭空造一个「我」");
     }
 
     /**

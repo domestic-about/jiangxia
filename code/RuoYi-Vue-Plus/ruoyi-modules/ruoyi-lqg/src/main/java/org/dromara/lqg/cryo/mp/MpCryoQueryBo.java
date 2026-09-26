@@ -24,8 +24,10 @@ import java.io.Serial;
  * 两个语义都落在 {@code CryoQueryService.buildWrapper} 上 —— 与 SAMPLE / EMBED 两张历史页签
  * 同一条读路径，小程序这边不另写一份 where。
  *
- * <p>★ {@code overdueOnly} / {@code location} 是「-80 冻存工作表」三个页签的三个档：
- * 全部（都不带）/ -80 超期（{@code overdueOnly=true}）/ 液氮（{@code location=ln2}）。
+ * <p>★ {@code overdueOnly} / {@code location} / {@code emptiedOnly} 是「-80 冻存工作表」四个页签的档：
+ * 全部（都不带）/ -80 超期（{@code overdueOnly=true}）/ 液氮（{@code location=ln2}）/
+ * 已取空（{@code emptiedOnly=true}，2026-09-24 甲方「支数取空的要提示」，剩余 ≤ 0）。
+ * 小程序表格页支持 {@code ?sheet=cryo&tab=overdue|ln2|emptied|all} 直达其中一档。
  * 超期那一段拼的是 {@code CryoOverdueSqlProvider.WHERE}（CRYO-REMIND-001 的唯一判定片段），
  * 阈值是参数、不在这里写任何天数常量。
  *

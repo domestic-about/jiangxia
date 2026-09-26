@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
 import { getHomeTodo, HomeTodoVO } from '@/api/lqg/home';
+import { sampleKindOfPath } from '@/views/lqg/sample/pages';
 
 // ============================================================================
 // 工作台首页待办 · 前端唯一的一份（SYS-HOME-001 · UI:admin.home）
 //
 // ★★ 为什么必须放在 store 里（ticket §0.1 硬要求 ③）：
-//   首页五张卡片与侧边菜单角标**共用同一次** `GET /lqg/home/todo` 的结果。
+//   首页待办卡片与侧边菜单角标**共用同一次** `GET /lqg/home/todo` 的结果。
 //   侧边栏若自己再请求一次，两个请求之间有人核验了一条样本，就会出
 //   「角标 3、进来卡片 2」——老师会怀疑系统，而且这种 bug 只在时序上出现、极难复现。
 //   所以：**本文件是前端唯一调 `/lqg/home/todo` 的地方**，
@@ -22,12 +23,14 @@ import { getHomeTodo, HomeTodoVO } from '@/api/lqg/home';
 //   `badgeOf()` 只负责给数，不做这两种判断（判断留在各自的渲染处，一眼能看清没写反）。
 // ============================================================================
 
-/** 五个待办键（与后端 HomeTodoVO / doc/api-contract.md 逐字对齐） */
+/** 待办键（与后端 HomeTodoVO 逐字对齐） */
 export type LqgTodoKey = keyof HomeTodoVO;
 
 /** 全零兜底：接口还没回来 / 回来缺键时，卡片显示 0 而不是 undefined */
 const ZERO: HomeTodoVO = {
   pendingSamples: 0,
+  pendingTissue: 0,
+  pendingOrganoid: 0,
   pendingEmbeds: 0,
   cryoOverdue: 0,
   pendingExtUsers: 0,
@@ -35,7 +38,7 @@ const ZERO: HomeTodoVO = {
 };
 
 export const useLqgTodoStore = defineStore('lqgTodo', () => {
-  /** 五个数（唯一来源；卡片与角标都读它） */
+  /** 待办数（唯一来源；卡片与角标都读它） */
   const todo = ref<HomeTodoVO>({ ...ZERO });
   const loading = ref(false);
   /** 拿到过一次真结果（侧边栏据此决定要不要补一次请求） */
@@ -79,9 +82,10 @@ export const useLqgTodoStore = defineStore('lqgTodo', () => {
   /**
    * 侧边菜单角标取值：按路由路径找它对应的那个数。
    *
-   * <p>路径映射（与蓝图 UI:admin.home 的四张「可直达」卡片一一对应）：
+   * <p>路径映射（与蓝图 UI:admin.home 的「可直达」卡片一一对应）：
    * <pre>
-   *   /sample       样本总表        → pendingSamples
+   *   /sample           样本记录信息表  → pendingTissue    （CR-20260924-10：原「样本总表」拆成两页，
+   *   /sample-organoid  类器官收样记录  → pendingOrganoid    红色数字按页分开；路径取自 views/lqg/sample/pages.ts）
    *   /embed        石蜡包埋        → pendingEmbeds
    *   /cryo         冻存管理        → cryoOverdue
    *   /auth         人员与单位      → pendingExtUsers
@@ -96,8 +100,12 @@ export const useLqgTodoStore = defineStore('lqgTodo', () => {
     if (!raw) {
       return 0;
     }
-    if (raw === '/sample' || raw.endsWith('/sample')) {
-      return Number(todo.value.pendingSamples) || 0;
+    const sampleKind = sampleKindOfPath(raw);
+    if (sampleKind === 'tissue') {
+      return Number(todo.value.pendingTissue) || 0;
+    }
+    if (sampleKind === 'organoid') {
+      return Number(todo.value.pendingOrganoid) || 0;
     }
     if (raw.endsWith('/embed')) {
       return Number(todo.value.pendingEmbeds) || 0;

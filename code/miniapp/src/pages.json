@@ -23,34 +23,6 @@
       }
     },
     {
-      "path": "pages/admin/cryo",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "-80 冻存记录"
-      }
-    },
-    {
-      "path": "pages/admin/embed",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "石蜡包埋送样记录"
-      }
-    },
-    {
-      "path": "pages/admin/organoid",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "类器官收样记录"
-      }
-    },
-    {
-      "path": "pages/admin/sample",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "样本记录信息表"
-      }
-    },
-    {
       "path": "pages/cryo/form",
       "type": "page",
       "style": {
@@ -153,6 +125,27 @@
       "type": "page",
       "style": {
         "navigationBarTitleText": "样本记录信息表"
+      }
+    },
+    {
+      "path": "pages/verify/embed",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "核验 · 石蜡包埋送样"
+      }
+    },
+    {
+      "path": "pages/verify/index",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "待核验"
+      }
+    },
+    {
+      "path": "pages/verify/sample",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "核验"
       }
     }
   ],

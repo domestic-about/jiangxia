@@ -5,6 +5,7 @@ import cn.dev33.satoken.annotation.SaMode;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.lqg.sys.home.domain.vo.HomeRecentVo;
+import org.dromara.lqg.sys.home.domain.vo.HomeRenderIssueVo;
 import org.dromara.lqg.sys.home.domain.vo.HomeTodoVo;
 import org.dromara.lqg.sys.home.service.HomeCounterService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,13 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
+/*
+ * 实现备注（给维护的人看，不进接口文档 / Swagger）：
+ *
  * 工作台首页（UI:admin.home，REQ-SYS-901）—— doc/api-contract.md 的
  * {@code GET /lqg/home/todo} 与 {@code GET /lqg/home/recent}。
  *
  * <pre>
- * GET /lqg/home/todo     → data:{pendingSamples, pendingEmbeds, cryoOverdue, pendingExtUsers, renderFailed}
- * GET /lqg/home/recent   → data:[{submitTime, submitNo, sourceUnitName, submitSource, verifyStatus}, …]
+ * GET /lqg/home/todo           → data:{pendingSamples, pendingTissue, pendingOrganoid, pendingEmbeds, cryoOverdue,
+ *                                      pendingExtUsers, renderFailed}（pendingSamples = pendingTissue + pendingOrganoid）
+ * GET /lqg/home/recent         → data:[{submitTime, submitNo, sampleKind, sourceUnitName, submitSource, verifyStatus}, …]
+ * GET /lqg/home/render-issues  → data:[{sampleId, internalNo, submitNo, docKind, audience, issue, errorMsg, missing…}, …]
  * </pre>
  *
  * <p>★ <b>鉴权是「内部角色闸」，不是「登录门」</b>：两个端点都挂
@@ -60,9 +65,14 @@ import java.util.List;
  * {@code *:*:*} 答得了后者，答不了前者，所以内外部隔离只能用角色闸表达。
  *
  * <p>★ 端点也<b>不落任何计数缓存</b>：没有 Redis key、没有 {@code @Cacheable}、
- * 没有任何「今日快照」表。五个数每次请求现算（见 {@link HomeCounterService}）。
+ * 没有任何「今日快照」表。待办数每次请求现算（见 {@link HomeCounterService}）。
  *
  * @author SYS-HOME-001
+ */
+/**
+ * 工作台首页：待办数、最近提交、渲染失败与缺图清单。
+ *
+ * <p>只给内部角色（管理员 / 内部人员 / 超管），外部账号一律 403。数字每次请求现算。
  */
 @RequiredArgsConstructor
 @RestController
@@ -72,7 +82,8 @@ public class HomeController {
     private final HomeCounterService homeCounterService;
 
     /**
-     * 五个待办数（卡片与侧边菜单角标共用这一次请求的结果）。
+     * 待办数（卡片与侧边菜单角标共用这一次请求的结果）；待核验样本按样本记录信息表 / 类器官收样记录分开给，
+     * 另给两者之和 {@code pendingSamples}。
      *
      * <p>内部角色闸（{@code mode = SaMode.OR}）：101 {@code lqg_admin} / 102
      * {@code lqg_internal} / 上游 {@code superadmin} 任一即可（= {@code INTERNAL_ROLE_KEYS}），
@@ -95,6 +106,18 @@ public class HomeController {
     @GetMapping("/recent")
     public R<List<HomeRecentVo>> recent() {
         return R.ok(homeCounterService.recent());
+    }
+
+    /**
+     * 渲染失败与缺图清单（首页「文档渲染失败」卡片点开看的就是它）：每行一份文档的一个版本，
+     * 带失败原因或缺了哪几张图；与卡片上的数同一个口径。
+     *
+     * <p>内部角色闸与另外两个端点相同，外部 403。
+     */
+    @SaCheckRole(value = {"lqg_admin", "lqg_internal", "superadmin"}, mode = SaMode.OR)
+    @GetMapping("/render-issues")
+    public R<List<HomeRenderIssueVo>> renderIssues() {
+        return R.ok(homeCounterService.renderIssues());
     }
 
 }

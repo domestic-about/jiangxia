@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -49,7 +50,7 @@ class DocFingerprintTest {
             .imageSlot("observe", List.of(9000004003L))
             .imageSlot("pretreat", List.of())
             .attachments(List.of(9000004011L))
-            .part("viability_oss=9000004011")
+            .embed("viability_file_name", 9000004011L, "活率报告.pdf")
             .part("doc_status=published");
         return model;
     }
@@ -125,6 +126,19 @@ class DocFingerprintTest {
     }
 
     @Test
+    @DisplayName("嵌进 Word 的细胞活率附件换了一个文件 → 指纹变；摘掉 → 指纹变；同一个 → 不变（H 批：附件本身嵌在文档里）")
+    void embeddedAttachmentIsCovered() {
+        DocRenderModel reference = base();
+        assertNotEquals(reference.contentHash(),
+            base().embed("viability_file_name", 9000004999L, "活率报告.pdf").contentHash(), "换了附件却没重出");
+        assertNotEquals(reference.contentHash(),
+            base().embed("viability_file_name", null, null).contentHash(), "摘掉附件却没重出");
+        assertEquals(reference.contentHash(),
+            base().embed("viability_file_name", 9000004011L, "活率报告.pdf").contentHash());
+        assertTrue(reference.canonical().contains("embed:viability_file_name=9000004011"), reference.canonical());
+    }
+
+    @Test
     @DisplayName("只升模板版本 → 指纹变（accept 2 点名的一条）")
     void templateVersionIsCovered() {
         DocRenderModel reference = base();
@@ -136,10 +150,10 @@ class DocFingerprintTest {
     @Test
     @DisplayName("同一个样本的内外部版指纹不同（audience 进指纹，两份产物互不覆盖）")
     void audienceIsCovered() {
-        // 外部版的 internal_no 本来就是空的 —— 即便字段完全一样，audience 也必须让指纹分叉
+        // 开关关着（默认）时外部版的 internal_no 是空的 —— 即便字段完全一样，audience 也必须让指纹分叉
         DocRenderModel internal = base(DocAudiences.INTERNAL);
         DocRenderModel external = base(DocAudiences.EXTERNAL);
-        assertNotEquals("T-hli01", external.texts().get("internal_no"), "外部版的内部编号必须是空的");
+        assertNotEquals("T-hli01", external.texts().get("internal_no"), "开关关着时外部版的内部编号必须是空的");
         assertNotEquals(internal.contentHash(), external.contentHash());
 
         DocRenderModel sameFieldsDifferentAudience = new DocRenderModel(
@@ -147,6 +161,17 @@ class DocFingerprintTest {
         DocRenderModel internalTwin = new DocRenderModel(
             DocKinds.ORGANOID_QC, DocAudiences.INTERNAL, "1").text("growth_state", "良好");
         assertNotEquals(internalTwin.contentHash(), sameFieldsDifferentAudience.contentHash());
+    }
+
+    @Test
+    @DisplayName("「内部编号」一格印没印单独进指纹（外部版随开关；印出来的字恰好一样也要分叉）")
+    void internalNoShownIsCovered() {
+        DocRenderModel hidden = base(DocAudiences.EXTERNAL);
+        DocRenderModel shown = base(DocAudiences.EXTERNAL).internalNoShown(true);
+        assertEquals(hidden.texts(), shown.texts(), "两份印的字一模一样（样本没内部编号时就是这样）");
+        assertNotEquals(hidden.contentHash(), shown.contentHash(), "开关状态没进指纹 → 会命中按旧设置出的那一份");
+        assertTrue(base(DocAudiences.INTERNAL).isInternalNoShown(), "内部版的样本质控表默认就是「印」");
+        assertFalse(base(DocAudiences.EXTERNAL).isInternalNoShown(), "外部版默认「不印」（开关默认关）");
     }
 
     @Test

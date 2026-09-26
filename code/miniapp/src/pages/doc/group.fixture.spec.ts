@@ -8,7 +8,8 @@
 //   `groupDocs` 另外还带 `title / subtitle / docs` 供页面渲染（`shape()` 不比较它们）。
 import { describe, expect, it } from 'vitest'
 import fixture from '@doc/verify/fixtures/doc-group-cases.json'
-import type { DocGroup, DocListRow } from './group'
+import type { DocListRow } from '@/api/doc'
+import type { DocGroup } from './group'
 import { groupDocs } from './group'
 
 interface GroupCase {

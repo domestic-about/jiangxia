@@ -7,7 +7,7 @@
 // 四件最容易做反的事（ticket §0 与 fixture 的 `_doc`）：
 //
 // 1. **外部永远没有收样段**——不是置灰、不是 `v-show=false`：字段名一旦进 `fields`，
-//    它就会被渲染进外部的包。所以这里给外部**只返回那三项**。
+//    它就会被渲染进外部的包。所以这里给外部**只返回那四项**（送检信息）。
 // 2. **`editable` 由这个纯函数给**（identity / verifyStatus / mine / mode 四件套）：
 //    fixture 逐例断的就是它。外部送来还没核验的样本在内部侧恒不可改（核验在工作台）。
 // 3. **`mode=view`（内部管理点一行进来）一律只读**，本人录的也只读；
@@ -15,21 +15,26 @@
 //    —— 「按钮显不显示」与「能不能改」同源（CR-20260918-07）。
 // 4. **身份缺失什么都不渲染**（不是「默认当内部」）：`fields` 为空、`editable=false`。
 //
-// 类器官收样记录是模板 B 的 7 列（REQ-SAMPLE-007）：内部七项全部可填；
-// 外部三项（Kevin 2026-09-17 晚定，CR-20260917-05）提交后待核验。
+// 类器官收样记录是模板 B 的 7 列（REQ-SAMPLE-007）+「代数」：内部八项全部可填；
+// 外部四项（Kevin 2026-09-17 晚定三项，CR-20260917-05；+ 代数）提交后待核验。
+//
+// ★「代数」（`passage`）不是模板 B 的列：甲方 2026-09-24 测试问题记录表第 18 行要求
+//   「合作单位和内部人员的都要再添加一项：代数」（CR-20260924-10）。它紧跟「类器官类型」，
+//   属于送检信息（外部能填、能改），fixture 里记在 `inserted`，不混进模板列。
 import type { ResolvedIdentity } from '@/types/identity'
 import { normalizeIdentity } from '@/types/identity'
 
 /** 三种入口模式；除此之外（含缺失 / 空串 / 不认识）一律按只读处理 */
 export type OrganoidMode = 'new' | 'edit' | 'view'
 
-/** 外部三项（fixture 的 `externalFields`，顺序即显示顺序） */
-export const EXTERNAL_FIELDS = ['sourceUnitName', 'organoidType', 'remark'] as const
+/** 外部四项（fixture 的 `externalFields`，顺序即显示顺序）：来源单位、类器官类型、代数、备注 */
+export const EXTERNAL_FIELDS = ['sourceUnitName', 'organoidType', 'passage', 'remark'] as const
 
-/** 内部七项（fixture 的 `internalFields`，顺序即显示顺序 = 模板 B 的列序） */
+/** 内部八项（fixture 的 `internalFields`，顺序即显示顺序 = 模板 B 的列序，「类器官类型」后插入「代数」） */
 export const INTERNAL_FIELDS = [
   'sourceUnitName',
   'organoidType',
+  'passage',
   'receiveDate',
   'internalNo',
   'processTime',
@@ -39,7 +44,7 @@ export const INTERNAL_FIELDS = [
 
 export type OrganoidFieldKey = (typeof INTERNAL_FIELDS)[number] | (typeof EXTERNAL_FIELDS)[number]
 
-/** 收样段字段（**只有内部**看得到）：内部七项里除去「来源单位 / 类器官类型」之外的五项 */
+/** 收样段字段（**只有内部**看得到）：内部八项里除去「来源单位 / 类器官类型 / 代数」之外的五项 */
 export const RECEIVE_FIELDS = [
   'receiveDate',
   'internalNo',
@@ -86,7 +91,7 @@ export function organoidLayout(
   if (entry === 'view') {
     return { fields, editable: false }
   }
-  // 新增：内外部都能填（外部三项 → pending，内部七项 → valid）
+  // 新增：内外部都能填（外部四项 → pending，内部八项 → valid）
   if (entry === 'new') {
     return { fields, editable: true }
   }
@@ -117,10 +122,11 @@ export interface OrganoidFieldSpec {
   editable: boolean
 }
 
-/** 字段的中文标签（**逐字对甲方模板 B 的列名**；顺序与 INTERNAL_FIELDS 一致） */
+/** 字段的中文标签（**逐字对甲方模板 B 的列名**，「代数」是甲方后加的；顺序与 INTERNAL_FIELDS 一致） */
 const LABELS: Record<OrganoidFieldKey, string> = {
   sourceUnitName: '来源单位',
   organoidType: '类器官类型',
+  passage: '代数',
   receiveDate: '收样日期',
   internalNo: '内部编号',
   processTime: '处理时间',
@@ -143,6 +149,20 @@ export function fieldLabel(key: OrganoidFieldKey): string {
   return LABELS[key]
 }
 
+/** 可输入字段最多几个字（与后端校验、库里的列长同一口径）；来源单位的手填名在单位面板里（100） */
+const MAXLENGTH: Partial<Record<OrganoidFieldKey, number>> = {
+  organoidType: 100,
+  // 代数形如 P3 / P12 / P999（与冻存批次同一规则 ^P\d{1,3}$），最长 4 个字
+  passage: 4,
+  internalNo: 64,
+  operatorName: 50,
+  remark: 500,
+}
+
+export function fieldMaxlength(key: OrganoidFieldKey): number | undefined {
+  return MAXLENGTH[key]
+}
+
 /** 布局 → 可渲染字段清单：顺序就是显示顺序，`editable` 是**整页可写性**的统一答案 */
 export function fieldSpecs(layout: OrganoidLayout, editable: boolean): OrganoidFieldSpec[] {
   return layout.fields.map(key => ({
@@ -155,3 +175,29 @@ export function fieldSpecs(layout: OrganoidLayout, editable: boolean): OrganoidF
 
 /** 取数：`/mp/dict/hints?type=organoid` 的联想词类型（类器官类型那一格用） */
 export const ORGANOID_HINT_TYPE = 'organoid'
+
+// ── 代数（CR-20260924-10）──────────────────────────────────────────────────
+
+/** 代数格式不对时的提示（与后端 `SubmitSegmentRules.MSG_PASSAGE` 同一句） */
+export const PASSAGE_HINT = '代数请填 P 加数字，如 P3'
+
+/**
+ * 代数的提交值：去首尾空白、开头的小写 p 转大写；空 = 没填（选填）。
+ * 与后端 `SubmitSegmentRules.normalizePassage` 同一个归一化 —— 前端先转好，用户在只读页看到的就是落库的样子。
+ */
+export function normalizePassage(raw: unknown): string {
+  const value = raw === null || raw === undefined ? '' : String(raw).trim()
+  return value.startsWith('p') ? `P${value.slice(1)}` : value
+}
+
+/**
+ * 代数的问题（空串 = 没问题）：选填；填了就必须形如 P3（`P` + 1~3 位数字，与冻存批次的代数同一规则）。
+ * 前端先拦一次给人话提示；后端同一规则兜底（格式不对 400「代数请填 P 加数字，如 P3」）。
+ */
+export function passageProblem(raw: unknown): string {
+  const value = normalizePassage(raw)
+  if (!value) {
+    return ''
+  }
+  return /^P\d{1,3}$/.test(value) ? '' : PASSAGE_HINT
+}

@@ -1,10 +1,14 @@
 package org.dromara.lqg.sample.mp;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.lqg.sample.service.PatchBodyReader;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitBo;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,6 +51,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class MpSampleController {
 
     private final MpSampleService mpSampleService;
+    /** 补丁要知道「哪些键出现过」（没带 = 不改、带了空值 = 清空，FIX V28 / V33） */
+    private final PatchBodyReader patchBodyReader;
 
     /**
      * 列表：默认全表（内部管理表格页）；带 {@code sort=recent} 时是「历史编辑记录」
@@ -74,11 +80,17 @@ public class MpSampleController {
     }
 
     /**
-     * 修改（历史编辑记录 / 内部管理只读页切修改模式）。
+     * 修改（历史编辑记录 / 内部管理只读页切修改模式）—— 补丁语义（FIX V28）：
+     * 没带的键不改；带了空值（{@code null} / 空串）= 清空，清必填项 → 400。
+     *
+     * <p>收原始 JSON 而不是直接收 {@link SampleSubmitBo}：反序列化之后「没传」与「传了 null」分不出来，
+     * 而这两种恰好是「不改」与「清空」。形状仍是 {@link SampleSubmitBo}（{@link PatchBodyReader} 用同一个
+     * ObjectMapper 解析，日期格式、忽略未知键与普通 {@code @RequestBody} 一致）。
      */
     @PutMapping
-    public R<Void> update(@RequestBody SampleSubmitBo bo) {
-        mpSampleService.update(bo);
+    public R<Void> update(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+        content = @Content(schema = @Schema(implementation = SampleSubmitBo.class))) @RequestBody JsonNode body) {
+        mpSampleService.update(patchBodyReader.read(body, SampleSubmitBo.class));
         return R.ok();
     }
 

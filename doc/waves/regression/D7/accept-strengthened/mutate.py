@@ -21,7 +21,13 @@ import re
 import subprocess
 import sys
 
-ROOT = "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid"
+# ★ 2026-09-23 按 CR-20260923-09 更新：ROOT 不再写死工作区绝对路径（独立验收查实：谁在副本里重放，
+#   写死的 ROOT 都会把变异写进工作区源码、在工作区执行 git checkout）→ 从脚本自身位置推导：
+#   accept-strengthened → D7 → regression → waves → doc → 仓库根（上溯 5 级）。
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", ".."))
+if not os.path.isfile(os.path.join(ROOT, "code", "miniapp", "src", "pages.json")):
+    sys.stderr.write(f"[error] ROOT 推导错了：{ROOT} 下没有 code/miniapp/src/pages.json\n")
+    sys.exit(2)
 
 F_HANDOFF = "code/miniapp/src/utils/fileHandoff.ts"
 F_DOWNLOADBAR = "code/miniapp/src/components/lqg/DownloadBar.vue"
@@ -51,9 +57,9 @@ MUTATIONS = {
          "    const filePath = await downloadToTemp(url, { header: authHeader(), requireAuth: true })\n",
          1),
     ]),
-    # H2：把两张卡片的数字写死成**错的数**（真值 2 / 1，= 证伪 F4）
+    # H2：把两张卡片的数字写死成**错的数**（真值 2 / 1，= 证伪 F4；CR-20260924-10 起样本卡拆成两张，写死组织那张）
     "H2": (F_HOME, [
-        (':value="todo.pendingSamples"', ':value="7"', 1),
+        (':value="todo.pendingTissue"', ':value="7"', 1),
         (':value="todo.pendingEmbeds"', ':value="9"', 1),
     ]),
     # H3a：删掉真代码那一行，只在注释里保留字面量（= 证伪 F1）

@@ -121,6 +121,7 @@ public class ExtSampleAssemblyService {
         vo.setHospitalNo(sample.getHospitalNo());
         vo.setTissueType(sample.getTissueType());
         vo.setOrganoidType(sample.getOrganoidType());
+        vo.setPassage(sample.getPassage());
         vo.setHasPathology(sample.getHasPathology());
         vo.setRemark(sample.getRemark());
         vo.setVerifyStatus(sample.getVerifyStatus());

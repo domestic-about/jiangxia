@@ -1,22 +1,26 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import type { SampleDetail, SampleFormValue } from '@/api/sample'
+import { computed, ref, watch } from 'vue'
+import type { SampleDetail, SampleFormValue, UnitIdCandidate } from '@/api/sample'
 import {
   createExtSample,
   createIntSample,
   emptyForm,
   fetchExtSampleDetail,
   fetchIntSampleDetail,
+  sourceUnitIdFor,
   toFormValue,
   updateExtSample,
   updateIntSample,
 } from '@/api/sample'
+import type { SelectorUnit } from '@/api/unit-group'
+import { boundUnitOf, fetchUnits, unitOptionsFor } from '@/api/unit-group'
 import ErrorState from '@/components/lqg/ErrorState.vue'
 import FieldRow from '@/components/lqg/FieldRow.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import OcrBar from '@/components/lqg/OcrBar.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
+import SourceUnitSheet from '@/components/lqg/SourceUnitSheet.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
@@ -26,6 +30,7 @@ import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-da
 import type { FieldSpec, FormFieldKey, FormMode } from './layout'
 import {
   RECEIVE_FIELDS,
+  fieldMaxlength,
   fieldSpecs,
   formLayout,
   hasReceiveGroup,
@@ -72,6 +77,12 @@ const ocrMarks = ref<Set<string>>(new Set())
  */
 const stubCase = ref('')
 const tissueHints = ref<string[]>([])
+/** 启用中的单位（`/mp/ext/units`，拉不到不挡填写）：内部的来源单位从这里选（V01） */
+const units = ref<SelectorUnit[]>([])
+/** 来源单位：选中的单位 id（手填时为 null）与「手动填写」开关；名字在 `form.sourceUnitName` */
+const unitId = ref<string | number | null>(null)
+const manualUnit = ref(false)
+const unitSheetRef = ref<{ open: () => void } | null>(null)
 /** 日期 / 时间控件的 `wd-datetime-picker`：目标字段、回填用的毫秒值、组件实例 */
 const pickerField = ref<FormFieldKey>('receiveDate')
 const pickerValue = ref<number>(Date.now())
@@ -110,7 +121,7 @@ const showReceive = computed(() => hasReceiveGroup(layout.value))
 // ★ 只读页（内部管理表格页点一行进来）右上角的「修改」（CR-20260918-07）：
 //   把 mode 换成 edit **重算同一个纯函数**，算出来可改才显示 —— 「按钮显不显示」与
 //   「能不能改」同源。外部送来还没核验的样本算出来是 false，这一页连「修改」都不出现
-//   （核验在工作台，绕不过去）。
+//   （核验走核验页，绕不过去）。
 const canEditFromView = computed(() => mode.value === 'view'
   && formLayout(identity.value, detail.value?.verifyStatus ?? null, mine.value, 'edit').editable)
 
@@ -127,8 +138,8 @@ const topNote = computed(() => {
     return ''
   }
   if (isInternal.value) {
-    // 口径复述 4：待核验 / 无效的外部样本在小程序里只读
-    return '核验与改判请到网页工作台'
+    // 口径复述 4：待核验 / 无效的外部样本在这一页只读；核验走核验页（甲方 2026-09-24 第 20 行），改判仍在工作台
+    return '核验请从首页「待处理」进入，改判请到网页工作台'
   }
   return '这条记录现在不能修改'
 })
@@ -173,10 +184,14 @@ async function load() {
         form.value.operatorName = store.name || ''
       }
       else {
-        // 外部新增：来源单位默认带档案里的单位名（UI:mp.sample.form）
-        form.value.sourceUnitName = unitDisplay(store.ext)
+        // 外部新增：来源单位默认带档案里的单位（UI:mp.sample.form）。绑定了单位（待核验 / 已核验）
+        // 就带它的 id 与名字（与类器官表单同一个来源）；只有自填单位名的，按手填处理（不带 id）。
+        const bound = boundUnitOf(store.ext)
+        unitId.value = bound ? bound.unitId : null
+        form.value.sourceUnitName = bound ? bound.unitName : unitDisplay(store.ext)
+        manualUnit.value = !bound && !!form.value.sourceUnitName
       }
-      await loadHints()
+      await Promise.all([loadHints(), loadUnits()])
       return
     }
     if (!sampleId.value) {
@@ -189,6 +204,10 @@ async function load() {
     detail.value = data
     serverEditable.value = data.editable === true
     form.value = toFormValue(data)
+    await loadUnits()
+    // 来源单位：内部详情带 id；外部详情没有这个键 → 名字与本人绑定单位相同才算选中它，否则按手填
+    unitId.value = data.sourceUnitId ?? sourceUnitIdFor(form.value.sourceUnitName, unitCandidates())
+    manualUnit.value = unitId.value === null && !!form.value.sourceUnitName.trim()
     if (layout.value.showOcr) {
       await loadHints()
     }
@@ -199,6 +218,107 @@ async function load() {
   finally {
     loading.value = false
   }
+}
+
+/** 单位列表（与类器官表单同一个接口；拉不到不挡填写，只剩「手动填写」） */
+async function loadUnits() {
+  try {
+    units.value = await fetchUnits()
+  }
+  catch {
+    units.value = []
+  }
+}
+
+/**
+ * 来源单位面板里列哪些单位（与后端同口径，V01）：内部 = 全部启用单位（内部路径**只认 id**，不按名字回找）；
+ * 外部 = 只有本人绑定的那一个（后端只收本人绑定单位的 id，别的单位 id 回 400）。
+ */
+const unitOptions = computed<SelectorUnit[]>(() => unitOptionsFor(store.identity, units.value, store.ext))
+
+/** 外部档案里还没有绑定单位时，面板里给的一句话 */
+const unitEmptyHint = computed(() => (isInternal.value ? '' : '档案里还没有绑定单位：可以手动填写，也可以先到「我的 → 单位与组别」补充'))
+
+/**
+ * 来源单位 id 的候选（名字与其中某一项**逐字相同**才带它的 id，`sourceUnitIdFor`）：
+ *   ① 详情里的 id（内部详情才有；外部详情的 VO 没有这个键）；② 面板里能选的单位（见 `unitOptions`）。
+ * 外部因此只可能带上本人绑定单位的 id；识别预填或手填成了别的名字 → 不带 id。
+ */
+function unitCandidates(): UnitIdCandidate[] {
+  const list: UnitIdCandidate[] = []
+  if (detail.value && isInternal.value) {
+    list.push({ id: detail.value.sourceUnitId, name: detail.value.sourceUnitName })
+  }
+  unitOptions.value.forEach(unit => list.push({ id: unit.unitId, name: unit.unitName }))
+  return list
+}
+
+/** 当前选中的单位 id 对应的单位名（对不上 → ''） */
+function nameOfUnit(id: string | number | null): string {
+  if (id === null) {
+    return ''
+  }
+  const hit = unitCandidates().find(c => c.id !== null && c.id !== undefined && String(c.id) === String(id))
+  return String(hit?.name ?? '').trim()
+}
+
+// 名字被别处改了（拍照识别预填）：不在手填状态时按新名字重新对 id —— 对不上就转成手填，不留旧 id
+watch(() => form.value.sourceUnitName, (name) => {
+  if (manualUnit.value || nameOfUnit(unitId.value) === String(name ?? '').trim()) {
+    return
+  }
+  unitId.value = sourceUnitIdFor(name ?? '', unitCandidates())
+  manualUnit.value = unitId.value === null && !!String(name ?? '').trim()
+})
+
+/** 面板里选了一个单位：id 与名字一起写回（名字是快照） */
+function onUnitPick(unit: SelectorUnit) {
+  unitId.value = unit.unitId
+  manualUnit.value = false
+  setField('sourceUnitName', unit.unitName)
+}
+
+/** 「列表里没有，手动填写」：清掉 id，只留名字 */
+function onUnitManual() {
+  unitId.value = null
+  manualUnit.value = true
+}
+
+function onUnitName(name: string) {
+  setField('sourceUnitName', name)
+}
+
+/** 提交用的单位 id：手填不带；选中的 id 与当前名字对不上（名字被改过）也不带 */
+function currentUnitId(): string | number | null {
+  if (manualUnit.value) {
+    return null
+  }
+  const name = form.value.sourceUnitName.trim()
+  if (!name) {
+    return null
+  }
+  if (unitId.value !== null && nameOfUnit(unitId.value) === name) {
+    return unitId.value
+  }
+  return sourceUnitIdFor(name, unitCandidates())
+}
+
+/**
+ * 外部还没有来源单位（新用户、档案里没绑定单位）时的引导（后端「来源单位不能为空」同一件事）：
+ * 告诉他可以手填，或者去「我的 → 单位与组别」补充后再提交。
+ */
+function guideToUnitGroup() {
+  uni.showModal({
+    title: '还没有来源单位',
+    content: '可以在「来源单位」里手动填写；也可以先到「我的 → 单位与组别」补充单位与组别，之后提交会自动带上。',
+    confirmText: '去补充',
+    cancelText: '知道了',
+    success: (res) => {
+      if (res.confirm) {
+        goPage('/pages/me/unit-group')
+      }
+    },
+  })
 }
 
 /** 组织类型联想词：字典接口 `/mp/dict/hints?type=tissue`（拉不到不挡填写） */
@@ -282,6 +402,34 @@ function onBeforeRecognize() {
   preRecognizeMarked = marked
 }
 
+/**
+ * 必填标记与提交前校验（G26：与后端同一口径，不另起一套）——
+ *   · 来源单位：`t_lqg_sample.source_unit_name` 非空（field-ssot），内外部都要；
+ *   · 组织类型：tissue 类必填（`SampleKindRules.missingRequiredFields`）；
+ *   · 供体姓名：**外部必填、内部选填**（后端口径：外部送检必须写清供体，内部补录可以空着）；
+ *   · 内部另要收样日期、内部编号（内部新增直接有效，这两项必须有）。
+ */
+function isRequired(key: FormFieldKey): boolean {
+  if (key === 'sourceUnitName' || key === 'tissueType') {
+    return true
+  }
+  if (key === 'donorName') {
+    return !isInternal.value
+  }
+  return isInternal.value && (key === 'receiveDate' || key === 'internalNo')
+}
+
+/** 占位提示：组织类型给字典联想词，年龄提示可以写「3月龄」（G15：年龄是文本，不是数字），其余按控件默认 */
+function placeholderOf(key: FormFieldKey): string | undefined {
+  if (key === 'tissueType' && tissueHints.value.length) {
+    return `${tissueHints.value[0]} 等`
+  }
+  if (key === 'age') {
+    return '如 56 或 3月龄'
+  }
+  return undefined
+}
+
 function optionsFor(key: FormFieldKey) {
   return key === 'gender' ? genderOptions : ynOptions
 }
@@ -298,6 +446,10 @@ function toMs(value: string): number {
 
 function onPick(key: FormFieldKey) {
   if (!editable.value) {
+    return
+  }
+  if (key === 'sourceUnitName') {
+    unitSheetRef.value?.open()
     return
   }
   pickerField.value = key
@@ -329,6 +481,10 @@ function formatMs(ms: number, type: 'date' | 'datetime'): string {
 function payload(): Record<string, unknown> {
   const f = form.value
   const body: Record<string, unknown> = {
+    // ★ V01：来源单位 id 与名字一起发（以前只发名字 → 外部从小程序交的组织样本 source_unit_id 为空，
+    //   工作台按单位筛选、按单位导出都查不到）。内部发面板里选中的单位 id（内部路径不按名字回找）；
+    //   外部只可能是本人绑定单位的 id；手填 / 名字改过就不带 id。
+    sourceUnitId: currentUnitId(),
     sourceUnitName: f.sourceUnitName,
     donorName: f.donorName,
     gender: f.gender,
@@ -360,12 +516,26 @@ async function submit() {
   if (!editable.value || saving.value) {
     return
   }
-  if (!form.value.donorName.trim()) {
+  // 必填项与 isRequired 同一口径（G26）：来源单位、组织类型；外部另要供体姓名；内部另要收样日期、内部编号
+  if (!form.value.sourceUnitName.trim()) {
+    if (isInternal.value) {
+      uni.showToast({ title: '请选择来源单位', icon: 'none' })
+    }
+    else {
+      guideToUnitGroup()
+    }
+    return
+  }
+  if (!isInternal.value && !form.value.donorName.trim()) {
     uni.showToast({ title: '请填供体姓名', icon: 'none' })
     return
   }
   if (!form.value.tissueType.trim()) {
     uni.showToast({ title: '请填组织类型', icon: 'none' })
+    return
+  }
+  if (isInternal.value && !form.value.receiveDate) {
+    uni.showToast({ title: '请选收样日期', icon: 'none' })
     return
   }
   if (isInternal.value && !form.value.internalNo.trim()) {
@@ -396,6 +566,11 @@ async function submit() {
     setTimeout(() => goPage('/pages/history/index'), 600)
   }
   catch (e) {
+    // 外部新用户撞上后端「来源单位不能为空」：换成去「我的 → 单位与组别」的引导
+    if (!isInternal.value && e instanceof Error && /来源单位.*(不能为空|为空|必填)/.test(e.message)) {
+      guideToUnitGroup()
+      return
+    }
     // 请求层已经按业务码 toast 过后端给的 msg（例如「待核验…只能在网页工作台核验或改判」）
     if (e instanceof Error && e.message) {
       uni.showToast({ title: e.message, icon: 'none' })
@@ -406,9 +581,24 @@ async function submit() {
   }
 }
 
+/**
+ * 「给这个样本加石蜡块」「加冻存」两个小链接（UI:mp.sample.form：内部修改模式才有，V26）：
+ * 只给**内部账号 + 修改模式 + 已有样本 id**，且这条样本**已核验有效** —— 两个目标页的
+ * 「选择样本」都只列有效样本（`SamplePicker` 钉在 `verifyStatus=valid`），待核验 / 无效的样本
+ * 带过去也提交不了（UI 锚：待核验、无效的外部样本整页只读，只提示去工作台核验）。
+ * 以前常显 —— 外部点进冻存页看到「没能确认你的身份」，新增模式下还没有样本 id，点了什么都不发生（死链）。
+ */
+const showAddLinks = computed(() => isInternal.value
+  && mode.value === 'edit'
+  && !!sampleId.value
+  && detail.value?.verifyStatus === 'valid')
+
+/** 底部栏：有「提交 / 保存」或有两个小链接才出（都没有时不留一条空白栏） */
+const showBar = computed(() => editable.value || showAddLinks.value)
+
 /** 「给这个样本加石蜡块」：带上 `sampleId` 进石蜡包埋填写页（EMBED-MP-001 点亮这条链接） */
 function addEmbed() {
-  if (!sampleId.value) {
+  if (!showAddLinks.value) {
     return
   }
   goPage(`/pages/embed/form?mode=new&sampleId=${sampleId.value}`)
@@ -416,7 +606,7 @@ function addEmbed() {
 
 /** 「加冻存」：带上 `sampleId` 进冻存填写页（CRYO-MP-001 点亮这条链接） */
 function addCryo() {
-  if (!sampleId.value) {
+  if (!showAddLinks.value) {
     return
   }
   goPage(`/pages/cryo/form?mode=new&sampleId=${sampleId.value}`)
@@ -464,9 +654,11 @@ function addCryo() {
           :label="spec.label"
           :control="spec.control"
           :readonly="!spec.editable"
-          :required="spec.key === 'donorName' || spec.key === 'tissueType'"
+          :required="isRequired(spec.key)"
+          :mono="spec.key === 'hospitalNo'"
+          :maxlength="fieldMaxlength(spec.key)"
           :model-value="fieldValue(spec.key)"
-          :placeholder="spec.key === 'tissueType' && tissueHints.length ? `${tissueHints[0]} 等` : '请填写'"
+          :placeholder="placeholderOf(spec.key)"
           :ocr-mark="ocrMarks.has(spec.key)"
           @update:model-value="(v: string) => setField(spec.key, v)"
           @pick="onPick(spec.key)"
@@ -491,6 +683,9 @@ function addCryo() {
             :label="spec.label"
             :control="spec.control"
             :readonly="!spec.editable"
+            :required="isRequired(spec.key)"
+            :mono="spec.key === 'internalNo'"
+            :maxlength="fieldMaxlength(spec.key)"
             :model-value="fieldValue(spec.key)"
             :ocr-mark="ocrMarks.has(spec.key)"
             @update:model-value="(v: string) => setField(spec.key, v)"
@@ -510,16 +705,30 @@ function addCryo() {
       <view class="lqg-bar-spacer" />
     </template>
 
-    <!-- 底部固定栏：可写才出「保存 / 提交」；只读页不出（没有可提交的东西） -->
-    <view v-if="!loading && !failed && specs.length > 0" class="lqg-bar form__bar">
+    <!-- 底部固定栏：可写才出「保存 / 提交」；两个小链接只给内部修改模式（V26）；都没有就不出栏 -->
+    <view v-if="!loading && !failed && specs.length > 0 && showBar" class="lqg-bar form__bar">
       <button v-if="editable" class="form__btn" :disabled="saving" @click="submit">
         {{ mode === 'new' ? '提交' : '保存' }}
       </button>
-      <view class="form__links">
+      <view v-if="showAddLinks" class="form__links">
         <text class="form__link" @click="addEmbed">给这个样本加石蜡块</text>
         <text class="form__link" @click="addCryo">加冻存</text>
       </view>
     </view>
+
+    <!-- 来源单位：底部弹框（内部 = 全部启用单位；外部 = 本人绑定的单位；都能手填） -->
+    <SourceUnitSheet
+      ref="unitSheetRef"
+      :units="unitOptions"
+      :unit-id="unitId"
+      :unit-name="form.sourceUnitName"
+      :manual="manualUnit"
+      :disabled="!editable"
+      :empty-hint="unitEmptyHint"
+      @pick="onUnitPick"
+      @manual="onUnitManual"
+      @update:unit-name="onUnitName"
+    />
 
     <!-- 日期 / 时间：底部弹框（落地规范 §5.4）；开关调组件的 open()，不用不存在的 :visible -->
     <wd-datetime-picker
@@ -528,7 +737,11 @@ function addCryo() {
       :type="pickerField === 'processTime' ? 'datetime' : 'date'"
       title="选择时间"
       @confirm="onPicked"
-    />
+    >
+      <!-- ★ 给默认插槽放一个空节点（G12）：没有默认插槽时 wd-datetime-picker 会自己渲染一行
+           「值 ›」的 cell，页面底部就多出一行没有标签的「今天日期 ›」。面板开关只靠 open()。 -->
+      <view />
+    </wd-datetime-picker>
   </view>
 </template>
 

@@ -84,6 +84,16 @@ public class CryoQueryBo extends PageQuery {
     private Boolean overdueOnly;
 
     /**
+     * ★ 只看<b>已取空</b>的批次（2026-09-24 甲方「支数取空的要提示」：两端冻存列表的「已取空」页签）。
+     *
+     * <p>拼的是 {@code CryoOverdueSqlProvider.EMPTIED_WHERE}（剩余 ≤ 0，与超期判定第 ③ 条同一份剩余算式），
+     * 所以这一档与行上的 {@code emptied}、页签数字 {@code tabCounts.emptied} 三处恒等。
+     * 与 {@code overdueOnly} 同时带 = 空集（取空的永不超期），前端两个页签互斥。
+     */
+    @Schema(description = "true = 只看已取空的批次（剩余 ≤ 0，判据与行上的 emptied 同源）")
+    private Boolean emptiedOnly;
+
+    /**
      * 是不是「历史编辑记录」那一档排序（CRYO-MP-001）。
      */
     public static boolean isRecentSort(String sort) {

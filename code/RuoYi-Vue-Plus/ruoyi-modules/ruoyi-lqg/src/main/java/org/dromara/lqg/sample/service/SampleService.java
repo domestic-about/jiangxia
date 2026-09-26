@@ -9,11 +9,13 @@ import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
-import org.dromara.lqg.auth.group.service.UnitQueryService;
-import org.dromara.lqg.auth.group.domain.SourceUnit;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitBo;
+import org.dromara.lqg.sample.domain.bo.SampleSubmitSegmentBo;
 import org.dromara.lqg.sample.guard.SampleKindRules;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules.UnitRef;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules.Writer;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,10 @@ import java.util.List;
  *       「先落盘再报错」是它要抓的假绿形态。</li>
  * </ol>
  *
+ * <p>★ FIX V02 / V03：送检段的必填与格式走 {@link SubmitSegmentRules}（违规 {@code code=400}，
+ * 不再一路走到数据库约束上报 500 回吐 SQL），送检段的落库列走 {@link SampleSubmitSegmentWriter}
+ * —— 与核验抽屉一并保存送检段、外部重提是<b>同一份</b>规则与列。
+ *
  * @author SAMPLE-MODEL-001
  */
 @Slf4j
@@ -45,9 +51,8 @@ public class SampleService {
 
     private final SampleMapper sampleMapper;
     private final SampleQueryService sampleQueryService;
-    private final SampleFieldCipher fieldCipher;
     private final SampleSubmitNoGenerator submitNoGenerator;
-    private final UnitQueryService unitQueryService;
+    private final SampleSubmitSegmentWriter segmentWriter;
 
     /**
      * 内部新增（{@code POST /lqg/sample}）。
@@ -55,14 +60,15 @@ public class SampleService {
     @Transactional(rollbackFor = Exception.class)
     public Long create(SampleSubmitBo bo) {
         if (bo == null) {
-            throw new ServiceException("请求体不能为空");
+            throw new ServiceException("请求体不能为空", 400);
         }
         String kind = SampleKindRules.normalize(bo.getSampleKind());
         if (!SampleKindRules.isKnownKind(kind)) {
-            throw new ServiceException("样本类别只能是 tissue（组织样本）或 organoid（类器官）");
+            throw new ServiceException("样本类别只能是 tissue（组织样本）或 organoid（类器官）", 400);
         }
-        requireRequired(kind, bo);
+        requireValid(kind, bo);
         requireInternalNoUnique(bo.getInternalNo(), null);
+        UnitRef unit = segmentWriter.resolveInternalUnit(bo.getSourceUnitId(), bo.getSourceUnitName());
 
         LoginUser loginUser = LoginHelper.getLoginUser();
         Long userId = loginUser == null ? null : loginUser.getUserId();
@@ -79,7 +85,7 @@ public class SampleService {
             entity.setVerifyStatus("valid");
             entity.setVerifyBy(userId);
             entity.setVerifyTime(new java.util.Date());
-            applyFields(entity, kind, bo);
+            applyFields(entity, kind, bo, unit);
             sampleMapper.insert(entity);
             log.info("内部新增样本：id={} submitNo={} kind={} internalNo={}",
                 entity.getId(), entity.getSubmitNo(), kind, entity.getInternalNo());
@@ -96,33 +102,34 @@ public class SampleService {
      * <p>用 {@link LambdaUpdateWrapper} 而不是 {@code updateById}：本方法需要把「改成空」的字段
      * （清住院号 / 清备注 / 换类别时清掉另一类的类型列）真的写成 NULL，而 {@code updateById}
      * 默认忽略 null（{@code FieldStrategy.NOT_NULL}）—— AUTH-GROUP-001 WARN-2 的形态。
+     *
+     * <p>★ 语义是<b>整份替换</b>（工作台表单整份提交；小程序的补丁在 {@code MpSampleService.mergePatch}
+     * 先合并成整份）。所以必填与格式校验的对象就是<b>这一次真正要写进去的值</b>，不再拿库里现值去凑
+     * （FIX V33：以前「合并视角校验、整份写入」—— 只传一个备注时校验照过，写库却把组织类型、
+     * 内部编号、收样日期一并写成 NULL）。
      */
     @Transactional(rollbackFor = Exception.class)
     public void update(SampleSubmitBo bo) {
         if (bo == null || bo.getId() == null) {
-            throw new ServiceException("缺少样本 id");
+            throw new ServiceException("缺少样本 id", 400);
         }
         DataPermissionHelper.ignore(() -> {
             Sample exists = sampleMapper.selectById(bo.getId());
             if (exists == null) {
                 // 已软删的行 selectById 也查不到（@TableLogic）→ 与「不存在」同样处理
-                throw new ServiceException("样本不存在（或已删除）");
+                throw new ServiceException("样本不存在（或已删除）", 404);
             }
             String kind = StringUtils.isNotBlank(bo.getSampleKind())
                 ? SampleKindRules.normalize(bo.getSampleKind())
                 : exists.getSampleKind();
             if (!SampleKindRules.isKnownKind(kind)) {
-                throw new ServiceException("样本类别只能是 tissue（组织样本）或 organoid（类器官）");
+                throw new ServiceException("样本类别只能是 tissue（组织样本）或 organoid（类器官）", 400);
             }
-            // 合并视角校验必填：没传的字段沿用库里的现值（否则「只改备注」会被必填规则误拒）
-            requireRequired(kind,
-                firstNonNull(bo.getTissueType(), exists.getTissueType()),
-                firstNonNull(bo.getOrganoidType(), exists.getOrganoidType()),
-                firstNonNull(bo.getInternalNo(), exists.getInternalNo()),
-                bo.getReceiveDate() != null ? bo.getReceiveDate() : exists.getReceiveDate());
+            requireValid(kind, bo);
             if (StringUtils.isNotBlank(bo.getInternalNo())) {
                 requireInternalNoUnique(bo.getInternalNo(), exists.getId());
             }
+            UnitRef unit = segmentWriter.resolveInternalUnit(bo.getSourceUnitId(), bo.getSourceUnitName());
             LambdaUpdateWrapper<Sample> patch = new LambdaUpdateWrapper<Sample>()
                 .eq(Sample::getId, exists.getId())
                 // 显式补 update_by / update_time：用 `update(null, wrapper)` 时 MyBatis-Plus 的
@@ -131,23 +138,15 @@ public class SampleService {
                 .set(Sample::getUpdateBy, currentUserId())
                 .set(Sample::getUpdateTime, new java.util.Date())
                 .set(Sample::getSampleKind, kind)
-                .set(Sample::getTissueType, SampleKindRules.KIND_TISSUE.equals(kind) ? bo.getTissueType() : null)
-                .set(Sample::getOrganoidType, SampleKindRules.KIND_ORGANOID.equals(kind) ? bo.getOrganoidType() : null)
                 .set(Sample::getInternalNo, trimToNull(bo.getInternalNo()))
                 .set(Sample::getReceiveDate, bo.getReceiveDate())
-                .set(Sample::getSourceUnitId, bo.getSourceUnitId())
-                .set(Sample::getSourceUnitName, resolveUnitName(bo))
-                .set(Sample::getDonorName, fieldCipher.encrypt(bo.getDonorName()))
-                .set(Sample::getGender, trimToNull(bo.getGender()))
-                .set(Sample::getAge, trimToNull(bo.getAge()))
-                .set(Sample::getHospitalNo, fieldCipher.encrypt(bo.getHospitalNo()))
-                .set(Sample::getHasPathology, trimToNull(bo.getHasPathology()))
                 .set(Sample::getIsFixed, trimToNull(bo.getIsFixed()))
                 .set(Sample::getProcessTime, bo.getProcessTime())
                 .set(Sample::getHasQcSheet, trimToNull(bo.getHasQcSheet()))
                 .set(Sample::getHasViabilityReport, trimToNull(bo.getHasViabilityReport()))
-                .set(Sample::getOperatorName, trimToNull(bo.getOperatorName()))
-                .set(Sample::getRemark, trimToNull(bo.getRemark()));
+                .set(Sample::getOperatorName, trimToNull(bo.getOperatorName()));
+            // 送检段：与核验抽屉、外部重提同一组列（SampleSubmitSegmentWriter）
+            segmentWriter.applyTo(patch, kind, segmentOf(bo), unit);
             sampleMapper.update(null, patch);
             log.info("修改样本：id={} kind={} internalNo={}", exists.getId(), kind, bo.getInternalNo());
             return null;
@@ -167,7 +166,7 @@ public class SampleService {
     public int remove(String ids) {
         List<Long> idList = parseIds(ids);
         if (idList.isEmpty()) {
-            throw new ServiceException("缺少样本 id");
+            throw new ServiceException("缺少样本 id", 400);
         }
         return DataPermissionHelper.ignore(() -> {
             int affected = sampleMapper.deleteByIds(idList);
@@ -184,18 +183,17 @@ public class SampleService {
     }
 
     /**
-     * 新增路径的必填校验（按类别分化）。
+     * 内部录入 / 修改的必填与格式（全部在写库之前；违规一次报全，{@code code=400}）：
+     * 送检段走 {@link SubmitSegmentRules#submitViolations}（与核验抽屉、外部重提同一份），
+     * 收样段另要求内部编号与收样日期（内部录的记录直接有效，FLOW:F-SAMPLE-02.step1 / step2）。
      */
-    private void requireRequired(String kind, SampleSubmitBo bo) {
-        requireRequired(kind, bo.getTissueType(), bo.getOrganoidType(), bo.getInternalNo(), bo.getReceiveDate());
-    }
-
-    private void requireRequired(String kind, String tissueType, String organoidType, String internalNo, Object receiveDate) {
-        List<String> missing = SampleKindRules.missingRequiredFields(kind, tissueType, organoidType, internalNo, receiveDate);
-        if (!missing.isEmpty()) {
-            throw new ServiceException(String.format("「%s」类样本缺少必填项：%s",
-                SampleKindRules.KIND_ORGANOID.equals(kind) ? "类器官" : "组织", String.join("、", missing)));
-        }
+    private void requireValid(String kind, SampleSubmitBo bo) {
+        List<String> violations = new ArrayList<>(
+            SubmitSegmentRules.submitViolations(kind, segmentOf(bo), Writer.INTERNAL));
+        violations.addAll(SubmitSegmentRules.receiveRequiredViolations(bo.getInternalNo(), bo.getReceiveDate()));
+        violations.addAll(SubmitSegmentRules.receiveViolations(bo.getInternalNo(), bo.getIsFixed(),
+            bo.getHasQcSheet(), bo.getHasViabilityReport(), bo.getOperatorName()));
+        SubmitSegmentRules.throwIfAny(violations);
     }
 
     /**
@@ -211,23 +209,16 @@ public class SampleService {
             .eq(Sample::getInternalNo, value)
             .ne(excludeId != null, Sample::getId, excludeId);
         if (sampleMapper.selectCount(wrapper) > 0) {
-            throw new ServiceException("内部编号「" + value + "」已存在，请换一个");
+            throw new ServiceException("内部编号「" + value + "」已存在，请换一个", 400);
         }
     }
 
     /**
-     * 把入参与「单位名称快照」合并进实体（新增路径）。
+     * 把入参与「单位名称快照」合并进实体（新增路径）：送检段走 {@link SampleSubmitSegmentWriter}，
+     * 收样段在这里。
      */
-    private void applyFields(Sample entity, String kind, SampleSubmitBo bo) {
-        entity.setSourceUnitId(bo.getSourceUnitId());
-        entity.setSourceUnitName(resolveUnitName(bo));
-        entity.setDonorName(fieldCipher.encrypt(bo.getDonorName()));
-        entity.setGender(trimToNull(bo.getGender()));
-        entity.setAge(trimToNull(bo.getAge()));
-        entity.setHospitalNo(fieldCipher.encrypt(bo.getHospitalNo()));
-        entity.setTissueType(SampleKindRules.KIND_TISSUE.equals(kind) ? trimToNull(bo.getTissueType()) : null);
-        entity.setOrganoidType(SampleKindRules.KIND_ORGANOID.equals(kind) ? trimToNull(bo.getOrganoidType()) : null);
-        entity.setHasPathology(trimToNull(bo.getHasPathology()));
+    private void applyFields(Sample entity, String kind, SampleSubmitBo bo, UnitRef unit) {
+        segmentWriter.applyTo(entity, kind, segmentOf(bo), unit);
         entity.setReceiveDate(bo.getReceiveDate());
         entity.setInternalNo(SampleKindRules.normalize(bo.getInternalNo()));
         entity.setIsFixed(trimToNull(bo.getIsFixed()));
@@ -237,21 +228,25 @@ public class SampleService {
         entity.setOperatorName(StringUtils.isNotBlank(bo.getOperatorName())
             ? bo.getOperatorName().trim()
             : currentNickname());
-        entity.setRemark(trimToNull(bo.getRemark()));
     }
 
     /**
-     * 来源单位名称快照：选了单位就取单位表的当前名称，否则用请求里的名称（ticket §2.2）。
+     * 内部入参里的送检段（逐字段手工拷，不用 BeanUtils：哪天两边多出同名字段也不会被静默带上）。
      */
-    private String resolveUnitName(SampleSubmitBo bo) {
-        if (bo.getSourceUnitId() != null) {
-            SourceUnit unit = unitQueryService.findUnit(bo.getSourceUnitId());
-            if (unit == null) {
-                throw new ServiceException("来源单位不存在");
-            }
-            return unit.getUnitName();
-        }
-        return trimToNull(bo.getSourceUnitName());
+    static SampleSubmitSegmentBo segmentOf(SampleSubmitBo bo) {
+        SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
+        seg.setSourceUnitId(bo.getSourceUnitId());
+        seg.setSourceUnitName(bo.getSourceUnitName());
+        seg.setDonorName(bo.getDonorName());
+        seg.setGender(bo.getGender());
+        seg.setAge(bo.getAge());
+        seg.setHospitalNo(bo.getHospitalNo());
+        seg.setTissueType(bo.getTissueType());
+        seg.setOrganoidType(bo.getOrganoidType());
+        seg.setPassage(bo.getPassage());
+        seg.setHasPathology(bo.getHasPathology());
+        seg.setRemark(bo.getRemark());
+        return seg;
     }
 
     private String currentNickname() {
@@ -261,10 +256,6 @@ public class SampleService {
 
     private static String trimToNull(String value) {
         return StringUtils.isBlank(value) ? null : value.trim();
-    }
-
-    private static String firstNonNull(String candidate, String fallback) {
-        return StringUtils.isNotBlank(candidate) ? candidate : fallback;
     }
 
     /**
@@ -283,7 +274,7 @@ public class SampleService {
             try {
                 out.add(Long.valueOf(value));
             } catch (NumberFormatException e) {
-                throw new ServiceException("样本 id 不是数字：" + value);
+                throw new ServiceException("样本 id 不是数字：" + value, 400);
             }
         }
         return out;

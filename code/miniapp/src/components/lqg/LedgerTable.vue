@@ -74,6 +74,9 @@ const emit = defineEmits<{ (e: 'row-tap', row: LedgerTableRow): void }>()
 <style lang="scss" scoped>
 .ledger {
   overflow: hidden;
+  /* scroll-view 自带 width: 100%，再叠上 .lqg-ledger 左右各 16 的外边距，整页就比屏宽多出 16px、
+     能被横向拖动（390 宽实测 scrollWidth 406）。宽度交还给块级默认的「撑满减外边距」。 */
+  width: auto;
 }
 
 .ledger__head {
@@ -104,9 +107,32 @@ const emit = defineEmits<{ (e: 'row-tap', row: LedgerTableRow): void }>()
   text-overflow: ellipsis;
 }
 
+/* 表头例外：**折行不省略**（2026-09-24 甲方要看清「-80度超低温冰箱转移至液氮时间」这一列；
+   列宽 120 只放得下八九个字，省略成「-80度超低温冰…」就看不出是哪一列）。
+   整行表头随最长那一格一起变高（flex 默认拉伸），各格底色连成一片。 */
+.ledger__head .ledger__cell {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.35;
+}
+
 .ledger__fz-main {
   display: block;
   font-size: var(--lqg-fs-base);
+  font-weight: var(--lqg-fw-semibold);
+}
+
+/* 超期行冻结格第二行小字（「已超 N 天」）红字加粗 —— 与待核验行的琥珀小字同一个写法。
+   这一条原先加在 src/style/components.scss 里，让那份文件比设计权威
+   doc/design-options/direction-a/components.scss 多出一行；挪到组件自己的样式里，两份范式文件逐字一致。 */
+.lqg-ledger__row--overdue .lqg-ledger__fz-sub {
+  color: var(--lqg-danger);
+  font-weight: var(--lqg-fw-semibold);
+}
+
+/* 冻存已取空的行（2026-09-24 甲方「支数取空的要提示」）：冻结格小字「已取空 · 初始 N 支」琥珀加粗 */
+.lqg-ledger__row--emptied .lqg-ledger__fz-sub {
+  color: var(--lqg-warn);
   font-weight: var(--lqg-fw-semibold);
 }
 </style>

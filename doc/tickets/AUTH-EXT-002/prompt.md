@@ -30,7 +30,7 @@ blueprint_refs:
   - FIELD:t_lqg_embed.submitter_id
   - FIELD:t_lqg_embed.verify_status
 accept:
-  - name: "可见集合逐身份钉死（含待核验的外部送样）；同组可看、异组按不存在返回；石蜡块键集合是白名单（含操作人与包埋人，CR-20260918-07）；内部编号默认不出现、开关打开才出现；四条结构性不变量仍然成立"
+  - name: "可见集合逐身份钉死（含待核验的外部送样）；同组可看、异组按不存在返回（码与提示和根本不存在的 id 逐字相同，CR-20260923-09）；石蜡块键集合是白名单（含操作人与包埋人，CR-20260918-07）；内部编号默认不出现、开关打开才出现；四条结构性不变量仍然成立"
     form: API
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
@@ -42,7 +42,8 @@ accept:
       test "$(ids extC)" = '[]' && test "$(ids extD)" = '["9000002004"]' && test "$(ids extE)" = '[]' && test "$(ids extF)" = '[]' &&
       test "$(ids extA onlyMine=true)" = '["9000002006"]' && test "$(ids extB onlyMine=true)" = '[]' &&
       bash doc/verify/api.sh --as extC GET /mp/ext/sample/9000001001 | jq -e '.code==404 and ((.data // {})|length==0)' &&
-      bash doc/verify/api.sh --as extC GET /mp/ext/embed/9000002001 | jq -e '.code==404' &&
+      test "$(bash doc/verify/api.sh --as extC --bizcode GET /mp/ext/embed/9000002001)" = "$(bash doc/verify/api.sh --as extC --bizcode GET /mp/ext/embed/999999999)" &&
+      bash doc/verify/api.sh --as extC GET /mp/ext/embed/9000002001 | jq -e '.code==404 and ((.data // {})|length==0)' &&
       python3 doc/verify/db.py --sql "SELECT config_value FROM sys_config WHERE config_key='lqg.ext.show-internal-no'" --eq false &&
       bash doc/verify/api.sh --as extB GET /mp/ext/sample/9000001001 | jq -e '(.data|has("internalNo"))==false' &&
       bash doc/verify/api.sh --as extA --bizcode GET '/system/config/list?configKey=lqg.ext.show-internal-no' | grep -qE '^(401|403)' &&
@@ -58,27 +59,31 @@ accept:
       ExtEmbedVo 直接用了内部的 EmbedVo → keys 差集里出现 internalNo / remark / verifyBy 红；契约测试 I2 / I3 同时红。
       （`embedBy`、`operatorName` 自 CR-20260918-07 起在白名单里；**I3 的禁用字段表要同步摘掉这两个名字**，否则 cmp 后的契约测试必红——见 §0 的连带前置）
       照旧口径把操作人 / 包埋人剔了 → 两个「李工」那段红：甲方要的就是这两个。顺手把冻存或核验人也带出来 → keys 差集红。
-      在 ext 包里注入 EmbedMapper 直接查 → I4 红。
+      在 ext 包里（`ExtScopeServiceImpl` 以外）注入 EmbedMapper 直接查 → I4 红。
       详情接口为了拼 embeds 重新按 id 查样本、绕过了 assertVisible → extC 拿到 200 红。单条石蜡包埋接口不查所挂样本的可见性 → extC 取 2001 拿到 200 红。
+      看不见的回「样本不存在」、根本不存在的回「石蜡包埋记录不存在」（或码不同）→ 逐字比对那段红：提示一不同，外部就能拿它探出别人的记录在不在（CR-20260923-09，issue #299）。
       详情只列有编号的石蜡块 → extA 看 1002 是空数组红：外部看不到自己送的样。
       列表按「本人提交的」而不是可见样本算 → extB 看不到 2001-2003 红；onlyMine 按样本的提交人算 → extB 带 onlyMine 会多出 2003（那是实验室在他的样本上建的块）红。
       外部角色够得着系统参数（能查甚至能改这个开关）→ extA 那段 403 红：CR-20260918-07 说了只有内部人员能在工作台系统管理里改。
       内部编号写死不给 → 开关打开那段红；写死给 → 默认那两段红（开关块跑完会把参数改回 false，中途红了要手动改回来再重跑）。
       开关读成启动时的 `@Value` / 常量而不是运行时的 sys_config → 改完参数下一次读不生效，`T-hli01` 那段红。
       开关打开就顺手给待核验的 1002 也编了个内部编号 → 1002 那段红：核验前本来就没有编号。
-  - name: "提交与重提的写保护：替同组别人的样本送样、挂到自己无效的样本、挂到看不见的样本、改别人的送样、改实验室录入的石蜡块——全部被拒且库里不变；入参夹带的编号、染色、核验状态不生效；无效的改后重提回到待核验"
+  - name: "提交与重提的写保护：替同组别人的样本送样、挂到自己无效的样本、挂到看不见的样本、改别人的送样、改实验室录入的石蜡块、改看不见的石蜡块——全部被拒且库里不变；看得见的被拒回 400，看不见的与根本不存在的 id 逐字相同（404，CR-20260923-09）；入参夹带的编号、染色、核验状态不生效；无效的改后重提回到待核验"
     form: STATE
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
-      bash doc/verify/api.sh --as extB --fresh-module ruoyi-lqg --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"组织"}' | grep -qE '^(400|403|404)' &&
-      bash doc/verify/api.sh --as extA --bizcode POST /mp/ext/embed '{"sampleId":9000001003,"sampleType":"组织"}' | grep -qE '^(400|403)' &&
-      bash doc/verify/api.sh --as extC --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"组织"}' | grep -qE '^(400|404)' &&
+      bash doc/verify/api.sh --as extB --fresh-module ruoyi-lqg --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"组织"}' | grep -qE '^400' &&
+      bash doc/verify/api.sh --as extA --bizcode POST /mp/ext/embed '{"sampleId":9000001003,"sampleType":"组织"}' | grep -qE '^400' &&
+      test "$(bash doc/verify/api.sh --as extC --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"组织"}')" = "$(bash doc/verify/api.sh --as extC --bizcode POST /mp/ext/embed '{"sampleId":999999999,"sampleType":"组织"}')" &&
+      bash doc/verify/api.sh --as extC --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"组织"}' | grep -qE '^404' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_embed WHERE submit_source='external' AND del_flag='0'" --eq 1 &&
       bash doc/verify/api.sh --as extA POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"类器官","organoidSourceType":"肝类器官","paraffinBlockNo":"T-hack9","verifyStatus":"valid","embedBy":"外部","stainTypes":["HE"],"operatorName":"外部","submitSource":"internal"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT e.submit_source || '|' || e.verify_status || '|' || COALESCE(e.paraffin_block_no,'-') || '|' || COALESCE(e.embed_by,'-') || '|' || COALESCE(e.stain_types,'-') || '|' || COALESCE(e.operator_name,'-') || '|' || p.real_name FROM t_lqg_embed e JOIN t_lqg_ext_profile p ON p.user_id = e.submitter_id WHERE e.sample_id=9000001001 AND e.submit_source='external'" --eq "external|pending|-|-|-|-|王医生" &&
-      bash doc/verify/api.sh --as extB --bizcode PUT /mp/ext/embed/9000002006 '{"sampleId":9000001002,"sampleType":"被同组人改"}' | grep -qE '^(400|403|404)' &&
-      bash doc/verify/api.sh --as extA --bizcode PUT /mp/ext/embed/9000002001 '{"sampleId":9000001001,"sampleType":"改实验室的块"}' | grep -qE '^(400|403|404)' &&
-      python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_embed WHERE sample_type IN ('被同组人改','改实验室的块')" --eq 0 &&
+      bash doc/verify/api.sh --as extB --bizcode PUT /mp/ext/embed/9000002006 '{"sampleId":9000001002,"sampleType":"被同组人改"}' | grep -qE '^400' &&
+      bash doc/verify/api.sh --as extA --bizcode PUT /mp/ext/embed/9000002001 '{"sampleId":9000001001,"sampleType":"改实验室的块"}' | grep -qE '^400' &&
+      test "$(bash doc/verify/api.sh --as extC --bizcode PUT /mp/ext/embed/9000002001 '{"sampleType":"看不见也想改"}')" = "$(bash doc/verify/api.sh --as extC --bizcode PUT /mp/ext/embed/999999999 '{"sampleType":"看不见也想改"}')" &&
+      bash doc/verify/api.sh --as extC --bizcode PUT /mp/ext/embed/9000002001 '{"sampleType":"看不见也想改"}' | grep -qE '^404' &&
+      python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_embed WHERE sample_type IN ('被同组人改','改实验室的块','看不见也想改')" --eq 0 &&
       bash doc/verify/api.sh --as staff PUT /lqg/embed/9000002006/verify '{"action":"invalid","reason":"样本类型写错"}' | jq -e '.code==200' &&
       bash doc/verify/api.sh --as extA PUT /mp/ext/embed/9000002006 '{"sampleId":9000001002,"sampleType":"类器官","organoidSourceType":"胆管类器官"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT verify_status || '|' || COALESCE(invalid_reason,'-') || '|' || sample_type || '|' || organoid_source_type FROM t_lqg_embed WHERE id=9000002006" --eq "pending|-|类器官|胆管类器官" &&
@@ -88,6 +93,8 @@ accept:
       不看样本状态 → extA 挂到自己无效的 1003 上，count 红。
       外部 BO 复用内部 EmbedBo → 夹带的石蜡块编号、包埋人、染色、操作人落库，join 那段红：外部自己给自己编了一个石蜡块。
       PUT 只校验可见不校验本人 → extB 改掉 extA 的 2006；不看来源 → extA 改掉实验室录的 2001，count 红。
+      看得见的被拒回成 403 / 404 → `^400` 那几段红：对看得见的东西说「不能改」不泄露什么，说「不存在」反而和详情里看得见它自相矛盾（契约 `/mp/ext/embed` 那一行）。
+      写口先按 id 直接查记录或样本、「别人的」回 400、「不存在的」回 404 → extC 那两组逐字比对红：400 与 404 之差就是「这个 id 有没有」的预言机（CR-20260923-09，issue #299）。只比对不断码的话，两边都连不上时空串相等也会过，所以每组后面再断一次 404。
       重提不回到待核验、或没清无效原因 → 最后一段红。
   - name: "小程序外部详情页接上了包埋卡片（含待核验的送样），卡片上有操作人与包埋人、没有冻存与核验人；内部编号这一行随后端给不给键来渲染（CR-20260918-07）"
     form: API
@@ -98,13 +105,15 @@ accept:
       grep -q 'embedBy' src/components/lqg/EmbedCard.vue && grep -q 'operatorName' src/components/lqg/EmbedCard.vue &&
       ! grep -nE 'internalNo|verifyBy|frozenBy|cryo' src/components/lqg/EmbedCard.vue &&
       grep -qE 'v-if="[^"]*(internalNo|showInternalNo)' src/pages/sample/detail-ext.vue &&
-      ! grep -nE 'verifyBy|frozenBy|cryo' src/pages/sample/detail-ext.vue
+      ! grep -nE 'verifyBy|frozenBy|cryo' src/pages/sample/detail-ext.vue &&
+      grep -q 'd.passage' src/pages/sample/detail-ext.vue && grep -q "label: '代数'" src/pages/sample/detail-ext.vue
     counterfeit: |-
       EmbedCard 走桶口导入（小程序里渲染成空白且不报错）→ 第 3 段要求的是 .vue 直接路径，红。
       卡片不区分待核验 → verifyStatus 那段红：没编号的送样会显示成一块空白石蜡。
       照旧口径把包埋人 / 操作人藏了 → embedBy、operatorName 两段红（CR-20260918-07 起这两个要给）。
       卡片上顺手带出冻存或核验人 → 那条 `! grep` 红：甲方原话是「看不到冻存信息」。
       详情页把内部编号写死渲染（关着时显示空行 / `undefined`）→ v-if 那段红：关着的时候后端连键都不给，页面上这一行整行不该出现。
+      类器官样本的详情没显示「代数」（外部自己填的一项，CR-20260924-10）→ 最后一段红：外部改了代数之后在详情里看不到自己填的值。
 ---
 
 # AUTH-EXT-002 · 外部石蜡包埋送样：提交与改后重提、可见范围内的列表与详情；外部样本详情补上石蜡包埋情况（石蜡块编号标识，含待核验的送样；操作人与包埋人对外可见、内部编号按开关，CR-20260918-07）
@@ -125,7 +134,8 @@ accept:
 - [ ] 口径复述（本张最容易做反的）：
   1. 对外的标识是**石蜡块编号**——甲方原话：那是他们取的名字，不想让外部知道真实内部编号。`ExtEmbedVo` 里没有内部编号、备注、核验人、冻存；
      **操作人（`operatorName`）与包埋人（`embedBy`）自 CR-20260918-07 起要给**。
-  2. 仍然走咽喉：列表先取 `visibleSampleIds` 再按样本 id 集合调 embed 域 service；单条先按记录取出 `sampleId` 再 `assertVisible`；ext 包不碰 `EmbedMapper`。
+  2. 仍然走咽喉：列表先取 `visibleSampleIds` 再按样本 id 集合调 embed 域 service；单条先按记录取出 `sampleId` 再判可见——判据只在 `ExtScopeService` 一处（`assertEmbedVisible` 按记录、`assertUsableForEmbed` 按挂样，读口写口同一处，CR-20260923-09）；ext 包里除 `ExtScopeServiceImpl` 外不碰任何 `*Mapper`（契约测试 I4）。
+     **不可见、不存在、已软删一律 404、同一句提示**（按记录 id 是「石蜡包埋记录不存在」，按 `sampleId` 挂样是「样本不存在」），不能靠 400 / 404 或提示语分辨别人的记录在不在；**看得见但不是本人的、所挂样本已判无效的才回 400**。
   3. **提交只许挂本人送检过、没被判无效的样本**：同组别人的样本看得见，但不能替他送样；入参 `ExtEmbedSubmitBo` 只有 `sampleId`、`sampleType`、`organoidSourceType`。
   4. **改后重提只许本人的待核验 / 无效**：同组的可看不可改；内部录入的石蜡块外部永远只读。
   5. 详情里的 `embeds` 包含外部提交还没核验的送样（`paraffinBlockNo` 为空、带状态与无效原因），外部要能看到自己送的样走到哪一步。
@@ -142,7 +152,7 @@ accept:
 
 - `ExtEmbedController`（`/mp/ext/embed`，类级 `@SaCheckRole("lqg_external")`），形状见 `doc/api-contract.md`：
   `GET list`（`onlyMine?`、`verifyStatus?`）= 可见样本名下全部未删的石蜡包埋记录，按 `COALESCE(update_time, create_time)` 倒序；`GET {id}`；
-  `POST`：`EmbedExternalService.submit`；`PUT {id}`：`EmbedExternalService.resubmit`。不可见按 404。
+  `POST`：`EmbedExternalService.submit`；`PUT {id}`：`EmbedExternalService.resubmit`。不可见、不存在、已软删一律 `code=404` 且提示逐字相同（`ExtScopeService.EMBED_NOT_FOUND` / `SAMPLE_NOT_FOUND`）；看得见但不是本人的、所挂样本已判无效的 → `code=400`（CR-20260923-09，issue #299）。
 - `ExtEmbedVo`：`sectioned` = `section_time` 非空；`stainTypes` 数组；`markers` 只有名称与表达；`submitNo` 读时带出；`mine`、`editable`；
   **`embedBy`、`operatorName`（CR-20260918-07）**——仍然没有内部编号、备注、核验人、冻存。
 - `ExtSampleDetailVo.embeds`：该样本未删的全部记录——有编号的按编号排序在前，没编号的（待核验 / 无效的送样）按提交时间排在后。
@@ -155,7 +165,7 @@ accept:
 ## 3 边界（明确不做）
 
 - 外部不能看冻存（CR-20260918-07 只放宽了操作人与包埋人）
-- 外部列表行不显示内部编号——开关只作用于外部**样本详情**（CR-20260918-07）
+- 外部列表行不显示内部编号——开关在页面数据上只作用于外部**样本详情**（CR-20260918-07）；CR-20260924-10 起同一个开关也管外部版质控文档里的「内部编号」一格，那部分在 DOC-RENDER-001，不在本张
 - 不做「系统管理 → 参数设置」的菜单与授权（那是工作台壳 SYS-WEB-001 的活），本张只读这个参数
 - 外部列表不加包埋提示
 - 文档在 AUTH-EXT-003
@@ -170,3 +180,9 @@ accept:
 5. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 6. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方（本张已知：契约第 51 / 64 行的 `ExtSampleDetailVo` / `ExtEmbedVo` 字段清单还是 CR-20260918-07 之前的写法）、没把握的口径
 7. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+## 5 票面更新
+
+- 2026-09-23 按 CR-20260923-09 更新：外部石蜡包埋读写口的越权断言改成「看不见的与根本不存在的 id（999999999）码与提示逐字相同，再断一次 404」（accept 1 的 GET、accept 2 的 POST 与 PUT）；看得见的被拒（同组别人的送样、实验室录的块、本人已无效的样本）从「400 / 403 / 404 都行」收紧为 400；§0 口径 2 与 §2 同步写明判据只在 `ExtScopeService`。
+- 注意（CR-20260924-10）：accept 1 把 `lqg.ext.show-internal-no` 置 true 再置回 false，参数一改就会触发已完成的外部版文档在后台按新设置重出（1~2 秒一份）；跑完回到 false 后外部版也回到留空，断言本身不受影响。
+- 2026-09-24 按 CR-20260924-10 更新：accept 3 末尾补「外部详情页类器官显示代数」一段；§3 写明开关同样管外部版文档（归 DOC-RENDER-001），并注明 accept 1 切开关会触发文档后台重出。

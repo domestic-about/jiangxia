@@ -8,6 +8,7 @@ import org.dromara.lqg.embed.domain.bo.EmbedSubmitBo;
 import org.dromara.lqg.embed.domain.vo.EmbedVo;
 import org.dromara.lqg.embed.service.EmbedQueryService;
 import org.dromara.lqg.embed.service.EmbedService;
+import org.dromara.lqg.sample.domain.bo.PatchBody;
 import org.springframework.stereotype.Service;
 
 /**
@@ -24,7 +25,7 @@ import org.springframework.stereotype.Service;
  * <ol>
  *   <li><b>补填就是修改</b>：{@code PUT} 只改传了的工序时间（patch），不新增行
  *       —— 这是 {@link EmbedService#update} 本来的语义，本类<b>不加</b>任何一层「先查再拼」，
- *       免得凭空多出一份会漂移的合并逻辑。</li>
+ *       免得凭空多出一份会漂移的合并逻辑。FIX V33：传了空值 = 清空（以前清不掉），没传 = 不动。</li>
  *   <li><b>内部人员改得动中心里任何人录的记录</b>（CR-20260918-07）：本类
  *       <b>不校验「是不是本人录的」</b>（accept 2 第 1 段：2002 是管理员建的，李工照样能改）。</li>
  *   <li><b>待核验 / 无效的外部送样在小程序里改不动</b>：闸在
@@ -81,9 +82,9 @@ public class MpEmbedService {
      *
      * <p>★ 谁录的都能改（CR-20260918-07）；待核验 / 无效 → 400（核验与改判只走工作台）。
      */
-    public void update(EmbedSubmitBo bo) {
-        embedService.update(bo);
-        log.info("小程序内部修改石蜡包埋：id={}", bo == null ? null : bo.getId());
+    public void update(PatchBody<EmbedSubmitBo> body) {
+        embedService.update(body);
+        log.info("小程序内部修改石蜡包埋：id={}", body == null || body.value() == null ? null : body.value().getId());
     }
 
 }

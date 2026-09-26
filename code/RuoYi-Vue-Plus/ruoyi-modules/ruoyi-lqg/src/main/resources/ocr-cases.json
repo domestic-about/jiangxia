@@ -1,0 +1,94 @@
+{
+  "_doc": "OCR-IMPL-001 的验收用例。rawLines = 识别服务返回的原始文本行（测试环境由 StubOcrProvider 按 case 名返回）；expect = 解析后必须出现且相等的字段；absent = 必须不出现的字段（宁缺毋滥：解析不出就不返回，绝不猜）。sourceUnitName 只在与 t_lqg_source_unit 里 active 的单位名完全一致时才返回。",
+  "cases": [
+    {
+      "case": "01-印刷标签",
+      "rawLines": [
+        "A 医院",
+        "姓名：测试供体甲",
+        "性别：男  年龄：56岁",
+        "住院号：ZY0000001",
+        "标本：肝组织"
+      ],
+      "expect": {
+        "donorName": "测试供体甲",
+        "gender": "male",
+        "age": "56",
+        "hospitalNo": "ZY0000001",
+        "tissueType": "肝组织",
+        "sourceUnitName": "A 医院"
+      },
+      "absent": []
+    },
+    {
+      "case": "02-系统截图（标签与值之间有空格、全角冒号混用）",
+      "rawLines": [
+        "患者姓名 测试供体丁",
+        "性 别 男",
+        "年 龄 61 岁",
+        "住 院 号：ZY0000004",
+        "临床诊断 肝占位"
+      ],
+      "expect": {
+        "donorName": "测试供体丁",
+        "gender": "male",
+        "age": "61",
+        "hospitalNo": "ZY0000004"
+      },
+      "absent": [
+        "tissueType",
+        "sourceUnitName"
+      ]
+    },
+    {
+      "case": "03-只有噪声（病灶：温度、日期里的数字不得被当成年龄或住院号）",
+      "rawLines": [
+        "保持 2-8℃ 低温运输",
+        "易碎品 轻拿轻放",
+        "2026-09-17 10:30"
+      ],
+      "expect": {},
+      "absent": [
+        "donorName",
+        "gender",
+        "age",
+        "hospitalNo",
+        "tissueType",
+        "sourceUnitName"
+      ]
+    },
+    {
+      "case": "04-只有部分字段",
+      "rawLines": [
+        "住院号:ZY0000002 床号:12",
+        "性别:女"
+      ],
+      "expect": {
+        "hospitalNo": "ZY0000002",
+        "gender": "female"
+      },
+      "absent": [
+        "donorName",
+        "age",
+        "tissueType"
+      ]
+    },
+    {
+      "case": "05-单位名不在单位表里（病灶：不得硬匹配成别的单位）",
+      "rawLines": [
+        "某某市第九医院",
+        "姓名:测试供体乙",
+        "年龄:48"
+      ],
+      "expect": {
+        "donorName": "测试供体乙",
+        "age": "48"
+      },
+      "absent": [
+        "sourceUnitName",
+        "gender",
+        "hospitalNo"
+      ]
+    }
+  ]
+}

@@ -39,26 +39,31 @@ accept:
       段6 染色漏了会上补的「无染色」NONE → 红。
       段8 迁移文件没进源码树（只在 target/ 里）→ ls 失败红。
       段9 多租户没关（上游默认 true）→ grep 红；之后所有 INSERT 都会被租户拦截器改写。
-  - name: "业务模块真的挂进了后端且反映真实环境：ping 的 db / tenant / encrypt 三项取自运行期而不是写死"
+  - name: "业务模块真的挂进了后端且反映真实环境：ping 的 db / tenant / encrypt 三项取自运行期而不是写死；ping 只给内部角色（管理员、内部人员都能调，外部 403，匿名 401，CR-20260923-09）"
     form: API
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
       bash doc/verify/api.sh --as admin --fresh-module ruoyi-lqg GET /lqg/sys/ping | jq -e '.code==200 and .data.module=="ruoyi-lqg" and .data.db=="PostgreSQL" and (.data.dbVersion|tostring|startswith("16")) and .data.tenantEnabled==false and .data.encryptEnabled==true' &&
-      bash doc/verify/api.sh --as anon --bizcode GET /lqg/sys/ping | grep -qE '^401'
+      bash doc/verify/api.sh --as anon --bizcode GET /lqg/sys/ping | grep -qE '^401' &&
+      bash doc/verify/api.sh --as staff GET /lqg/sys/ping | jq -e '.code==200 and .data.module=="ruoyi-lqg"' &&
+      bash doc/verify/api.sh --as extA --bizcode GET /lqg/sys/ping | grep -qE '^403'
     counterfeit: |-
       ruoyi-lqg 建了但没加进 ruoyi-admin 的依赖 → 接口 404，jq 红。
       ping 里把 "PostgreSQL" / "16" 写死成常量：骗不过第 1 条 DDL 断言的 server_version_num，但这里要求 dbVersion 与之同源——报告里要贴 ping 输出与 db.py 输出两份对照。
       dev 没开字段加密（上游默认 enable: false）→ encryptEnabled=false 红；之后 seed 里的密文读出来会是乱码。
       接口忘了鉴权（@SaIgnore）→ 匿名请求拿到 200，第 3 段红。
-  - name: "测试账号灌得进真实的若依表结构：8 个账号与角色逐一对上，且此刻其余 6 段 seed 因表未建被跳过而不是报错"
+      ping 只做了「登录即可调」、没加内部角色闸（CR-20260923-09 之前的形态）→ 第 5 段 extA 拿到 200 红：外部小程序 token 能读到 profile、mock 登录开关、加密开关与库版本这些环境指纹。
+      角色闸写成 Sa-Token 缺省的 AND（要求 lqg_admin、lqg_internal、superadmin 同时具备）→ 管理员与内部人员一起 403，第 2、4 段红；第 4 段是 OR 的正向对照。
+  - name: "测试账号灌得进真实的若依表结构：8 个账号与角色逐一对上；seed/ 下有几段就灌进几段、一段不跳过（D1 时「其余 6 段因表未建被跳过」的前提已被后续建表改掉，见反例说明）"
     form: DATA
     run: |-
-      OUT="$(bash doc/verify/reseed.sh --yes)" && printf '%s' "${OUT}" | grep -q '已灌 01-accounts.sql' && printf '%s' "${OUT}" | grep -q '跳过 04-sample.sql' &&
+      OUT="$(bash doc/verify/reseed.sh --yes)" && printf '%s' "${OUT}" | grep -q '已灌 01-accounts.sql' && test "$(printf '%s\n' "${OUT}" | grep -c '已灌 ')" = "$(ls doc/verify/seed/*.sql | wc -l | tr -d ' ')" && ! printf '%s' "${OUT}" | grep -q '跳过' &&
       python3 doc/verify/db.py --sql "SELECT u.user_name || ':' || r.role_key FROM sys_user u JOIN sys_user_role ur ON ur.user_id = u.user_id JOIN sys_role r ON r.role_id = ur.role_id WHERE u.user_id BETWEEN 9000000000 AND 9000009999 AND u.del_flag='0'" --col-set "lqgadmin:lqg_admin,lqg_13800000001:lqg_internal,wx_13800000011:lqg_external,wx_13800000012:lqg_external,wx_13800000013:lqg_external,wx_13800000014:lqg_external,wx_13800000015:lqg_external,wx_13800000016:lqg_external"
     counterfeit: |-
       角色 id 没按 lint-profile 取 101 / 102 / 103（比如让序列自增）→ seed 里的 sys_user_role 指向不存在的角色，JOIN 后集合为空红。
       为了让 seed 灌进去而去改 seed 文件（把列名改成自己建的列）→ 本条不红，但 gen_seed.py 重新生成时会对着 SSOT 报错；完工报告要求贴 `git status doc/verify` 为空。
-      reseed 在表未建时整体失败退出（而不是逐段跳过）→ 第一行就红。
+      （2026-09-23 改写，a2 重放发现）第一行原来断 reseed 输出里有「跳过 04-sample.sql」，只在 D1 当时成立（那时只建了若依表与账号）；D2 起各域把 t_lqg_* 表都建齐了，那一段按构造永远红。现在改断「seed/ 下有几段就灌进几段、输出里没有任何一段跳过」（现有 01–07 七段）：哪张业务表漏建 → 那一段被跳过，灌入段数对不上、「跳过」也出现，第一行红；列与 SSOT 对不上 → psql 报错退出（ON_ERROR_STOP），第一行红。
+      原来的「reseed 在表未建时整体失败退出（而不是逐段跳过）→ 第一行红」这条 D1 口径在建全了表的库上已无法复现，不再由本条断言（reseed.sh 的逐段跳过逻辑没变）。
 ---
 
 # SYS-BASE-001 · 后端工程骨架：若依 + PostgreSQL + Flyway 基线 + ruoyi-lqg 模块 + 字典与角色 seed + 本地开发环境
@@ -92,7 +97,7 @@ REQ-SYS-010 要的「测试环境只用测试数据」在本地的落点就是 `
 - `tenant.enable: false`（`application.yml`）。不引 `ruoyi-workflow`；SnailJob 不启用（本项目的定时任务用 Spring `@Scheduled`）。
 - 新模块 `ruoyi-modules/ruoyi-lqg`（artifactId 同名），包根 `org.dromara.lqg`，按域分子包 `auth / sample / embed / cryo / qc / doc / ocr / ext / sys`。
   两处接入：`ruoyi-modules/pom.xml` 的 `<modules>` + `ruoyi-admin/pom.xml` 的依赖。
-- `GET /lqg/sys/ping`（登录即可调）：返回 `doc/api-contract.md` 约定的形状，`db` / `dbVersion` 取自真实连接的 `DatabaseMetaData`，不写死。
+- `GET /lqg/sys/ping`（**仅内部角色**：`lqg_admin` / `lqg_internal` / `superadmin` 任一即可，`@SaCheckRole(..., mode = SaMode.OR)`；外部 403、匿名 401。CR-20260923-09：原「登录即可调」作废——外部小程序 token 也能读到 profile、mock 登录开关、加密开关这些环境指纹）：返回 `doc/api-contract.md` 约定的形状，`db` / `dbVersion` 取自真实连接的 `DatabaseMetaData`，不写死。
 
 ### 2.2 Flyway
 - 引 `flyway-core` + `flyway-database-postgresql`；`out-of-order=false`、`baseline-on-migrate=false`（空库直接从第一支迁移跑起）。
@@ -105,6 +110,8 @@ REQ-SYS-010 要的「测试环境只用测试数据」在本地的落点就是 `
 - `mybatis-encryptor`：dev / test 写死 `enable: true, algorithm: AES, encode: BASE64, password: LqgTestAesKey#01`（seed 的密文按它算的）；
   prod 的 password 取环境变量，**不进仓库**。
 - `code/deploy/dev/docker-compose.yml`：`postgres:16-alpine`（库 `lqg_dev`，只绑 127.0.0.1）、`redis`、`minio`（本地对象存储，bucket 私有）。
+  容器名固定为 `lqg-dev-*`（project 名 `lqg-dev`），宿主端口读 `code/deploy/dev/.env` 里的 `LQG_DB_PORT / LQG_REDIS_PORT / LQG_MINIO_PORT / LQG_MINIO_CONSOLE_PORT / LQG_GOTENBERG_PORT`（缺省 5433 / 6380 / 9002 / 9003 / 3010）——这一套是 Kevin 本机的开发环境。
+  本票三条 accept 只经 `LQG_VERIFY_ENV_FILE` 指向的库与后端做断言，不起停容器、不写 `/tmp`；在隔离环境重放只需把 `LQG_VERIFY_ENV_FILE`（以及 `TMPDIR`）指向自己那一套，别对 dev compose 做任何 up / down / stop（CR-20260924-11，清单见 doc/verify/README.md「隔离环境重放」）。
 - 根 `.gitignore` 加 `doc/verify/verify.env`、各端构建产物、`*.env.local`。
 - 照 `doc/verify/verify.env.example` 建 `doc/verify/verify.env`，跑通 `bash doc/verify/reseed.sh --yes`（此时只会灌 `01-accounts.sql`，其余分段提示「表还没建」是正常的）。
 
@@ -120,8 +127,11 @@ REQ-SYS-010 要的「测试环境只用测试数据」在本地的落点就是 `
 
 1. 上游版本号与 commit；`ruoyi-lqg` 两处接入的 diff
 2. 三支迁移的文件名；`SELECT version, script, success FROM flyway_schema_history ORDER BY installed_rank` 的输出
-3. `reseed.sh --yes` 的完整输出（应为：已灌 01，其余 6 段跳过）
+3. `reseed.sh --yes` 的完整输出（D1 完工时应为：已灌 01，其余 6 段跳过；D2 起各域建表后七段全灌，accept 3 已按现状改写）
 4. **改了哪些文件**（含 Flyway 文件名与取号依据、新增的类 / 页面 / 接口清单）
 5. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 6. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 7. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-23 按 CR-20260923-09 更新：§2.1 ping 改为仅内部角色（lqg_admin / lqg_internal / superadmin，OR），外部 403；accept 2 补「内部人员 200、extA 403」两段；accept 3 的过期断言「跳过 04-sample.sql」改为「seed 各段全部灌入、一段不跳过」，原因写进反例说明。
+- 2026-09-24 按 CR-20260924-11 更新：核对三条 accept 的 run 没有写死 dev 容器、3010、`/tmp/lqg-*`（只经 `LQG_VERIFY_ENV_FILE` 连库与后端），run 不动；§2.3 补 dev compose 的容器名与端口变量，以及隔离环境重放只需换 `LQG_VERIFY_ENV_FILE`、不许动 dev compose。

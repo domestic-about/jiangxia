@@ -15,7 +15,8 @@
 //   3. 顶部切换条的顺序与「要不要合并」**复用** `groupDocs`（DOC-MP-001 的纯函数），
 //      本页一行排序都不写（口径复述 4）。
 //   4. 身份只决定**打哪个接口**（内部 `/mp/int/doc/**`、外部 `/mp/ext/doc/**`），
-//      不决定「给哪几份」：外部拿到的也是清单里那几份（口径复述 4 的后半句）。
+//      不决定「给哪几份」：外部拿到的也是清单里那几份（口径复述 4 的后半句）；
+//      两条都带原图与附件（UI:mp.doc.preview；外部那条在独立验收 V24 补齐）。
 //
 // ★★ **失败态不泄露内部错误**：页面只说一句人话（`stateText('failed')`），
 //    内部那条接口里的失败原因字段一个字节都不读（accept 1 的禁字 grep 钉着这件事）。
@@ -112,7 +113,8 @@ async function fetchPages(kind: string) {
   try {
     const data = await fetchDocPages(sampleId.value, kind, identity.value)
     pages.value = data.pages ?? []
-    // ★ 外部那条只给页面图（#254）：这两个键拿不到就是空数组 —— 「文档中的图片」「附件」两段不渲染
+    // ★ 内外部两条都给「文档中的图片」（缩略 previewUrl、点开 url 原图）与附件（含细胞活率测定附件）——
+    //   外部那条由后端咽喉逐个核过（只签本样本、已完成成员的对象，独立验收 V24）；缺键时按空数组、整段不渲染
     images.value = data.images ?? []
     attachments.value = data.attachments ?? []
     state.value = 'ready'

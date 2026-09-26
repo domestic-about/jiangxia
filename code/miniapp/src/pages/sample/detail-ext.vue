@@ -106,23 +106,34 @@ function has(value: unknown): boolean {
   return value !== null && value !== undefined && String(value) !== ''
 }
 
+// `mono`：编号类（送检单号、住院号）用等宽字体（落地规范 §3，G17）
 const rows = computed(() => {
   const d = detail.value
   if (!d) {
-    return [] as Array<{ label: string, value: string }>
+    return [] as Array<{ label: string, value: string, mono: boolean }>
   }
   return [
-    { label: '送检单号', value: str(d.submitNo) },
-    { label: '供体姓名', value: str(d.donorName) },
-    { label: '性别', value: genderText(d.gender) },
-    { label: '年龄', value: str(d.age) },
-    { label: '住院号', value: str(d.hospitalNo) },
-    { label: '组织类型', value: str(d.tissueType) || str(d.organoidType) },
-    { label: '有无病理', value: ynText(d.hasPathology) },
-    { label: '来源单位', value: str(d.sourceUnitName) },
-    { label: '备注', value: str(d.remark) },
+    { label: '送检单号', value: str(d.submitNo), mono: true },
+    { label: '供体姓名', value: str(d.donorName), mono: false },
+    { label: '性别', value: genderText(d.gender), mono: false },
+    { label: '年龄', value: str(d.age), mono: false },
+    { label: '住院号', value: str(d.hospitalNo), mono: true },
+    // 类器官收样记录的两行是「类器官类型」+「代数」（代数是外部自己填的，CR-20260924-10）；组织样本没有代数
+    { label: d.sampleKind === 'organoid' ? '类器官类型' : '组织类型', value: str(d.tissueType) || str(d.organoidType), mono: false },
+    { label: '代数', value: d.sampleKind === 'organoid' ? str(d.passage) : '', mono: true },
+    { label: '有无病理', value: ynText(d.hasPathology), mono: false },
+    { label: '来源单位', value: str(d.sourceUnitName), mono: false },
+    { label: '备注', value: str(d.remark), mono: false },
   ].filter(r => r.value !== '')
 })
+
+/**
+ * 评分表的合计分（UI:mp.sample.detail.ext ③「评分表带合计分」，G16）：
+ * 只认清单接口行上的 `totalScore`（后端只在评分表那一行给这个键），前端不自己加分。
+ */
+function scoreText(doc: DocListRow): string {
+  return typeof doc.totalScore === 'number' ? `合计 ${doc.totalScore} 分` : ''
+}
 
 function str(value: unknown): string {
   return value === null || value === undefined ? '' : String(value)
@@ -156,7 +167,7 @@ function ynText(value: unknown): string {
 
       <!-- ① 送检信息 -->
       <view class="lqg-gl">送检信息</view>
-      <view class="lqg-card lqg-card--flush">
+      <view class="lqg-card lqg-card--flush det__card">
         <view class="det__row">
           <text class="det__k">核验状态</text>
           <StatusChip :value="verifyStatus" />
@@ -168,7 +179,7 @@ function ynText(value: unknown): string {
         </view>
         <view v-for="row in rows" :key="row.label" class="det__row">
           <text class="det__k">{{ row.label }}</text>
-          <text class="det__v">{{ row.value }}</text>
+          <text class="det__v" :class="{ 'lqg-mono': row.mono }">{{ row.value }}</text>
         </view>
       </view>
 
@@ -185,7 +196,7 @@ function ynText(value: unknown): string {
 
       <!-- ③ 质控文档（DOC-MP-001 接外部清单；点条目进预览占位页） -->
       <view class="lqg-gl">质控文档</view>
-      <view v-if="docs.length" class="lqg-card lqg-card--flush">
+      <view v-if="docs.length" class="lqg-card lqg-card--flush det__card">
         <view
           v-for="doc in docs"
           :key="String(doc.docKind)"
@@ -196,10 +207,11 @@ function ynText(value: unknown): string {
             <text class="det__docname">{{ docKindLabel(doc.docKind) }}</text>
             <text class="det__doctime">{{ doc.publishedTime }}</text>
           </view>
+          <text v-if="scoreText(doc)" class="det__score lqg-num">{{ scoreText(doc) }}</text>
           <text class="det__arrow">›</text>
         </view>
       </view>
-      <view v-else class="lqg-card">
+      <view v-else class="lqg-card det__card">
         <text class="det__empty">结果出具后会显示在这里</text>
       </view>
     </template>
@@ -213,6 +225,11 @@ function ynText(value: unknown): string {
 
 .det__bar {
   margin-top: var(--lqg-sp-5);
+}
+
+/* 整块卡片左右留屏边距（落地规范 §7：屏边距 16，G14） */
+.det__card {
+  margin: 0 var(--lqg-gutter);
 }
 
 /* 第③段：每份文档一行（点一行进预览占位页） */
@@ -245,6 +262,13 @@ function ynText(value: unknown): string {
 .det__doctime {
   font-size: var(--lqg-fs-sm);
   color: var(--lqg-ink-3);
+}
+
+.det__score {
+  flex: none;
+  font-size: var(--lqg-fs-body);
+  font-weight: var(--lqg-fw-semibold);
+  color: var(--lqg-primary);
 }
 
 .det__arrow {

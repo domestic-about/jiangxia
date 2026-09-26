@@ -12,10 +12,10 @@ import java.util.Map;
  * 冻存批次列表的响应体（{@code GET /lqg/cryo/batch/list}，doc/api-contract.md 的 CRYO 一节）。
  *
  * <p>★ 就是在 {@link TableDataInfo} 的 {@code total / rows / code / msg} 之上多带一个
- * <b>{@code tabCounts}</b>（ticket §2 末句 / 契约「响应另带 {@code tabCounts:{all, overdue, ln2}}」）：
+ * <b>{@code tabCounts}</b>（ticket §2 末句 / 契约「响应另带 {@code tabCounts:{all, overdue, ln2}}」，2026-09-24 追加 {@code emptied}）：
  * <pre>
  * { "code":200, "msg":"查询成功", "total":7, "rows":[…],
- *   "tabCounts":{"all":7,"overdue":2,"ln2":2} }
+ *   "tabCounts":{"all":7,"overdue":2,"ln2":2,"emptied":1} }
  * </pre>
  *
  * <p>★ <b>为什么不改上游的 {@code TableDataInfo}</b>：那是全仓共用的分页壳，加一个只有冻存用的键
@@ -26,8 +26,10 @@ import java.util.Map;
  * <p>★ 三个数的口径：{@code all} = 未删批次数、{@code ln2} = 当前位置为液氮的（直接进液氮
  * {@code in_minus80='N'} <b>或</b>已登记转液氮 {@code to_ln2_time} 非空，与行上的
  * {@code location} 同源）、{@code overdue} = {@code CryoOverdueService.countOverdue()}
- * —— 与超期清单、工作台首页计数<b>同一个函数、同一段 where</b>。
- * 三个数都是<b>整表口径</b>（不随列表的筛选收窄）：页签是「这张表上有多少」的导航，
+ * —— 与超期清单、工作台首页计数<b>同一个函数、同一段 where</b>；
+ * {@code emptied} = 已取空（剩余 ≤ 0，{@code CryoOverdueSqlProvider.EMPTIED_WHERE}，与行上的 {@code emptied} 同源；
+ * 2026-09-24 甲方「支数取空的要提示」）。
+ * 四个数都是<b>整表口径</b>（不随列表的筛选收窄）：页签是「这张表上有多少」的导航，
  * 与 {@code total}（当前筛选下的行数）是两件事。
  *
  * @author CRYO-REMIND-001
@@ -41,12 +43,12 @@ public class CryoBatchPageVo extends TableDataInfo<CryoBatchVo> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 页签计数：{@code all}（全部）/ {@code overdue}（超期）/ {@code ln2}（液氮）。
+     * 页签计数：{@code all}（全部）/ {@code overdue}（超期）/ {@code ln2}（液氮）/ {@code emptied}（已取空）。
      *
-     * <p>键顺序固定为 all → overdue → ln2（{@link java.util.LinkedHashMap}），
+     * <p>键顺序固定为 all → overdue → ln2 → emptied（{@link java.util.LinkedHashMap}），
      * 断言可以逐字比。
      */
-    @Schema(description = "页签计数：{all, overdue, ln2}（整表口径）")
+    @Schema(description = "页签计数：{all, overdue, ln2, emptied}（整表口径）")
     private Map<String, Long> tabCounts;
 
 }

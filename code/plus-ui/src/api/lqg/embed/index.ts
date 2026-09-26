@@ -43,6 +43,8 @@ export interface EmbedVO {
   /** ★ 所挂样本的核验状态 —— 核验抽屉据此置灰「判为有效」 */
   sampleVerifyStatus?: string | null;
   sourceUnitName?: string | null;
+  /** 所挂样本的类别 tissue / organoid（读时带出）——「样本编号」点回样本时决定回哪一页 */
+  sampleKind?: string | null;
   /** 外部送样在核验前为空 */
   paraffinBlockNo?: string | null;
   sampleType?: string | null;
@@ -99,11 +101,13 @@ export interface EmbedQuery {
   submitSource?: string | null;
 }
 
-/** 新增 / 修改入参（POST / PUT /lqg/embed） */
-export interface EmbedForm {
-  id?: string | number | null;
-  sampleId?: string | number | null;
-  paraffinBlockNo?: string | null;
+/**
+ * 补填段（FIX V02b / issue #147）：与后端 `EmbedFillBo` 逐键一致 —— 身份与石蜡块编号以外、抽屉里能填的 15 项。
+ *
+ * ★ 普通保存（`PUT /lqg/embed`，EmbedForm 继承它）与核验抽屉一并保存的 `fill`（`PUT /lqg/embed/{id}/verify`）
+ *   是同一个形状、后端同一份规则（EmbedFillWriter）；补丁语义：没带的键不动、带了空值清空、markers 带了就整组替换。
+ */
+export interface EmbedFillForm {
   sampleType?: string | null;
   organoidSourceType?: string | null;
   tissueReceiveTime?: string | null;
@@ -123,6 +127,13 @@ export interface EmbedForm {
   remark?: string | null;
 }
 
+/** 新增 / 修改入参（POST / PUT /lqg/embed） */
+export interface EmbedForm extends EmbedFillForm {
+  id?: string | number | null;
+  sampleId?: string | number | null;
+  paraffinBlockNo?: string | null;
+}
+
 /** 核验入参（PUT /lqg/embed/{id}/verify） */
 export interface EmbedVerifyForm {
   action: 'valid' | 'invalid';
@@ -130,6 +141,11 @@ export interface EmbedVerifyForm {
   paraffinBlockNo?: string | null;
   /** action=invalid 必填 */
   reason?: string | null;
+  /**
+   * 核验抽屉里的补填段（可选；与核验结论同一事务保存，FIX V02b）。不带 = 补填段一个字都不动。
+   * 判为有效：15 项都收；判为无效：只收 sampleType / organoidSourceType（其余是核验有效后才补填的，后端带了 400）。
+   */
+  fill?: EmbedFillForm | null;
 }
 
 /** 列表（分页；待核验置顶，其余按创建时间倒序） */
@@ -175,7 +191,7 @@ export function delEmbed(ids: string | number | Array<string | number>) {
   });
 }
 
-/** 核验 / 改判：判有效要石蜡块编号（且所挂样本已核验有效）；判无效要原因 */
+/** 核验 / 改判：判有效要石蜡块编号（且所挂样本已核验有效）；判无效要原因；带 fill 时补填段与核验结论一起保存 */
 export function verifyEmbed(id: string | number, data: EmbedVerifyForm) {
   return request({
     url: '/lqg/embed/' + id + '/verify',

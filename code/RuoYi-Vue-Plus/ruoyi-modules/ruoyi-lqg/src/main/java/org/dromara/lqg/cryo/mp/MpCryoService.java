@@ -10,6 +10,7 @@ import org.dromara.lqg.cryo.batch.service.CryoBatchService;
 import org.dromara.lqg.cryo.batch.service.CryoQueryService;
 import org.dromara.lqg.cryo.flow.domain.vo.CryoFlowRecordVo;
 import org.dromara.lqg.cryo.flow.service.CryoFlowService;
+import org.dromara.lqg.sample.domain.bo.PatchBody;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,20 +23,20 @@ import java.util.List;
  * <p>★ 本类<b>不自己查库、不自己写库、不自己判超期</b>：
  * <ul>
  *   <li>读走 {@link CryoQueryService#list} —— 与工作台列表<b>同一个方法</b>，所以
- *       {@code tabCounts:{all,overdue,ln2}}、每行的 {@code overdue / overdueDays / remainingQty /
- *       location / handlerName / mine} 全部是现成的、且与超期清单同源（CRYO-REMIND-001 §3.3
+ *       {@code tabCounts:{all,overdue,ln2,emptied}}、每行的 {@code overdue / overdueDays / remainingQty /
+ *       location / emptied / handlerName / mine} 全部是现成的、且与超期清单同源（CRYO-REMIND-001 §3.3
  *       明写「MP 端点只需转发」）；</li>
  *   <li>写走 {@link CryoBatchService} —— {@code initQty} 改了同样跑
  *       {@code CryoBalanceChecker} 的逐笔校验（CR-20260917-04 / FLOW:F-CRYO-02.step5），
  *       小程序这边<b>不另写一份「剩余不为负」的判据</b>；内部人员改谁录的都行
  *       （CR-20260918-07），本类<b>不校验「是不是本人录的」</b>；</li>
- *   <li>取用登记走 {@link CryoFlowService#list} —— <b>只读</b>。</li>
+ *   <li>取用登记的读走 {@link CryoFlowService#list}。</li>
  * </ul>
  *
- * <p>★★ <b>本类没有任何写流水的口</b>（CR-20260917-05 / ticket §3）：没有
- * {@code create/update/delete} 流水、没有 {@code toLn2}、没有删批次。小程序里能做的是
- * 首页新增冻存记录、历史编辑记录里改一条冻存记录（含冻存数量），以及只读查看。
- * 不是「前端不放按钮」——这些路径在 {@code /mp/int/cryo/**} 上<b>根本不存在</b>。
+ * <p>★★ <b>本类没有任何写流水的口</b>：没有 {@code create/update/delete} 流水、没有 {@code toLn2}、
+ * 没有删批次。2026-09-24 起小程序内部人员也能在批次详情弹层里取走 / 补入 / 转液氮 / 改删登记
+ * （甲方「小程序和工作台界面都能操作」），但走的是 {@code /lqg/cryo/batch/{id}/**} 那一份写口
+ * （{@code CryoFlowController}），不在这里转发 —— 这些路径在 {@code /mp/int/cryo/**} 上仍然不存在。
  *
  * @author CRYO-MP-001
  */
@@ -88,14 +89,15 @@ public class MpCryoService {
      * {@link CryoBatchService#update} 拒绝（400，消息里指出是哪一笔），前端把提示原样显示。
      * 谁录的都能改（CR-20260918-07）。
      */
-    public void update(CryoBatchSubmitBo bo) {
-        cryoBatchService.update(bo);
+    public void update(PatchBody<CryoBatchSubmitBo> body) {
+        cryoBatchService.update(body);
+        CryoBatchSubmitBo bo = body == null ? null : body.value();
         log.info("小程序内部修改冻存批次：id={} initQty={}", bo == null ? null : bo.getId(),
             bo == null ? null : bo.getInitQty());
     }
 
     /**
-     * 这一批的取用登记（<b>只读</b>）：时间倒序，每行带操作后剩余 {@code balanceAfter} 与
+     * 这一批的取用登记（读口）：时间倒序，每行带操作后剩余 {@code balanceAfter} 与
      * 「改过没有」{@code edited} / {@code updateByName}（CRYO-FLOW-001 已装配好）。
      *
      * <p>批次不存在 / 已软删 → 400「冻存批次不存在」（与详情口同语义，不泄露存在性）。

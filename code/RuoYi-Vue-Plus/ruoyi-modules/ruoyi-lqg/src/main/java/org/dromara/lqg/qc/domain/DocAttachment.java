@@ -15,7 +15,7 @@ import java.io.Serial;
  * <p>★ <b>通用附件不进 Word 正文</b>，只在预览页下方列出（类注释照 SSOT）；
  * 样本质控表上另有一栏「细胞活率测定」是<b>单独一列</b>
  * （{@code t_lqg_qc_sample.viability_oss_id} + {@code viability_file_name}），
- * <b>不走本表</b> —— 那一格在文档里印文件名。
+ * <b>不走本表</b> —— 那一格在 Word 里嵌入附件本身（图标 + 文件名，双击打开，{@code DocOleEmbedder}）。
  *
  * <p>★ 三份文档都能挂附件（{@code doc_type} 含 {@code organoid_score}）；
  * <b>图片位</b>只有两份（{@code organoid_score} 没有 slot）。

@@ -117,6 +117,7 @@ import { globalHeaders } from '@/utils/request';
 import { OSS_UPLOAD_URL, saveSampleQc, type QcSampleDocVO, type QcSampleSaveBO } from '@/api/lqg/qc';
 import ImageSlotUploader from '../components/ImageSlotUploader.vue';
 import AttachmentList from '../components/AttachmentList.vue';
+import { uploadBizErrorMessage, uploadErrorMessage } from '../components/uploadFeedback';
 import { useI18n } from 'vue-i18n';
 
 // ============================================================================
@@ -228,24 +229,27 @@ const save = async () => {
 };
 
 // ── 细胞活率测定附件（单文件）────────────────────────────────────────────────
+const VIABILITY_MAX_MB = 50;
+
 const handleViabilityBeforeUpload = (file: File) => {
-  if (file.size / 1024 / 1024 > 50) {
-    proxy?.$modal.msgError(t('lqg.qc.attachment.tooLarge', { max: 50 }));
+  if (file.size / 1024 / 1024 > VIABILITY_MAX_MB) {
+    proxy?.$modal.msgError(`「${file.name}」` + t('lqg.qc.attachment.tooLarge', { max: VIABILITY_MAX_MB }));
     return false;
   }
   proxy?.$modal.loading(t('lqg.qc.uploading'));
   return true;
 };
 
-const handleViabilityError = () => {
+/** 上传请求本身失败（超限的空 400 / 413 / 登录过期 / 网络断了 …）：说清原因（与图片位 / 附件同一口径） */
+const handleViabilityError = (error: unknown, file: any) => {
   proxy?.$modal.closeLoading();
-  proxy?.$modal.msgError(t('lqg.qc.uploadFailed'));
+  proxy?.$modal.msgError(uploadErrorMessage(t, error, file?.name, VIABILITY_MAX_MB));
 };
 
-const handleViabilitySuccess = (res: any) => {
+const handleViabilitySuccess = (res: any, file: any) => {
   proxy?.$modal.closeLoading();
   if (res?.code !== 200) {
-    proxy?.$modal.msgError(res?.msg || t('lqg.qc.uploadFailed'));
+    proxy?.$modal.msgError(uploadBizErrorMessage(t, res, file?.name));
     return;
   }
   form.viabilityOssId = res.data.ossId;

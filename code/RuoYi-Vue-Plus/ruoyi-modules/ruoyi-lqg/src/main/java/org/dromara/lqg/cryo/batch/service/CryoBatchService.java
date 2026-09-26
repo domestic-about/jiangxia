@@ -18,6 +18,7 @@ import org.dromara.lqg.cryo.batch.mapper.CryoFlowMapper;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.verify.VerifyTransitions;
+import org.dromara.lqg.sample.domain.bo.PatchBody;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,11 +127,13 @@ public class CryoBatchService {
     }
 
     /**
-     * 修改批次（{@code PUT /lqg/cryo/batch}）—— <b>patch 语义</b>：只改传了的字段；
+     * 修改批次（{@code PUT /lqg/cryo/batch}、{@code PUT /mp/int/cryo/batch}）—— <b>补丁语义</b>：
+     * 键没出现 = 不动；键出现、值为空 = 清空（FIX V33，以前清不掉）；清必填项 → 400。
      * {@code initQty} 改了就<b>先锁行、再逐笔校验</b>。
      */
     @Transactional(rollbackFor = Exception.class)
-    public void update(CryoBatchSubmitBo bo) {
+    public void update(PatchBody<CryoBatchSubmitBo> body) {
+        CryoBatchSubmitBo bo = body == null ? null : body.value();
         if (bo == null || bo.getId() == null) {
             throw new ServiceException("缺少冻存批次 id", 400);
         }
@@ -151,60 +154,69 @@ public class CryoBatchService {
                 .set(CryoBatch::getUpdateBy, userId)
                 .set(CryoBatch::getUpdateTime, new Date());
 
-            // ── 所挂样本：传了且换了人才校验（必须仍是已核验有效的样本）
-            if (bo.getSampleId() != null && !bo.getSampleId().equals(exists.getSampleId())) {
-                requireValidSample(bo.getSampleId());
-                patch.set(CryoBatch::getSampleId, bo.getSampleId());
+            // ★ FIX V33（补丁语义）：键没出现 = 不动；键出现、值为空 = 清空；清必填项 → 400。
+            //   以前一律「null = 不动」：工作台抽屉里清掉填错的「-80 转移至液氮时间」点保存，
+            //   提示已保存而库里还在（这一批永远算「已转液氮」、退出超期提醒）。
+            // ── 所挂样本：必填；传了且换了人才校验（必须仍是已核验有效的样本）
+            if (body.has("sampleId")) {
+                if (bo.getSampleId() == null) {
+                    throw new ServiceException("所挂样本不能为空", 400);
+                }
+                if (!bo.getSampleId().equals(exists.getSampleId())) {
+                    requireValidSample(bo.getSampleId());
+                    patch.set(CryoBatch::getSampleId, bo.getSampleId());
+                }
             }
             // ── 冻存样品名称：传了就不能为空（内容是手填的自由文本，不解析）
-            if (bo.getCryoName() != null) {
+            if (body.has("cryoName")) {
                 String cryoName = trimToNull(bo.getCryoName());
                 if (cryoName == null) {
                     throw new ServiceException("冻存样品名称不能为空", 400);
                 }
                 patch.set(CryoBatch::getCryoName, cryoName);
             }
-            // ── 代数：传了就必须是 ^P\d{1,3}$
-            if (bo.getPassage() != null) {
+            // ── 代数：传了就必须是 ^P\d{1,3}$（空值同样被拒）
+            if (body.has("passage")) {
                 patch.set(CryoBatch::getPassage, CryoBalanceChecker.requirePassage(bo.getPassage()));
             }
-            // ── 冻存时间：传了就要重算「转液氮不得早于冻存」
+            // ── 冻存时间：传了就不能为空，并重算「转液氮不得早于冻存」
             LocalDate freezeTime = exists.getFreezeTime();
-            if (bo.getFreezeTime() != null) {
+            if (body.has("freezeTime")) {
                 freezeTime = CryoBalanceChecker.requireFreezeTime(bo.getFreezeTime());
             }
-            LocalDate toLn2Time = bo.getToLn2Time() != null ? bo.getToLn2Time() : exists.getToLn2Time();
+            // ── 转液氮时间：传了就用传的（空值 = 撤销「已转液氮」，不在库里硬留一个填错的日期）
+            LocalDate toLn2Time = body.has("toLn2Time") ? bo.getToLn2Time() : exists.getToLn2Time();
             CryoBalanceChecker.requireLn2NotBeforeFreeze(freezeTime, toLn2Time);
-            if (bo.getFreezeTime() != null) {
+            if (body.has("freezeTime")) {
                 patch.set(CryoBatch::getFreezeTime, freezeTime);
             }
             // ── 是否暂存 -80 / 液氮位置：两个字段互相牵制，合并成「改后的最终态」再判
-            String inMinus80 = bo.getInMinus80() != null
+            String inMinus80 = body.has("inMinus80")
                 ? CryoBalanceChecker.requireInMinus80(bo.getInMinus80()) : exists.getInMinus80();
-            String ln2Location = bo.getLn2Location() != null
+            String ln2Location = body.has("ln2Location")
                 ? trimToNull(bo.getLn2Location()) : exists.getLn2Location();
             ln2Location = CryoBalanceChecker.requireLn2Location(inMinus80, toLn2Time, ln2Location);
-            if (bo.getInMinus80() != null) {
+            if (body.has("inMinus80")) {
                 patch.set(CryoBatch::getInMinus80, inMinus80);
             }
-            if (bo.getLn2Location() != null) {
+            if (body.has("ln2Location")) {
                 patch.set(CryoBatch::getLn2Location, ln2Location);
             }
-            if (bo.getToLn2Time() != null) {
-                patch.set(CryoBatch::getToLn2Time, bo.getToLn2Time());
+            if (body.has("toLn2Time")) {
+                patch.set(CryoBatch::getToLn2Time, toLn2Time);
             }
-            // ── ★ 初始支数：可改，但改完必须逐笔算下来每一步都不为负
-            if (bo.getInitQty() != null) {
+            // ── ★ 初始支数：可改（不能清空），但改完必须逐笔算下来每一步都不为负
+            if (body.has("initQty")) {
                 int initQty = CryoBalanceChecker.requirePositiveInitQty(bo.getInitQty());
                 CryoBalanceChecker.requireNonNegative(initQty, undeletedFlows(exists.getId()));
                 patch.set(CryoBatch::getInitQty, initQty);
             }
-            // ── 其余标量：null = 不动（补填 / 局部修改语义）
-            patch.set(bo.getDensity() != null, CryoBatch::getDensity, trimToNull(bo.getDensity()))
-                .set(bo.getFrozenBy() != null, CryoBatch::getFrozenBy, trimToNull(bo.getFrozenBy()))
-                .set(bo.getRemark() != null, CryoBatch::getRemark, trimToNull(bo.getRemark()));
+            // ── 其余标量：没传 = 不动；传了空值 = 清空
+            patch.set(body.has("density"), CryoBatch::getDensity, trimToNull(bo.getDensity()))
+                .set(body.has("frozenBy"), CryoBatch::getFrozenBy, trimToNull(bo.getFrozenBy()))
+                .set(body.has("remark"), CryoBatch::getRemark, trimToNull(bo.getRemark()));
             cryoBatchMapper.update(null, patch);
-            log.info("修改冻存批次：id={} initQty={} operator={}", exists.getId(), bo.getInitQty(), userId);
+            log.info("修改冻存批次：id={} 改动键={} operator={}", exists.getId(), body.keys(), userId);
             return null;
         });
     }
@@ -283,9 +295,16 @@ public class CryoBatchService {
         return StringUtils.isBlank(value) ? null : value.trim();
     }
 
+    /**
+     * 当前登录人 id；取不到（没有请求上下文，例如单测、定时任务）时 null —— 与 {@code SampleQueryService.currentUserId} 同口径。
+     */
     private static Long currentUserId() {
-        LoginUser loginUser = LoginHelper.getLoginUser();
-        return loginUser == null ? null : loginUser.getUserId();
+        try {
+            LoginUser loginUser = LoginHelper.getLoginUser();
+            return loginUser == null ? null : loginUser.getUserId();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static String currentNickname() {

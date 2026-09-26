@@ -30,6 +30,25 @@ doc/
 code/                        代码（D1 的 SYS-BASE-001 起建）：RuoYi-Vue-Plus / plus-ui / miniapp / deploy
 ```
 
+## 本机启动（dev）
+
+前提：dev 容器在跑（`docker compose -f code/deploy/dev/docker-compose.yml up -d`，库 5433 / Redis 6380 / MinIO 9002 / Gotenberg 3010），`code/deploy/dev/.env` 存在（gitignored）。
+
+```bash
+# 后端 :8081（在 code/RuoYi-Vue-Plus 下）
+cd code/RuoYi-Vue-Plus
+mvn install -DskipTests -q            # 第一次、以及改了 ruoyi-lqg / ruoyi-common 等非 admin 模块之后
+mvn spring-boot:run -pl ruoyi-admin   # 自动用 dev profile、自动读 code/deploy/dev/.env、自带 JVM 代理例外
+
+# 工作台 :8082（代理到 8081）
+cd code/plus-ui && pnpm dev
+# 小程序 H5 :9100（直连 8081，mock 登录）
+cd code/miniapp && pnpm dev:h5
+```
+
+- Maven 用本项目自己的本地仓库 `.m2repo`（`code/RuoYi-Vue-Plus/.mvn/maven.config` 指定）：本项目与其它若依项目都用 `org.dromara:ruoyi-*:5.5.3` 坐标，共用 `~/.m2` 会互相覆盖。IDE 里跑的话，把 Maven 的 Local repository 也指到 `.m2repo`。
+- 一条命令起三个进程：`bash .tmp/local-env/local.sh up`（`down` / `status` / `reseed` 同理）。
+
 ## 常用命令（cwd = 本目录）
 
 ```bash

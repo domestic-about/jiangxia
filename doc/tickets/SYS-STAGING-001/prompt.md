@@ -84,6 +84,8 @@ accept:
 - `code/deploy/common/`：后端 Dockerfile（多阶段：maven 构建 → JRE 运行，构建参数 `BUILD_COMMIT` 注入 `/lqg/sys/ping` 的 `buildCommit`）、nginx 配置模板、`wait-for` 小脚本。
 - `code/deploy/test/docker-compose.yml`：`postgres:16-alpine`（库 `lqg_test`）、`redis`、`minio`、`backend`（`--spring.profiles.active=test`）、`nginx`（工作台 dist + `/prod-api` 反代 + HTTPS）。
   `.env` 放密码与域名，**不进 git**，给一份 `.env.example`。
+- 上传上限统一（CR-20260923-09）：后端单个文件 50MB、一次请求合计 60MB，超了回 `code=413` 与中文提示；nginx 一律 `client_max_body_size 60m`（compose 里的 nginx 与宿主机那层都是），别在某一层留小的缺省值。
+- actuator 不对外（CR-20260923-09）：nginx 对 `/actuator` 与 `/prod-api/actuator` 两条路一律回 404。
 - `application-test.yml`：同 dev 的加密口令（seed 的密文按它算的）、`lqg.auth.mock-login=true`、`lqg.ocr.provider=stub`、api 加解密关。
 - `code/deploy/test/deploy.sh`：本地构建镜像 → 推到测试机 → `docker compose up -d` → 等健康 → 远程执行 reseed（把 `doc/verify/seed/` 与 `reseed.sh` 一并同步过去，库名 `lqg_test` 满足护栏）。
 - `doc/verify/verify.test.env.example`：指向测试环境的 API 地址（DB 不对外，DB 类断言只在本地跑）。
@@ -105,3 +107,11 @@ accept:
 5. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 6. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 7. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+## 5 票面更新
+
+- 2026-09-23 按 CR-20260923-09 更新：§2 补上传上限统一 60m、nginx 挡掉 actuator；说明 accept 1 里 `mine=true` 那段原文断言已成立、重新部署后要补的两段 actuator 断言（见下）。两条 accept 的 run 本轮不改：都要连公网测试机，而 CR 定了测试机现阶段不动，本轮不跑。
+  - accept 1 里 `mine=true` 那一段（`/mp/int/sample/list?pageSize=100&mine=true`，按顶层 `&&` 切是第 6 段）：#191 修掉之后 `mine` 与 `sort` 无关，原文不补 `&sort=recent` 也返回 `["9000001008","9000001009"]`（本机活体已绿）；测试机重新部署到当前代码后这一段即绿。
+  - 测试机重新部署后，在 accept 1 末尾补两段（写法供参考，现在不进 run）：
+    `B="$(sed -n 's/^LQG_API_BASE=//p' doc/verify/verify.test.env)" && test "$(curl -s -o /dev/null -w '%{http_code}' "${B}/actuator/health")" = 404 && test "$(curl -s -o /dev/null -w '%{http_code}' "${B}/prod-api/actuator/env")" = 404`
+- 2026-09-24 按 CR-20260924-11 更新：核对两条 accept 没有写死 Kevin 本机的 dev 容器、3010 或 `/tmp/lqg-*`——accept 1 经 `LQG_VERIFY_ENV_FILE=doc/verify/verify.test.env` 连公网测试机，accept 2 只 `nc` 测试机端口并读仓库里的 compose，本机不起停任何容器；远程段语义不变，run 不动。在隔离环境重放时照样只连测试机，本机要设的变量见 doc/verify/README.md「隔离环境重放」。

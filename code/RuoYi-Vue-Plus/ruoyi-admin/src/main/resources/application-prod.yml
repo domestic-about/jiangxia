@@ -29,8 +29,15 @@ spring.servlet.multipart.location: /ruoyi/server/temp
 #      这是**预期行为**，不是缺陷（见 doc/verify/verify.prod.env.example 的说明）。
 #   3. 库 / Redis / Gotenberg 走 compose 内网**服务名**，不是宿主端口。
 #
-# ★ 其他键（mail / sms / justauth / api-decrypt / snail-job 的其余项）保持与上游同构：
+# ★ 其他键（mail / sms / justauth / snail-job 的其余项）保持与上游同构：
 #   被显式关掉的开关越多，越容易出现「配置文件与代码缺省不一致」这类只有上线才发现的坑。
+#
+# ★ 上线安全加固（独立验收 2026-09-23 的 V13 / V14 / V15 / V18，F4）：
+#   JWT 签名密钥、接口加解密两把 RSA 密钥、字段加密口令一律**只从环境变量取、没有缺省值**；
+#   缺失、等于公开的缺省值、强度不够（JWT < 32 字符 / RSA < 2048 位 / AES 口令不是 16|24|32 位）
+#   时由 ruoyi-common-web 的 StartupSafetyGuard 在**连库之前**拒绝启动，并在控制台写明缺哪个变量。
+#   生成方法：code/deploy/prod/gen-secrets.sh（一次生成全部，追加进服务器 .env，600 权限）。
+#   actuator 只开 health / info、健康详情不外露（nginx 也不转发 /actuator/）。
 
 --- # 监控中心配置
 # 本项目不起 Spring Boot Admin（不接第三方 APM，见票面 §3 边界）
@@ -145,9 +152,39 @@ redisson:
 mail:
   enabled: false
 
+--- # Sa-Token（V13）
+# JWT 签名密钥：若依默认的 abcdefghijklmnopqrstuvwxyz 是公开的，拿它能验签（也能签）真实 token。
+# 只从环境变量取、没有缺省值；StartupSafetyGuard 还会拒绝默认值与短于 32 个字符的密钥。
+sa-token:
+  jwt-secret-key: ${LQG_JWT_SECRET}
+
+--- # 接口加解密（V14）
+# 若依那对公开的 512 位 RSA 密钥不许上生产。两对密钥、四个值（gen-secrets.sh 一次生成）：
+#   · 请求：前端用 VITE_APP_RSA_PUBLIC_KEY 加密 → 后端用这里的 privateKey 解密（LQG_API_REQUEST_PRIVATE_KEY）
+#   · 响应：后端用这里的 publicKey 加密 → 前端用 VITE_APP_RSA_PRIVATE_KEY 解密（LQG_API_RESPONSE_PUBLIC_KEY）
+# 前端那两个在**构建工作台时**从环境变量注入（code/plus-ui/.env.production 里不再写死）。
+# 开关沿用 application.yml 的缺省（开着），本文件不写它。
+api-decrypt:
+  publicKey: ${LQG_API_RESPONSE_PUBLIC_KEY}
+  privateKey: ${LQG_API_REQUEST_PRIVATE_KEY}
+
+--- # Actuator（V18）
+# 上游缺省把全部端点暴露出来、健康详情全开（application.yml），生产只留 health / info，
+# 健康详情与组件明细都不外露（{"status":"UP"} 就够部署自检用）。nginx 另外把 /actuator 挡在外面。
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
 --- # 数据加密（@EncryptField / SampleFieldCipher）
 # ADR-0006：供体姓名、住院号、患者编号三列加密落库。**生产口令 ≠ 测试的 LqgTestAesKey#01。**
-# ★ 口令只从环境变量取（compose 注入服务器 .env 里的 LQG_ENCRYPT_PASSWORD，600 权限）。
+# ★ 口令只从环境变量取（compose 注入服务器 .env 里的 LQG_ENCRYPT_PASSWORD，600 权限）；
+#   缺失、等于测试口令 LqgTestAesKey#01、长度不是 16 / 24 / 32 → StartupSafetyGuard 拒绝启动（V15）。
 # ★ 口令丢了 = 这三列永远读不出来（AES 无后门）→ 上线当天另存一份给 Kevin，记进交接单
 #   （doc/ops/部署手册.md §8）。
 # ★ enable 保持 true：accept 1 第 2 段要 /lqg/sys/ping 报 encryptEnabled==true。

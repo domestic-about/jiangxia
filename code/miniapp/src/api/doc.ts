@@ -98,10 +98,11 @@ export async function fetchSampleDocs(sampleId: string | number, identity: 'inte
 // ★★ 两个 shapes **不是同一个**（如实按接口写，别发明统一的形状，issue #254/#257）：
 //   内部那条的 `data` = 工作台同款 `DocPagesVo`：
 //     {status, docKind, audience, contentHash, templateVersion, errorMsg?, pages:[{pageNo,url}],
-//      images:[{url,previewUrl}], attachments:[{fileName,fileSize,url}]}
-//   外部那条（`ExtDocPagesVo`）只有 `{docKind, status, pages:[{pageNo,url}]}` ——
-//     **没有** images / attachments（外部预览只给页面图）、也**没有**失败原因与指纹。
-//   → 所以下面的读取一律 `?? []`，外部视角下「文档中的图片」「附件」两段就是空的（不是 bug）。
+//      images:[{url,previewUrl}], attachments:[{fileName,fileSize,url}], missingImageCount, missingImages}
+//   外部那条（`ExtDocPagesVo`）是 `{docKind, status, pages:[{pageNo,url}], images:[{url,previewUrl}],
+//     attachments:[{fileName,fileSize,url}]}` —— 原图与附件在独立验收 V24 补齐（后端咽喉逐个核对象），
+//     **没有**失败原因、指纹与缺图明细。
+//   → 读取一律 `?? []`：缺键时「文档中的图片」「附件」两段不渲染。
 //
 // ★ 一律 `silent: true`：成败由页面自己表达（渲染中 / 生成中 / 一句人话的失败态），
 //   不让请求层弹后端的 msg —— 那正是「把内部错误显示给用户」的形态（accept 1 第 5 段）。
@@ -128,7 +129,7 @@ export interface DocAttachmentRow {
 }
 
 /**
- * 预览的 `data`（内部那条的形状；外部那条是它的子集）。
+ * 预览的 `data`（内部那条的形状；外部那条是它的子集：页面图 + 原图 + 附件）。
  *
  * `errorMsg` / `contentHash` / `templateVersion` 只在**内部**那条上有 ——
  * 页面**不读它们**（外部拿不到、内部也不给用户看），列在这里只是为了让类型与接口一致。
@@ -157,7 +158,7 @@ export function fetchIntDocPages(sampleId: string | number, docKind: string) {
   return http.get<DocPagesData>(docPath('int', sampleId, docKind, 'pages'), {}, { silent: true })
 }
 
-/** 外部预览（AUTH-EXT-003；只有页面图） */
+/** 外部预览（AUTH-EXT-003；页面图 + 原图 + 附件，V24 起） */
 export function fetchExtDocPages(sampleId: string | number, docKind: string) {
   return http.get<DocPagesData>(docPath('ext', sampleId, docKind, 'pages'), {}, { silent: true })
 }

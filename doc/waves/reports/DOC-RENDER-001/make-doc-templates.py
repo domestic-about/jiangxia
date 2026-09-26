@@ -30,13 +30,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[4]
 SRC = ROOT / "_input/templates"
 DST = ROOT / "code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/resources/lqg/doc-templates"
-TEMPLATE_VERSION = "1"
+TEMPLATE_VERSION = "3"
+# ★ 2026-09-23 按 CR-20260923-09 更新：与 code/…/doc-templates/template-version.txt 同步为 3（F2 去掉了甲方批注用的
+#   绿色高亮 `w:highlight`：样本质控表 10 处、类器官质控表 3 处）。本脚本重跑时一律剥掉占位 run 的高亮（见 strip_highlight），
+#   否则会把高亮带回成品文档。
 
 # ── 空段里插入 run 用的 rPr 兜底（正常路径是抄该段 w:pPr 里的 rPr）────────────
 FALLBACK_RPR = (
     '<w:rPr><w:rFonts w:hint="default" w:ascii="Times New Roman" w:hAnsi="Times New Roman"'
     ' w:eastAsia="宋体" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>'
 )
+
+
+HIGHLIGHT_RE = re.compile(r"<w:highlight\b[^>]*/>|<w:highlight\b[^>]*>.*?</w:highlight>", re.S)
+
+
+def strip_highlight(rpr: str) -> str:
+    """去掉 rPr 里的 `w:highlight`（甲方原件用绿色高亮标「这里要填」，那是批注，不该进模板与成品）。"""
+    return HIGHLIGHT_RE.sub("", rpr)
 
 
 def para_span(xml: str, para_id: str) -> tuple[int, int]:
@@ -55,7 +66,7 @@ def para_rpr(para_xml: str) -> str:
     if ppr:
         rprs = re.findall(r"<w:rPr>.*?</w:rPr>", ppr.group(0), re.S)
         if rprs:
-            return rprs[-1]
+            return strip_highlight(rprs[-1])
     return FALLBACK_RPR
 
 
@@ -76,6 +87,13 @@ def replace_text(xml: str, para_id: str, old: str, new: str) -> str:
     if needle not in para:
         raise SystemExit(f"[error] paraId={para_id} 里没有 {old!r}")
     para = para.replace(needle, f">{new}</w:t>", 1)
+    # 保留原 run 的 rPr，但剥掉高亮：占位符所在的那个 run 会原样进成品
+    for m in re.finditer(r"<w:r\b[^>]*>.*?</w:r>", para, re.S):
+        if f">{new}</w:t>" in m.group(0):
+            run = m.group(0)
+            run2 = re.sub(r"<w:rPr>.*?</w:rPr>", lambda r: strip_highlight(r.group(0)), run, count=1, flags=re.S)
+            para = para[: m.start()] + run2 + para[m.end():]
+            break
     return xml[:s] + para + xml[e:]
 
 
@@ -92,7 +110,7 @@ def replace_with_picture_runs(xml: str, para_id: str, old: str, tags: list[str])
         run = m.group(0)
         if f">{old}</w:t>" in run:
             rpr = re.search(r"<w:rPr>.*?</w:rPr>", run, re.S)
-            rpr = rpr.group(0) if rpr else FALLBACK_RPR
+            rpr = strip_highlight(rpr.group(0)) if rpr else FALLBACK_RPR
             new_runs = "".join(f"<w:r>{rpr}<w:t>{t}</w:t></w:r>" for t in tags)
             para = para[: m.start()] + new_runs + para[m.end() :]
             break

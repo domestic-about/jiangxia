@@ -183,7 +183,7 @@ out.requests = seen.map((r) => {
 out.assertions = {
   exportEnabled: out.beforeFilter.exportDisabled === false,
   noPlaceholderToast: out.beforeFilter.hasPlaceholderToast === false,
-  noteIsNewWording: out.beforeFilter.note === '核验、冻存取用请到网页工作台',
+  noteIsNewWording: out.beforeFilter.note === '核验、冻存登记在小程序和网页工作台都能做',
   handedOff: out.actionSheet.includes('打开') && out.actionSheet.includes('发送到微信'),
   tissueFilteredRequest: out.requests.some(r => r.kind === 'request'
     && r.url.includes('/mp/int/export/tissue') && r.url.includes('verifyStatus=pending')),

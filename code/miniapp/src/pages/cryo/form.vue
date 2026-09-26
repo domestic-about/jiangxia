@@ -89,8 +89,8 @@ const flagOptions = [
   { value: 'N', label: '否' },
 ]
 
-/** 选「否」（直接进液氮）才要液氮储存位置 */
-const needLn2Location = computed(() => form.value.inMinus80 === 'N')
+/** 选「否」（直接进液氮）或已登记转液氮时，液氮储存位置必填（与后端同一条） */
+const needLn2Location = computed(() => form.value.inMinus80 === 'N' || !!form.value.toLn2Time)
 
 /**
  * 代数那一栏显示的**数字部分**：页面固定一个 `P` 前缀，输入框只吃数字（数字键盘）。
@@ -290,43 +290,22 @@ async function submit() {
 
       <text v-if="lastModified" class="cryo__meta">{{ lastModified }}</text>
 
-      <NoteBar v-if="mode !== 'new'" tone="warn" text="取走、补入、转液氮与修改登记请到网页工作台" />
+      <NoteBar v-if="mode !== 'new'" text="取走、补入、转液氮：在「内部管理 → -80 冻存」里点这一批登记" />
 
+      <!-- 字段先后照甲方 -80 冻存模板（2026-09-24「请参照我发你的模板，理解先后顺序」）：
+           冻存时间、冻存样品、冻存数量/支、冻存密度、暂存-80、冻存人、转移至液氮时间、液氮储存位置、备注；
+           模板没有的「代数」放在最后。「选择样本」是挂样本用的，放在最前（选了才能预填样品名称）。 -->
       <view class="cryo__group">
         <FieldRow
           label="选择样本"
           control="select"
           required
+          mono
           :readonly="!editable"
           :model-value="form.sampleLabel"
           placeholder="请选择已核验有效的样本"
           @pick="openSamplePicker"
         />
-
-        <FieldRow
-          label="冻存样品名称"
-          required
-          :readonly="!editable"
-          :model-value="form.cryoName"
-          placeholder="选样本后自动填「内部编号-」"
-          @update:model-value="(v: string) => form.cryoName = v"
-        />
-
-        <wd-cell v-if="editable" title="代数" required>
-          <view class="cryo__passage">
-            <text class="cryo__passage-p">P</text>
-            <input
-              class="cryo__passage-in"
-              type="number"
-              :value="passageDigits"
-              placeholder="1~3 位数字"
-              @input="onPassageInput"
-            >
-          </view>
-        </wd-cell>
-        <wd-cell v-else title="代数" value-align="right">
-          <text class="cryo__ro">{{ form.passage || '—' }}</text>
-        </wd-cell>
 
         <FieldRow
           label="冻存时间"
@@ -336,6 +315,17 @@ async function submit() {
           :model-value="form.freezeTime"
           placeholder="请选择日期"
           @pick="openDatePicker"
+        />
+
+        <FieldRow
+          label="冻存样品名称"
+          required
+          mono
+          :maxlength="100"
+          :readonly="!editable"
+          :model-value="form.cryoName"
+          placeholder="选样本后自动填「内部编号-」"
+          @update:model-value="(v: string) => form.cryoName = v"
         />
 
         <FieldRow
@@ -353,6 +343,7 @@ async function submit() {
 
         <FieldRow
           label="冻存密度"
+          :maxlength="50"
           :readonly="!editable"
           :model-value="form.density"
           placeholder="例如 2e5"
@@ -369,19 +360,24 @@ async function submit() {
         </FieldRow>
 
         <FieldRow
-          label="液氮储存位置"
-          :required="needLn2Location"
-          :readonly="!editable"
-          :model-value="form.ln2Location"
-          placeholder="选「否」时必填，例如 1号罐-1架-A2"
-          @update:model-value="(v: string) => form.ln2Location = v"
-        />
-
-        <FieldRow
           label="冻存人"
+          :maxlength="50"
           :readonly="!editable"
           :model-value="form.frozenBy"
           @update:model-value="(v: string) => form.frozenBy = v"
+        />
+
+        <!-- 只显示：转液氮在批次详情弹层的「转液氮」里登记（本页保存不带这个键 = 不动它） -->
+        <FieldRow label="-80度超低温冰箱转移至液氮时间" readonly :model-value="form.toLn2Time" />
+
+        <FieldRow
+          label="液氮储存位置"
+          :required="needLn2Location"
+          :maxlength="100"
+          :readonly="!editable"
+          :model-value="form.ln2Location"
+          :placeholder="needLn2Location ? '必填，例如 1号罐-1架-A2' : '转液氮时填，例如 1号罐-1架-A2'"
+          @update:model-value="(v: string) => form.ln2Location = v"
         />
 
         <FieldRow
@@ -392,6 +388,22 @@ async function submit() {
           placeholder="选填"
           @update:model-value="(v: string) => form.remark = v"
         />
+
+        <wd-cell v-if="editable" title="代数" required>
+          <view class="cryo__passage">
+            <text class="cryo__passage-p">P</text>
+            <input
+              class="cryo__passage-in"
+              type="number"
+              :value="passageDigits"
+              placeholder="1~3 位数字"
+              @input="onPassageInput"
+            >
+          </view>
+        </wd-cell>
+        <wd-cell v-else title="代数" value-align="right">
+          <text class="cryo__ro">{{ form.passage || '—' }}</text>
+        </wd-cell>
       </view>
 
       <view class="lqg-bar-spacer" />
@@ -411,7 +423,11 @@ async function submit() {
       type="date"
       title="选择日期"
       @confirm="onPicked"
-    />
+    >
+      <!-- ★ 给默认插槽放一个空节点（G12）：没有默认插槽时 wd-datetime-picker 会自己渲染一行
+           「值 ›」的 cell，页面底部就多出一行没有标签的「今天日期 ›」。面板开关只靠 open()。 -->
+      <view />
+    </wd-datetime-picker>
   </view>
 </template>
 
@@ -438,7 +454,7 @@ async function submit() {
 }
 
 .cryo__group {
-  margin: 0 var(--lqg-gutter);
+  margin: var(--lqg-sp-5) var(--lqg-gutter) 0;
   overflow: hidden;
   border-radius: var(--lqg-radius-card);
   background: var(--lqg-card);

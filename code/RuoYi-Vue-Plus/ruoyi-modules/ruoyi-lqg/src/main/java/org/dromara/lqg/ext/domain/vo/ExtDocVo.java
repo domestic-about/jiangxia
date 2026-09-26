@@ -18,13 +18,14 @@ import java.util.Date;
  *
  * <p>★ 形状按 {@code doc/api-contract.md} 第 87 行的 {@code ExtDocVo} 抄：
  * {@code {sampleId, submitNo, donorNameMasked, docKind, publishedTime, totalScore?}}。
- * <b>没有</b>内部编号、没有渲染人、没有内部文件路径 —— 外部版文档里的内部编号一格仍留空
- * （CR-20260918-07：{@code lqg.ext.show-internal-no} 不作用于预渲染文档）。
+ * <b>没有</b>内部编号、没有渲染人、没有内部文件路径。外部版文档<b>正文里</b>的内部编号一格
+ * 随系统参数 {@code lqg.ext.show-internal-no}（默认留空；甲方 2026-09-24 意见第 23 行起开关也管文档，
+ * 由 doc 域的渲染与发放判据负责，见 {@code DocRenderService#delivery}），与本元信息形状无关。
  *
  * @author AUTH-EXT-001
  */
 @Data
-@Schema(description = "外部质控文档元信息（本票占位，AUTH-EXT-003 接数据）")
+@Schema(description = "外部质控文档元信息")
 public class ExtDocVo implements Serializable {
 
     @Serial

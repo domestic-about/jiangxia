@@ -13,17 +13,20 @@
 export default {
   // ── 页面与筛选区 ──────────────────────────────────────────────────────────
   title: '-80 冻存管理',
-  subtitle: '批次列表按超期置顶、整行浅红；取走 / 补入 / 盘点调整与改删登记只有工作台能改，导出与甲方模板逐列一致。',
+  // 页头一句话（2026-09-24 本机验收，四张表统一口径）：这张表是什么、和样本的关系、谁来填
+  subtitle:
+    '一行是一个冻存批次，挂在某个样本下（一个样本可以冻多批），点「内部编号」回到样本。冻存记录只有中心内部人员填写，合作单位看不到也不能填；超期的置顶、整行浅红，取空的标「已取空」。',
   search: '搜索',
   reset: '重置',
   loading: '加载中…',
   empty: '没有符合条件的冻存批次',
 
-  /** 顶部页签：三个数字都取后端的 tabCounts（整表口径，翻页不变） */
+  /** 顶部页签：四个数字都取后端的 tabCounts（整表口径，翻页不变）；「已取空」是 2026-09-24 加的 */
   tab: {
     all: '全部',
     overdue: '-80 超期',
-    ln2: '液氮'
+    ln2: '液氮',
+    emptied: '已取空'
   },
 
   filter: {
@@ -38,8 +41,20 @@ export default {
     overdueOnly: '只看超期',
     freezeTimeRange: '冻存时间',
     freezeTimeBegin: '冻存时间起',
-    freezeTimeEnd: '冻存时间止',
-    sampleFilter: '只看样本 {id} 的冻存批次'
+    freezeTimeEnd: '冻存时间止'
+  },
+
+  // ── 带 sampleId 进来时顶部的提示条（2026-09-24 本机验收） ─────────────────────
+  scope: {
+    only: '只看{sample}的冻存批次',
+    total: '共 {n} 批',
+    showAll: '看全部',
+    openSample: '打开样本',
+    sampleFallback: '样本 {id}'
+  },
+
+  cell: {
+    openSample: '回到这条样本'
   },
 
   // ── 工具栏 ────────────────────────────────────────────────────────────────
@@ -52,7 +67,7 @@ export default {
     exportEmpty: '当前筛选没有可导出的批次'
   },
 
-  // ── 表格列（模板 9 列 + 内部编号 / 代数 / 当前剩余 / 当前位置 + 最后修改 + 操作） ──
+  // ── 表格列（模板 9 列 + 代数 / 当前剩余（与导出同序）+ 内部编号 / 当前位置 / 最后修改 + 操作） ──
   col: {
     freezeTime: '冻存时间',
     cryoName: '冻存样品',
@@ -116,6 +131,8 @@ export default {
     editTitle: '编辑冻存批次',
     sectionBatch: '批次信息',
     sectionStore: '存放位置',
+    /** 模板里没有、系统要的字段（代数），放在模板列之后 */
+    sectionExtra: '补充信息',
     lastModified: '最后修改：{name} · {time}',
     lastModifiedNever: '最后修改：从未修改',
     save: '保存',
@@ -205,7 +222,9 @@ export default {
     saved: '已登记',
     editSaved: '已保存',
     saveFailed: '保存失败，请重试',
-    balanceTipCurrent: '当前剩余 {qty} 支'
+    balanceTipCurrent: '当前剩余 {qty} 支',
+    /** 取走让这一批从有变成 0 支时，提交前多问的那一句（与小程序同一句） */
+    emptyConfirm: '登记后这一批就取空了（剩 0 支），确定吗？'
   },
 
   // ── 转液氮弹窗 ────────────────────────────────────────────────────────────

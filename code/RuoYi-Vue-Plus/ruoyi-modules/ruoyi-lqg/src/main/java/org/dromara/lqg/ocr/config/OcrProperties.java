@@ -33,7 +33,8 @@ public class OcrProperties {
     private boolean paidEnabled;
 
     /**
-     * 单张图大小上限（字节）。与 {@code application.yml} 的 multipart 上限同一口径（5MB）。
+     * 单张图大小上限（字节，缺省 5MB，ticket §2）。由 {@code MpOcrController} 自己判，
+     * 与 {@code spring.servlet.multipart} 的全局上限（附件 50MB / 一次 60MB）无关 —— 那个只是更外面的一道闸。
      */
     @Value("${lqg.ocr.max-bytes:5242880}")
     private long maxBytes;

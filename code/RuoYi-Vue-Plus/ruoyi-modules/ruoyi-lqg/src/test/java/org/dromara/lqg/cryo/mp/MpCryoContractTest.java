@@ -94,7 +94,11 @@ class MpCryoContractTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("MpCryoController 没有 PUT 处理方法"));
         assertEquals(1, update.getParameterCount(), "PUT /mp/int/cryo/batch 只收请求体，不该有路径变量");
-        assertEquals(CryoBatchSubmitBo.class, update.getParameterTypes()[0], "PUT 的入参类型应是 CryoBatchSubmitBo");
+        // FIX V33：收原始 JSON（没带 = 不动、带了空值 = 清空），形状仍是 CryoBatchSubmitBo（接口文档里标着）
+        assertEquals(com.fasterxml.jackson.databind.JsonNode.class, update.getParameterTypes()[0],
+            "PUT 收原始 JSON 再按 CryoBatchSubmitBo 解析（PatchBody）");
+        assertEquals(CryoBatchSubmitBo.class, update.getParameters()[0]
+            .getAnnotation(io.swagger.v3.oas.annotations.parameters.RequestBody.class).content()[0].schema().implementation());
         assertEquals(0, update.getAnnotationsByType(PathVariable.class).length);
     }
 

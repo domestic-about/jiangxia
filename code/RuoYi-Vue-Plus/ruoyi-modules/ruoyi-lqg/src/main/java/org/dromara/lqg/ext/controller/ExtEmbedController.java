@@ -12,6 +12,7 @@ import org.dromara.lqg.ext.domain.bo.ExtEmbedQueryBo;
 import org.dromara.lqg.ext.domain.bo.ExtEmbedSubmitBo;
 import org.dromara.lqg.ext.domain.vo.ExtEmbedVo;
 import org.dromara.lqg.ext.service.ExtEmbedAssemblyService;
+import org.dromara.lqg.ext.service.ExtScopeService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -63,13 +64,14 @@ public class ExtEmbedController {
     }
 
     /**
-     * 单条：不可见 / 不存在一律按「不存在」回 404（不泄露存在性）。
+     * 单条：不可见 / 不存在 / 已软删一律同一个 404、同一句 {@link ExtScopeService#EMBED_NOT_FOUND}
+     * （不泄露存在性；判据在 {@code ExtScopeService.assertEmbedVisible}，与写口同一处）。
      */
     @GetMapping("/{id}")
     public R<ExtEmbedVo> detail(@PathVariable Long id) {
         ExtEmbedVo vo = extEmbedAssemblyService.detail(currentUserId(), id);
         if (vo == null) {
-            throw new ServiceException("石蜡包埋记录不存在", 404);
+            throw new ServiceException(ExtScopeService.EMBED_NOT_FOUND, 404);
         }
         return R.ok(vo);
     }

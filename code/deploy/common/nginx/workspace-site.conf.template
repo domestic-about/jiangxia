@@ -19,8 +19,28 @@ server {
     root  /usr/share/nginx/html;
     index index.html;
 
-    # 上传/导出走同一个后端；与宿主 nginx 的值保持一致
-    client_max_body_size 50m;
+    # 上传/导出走同一个后端；与宿主 nginx 的值保持一致。
+    # 60m = 后端 spring.servlet.multipart.max-request-size（60MB），生产 nginx 同口径（V05）
+    client_max_body_size 60m;
+
+    # 上传体积超限（V05）：回与后端同口径的 JSON（{code,msg}），不回 nginx 默认的 413 HTML ——
+    # 工作台 / 小程序按响应体的 code、msg 给提示。数值与后端 spring.servlet.multipart 同口径。
+    error_page 413 = @lqg_413;
+    location @lqg_413 {
+        default_type "application/json; charset=utf-8";
+        return 413 '{"code":413,"msg":"上传的文件太大：单个文件不能超过 50MB，一次上传合计不能超过 60MB","data":null}';
+    }
+
+    # ── 0) actuator 一律不对外（V18）：根路径与 /prod-api 前缀两条路都挡，统一 404 ─────────
+    #    上游 SecurityConfig 用 Basic 认证护 /actuator，而本项目从没配过那对口令 —— 期望值是字面量
+    #    「null:null」，dev / test 下全量暴露（env、heapdump 都在）。这里在入口直接挡掉；
+    #    `^~` 前缀比下面的 `^~ /prod-api/` 长、又压过正则，/prod-api/actuator/… 也进不去。
+    location ^~ /actuator {
+        return 404;
+    }
+    location ^~ /prod-api/actuator {
+        return 404;
+    }
 
     # ── 1) 网页工作台的 API：plus-ui 的 VITE_APP_BASE_API=/prod-api ─────────────
     #    带 ^~ 前缀，避免被下面的正则 location 抢走。proxy_pass 末尾的 `/` 会**剥掉** /prod-api 前缀。
@@ -33,7 +53,7 @@ server {
     #    小程序 env/.env.test 的 VITE_SERVER_BASEURL=https://<域名>，请求路径是 /auth/login、/mp/...；
     #    api.sh 请求 /auth/login、/lqg/sys/ping、/mp/ext/... —— 两边都不带 /prod-api。
     #    proxy_pass 不带 URI 部分 → 原样透传路径。
-    location ~ ^/(auth|lqg|mp|system|monitor|resource|tool|workflow|actuator|snail-job)/ {
+    location ~ ^/(auth|lqg|mp|system|monitor|resource|tool|workflow|snail-job)/ {
         proxy_pass http://${LQG_BACKEND_UPSTREAM};
         include /etc/nginx/conf.d/lqg-proxy-headers.inc;
     }

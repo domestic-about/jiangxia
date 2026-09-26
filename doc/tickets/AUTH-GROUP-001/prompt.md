@@ -45,7 +45,7 @@ accept:
       组别唯一索引只建在 group_name 上（漏了 unit_id）→ 第 3 段红：A 医院有了「肝胆外科组」，B 大学就建不了同名组。
       唯一索引不带 WHERE del_flag='0' → ddl_vs_ssot 红：停用后误删的组别名永远占着。
       create_dept 漏建（若依 insertFill 会写它，INSERT 时才炸）→ 公共字段缺失红。
-  - name: "核验状态机：非法转移被拒且库里不变；自填单位不选新建或归并不许通过；外部一改单位组别立刻回到待核验"
+  - name: "核验状态机：非法转移被拒且库里不变；自填单位不选新建或归并不许通过；外部一改单位组别立刻回到待核验；内部账号调外部档案接口 403 且不会给自己建出外部档案（CR-20260923-09）"
     form: STATE
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
@@ -57,13 +57,16 @@ accept:
       bash doc/verify/api.sh --as extA PUT /mp/ext/profile '{"realName":"王医生","unitId":9000009001,"groupId":9000009102}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT bind_status || '|' || group_id || '|' || COALESCE(verified_by::text,'-') FROM t_lqg_ext_profile WHERE user_id=9000000111" --eq "pending|9000009102|-" &&
       bash doc/verify/api.sh --as extA --bizcode PUT /mp/ext/profile '{"realName":"王医生","unitId":9000009001,"groupId":9000009103}' | grep -qvE '^200' &&
+      bash doc/verify/api.sh --as staff --bizcode PUT /mp/ext/profile '{"realName":"李工","unitId":9000009001,"groupId":9000009101}' | grep -qE '^403' &&
+      python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_ext_profile WHERE user_id=9000000101" --eq 0 &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-
       approve 不校验自填档案 → 第 2 段拿到 200 红；库里会出现 unit_id 为空却 verified 的档案，同组互看按 group_id 算时永远匹配不上。
       reject 不要求原因 → 第 4 段拿到 200 红。
       「新建」只建了单位没建组别，或组别挂错了单位 → 第 6 段 JOIN 不出行红。
       外部改组别后状态仍是 verified → 第 8 段红：他换到别的组之后，还能继续看原来那组的样本。
-      最后一段：组别 9000009103 属于 B 大学，却和单位 A 医院一起提交 → 必须拒绝（单位与组别不匹配）。
+      第 9 段：组别 9000009103 属于 B 大学，却和单位 A 医院一起提交 → 必须拒绝（单位与组别不匹配）。
+      /mp/ext/profile 没挂外部角色闸（CR-20260923-09 查实的形态）→ 第 10 段 staff 拿到 200 红，第 11 段还会多出一行 staff 的外部档案：内部账号给自己建了一个外部身份，「外部用户」页与同组互看都会把他算进去。请求体是合法的（单位与组别匹配），红只能来自角色闸。
       每段「被拒」后面都跟一条库内状态断言——只看业务码的话，先落盘再返回 400 也是绿的。
   - name: "对外的单位选择器只含启用项且不带任何人数；两个菜单落在 5100 段、可达、内部人员也看得到"
     form: MENU
@@ -107,6 +110,7 @@ accept:
 - `/lqg/auth/unit`、`/lqg/auth/group`：增改、启用 / 停用（不物理删；已有人绑定的组别停用后，已绑定的人不受影响）。组别列表带 `verifiedCount`（读时 count）。同单位内组别名唯一、单位名全库唯一（部分唯一索引已保证，service 层给人话报错）。
 - `GET /mp/ext/units`：只返回 `active` 的单位及其 `active` 的组别。**对外部开放**，所以只有 id 和名称，不带任何人数。
 - `PUT /mp/ext/profile`：写 `real_name` + （`unit_id`,`group_id`）或（`unit_name_input`,`group_name_input`）；两套互斥，选了列表项就清空自填项。任何一次成功保存 → `bind_status='pending'`，清 `verified_by / verified_time / reject_reason`。
+  **只对外部角色开放**（类级 `@SaCheckRole("lqg_external")`，与其余 `/mp/ext/**` 写接口一致）：内部账号调用一律 403，库里不建档案（CR-20260923-09：以前漏了这道闸，内部账号调它会给自己补建一行外部档案）。新登录的外部账号建号时就挂了 103，还没填单位也调得通。
 - `PUT /lqg/auth/ext-user/{userId}/verify`：
   - `approve`：档案是自填的 → 必须带 `createUnit:true`（把自填名建成 active 单位 / 组别）或 `unitId + groupId`（归并）；最终 `unit_id`、`group_id` 都非空才允许 `verified`。
   - `reject`：`reason` 必填。
@@ -131,3 +135,5 @@ accept:
 4. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 5. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 6. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-23 按 CR-20260923-09 更新：accept 2 补「staff 带合法请求体调 PUT /mp/ext/profile 返回 403、staff 的外部档案仍是 0 行」两段；§2.2 写明该接口只对外部角色开放。

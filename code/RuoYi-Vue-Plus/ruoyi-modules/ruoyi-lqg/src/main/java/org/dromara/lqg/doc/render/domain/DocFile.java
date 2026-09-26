@@ -72,6 +72,24 @@ public class DocFile extends BaseEntity {
     /** 生成完成时间 */
     private Date renderedTime;
 
+    /**
+     * 这一版渲染时取不到字节的图片张数（只在 header 行 docx / page_no=0 上有意义）。
+     *
+     * <p>口径（#217）：内部版照出但记下缺图；外部版缺图直接 failed、不对外。
+     */
+    private Integer missingImageCount;
+
+    /** 缺了哪几张（给人看的一句话，「样本质控表·收样原始情况 第 1 张（原因）；…」） */
+    private String missingImages;
+
+    /**
+     * 这一版「内部编号」一格是不是按「印出」渲染的：{@code Y} / {@code N}（只在 header 行上有意义）。
+     *
+     * <p>★ 外部版随系统参数 {@code lqg.ext.show-internal-no}；开关关着时，这一列是 {@code Y} 的外部版
+     * 一律不对外（{@code DocRenderService#deliverable}）—— 指纹回答不了「旧产物上印没印」，所以落这一列。
+     */
+    private String showInternalNo;
+
     /** 软删标志（{@code @TableLogic}） */
     @TableLogic
     private String delFlag;

@@ -31,7 +31,7 @@ function isFull(index: number): boolean {
     <EntryTile
       v-for="(key, index) in entries"
       :key="key"
-      :mark="presentationOf(key).mark"
+      :icon="presentationOf(key).icon"
       :title="presentationOf(key).title"
       :desc="presentationOf(key).desc"
       :full="isFull(index)"

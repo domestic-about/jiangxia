@@ -20,16 +20,20 @@ blueprint_refs:
   - FIELD:t_lqg_cryo_batch.to_ln2_time
   - FIELD:t_lqg_cryo_batch.in_minus80
 accept:
-  - name: "超期清单钉死在 seed 的边界病灶上：阈值取系统参数 `lqg.cryo.overdue-days`（默认 14，CR-20260918-07）——恰好第 14 天算、第 13 天不算、取空了不算、直接进液氮不算、软删不算；清单、页签计数、只看超期三处同源相等，计数函数与清单同源"
+  - name: "超期清单钉死在 seed 的边界病灶上：阈值取系统参数 `lqg.cryo.overdue-days`（默认 14，CR-20260918-07）——恰好第 14 天算、第 13 天不算、取空了不算、直接进液氮不算、软删不算；清单、页签计数、只看超期三处同源相等，计数函数与清单同源；「已取空」页签（剩余 ≤ 0，CR-20260924-10）与行上标记、库内独立算的集合同源，且与超期互斥"
     form: DATA
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg GET /lqg/cryo/overdue | jq -e '([.data[] | "\(.id|tostring):\(.overdueDays)"] | sort) == ["9000003001:6","9000003005:0"]' &&
       python3 doc/verify/db.py --sql "SELECT b.id FROM t_lqg_cryo_batch b WHERE b.del_flag='0' AND b.in_minus80='Y' AND b.to_ln2_time IS NULL AND CURRENT_DATE - b.freeze_time >= (SELECT config_value::int FROM sys_config WHERE config_key='lqg.cryo.overdue-days') AND b.init_qty + COALESCE((SELECT SUM(f.delta) FROM t_lqg_cryo_flow f WHERE f.batch_id=b.id AND f.del_flag='0'),0) > 0" --col-set 9000003001,9000003005 &&
       LIST="$(bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?pageSize=100')" &&
-      printf '%s' "${LIST}" | jq -e '.tabCounts == {"all":7,"overdue":2,"ln2":2} and ([.rows[]|select(.overdue)|.id|tostring]|sort)==["9000003001","9000003005"] and ([.rows[0:2][].overdue]==[true,true])' &&
+      printf '%s' "${LIST}" | jq -e '.tabCounts == {"all":7,"overdue":2,"ln2":2,"emptied":1} and ([.rows[]|select(.overdue)|.id|tostring]|sort)==["9000003001","9000003005"] and ([.rows[0:2][].overdue]==[true,true])' &&
+      printf '%s' "${LIST}" | jq -e '([.rows[]|select(.emptied==true)|.id|tostring])==["9000003004"] and ([.rows[]|select((.id|tostring)=="9000003004")|[.remainingQty,.overdue]]==[[0,false]])' &&
       bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?overdueOnly=true&pageSize=100' | jq -e '(.rows|length)==2' &&
-      (cd code/RuoYi-Vue-Plus && mvn -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest='CryoOverdue*Test' -Dsurefire.failIfNoSpecifiedTests=true)
+      bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?emptiedOnly=true&pageSize=100' | jq -e '([.rows[].id|tostring])==["9000003004"] and .total==1 and .tabCounts.emptied==1' &&
+      python3 doc/verify/db.py --sql "SELECT b.id FROM t_lqg_cryo_batch b WHERE b.del_flag='0' AND b.init_qty + COALESCE((SELECT SUM(f.delta) FROM t_lqg_cryo_flow f WHERE f.batch_id=b.id AND f.del_flag='0'),0) <= 0" --col-set 9000003004 &&
+      bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?overdueOnly=true&emptiedOnly=true&pageSize=100' | jq -e '(.rows|length)==0' &&
+      (cd code/RuoYi-Vue-Plus && mvn -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest='CryoOverdue*Test,CryoEmptied*Test' -Dsurefire.failIfNoSpecifiedTests=true)
     counterfeit: |-
       判定写成「大于阈值天数」→ 少了恰好第 14 天的 3005 红。
       漏了「剩余 > 0」→ 多出已取空的 3004 红：提醒人去把一个空盒子转进液氮。
@@ -37,6 +41,7 @@ accept:
       页签计数和清单各写各的 where → tabCounts.overdue 与清单长度不等红；countOverdue 另写一份 → 单测里「计数 = 清单长度」那条红，工作台首页的数字与列表对不上。
       迁移没把 `lqg.cryo.overdue-days` 插进 sys_config → 独立 SQL 的子查询是 NULL、清单查空，--col-set 红（默认值只写在 java 里不算数：甲方要在工作台改得着）。
       两侧不同源：接口 vs db.py 里独立写的 SQL（阈值两边都从 sys_config 取，不写字面量）；再由 seed 的期望集合钉住。
+      「已取空」（CR-20260924-10）：页签数另写一份剩余算式、或前端数当前页 → tabCounts.emptied 与 emptiedOnly 行数、库内独立集合对不上红；行上 emptied 按「初始支数 = 0」之类错判据 → 3004 那段红；emptiedOnly 筛选时把超期条件也拼进去（或超期漏了「剩余 > 0」）→ 两个筛选叠加不是空集红。tabCounts 多了 emptied 键之后整对象相等仍然逐字比，键不许再多。
   - name: "提醒跟着状态走：登记转液氮当场出清单、超期计数减 1；支数取空了也当场出清单（CR-20260918-07 甲方问「转移后还会有提示吗」）；判定函数只有一处"
     form: STATE
     run: |-
@@ -47,13 +52,13 @@ accept:
       bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?pageSize=100' | jq -e '.tabCounts.overdue==1 and ([.rows[]|select((.id|tostring)=="9000003001")|.overdue]==[false])' &&
       bash doc/verify/api.sh --as staff POST /lqg/cryo/batch/9000003005/flow '{"flowType":"take","qty":2,"purpose":"全部取用"}' | jq -e '.code==200' &&
       bash doc/verify/api.sh --as staff GET /lqg/cryo/overdue | jq -e '.data==[]' &&
-      bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?pageSize=100' | jq -e '.tabCounts.overdue==0' &&
+      bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?pageSize=100' | jq -e '.tabCounts.overdue==0 and .tabCounts.emptied==2 and ([.rows[]|select((.id|tostring)=="9000003005")|.emptied]==[true])' &&
       bash doc/verify/api.sh --as extA --bizcode GET /lqg/cryo/overdue | grep -qE '^403' &&
       test "$(grep -rlE 'freeze_time|freezeTime' code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg --include=*.java | xargs grep -lE '\b14\b|OVERDUE_DAYS' | grep -v '/cryo/remind/' | wc -l | tr -d ' ')" = 0 &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-
       超期存成了标志位、靠每天的定时任务刷新 → 转了液氮之后到第二天早上 8 点前，清单里还挂着它，第 4、5 段红。这正是甲方 9-18 问的那句「转移后还会有提示吗」（CR-20260918-07）。
-      清单去掉了它、页签数字另算一份 → tabCounts.overdue 还是 2 红：甲方看见的是那个数字。
+      清单去掉了它、页签数字另算一份 → tabCounts.overdue 还是 2 红：甲方看见的是那个数字。取空之后「已取空」页签没跟着加一（2026-09-24 甲方「支数取空的要提示」）→ emptied==2 那格红。
       阈值口径（`14` 或 `OVERDUE_DAYS` 常量）散落在 remind 包之外的别处（比如列表 service 自己又写了一遍）→ 最后一段 grep 红；remind 包里也只许留「读不到参数时的回落值」这一处。
       结尾 reseed：别把转了液氮的 3001 留给后面的断言。
   - name: "阈值是系统参数不是常量（CR-20260918-07）：sys_config 里种着 `lqg.cryo.overdue-days`=14；在工作台把它改成 13，下一次读清单就多出第 13 天的 3006、计数 2→3，改回 14 又退出"
@@ -91,7 +96,8 @@ accept:
   2. **阈值不是常量，是系统参数 `lqg.cryo.overdue-days`（默认 14）**（CR-20260918-07）：若依 `sys_config` 的一项，内部人员在工作台「系统管理 → 参数设置」里改，**改完下一次读时即生效**——所以每次判定都去读，别在启动时读一次或缓存进静态字段。不建表、不做专门的配置页面。
   3. **判定只有一个函数**。工作台列表、小程序内部管理的冻存表格页、超期清单、工作台首页计数四处都调它；各写各的 where，四个数字迟早不相等。
   4. 读时算，不落「是否超期」标志位。**所以登记转液氮（`to_ln2_time` 落值）或支数被取空（剩余 = 0）之后，这一条立刻退出超期清单、提醒消失**（CR-20260918-07，甲方 9-18 问「转移后还会有提示吗」——答：不会，转完就没了）。定时任务只负责每天写一行日志，不是判定依据。
-  5. 提示只在系统内（工作台首页卡片与菜单角标、列表置顶标红、小程序「我的 → 内部管理」冻存表格页的超期页签）。小程序首页没有数字（CR-20260917-05）。**不做**订阅消息、短信、企业微信推送。
+  5. 提示只在系统内（工作台首页卡片与菜单角标、内部人员的小程序首页「待处理」、列表置顶标红、小程序「我的 → 内部管理」冻存表格页的超期页签）。小程序内部首页的超期数读 `GET /lqg/home/todo` 的 `cryoOverdue`（CR-20260924-10 推翻了 CR-20260917-05 的「小程序首页没有数字」；外部首页仍没有）。**不做**订阅消息、短信、企业微信推送。
+  6. **「已取空」是另一种提示、与超期互斥**（CR-20260924-10，甲方「支数取空的要提示」）：剩余 ≤ 0 的批次行上 `emptied=true`，列表 `emptiedOnly=true` 只看它们，`tabCounts` 追加 `emptied`（键序 all → overdue → ln2 → emptied）；片段 `CryoOverdueSqlProvider.EMPTIED_WHERE` 与超期第 ③ 条拼同一份剩余算式，超期 `WHERE` 原文不动。
 
 ## 1 背景与口径
 
@@ -105,6 +111,7 @@ accept:
 - 迁移 `V202609241205__CRYO-REMIND-001-config.sql`：往 `sys_config` 插一行 `lqg.cryo.overdue-days` = `14`（`config_name`「-80 冻存超期天数」、`config_type='Y'` 内置可改不可删、`remark` 写清含义）。**不建表**（CR-20260918-07）。
 - `GET /lqg/cryo/overdue`：超期批次，按已超天数倒序；每行 `overdueDays = today - freeze_time - 阈值天数`。
 - `/lqg/cryo/batch/list` 每行补 `overdue`、`overdueDays`；响应补 `tabCounts:{all, overdue, ln2}`；支持 `overdueOnly=true`；默认排序超期置顶。
+  CR-20260924-10 追加：每行 `emptied`（剩余 ≤ 0）、`frozenDays`（服务器日期算的冻存天数，给小程序批次详情的「冻存 N 天」）；`tabCounts.emptied`；`emptiedOnly=true`（导出同一份 wrapper，自动生效）；单测 `CryoEmptiedContractTest`。
 - `CryoOverdueService.countOverdue()`：与清单同一个 where 片段，给工作台首页待办与菜单角标（SYS-HOME-001）用。
 - `@Scheduled(cron = "0 0 8 * * ?")`：把当日超期批次数与清单写一行 INFO 日志。
 - 单测 `CryoOverdueServiceTest`：边界四例（第 13 天 / 第 14 天 / 已取空 / 已转液氮），阈值换成 7 时边界跟着移动一例，外加一条「`countOverdue()` = `listOverdue().size()`」。
@@ -121,3 +128,5 @@ accept:
 2. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 3. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 4. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-24 按 CR-20260924-10 更新：`tabCounts` 追加 `emptied`——accept 1 的整对象相等补 `"emptied":1`，并补「已取空」四段（行上 emptied 只有 3004 且剩 0 不超期、emptiedOnly 只出 3004、库内独立集合、与 overdueOnly 叠加为空），单测范围加 `CryoEmptied*Test`；accept 2 取空 3005 后断 `tabCounts.emptied==2` 且 3005 标已取空；§0 口径 5 改为小程序内部首页也提醒、新增口径 6，§2 补 emptied / frozenDays / emptiedOnly。

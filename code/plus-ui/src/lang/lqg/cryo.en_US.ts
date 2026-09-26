@@ -6,7 +6,7 @@
 
 export default {
   title: '-80 cryo management',
-  subtitle: 'Overdue batches are pinned on top with a pale red row; withdraw / replenish / stock-take and editing or deleting a record are workbench-only, and the export matches the client template column by column.',
+  subtitle: 'One row per cryo batch, attached to a sample (a sample can have several batches); click "Internal no." to go back to the sample. Cryo records are filled in by center staff only — partners can neither see nor fill them; overdue batches are pinned on top with a pale red row, used-up ones are marked.',
   search: 'Search',
   reset: 'Reset',
   loading: 'Loading…',
@@ -15,7 +15,8 @@ export default {
   tab: {
     all: 'All',
     overdue: '-80 overdue',
-    ln2: 'Liquid nitrogen'
+    ln2: 'Liquid nitrogen',
+    emptied: 'Used up'
   },
 
   filter: {
@@ -30,8 +31,19 @@ export default {
     overdueOnly: 'Overdue only',
     freezeTimeRange: 'Freeze time',
     freezeTimeBegin: 'Freeze from',
-    freezeTimeEnd: 'Freeze to',
-    sampleFilter: 'Only cryo batches of sample {id}'
+    freezeTimeEnd: 'Freeze to'
+  },
+
+  scope: {
+    only: 'Only cryo batches of {sample}',
+    total: '{n} batches in total',
+    showAll: 'Show all',
+    openSample: 'Open sample',
+    sampleFallback: 'sample {id}'
+  },
+
+  cell: {
+    openSample: 'Back to this sample'
   },
 
   toolbar: {
@@ -103,6 +115,7 @@ export default {
     editTitle: 'Edit cryo batch',
     sectionBatch: 'Batch',
     sectionStore: 'Storage',
+    sectionExtra: 'Additional',
     lastModified: 'Last modified: {name} · {time}',
     lastModifiedNever: 'Last modified: never',
     save: 'Save',
@@ -186,7 +199,8 @@ export default {
     saved: 'Recorded',
     editSaved: 'Saved',
     saveFailed: 'Save failed, please retry',
-    balanceTipCurrent: 'Current remaining {qty} tubes'
+    balanceTipCurrent: 'Current remaining {qty} tubes',
+    emptyConfirm: 'After this record the batch will be used up (0 tubes left). Continue?'
   },
 
   toLn2: {

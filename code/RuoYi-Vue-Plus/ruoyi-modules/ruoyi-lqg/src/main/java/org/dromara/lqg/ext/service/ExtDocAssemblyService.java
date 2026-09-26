@@ -7,13 +7,17 @@ import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.lqg.doc.pdf.domain.vo.DocPageItemVo;
+import org.dromara.lqg.doc.pdf.domain.vo.DocPagesAttachmentVo;
+import org.dromara.lqg.doc.pdf.domain.vo.DocPagesImageVo;
 import org.dromara.lqg.doc.pdf.domain.vo.DocPagesVo;
 import org.dromara.lqg.doc.render.DocKinds;
 import org.dromara.lqg.doc.render.domain.vo.DocDownloadVo;
 import org.dromara.lqg.doc.service.DocExternalQueryService;
 import org.dromara.lqg.doc.service.DocExternalQueryService.DocExternalRow;
 import org.dromara.lqg.ext.domain.bo.ExtDocQueryBo;
+import org.dromara.lqg.ext.domain.vo.ExtDocAttachmentVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocDownloadVo;
+import org.dromara.lqg.ext.domain.vo.ExtDocImageVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocPageItemVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocPagesVo;
 import org.dromara.lqg.ext.domain.vo.ExtDocVo;
@@ -125,10 +129,11 @@ public class ExtDocAssemblyService {
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * 预览：页面图（10 分钟签名链接）。
+     * 预览：页面图 + 文档中的图片（原图 / 预览图）+ 附件（10 分钟签名链接）。
      *
      * <p>★ 先 {@code assertVisible} 再判「有没有这一份」：异组用户猜 id → 404，
-     * 看得见但那份是草稿 / 没渲染成功 → 也是 404。
+     * 看得见但那份是草稿 / 没渲染成功 → 也是 404。图片与附件的签发咽喉在 doc 域读口
+     * （{@code DocExternalQueryService#pages} → {@code DocPagesService}），这里只拼装。
      */
     public ExtDocPagesVo pages(Long userId, Long sampleId, String docKind) {
         extScopeService.assertVisible(userId, sampleId);
@@ -143,6 +148,20 @@ public class ExtDocAssemblyService {
             }
         }
         vo.setPages(pages);
+        List<ExtDocImageVo> images = new ArrayList<>();
+        if (src.getImages() != null) {
+            for (DocPagesImageVo image : src.getImages()) {
+                images.add(new ExtDocImageVo(image.getUrl(), image.getPreviewUrl()));
+            }
+        }
+        vo.setImages(images);
+        List<ExtDocAttachmentVo> attachments = new ArrayList<>();
+        if (src.getAttachments() != null) {
+            for (DocPagesAttachmentVo attachment : src.getAttachments()) {
+                attachments.add(new ExtDocAttachmentVo(attachment.getFileName(), attachment.getFileSize(), attachment.getUrl()));
+            }
+        }
+        vo.setAttachments(attachments);
         return vo;
     }
 

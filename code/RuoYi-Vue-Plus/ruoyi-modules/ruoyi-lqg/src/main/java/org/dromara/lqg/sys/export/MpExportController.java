@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  * GET /mp/int/export/tissue     按当前筛选导出「样本记录信息表」xlsx（14 列）
- * GET /mp/int/export/organoid   按当前筛选导出「类器官收样记录」xlsx（7 列）
+ * GET /mp/int/export/organoid   按当前筛选导出「类器官收样记录」xlsx（模板 7 列 + 插入列）
  * GET /mp/int/export/embed      按当前筛选导出「石蜡包埋送样记录」xlsx（16 列）
  * GET /mp/int/export/cryo       按当前筛选导出「-80 冻存」xlsx（9 + 2 列）
  *      · 查询参数 = 对应工作表 list 的筛选参数（与 /mp/int/{sample,embed}/list、

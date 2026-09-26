@@ -12,7 +12,7 @@
 // ★ **筛选参数名与表格页各表 list 逐字相同**（ticket §0 口径 2：用户筛了什么就导出什么）：
 //   · 样本两张表：`keyword` / `verifyStatus`（= `GET /mp/int/sample/list` 的那两个）
 //   · 石蜡包埋：`keyword` / `verifyStatus` / `stain`
-//   · -80 冻存：`overdueOnly`（-80 超期页签）/ `location='ln2'`（液氮页签）
+//   · -80 冻存：`overdueOnly`（-80 超期页签）/ `location='ln2'`（液氮页签）/ `emptiedOnly`（已取空页签）
 //   · 空值一律**不带这个参数**（带了空串会被后端当成「筛空串」，行数就不是全部）
 //
 // ★ 为什么要拼**相对**地址：根地址的判据只有一处（`utils/baseUrl.ts`）。本文件保持纯函数，
@@ -64,9 +64,10 @@ function queryOf(sheet: ExportSheet, filters?: Partial<LedgerFilters> | null): s
       push(pairs, 'stain', f.stain)
       break
     case 'cryo':
-      // 三个页签：全部（都不带）/ -80 超期（overdueOnly=true）/ 液氮（location=ln2）
+      // 四个页签：全部（都不带）/ -80 超期（overdueOnly=true）/ 液氮（location=ln2）/ 已取空（emptiedOnly=true）
       push(pairs, 'overdueOnly', f.cryoView === 'overdue' ? 'true' : '')
       push(pairs, 'location', f.cryoView === 'ln2' ? 'ln2' : '')
+      push(pairs, 'emptiedOnly', f.cryoView === 'emptied' ? 'true' : '')
       break
   }
   return pairs.length > 0 ? `?${pairs.join('&')}` : ''

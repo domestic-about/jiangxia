@@ -2,7 +2,7 @@
 //
 //   node probe.mjs H1a   → SYS-EXPORT-001  · 导出请求真发一次：请求头必须带 Authorization + clientid，且 200/真 xlsx
 //   node probe.mjs H1b   → SYS-EXPORT-001  · 文档下载真点一次：OSS 直链请求**不带** Authorization，且 200
-//   node probe.mjs H2    → SYS-HOME-001    · 真 DOM 读五张卡片数字 == 同一次 /lqg/home/todo 的返回值
+//   node probe.mjs H2    → SYS-HOME-001    · 真 DOM 读六张卡片数字 == 同一次 /lqg/home/todo 的返回值（CR-20260924-10 起待核验样本拆成两张）
 //   node probe.mjs H3b   → DOC-MP-002      · 点缩略图后打开层拿到的 src == 原图 url（且 ≠ previewUrl）
 //   node probe.mjs H4    → DOC-PUBLISH-001 · 真 DOM 数下载入口恰好 4 个，且各自 format/合并位正确
 //
@@ -182,13 +182,13 @@ async function h2() {
   const apiData = last?.body?.data || null
   c.note('api_get_lqg_home_todo', { url: last?.url || '(没抓到)', status: last?.status ?? null, data: apiData })
   c.note('dom_cards', cards)
-  c.rec('H2:真 DOM 渲染出五张待办卡片', cards.length === 5, JSON.stringify(cards.map(x => x.title)))
+  c.rec('H2:真 DOM 渲染出六张待办卡片', cards.length === 6, JSON.stringify(cards.map(x => x.title)))
   c.rec('H2:抓到同一次 /lqg/home/todo 的响应（判据的另一侧是真接口返回值）',
     !!apiData, JSON.stringify({ n: todo.length, data: apiData }))
 
   const map = [
-    ['样本', 'pendingSamples'], ['石蜡', 'pendingEmbeds'], ['超期', 'cryoOverdue'],
-    ['外部', 'pendingExtUsers'], ['渲染', 'renderFailed'],
+    ['样本记录', 'pendingTissue'], ['类器官收样', 'pendingOrganoid'], ['石蜡', 'pendingEmbeds'],
+    ['超期', 'cryoOverdue'], ['外部', 'pendingExtUsers'], ['渲染', 'renderFailed'],
   ]
   const pairs = []
   if (apiData) {

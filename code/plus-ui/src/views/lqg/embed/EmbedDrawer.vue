@@ -21,6 +21,8 @@
           </template>
           <div>{{ sampleOk ? t('lqg.embed.drawer.sampleVerifiedTip') : t('lqg.embed.drawer.sampleNotVerified', { status: sampleStatusText }) }}</div>
           <div class="lqg-embed-drawer__hint">{{ t('lqg.embed.drawer.verifyHint') }}</div>
+          <!-- FIX V02b：抽屉里补填的内容随「判为有效并保存」同一次保存（以前显示成可填、实际被静默丢弃） -->
+          <div class="lqg-embed-drawer__hint">{{ fillText(locale, 'fillHint') }}</div>
         </el-alert>
 
         <!-- ① 包埋信息 -->
@@ -193,6 +195,15 @@
 
     <!-- 判无效的原因（外部看得到这句话） -->
     <el-dialog v-model="invalidDialog.visible" :title="t('lqg.embed.drawer.invalidReasonTitle')" width="460px" append-to-body>
+      <!-- FIX V02b：判为无效不收实验室补填的那 13 项 —— 抽屉里改过的，这里明说不会保存（不静默丢） -->
+      <el-alert
+        v-if="invalidDialog.dropped.length"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="mb8 lqg-embed-drawer__dropped"
+        :title="fillText(locale, 'invalidDropsLab', { fields: invalidDialog.dropped.join(locale === 'en_US' ? ', ' : '、') })"
+      />
       <el-form ref="invalidRef" :model="invalidDialog" :rules="invalidRules" label-width="90px">
         <el-form-item :label="t('lqg.embed.drawer.invalidReason')" prop="reason">
           <el-input
@@ -224,16 +235,18 @@ import {
   verifyEmbed,
   isExternalPending
 } from '@/api/lqg/embed';
-import type { EmbedForm, EmbedMarkerVO, EmbedVO } from '@/api/lqg/embed';
+import type { EmbedFillForm, EmbedForm, EmbedMarkerVO, EmbedVO } from '@/api/lqg/embed';
 import { listSamples } from '@/api/lqg/sample';
 import type { SampleVO } from '@/api/lqg/sample';
 import { STAIN_ORDER, hasOtherStain, stainProblem, toggleStain } from './stain';
+import { fillText, invalidFill, labChanges } from './verifyFill';
+import type { FillLabKey } from './verifyFill';
 import { useI18n } from 'vue-i18n';
 
 const emit = defineEmits<{ (e: 'saved'): void }>();
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { lqg_stain_type, lqg_marker_expr, lqg_verify_status } = toRefs<any>(
   proxy?.useDict('lqg_stain_type', 'lqg_marker_expr', 'lqg_verify_status')
 );
@@ -293,7 +306,10 @@ const emptyForm = (): EmbedForm & Partial<EmbedVO> => ({
 
 const form = ref<ReturnType<typeof emptyForm>>(emptyForm());
 const markers = ref<EmbedMarkerVO[]>([]);
-const invalidDialog = reactive<{ visible: boolean; reason: string }>({ visible: false, reason: '' });
+/** 判无效弹窗：原因 + 抽屉里改过、却不会随判无效保存的实验室补填项（中文名，FIX V02b） */
+const invalidDialog = reactive<{ visible: boolean; reason: string; dropped: string[] }>({ visible: false, reason: '', dropped: [] });
+/** 打开抽屉那一刻的补填段（判无效前据此算「改过的实验室补填项」，FIX V02b） */
+const fillSnapshot = ref<EmbedFillForm | null>(null);
 
 const title = computed(() =>
   mode.value === 'create'
@@ -339,11 +355,22 @@ const invalidRules: ElFormRules = {
 
 // ── 打开 ────────────────────────────────────────────────────────────────────
 
-const openAdd = () => {
+/**
+ * 新增。
+ *
+ * @param presetSample 石蜡包埋页正「只看某个样本」时带进来（2026-09-24 本机验收「新增默认挂这个样本」）：
+ *                     下拉里先放好这一项并选中、带出收样 / 处理时间，仍可改选别的样本。
+ *                     调用方只传已核验有效的样本（下拉本来就只列有效样本）。
+ */
+const openAdd = (presetSample?: SampleVO | null) => {
   mode.value = 'create';
   form.value = emptyForm();
   markers.value = [];
-  sampleOptions.value = [];
+  sampleOptions.value = presetSample ? [presetSample] : [];
+  if (presetSample) {
+    form.value.sampleId = presetSample.id;
+    handleSampleChange(presetSample.id);
+  }
   visible.value = true;
 };
 
@@ -359,6 +386,7 @@ const open = async (row: EmbedVO) => {
     if (markers.value.length === 0) {
       addMarker();
     }
+    fillSnapshot.value = JSON.parse(JSON.stringify(fillPayload())) as EmbedFillForm;
   } catch {
     proxy?.$modal.msgError(t('lqg.embed.drawer.loadFailed'));
   } finally {
@@ -371,6 +399,8 @@ const handleClosed = () => {
   markers.value = [];
   invalidDialog.visible = false;
   invalidDialog.reason = '';
+  invalidDialog.dropped = [];
+  fillSnapshot.value = null;
 };
 
 // ── 选样本（远程搜索，只列已核验有效的样本） ─────────────────────────────────
@@ -426,11 +456,15 @@ const removeMarker = (index: number) => {
 
 // ── 提交 ────────────────────────────────────────────────────────────────────
 
-const payload = (): EmbedForm => {
+/**
+ * 补填段（15 项，FIX V02b）：抽屉里除所挂样本与石蜡块编号以外的全部内容。
+ *
+ * ★ 普通保存（payload）与核验时的 `fill` 用的是**这同一份**取值 —— 后端也是同一份规则（EmbedFillWriter），
+ *   不会出现「保存存得进、核验存不进」或反过来。
+ */
+const fillPayload = (): EmbedFillForm => {
   const f = form.value;
-  const body: EmbedForm = {
-    sampleId: f.sampleId ?? null,
-    paraffinBlockNo: f.paraffinBlockNo ?? null,
+  const body: EmbedFillForm = {
     sampleType: f.sampleType ?? null,
     organoidSourceType: f.organoidSourceType ?? null,
     tissueReceiveTime: f.tissueReceiveTime ?? null,
@@ -449,12 +483,23 @@ const payload = (): EmbedForm => {
   processFields.forEach((field: ProcessField) => {
     body[field] = (f[field] as string | null) ?? null;
   });
-  // markers 传了就整组替换（后端语义）；空数组 = 清空，所以只有非空时才带
+  // markers 传了就整组替换（后端语义）；只带填过的行（名称或表达有一个就算），全空 = 清空
   body.markers = markers.value
     .filter((m) => (m.markerName ?? '').trim() || (m.expression ?? ''))
     .map((m) => ({ markerName: (m.markerName ?? '').trim() || null, expression: m.expression ?? null }));
   return body;
 };
+
+/** 普通保存（POST / PUT /lqg/embed）的整份表单 = 所挂样本 + 石蜡块编号 + 补填段 */
+const payload = (): EmbedForm => ({
+  sampleId: form.value.sampleId ?? null,
+  paraffinBlockNo: form.value.paraffinBlockNo ?? null,
+  ...fillPayload()
+});
+
+/** 实验室补填项的界面名（沿用抽屉里的字段标签） */
+const LAB_LABEL_KEY: Partial<Record<FillLabKey, string>> = { stainTypes: 'stain', markers: 'marker' };
+const labLabel = (key: FillLabKey) => t('lqg.embed.drawer.' + (LAB_LABEL_KEY[key] ?? key));
 
 const validateStain = (): boolean => {
   const problem = stainProblem(form.value.stainTypes, form.value.stainOther);
@@ -514,10 +559,11 @@ const submitSave = async () => {
  *    = `verifyStatus === 'valid'`）才保留「先保存再核验」的顺序。核验抽屉打开的都是
  *    `isExternalPending` 的行（pending / invalid）→ 这里恒为 false；留这条分支是给
  *    「已生效记录的改判」这类入口用的：那种情况下抽屉里补填的工序 / 染色才存得进去。
- * 3. 核验抽屉里补填的工序 / 染色 / marker 本次不落库：契约里 `EmbedVerifyBo` 只收
- *    action / paraffinBlockNo / reason（doc/api-contract.md 第 62 行）。核验通过后这行变成
- *    `valid`（可普通保存），从列表点「编辑」补填即可 —— 抽屉顶部提示也是这么写的
- *    （「之后照常补工序与染色」）。这里**不再**为了它们去发一个注定被拒的 PUT。
+ * 3. 核验抽屉里补填的内容**随 verify 请求的 `fill` 一起送**（FIX V02b / issue #147）：以前
+ *    `EmbedVerifyBo` 只收 action / paraffinBlockNo / reason，工序 / 染色 / marker 等显示成可填、
+ *    实际被静默丢弃。现在后端把 `fill` 与核验结论拼进同一条 UPDATE（规则与普通保存同一份）：
+ *    「判为有效并保存」带整份补填段；「判为无效」只带样本类型、类器官来源类型（实验室补填的
+ *    13 项在核验有效后才补填，改过的会在原因弹窗里明说不保存）。这里**仍然不**先发普通保存。
  */
 const preSaveIfEditable = async () => {
   if (mode.value !== 'verify' || !form.value.id || !shouldSaveBeforeVerify(form.value)) {
@@ -537,10 +583,12 @@ const submitValid = async () => {
   submitting.value = true;
   try {
     await preSaveIfEditable();
-    // ★ 待核验的外部送样直接走 /verify，判有效的必填项（石蜡块编号）随这一次请求一起送
+    // ★ 待核验的外部送样直接走 /verify，判有效的必填项（石蜡块编号）随这一次请求一起送；
+    //   抽屉里补填的内容作为 fill 一并送（FIX V02b：以前被静默丢弃），后端同一事务保存
     await verifyEmbed(form.value.id as string | number, {
       action: 'valid',
-      paraffinBlockNo: (form.value.paraffinBlockNo ?? '').trim()
+      paraffinBlockNo: (form.value.paraffinBlockNo ?? '').trim(),
+      fill: fillPayload()
     });
     proxy?.$modal.msgSuccess(t('lqg.embed.drawer.verifiedValid'));
     visible.value = false;
@@ -555,6 +603,9 @@ const submitValid = async () => {
 
 const openInvalidDialog = () => {
   invalidDialog.reason = '';
+  // 抽屉里改过、却不会随判无效保存的实验室补填项：弹窗里明说（FIX V02b，不静默丢）。
+  // 没有快照（详情没读成功）就按「打开时全空」比，填了的一律算改过 —— 宁可多提示，不许漏
+  invalidDialog.dropped = labChanges(fillSnapshot.value ?? {}, fillPayload()).map(labLabel);
   invalidDialog.visible = true;
 };
 
@@ -566,8 +617,13 @@ const submitInvalid = () => {
     submitting.value = true;
     try {
       await preSaveIfEditable();
-      // ★ 与判有效同一条路：直接调 /verify，原因随这次请求一起送（不再先做必被拒的普通保存）
-      await verifyEmbed(form.value.id as string | number, { action: 'invalid', reason: invalidDialog.reason });
+      // ★ 与判有效同一条路：直接调 /verify，原因随这次请求一起送（不再先做必被拒的普通保存）；
+      //   样本类型、类器官来源类型的更正作为 fill 一并保存（FIX V02b），实验室补填项判无效不收
+      await verifyEmbed(form.value.id as string | number, {
+        action: 'invalid',
+        reason: invalidDialog.reason,
+        fill: invalidFill(fillPayload())
+      });
       proxy?.$modal.msgSuccess(t('lqg.embed.drawer.verifiedInvalid'));
       invalidDialog.visible = false;
       visible.value = false;

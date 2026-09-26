@@ -4,6 +4,7 @@
 // ★ 用例钉的是 ticket §0 口径 2「筛选参数与表格页当前筛选一致：用户筛了什么就导出什么，
 //   不筛就是全部」：所以每条都断言**整串**（多一个 `&` 也算不一致）。
 import { describe, expect, it } from 'vitest'
+import type { LedgerFilters } from '@/api/ledger'
 import { isExportSheet, EXPORT_PATH_PREFIX, exportFileName, exportUrl } from './export'
 
 describe('exportUrl(sheet, filters)', () => {
@@ -45,8 +46,11 @@ describe('exportUrl(sheet, filters)', () => {
   it('-80 冻存的三个页签：全部不带 / 超期 overdueOnly=true / 液氮 location=ln2', () => {
     expect(exportUrl('cryo', { cryoView: 'overdue' })).toBe('/mp/int/export/cryo?overdueOnly=true')
     expect(exportUrl('cryo', { cryoView: 'ln2' })).toBe('/mp/int/export/cryo?location=ln2')
+    // 2026-09-24 加的第四个页签：已取空
+    expect(exportUrl('cryo', { cryoView: 'emptied' })).toBe('/mp/int/export/cryo?emptiedOnly=true')
     // 两个页签不会同时生效（一个单选）
-    expect(exportUrl('cryo', { cryoView: 'overdue', location: 'ln2' }))
+    // （`location` 不是表格页的筛选键：故意夹带一个多余键，断它不会被原样拼进查询串 —— 用类型断言绕过多余属性检查）
+    expect(exportUrl('cryo', { cryoView: 'overdue', location: 'ln2' } as Partial<LedgerFilters>))
       .toBe('/mp/int/export/cryo?overdueOnly=true')
   })
 

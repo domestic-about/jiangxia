@@ -112,6 +112,134 @@ class DocTemplateContractTest {
     }
 
     @Test
+    @DisplayName("模板里没有甲方批注留下的高亮 / 彩色底纹（独立验收 V11：成品里曾带亮绿底），版本号已加一")
+    void templatesCarryNoAnnotationHighlight() throws Exception {
+        for (String kind : DocKinds.TEMPLATED) {
+            try (java.util.zip.ZipInputStream zip = new java.util.zip.ZipInputStream(
+                new ByteArrayInputStream(DocTemplate.bytes(kind)))) {
+                java.util.zip.ZipEntry entry;
+                while ((entry = zip.getNextEntry()) != null) {
+                    if (!entry.getName().endsWith(".xml")) {
+                        continue;
+                    }
+                    String xml = new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    assertFalse(xml.contains("<w:highlight"),
+                        kind + " 的 " + entry.getName() + " 里还有 w:highlight（甲方批注的绿色高亮会印进成品）");
+                    java.util.regex.Matcher shd = Pattern.compile("<w:shd [^>]*w:fill=\"([0-9A-Fa-f]{6})\"").matcher(xml);
+                    while (shd.find()) {
+                        assertEquals("FFFFFF", shd.group(1).toUpperCase(),
+                            kind + " 的 " + entry.getName() + " 里有彩色底纹 " + shd.group(1));
+                    }
+                }
+            }
+        }
+        // 去高亮 = 换模板文件 → 版本号加一（指纹随之失效，下次渲染用新模板；V11 之前是 2）
+        assertTrue(Integer.parseInt(DocTemplate.version()) >= 3, "模板改过之后版本号要加一，当前：" + DocTemplate.version());
+    }
+
+    @Test
+    @DisplayName("G 批 C 组：模板保留甲方原件的字体（宋体 / Times New Roman），不再写死容器字体；版本号 ≥ 4")
+    void templatesKeepTheClientsFonts() throws Exception {
+        for (String kind : DocKinds.TEMPLATED) {
+            for (String part : List.of("word/document.xml", "word/styles.xml", "word/theme/theme1.xml")) {
+                String xml = part(kind, part);
+                assertFalse(xml.contains("Noto Serif SC") || xml.contains("Tinos"),
+                    kind + " 的 " + part + " 里还写着容器字体（下载的 Word 在甲方电脑上会被别的字体顶替）");
+            }
+            String doc = part(kind, "word/document.xml");
+            assertTrue(doc.contains("w:eastAsia=\"宋体\""), kind + " 的中文字体应是原件的宋体");
+            assertTrue(doc.contains("Times New Roman"), kind + " 的拉丁字体应是原件的 Times New Roman");
+        }
+        assertTrue(Integer.parseInt(DocTemplate.version()) >= 4, "换回原件字体 = 换模板文件，版本号要加一：" + DocTemplate.version());
+    }
+
+    @Test
+    @DisplayName("G 批 C 组：评分表末尾不留空段落（加了合计行后它会被挤到第二页，单独导出多一张空白页）")
+    void scoreTemplateHasNoTrailingEmptyParagraph() throws Exception {
+        String xml = part(DocKinds.ORGANOID_SCORE, "word/document.xml");
+        String body = xml.substring(0, xml.lastIndexOf("<w:sectPr"));
+        String last = body.substring(body.lastIndexOf("<w:p "));
+        assertTrue(last.contains("<w:t"), "评分表正文最后一段应是那句「注」，不是空段落：" + last.substring(0, Math.min(200, last.length())));
+    }
+
+    @Test
+    @DisplayName("G 批 C 组：样本质控表的三个图片行不跨页断开（放了图的那一行整行挪页，不会一张图在上一页、一张在下一页）")
+    void sampleImageRowsDoNotSplitAcrossPages() throws Exception {
+        String xml = part(DocKinds.SAMPLE_QC, "word/document.xml");
+        for (String slot : List.of("orig", "observe", "pretreat")) {
+            int tag = xml.indexOf("{{@" + slot + "_img1}}");
+            String rowHead = xml.substring(xml.lastIndexOf("<w:tr ", tag), tag);
+            assertTrue(rowHead.contains("<w:cantSplit/>"), slot + " 所在行没有 cantSplit");
+        }
+    }
+
+    @Test
+    @DisplayName("图片位「能放图的框」放得进格子：宽 ≤ 格宽扣左右单元格边距，高 ≤ 模板这一行的最小行高 —— 图排完不撑破格子")
+    void imageBoxFitsInsideTheCell() throws Exception {
+        assertFits(DocKinds.SAMPLE_QC, "orig");
+        assertFits(DocKinds.SAMPLE_QC, "observe");
+        assertFits(DocKinds.SAMPLE_QC, "pretreat");
+        assertFits(DocKinds.ORGANOID_QC, "organoid_observe");
+    }
+
+    private static String part(String kind, String name) throws Exception {
+        try (java.util.zip.ZipInputStream zip = new java.util.zip.ZipInputStream(
+            new ByteArrayInputStream(DocTemplate.bytes(kind)))) {
+            java.util.zip.ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.getName().equals(name)) {
+                    return new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                }
+            }
+        }
+        return "";
+    }
+
+    /** 从模板量出「占位符所在格子」的可用宽度与最小行高（twips），与渲染器用的框（px ×15）比。 */
+    private static void assertFits(String kind, String slot) throws Exception {
+        String xml = part(kind, "word/document.xml");
+        java.util.List<Integer> grid = new java.util.ArrayList<>();
+        java.util.regex.Matcher col = Pattern.compile("<w:gridCol w:w=\"(\\d+)\"").matcher(
+            xml.substring(xml.indexOf("<w:tblGrid>"), xml.indexOf("</w:tblGrid>")));
+        while (col.find()) {
+            grid.add(Integer.parseInt(col.group(1)));
+        }
+        java.util.regex.Matcher mar = Pattern.compile(
+            "<w:tblCellMar>.*?<w:left w:w=\"(\\d+)\".*?<w:right w:w=\"(\\d+)\"", Pattern.DOTALL).matcher(xml);
+        assertTrue(mar.find(), kind + " 模板里找不到 tblCellMar");
+        int margins = Integer.parseInt(mar.group(1)) + Integer.parseInt(mar.group(2));
+        int tag = xml.indexOf("{{@" + slot + "_img1}}");
+        assertTrue(tag > 0, kind + " 模板里没有 " + slot + " 的图片占位符");
+        String row = xml.substring(xml.lastIndexOf("<w:tr", tag), xml.indexOf("</w:tr>", tag));
+        int start = 0;
+        int span = 1;
+        java.util.regex.Matcher tc = Pattern.compile("<w:tc>(.*?)</w:tc>", Pattern.DOTALL).matcher(row);
+        while (tc.find()) {
+            java.util.regex.Matcher gs = Pattern.compile("<w:gridSpan w:val=\"(\\d+)\"").matcher(tc.group(1));
+            int s = gs.find() ? Integer.parseInt(gs.group(1)) : 1;
+            if (tc.group(1).contains("{{@" + slot + "_img1}}")) {
+                span = s;
+                break;
+            }
+            start += s;
+        }
+        int cellTwips = 0;
+        for (int i = start; i < start + span; i++) {
+            cellTwips += grid.get(i);
+        }
+        int usable = cellTwips - margins;
+        int[] box = DocxRenderer.SLOT_BOX_PX.get(slot);
+        int renderTwips = box[0] * 15;
+        assertTrue(renderTwips <= usable, kind + "/" + slot + "：框宽 " + renderTwips + " twips 超过格子可用宽度 "
+            + usable + " twips（格宽 " + cellTwips + " − 边距 " + margins + "）");
+        java.util.regex.Matcher h = Pattern.compile("<w:trHeight w:val=\"(\\d+)\"").matcher(row);
+        assertTrue(h.find(), kind + "/" + slot + " 所在行没有最小行高");
+        int rowTwips = Integer.parseInt(h.group(1));
+        assertTrue(box[1] * 15 <= rowTwips, kind + "/" + slot + "：框高 " + box[1] * 15 + " twips 超过模板行高 " + rowTwips
+            + " twips（图会把这一行撑高、表格被推到下一页）");
+    }
+
+    @Test
     @DisplayName("模板里的占位符语法是 poi-tl 的 {{…}}（docx_check 的 --no-placeholder 也认这个）")
     void placeholderSyntax() {
         assertTrue(Pattern.compile("\\{\\{[^}]+}}").matcher("{{patient_no}}").find());

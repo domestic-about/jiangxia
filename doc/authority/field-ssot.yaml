@@ -141,14 +141,15 @@ tables:
       - { name: verify_by, type: id, nullable: true, comment: "核验人 user_id" }
       - { name: verify_time, type: datetime, nullable: true, comment: "核验时间" }
       - { name: invalid_reason, type: str, length: 200, nullable: true, comment: "判无效的原因（外部可见）" }
-      - { name: source_unit_id, type: id, nullable: true, comment: "FK→t_lqg_source_unit.id；自填单位名时为空" }
+      - { name: source_unit_id, type: id, nullable: true, comment: "FK→t_lqg_source_unit.id；自填单位名时为空。外部提交时后端按提交人绑定的单位挂 id（单位名与绑定单位同名即挂），只接受本人绑定的单位；实验室核验时可改选正式单位归口（CR-20260923-09）" }
       - { name: source_unit_name, type: str, length: 100, nullable: false, comment: "来源单位名称（导出用；选了单位就存单位名快照）" }
-      - { name: donor_name, type: str, length: 255, nullable: true, comment: "★ 供体姓名，@EncryptField 加密落库（ADR-0006），只支持精确查询；organoid 类可空" }
+      - { name: donor_name, type: str, length: 255, nullable: true, comment: "★ 供体姓名，加密落库（ADR-0006，实现为 SampleFieldCipher 手工加解密，与 @EncryptField 等价），只支持精确查询；外部提交的组织样本必填，内部录入选填（后端校验，CR-20260923-09）；organoid 类可空" }
       - { name: gender, type: dict, length: 16, dict: lqg_gender, nullable: true, comment: "性别 male / female / unknown" }
       - { name: age, type: str, length: 20, nullable: true, comment: "年龄（文本：56 / 3月龄，模板没限定单位）" }
       - { name: hospital_no, type: str, length: 255, nullable: true, comment: "★ 住院号，@EncryptField 加密落库（ADR-0006），只支持精确查询" }
       - { name: tissue_type, type: str, length: 100, nullable: true, comment: "组织类型（tissue 类必填；自由文本，联想词来自字典 lqg_hint_tissue_type——不用历史值联想，防止外部看到别的单位填过的内容）" }
       - { name: organoid_type, type: str, length: 100, nullable: true, comment: "类器官类型（organoid 类必填；自由文本，联想词来自字典 lqg_hint_organoid_type）" }
+      - { name: passage, type: str, length: 10, nullable: true, comment: "代数（类器官收样记录才有，紧跟类器官类型；选填，形如 P3，去空格、小写 p 转大写后按冻存批次代数同一规则 ^P\\d{1,3}$ 校验）；属于送检段：外部可填、待核验 / 无效时可改，核验时实验室可改，外部看得到；组织样本恒为空（写路径一律写 NULL）。迁移 V202609281000（CR-20260924-10）" }
       - { name: has_pathology, type: flag, nullable: true, comment: "有无病理 Y / N（模板批注 N5 前半句；不进 14 列导出）" }
       - { name: receive_date, type: date, nullable: true, comment: "收样日期（内部填；核验为 valid 时必填）" }
       - { name: internal_no, type: str, length: 64, nullable: true, unique: uk_sample_internal_no, comment: "★ 内部编号：内部手填、全库唯一、贯穿到冻存；pending 的外部样本为空；默认不出现在任何 Ext*Vo 里（ADR-0004）" }
@@ -189,7 +190,7 @@ tables:
       - { name: dehydrate_time, type: date, nullable: true, comment: "脱水时间" }
       - { name: agarose_send_time, type: date, nullable: true, comment: "琼脂糖包埋样本送样时间" }
       - { name: paraffin_embed_time, type: date, nullable: true, comment: "石蜡包埋时间" }
-      - { name: section_time, type: date, nullable: true, comment: "切片时间（非空 = 已切片，总表的切片染色提示读它）" }
+      - { name: section_time, type: date, nullable: true, comment: "切片时间（非空 = 已切片，样本表（样本记录信息表 / 类器官收样记录两页）的切片染色提示读它）" }
       - { name: stain_types, type: str, length: 64, nullable: true, comment: "★ 染色，多选，逗号分隔的 lqg_stain_type 值（HE,IF,IHC,OTHER / NONE）；NONE 与其余互斥；空 = 还没选" }
       - { name: stain_other, type: str, length: 100, nullable: true, comment: "选了 OTHER 时写具体染色名" }
       - { name: operator_name, type: str, length: 50, nullable: true, comment: "操作人" }
@@ -269,7 +270,7 @@ tables:
       - { name: sampling_method, type: str, length: 100, nullable: true, comment: "取样方式" }
       - { name: clinical_diagnosis, type: text, nullable: true, comment: "临床诊断/既往治疗" }
       - { name: receive_desc, type: str, length: 500, nullable: true, comment: "收样描述（新建时默认填模板原文：样本按质控要求，保持2-8℃低温环境运输至实验室。）" }
-      - { name: viability_oss_id, type: id, nullable: true, comment: "细胞活率测定附件 FK→sys_oss.oss_id（文档里这一格印文件名，不做 OLE 嵌入）" }
+      - { name: viability_oss_id, type: id, nullable: true, comment: "细胞活率测定附件 FK→sys_oss.oss_id。★ 文档里这一格嵌入附件本身（CR-20260924-11）：Word 里是 OLE Package，显示文件图标 + 文件名，在 Word / WPS 里双击打开；PDF 与预览图里是图标 + 文件名；大于 20MB 不嵌、只印文件名并注明去附件里看。私有桶，对外只发短时签名链接" }
       - { name: viability_file_name, type: str, length: 200, nullable: true, comment: "细胞活率测定附件的原始文件名" }
       - { name: orig_desc, type: text, nullable: true, comment: "收样原始情况 · 情况描述" }
       - { name: observe_desc, type: text, nullable: true, comment: "样本观察情况 · 情况描述（默认模板原文：样本外观呈黄白色。）" }
@@ -328,8 +329,8 @@ tables:
       - { name: doc_type, type: dict, length: 16, dict: lqg_doc_type, nullable: false, comment: "sample_qc / organoid_qc（评分表没有图片位）" }
       - { name: doc_id, type: id, nullable: false, comment: "对应质控文档表的主键" }
       - { name: slot, type: dict, length: 24, dict: lqg_image_slot, nullable: false, comment: "orig / observe / pretreat（样本质控表）｜organoid_observe（类器官质控表）" }
-      - { name: oss_id, type: id, nullable: false, comment: "原图 FK→sys_oss.oss_id（预览页点开看的就是它）" }
-      - { name: preview_oss_id, type: id, nullable: true, comment: "预览图 FK→sys_oss.oss_id（长边 ≤ 2000px 的 JPEG；TIFF 等浏览器打不开的格式靠它显示；进 Word 的也是它）" }
+      - { name: oss_id, type: id, nullable: false, comment: "原图 FK→sys_oss.oss_id（预览页点开看的就是它）。私有桶；对外（含工作台质控编辑页）只发短时签名链接（CR-20260924-11）" }
+      - { name: preview_oss_id, type: id, nullable: true, comment: "预览图 FK→sys_oss.oss_id（长边 ≤ 2000px 的 JPEG；TIFF 等浏览器打不开的格式靠它显示；进 Word 的也是它）。私有桶；对外只发短时签名链接（CR-20260924-11）" }
       - { name: sort, type: int, nullable: false, default: "0", comment: "同一图片位内的顺序" }
     indexes:
       - { name: idx_doc_image_doc, cols: [doc_type, doc_id, slot] }
@@ -343,7 +344,7 @@ tables:
       - { name: id, type: id, nullable: false, comment: "主键" }
       - { name: doc_type, type: dict, length: 16, dict: lqg_doc_type, nullable: false, comment: "sample_qc / organoid_qc / organoid_score" }
       - { name: doc_id, type: id, nullable: false, comment: "对应质控文档表的主键" }
-      - { name: oss_id, type: id, nullable: false, comment: "FK→sys_oss.oss_id" }
+      - { name: oss_id, type: id, nullable: false, comment: "FK→sys_oss.oss_id。私有桶；对外（含工作台质控编辑页）只发短时签名链接（CR-20260924-11）" }
       - { name: file_name, type: str, length: 200, nullable: false, comment: "原始文件名" }
       - { name: file_size, type: int, nullable: false, comment: "字节数（单个 ≤ 50MB）" }
       - { name: sort, type: int, nullable: false, default: "0", comment: "显示顺序" }
@@ -359,14 +360,17 @@ tables:
       - { name: id, type: id, nullable: false, comment: "主键" }
       - { name: sample_id, type: id, nullable: false, unique: uk_doc_file, comment: "FK→t_lqg_sample.id" }
       - { name: doc_kind, type: dict, length: 16, dict: lqg_doc_kind, nullable: false, unique: uk_doc_file, comment: "sample_qc / organoid_qc / organoid_score / merged" }
-      - { name: audience, type: dict, length: 16, dict: lqg_doc_audience, nullable: false, unique: uk_doc_file, comment: "★ internal 内部版（含内部编号）/ external 外部版（内部编号按开关留空）；外部接口只许取 external" }
+      - { name: audience, type: dict, length: 16, dict: lqg_doc_audience, nullable: false, unique: uk_doc_file, comment: "★ internal 内部版（一直印内部编号）/ external 外部版（「内部编号」一格随系统参数 lqg.ext.show-internal-no：开印、关留空，CR-20260924-10）；外部接口只许取 external" }
       - { name: file_format, type: dict, length: 8, dict: lqg_file_format, nullable: false, unique: uk_doc_file, comment: "docx / pdf / png" }
       - { name: page_no, type: int, nullable: false, default: "0", unique: uk_doc_file, comment: "png 的页码（从 1 起）；docx / pdf 恒为 0" }
       - { name: oss_id, type: id, nullable: true, comment: "产物 FK→sys_oss.oss_id（私有桶；对外只发短时签名链接）" }
-      - { name: content_hash, type: str, length: 64, nullable: false, comment: "★ 内容指纹 = sha256(文档各字段 + 图片 oss_id 列表 + 模板版本 + audience)；与当前算出的不一致 = 缓存过期，必须重出" }
+      - { name: content_hash, type: str, length: 64, nullable: false, comment: "★ 内容指纹 = sha256(文档各字段 + 图片 oss_id 列表 + 嵌进 Word 的细胞活率附件 oss_id（CR-20260924-11，换附件必重出） + 模板版本 + audience + 「内部编号」一格印没印)；与当前算出的不一致 = 缓存过期，必须重出。开关切换 → 外部版样本质控表与合并件的指纹随之变（CR-20260924-10）" }
       - { name: template_version, type: str, length: 20, nullable: false, comment: "渲染所用模板版本号" }
       - { name: render_status, type: dict, length: 16, dict: lqg_render_status, nullable: false, default: "pending", comment: "pending / done / failed" }
       - { name: error_msg, type: str, length: 500, nullable: true, comment: "失败原因（工作台可见、可重试）" }
       - { name: rendered_time, type: datetime, nullable: true, comment: "生成完成时间" }
+      - { name: missing_image_count, type: int, nullable: false, default: "0", comment: "内部版缺图张数；外部版有任一张图取不到即整份 failed（CR-20260923-09，裁定 #217）；计入工作台首页渲染异常数" }
+      - { name: missing_images, type: str, length: 500, nullable: true, comment: "缺了哪几张（图位与取不到的原因），工作台可见" }
+      - { name: show_internal_no, type: flag, nullable: false, default: "N", comment: "★ 这一版「内部编号」一格是否印出 Y / N（header 行 docx / page_no=0 上有意义），落 done 时与指纹同一次写下；外部版随系统参数 lqg.ext.show-internal-no，开关关着时印了内部编号（Y）的外部版在清单 / 预览 / 下载一律不对外、后台按新设置重出。迁移 V202609284001（CR-20260924-10）" }
     indexes:
       - { name: idx_doc_file_sample, cols: [sample_id, doc_kind, audience] }

@@ -70,4 +70,14 @@ public final class DocKinds {
     public static boolean isMerged(String docKind) {
         return MERGED.equals(docKind);
     }
+
+    /**
+     * 这个种类的模板里有没有「内部编号」一格 —— 只有样本质控表有（合并件看成员）。
+     *
+     * <p>★ 内部编号开关只影响有这一格的文档：类器官质控表 / 评分表切换开关不必重出，
+     * 开关关着时也不会因为「开关变了」被挡在外面。
+     */
+    public static boolean hasInternalNoCell(String docKind) {
+        return SAMPLE_QC.equals(docKind);
+    }
 }

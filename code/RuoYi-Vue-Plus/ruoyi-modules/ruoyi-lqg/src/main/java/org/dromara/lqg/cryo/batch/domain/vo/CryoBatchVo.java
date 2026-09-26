@@ -107,6 +107,15 @@ public class CryoBatchVo implements Serializable {
     @Schema(description = "所挂样本的核验状态（读时带出）")
     private String sampleVerifyStatus;
 
+    /**
+     * 所挂样本的类别（读时带出；样本软删 / 查不到时为 null）。
+     *
+     * <p>工作台「内部编号」点回样本用：组织样本回「样本记录信息表」、类器官回「类器官收样记录」
+     * （Kevin 本机验收意见：四张表之间要能双向回）。
+     */
+    @Schema(description = "所挂样本的类别 tissue / organoid（读时带出）")
+    private String sampleKind;
+
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
@@ -154,5 +163,24 @@ public class CryoBatchVo implements Serializable {
      */
     @Schema(description = "已超天数（读时算：今天 − 冻存日 − 阈值天数；阈值当天为 0，未超期为 null）")
     private Integer overdueDays;
+
+    /**
+     * ★ <b>已取空</b>（读时算，不落库）：剩余支数 ≤ 0（{@code CryoBalanceChecker.isEmptied}）。
+     *
+     * <p>2026-09-24 甲方「支数取空的要提示」：工作台列表、小程序表格与批次详情弹层的「已取空」标记
+     * 都认这一格，与筛选 {@code emptiedOnly}、页签计数 {@code tabCounts.emptied} 是<b>同一份剩余算式</b>
+     * （SQL 侧 {@code CryoOverdueSqlProvider.EMPTIED_WHERE}）。取空的批次永不超期（超期判定第 ③ 条）。
+     */
+    @Schema(description = "是否已取空（读时算：剩余 ≤ 0）")
+    private Boolean emptied;
+
+    /**
+     * 冻存到今天的自然天数（{@code 今天 − 冻存日}，读时算；冻存时间为空时为 null）。
+     *
+     * <p>小程序批次详情弹层「-80℃ 暂存 · 冻存 N 天」那一句用它 —— 天数只在后端按服务器日期算一次，
+     * 与 {@code overdueDays} 同一个时钟，前端不自己拿手机日期减（跨时区 / 手机日期不准时两个数会对不上）。
+     */
+    @Schema(description = "冻存到今天的天数（读时算）")
+    private Integer frozenDays;
 
 }

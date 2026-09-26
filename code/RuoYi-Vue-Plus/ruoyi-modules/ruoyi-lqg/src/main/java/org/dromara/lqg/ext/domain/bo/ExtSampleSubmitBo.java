@@ -22,6 +22,13 @@ import java.io.Serializable;
  * <p>★ 同样没有 {@code sampleKind} / {@code submitSource} / {@code verifyStatus} / {@code submitterId}：
  * 它们由服务端按端点与当前登录人写死（{@code tissue} / {@code external} / {@code pending} / 本人）。
  *
+ * <p>★ FIX V03（issue #88 / #111）：必填与格式在 service 里<b>写库之前</b>统一校验
+ * （{@code SubmitSegmentRules.submitViolations}，违规 {@code code=400} + 字段级提示），
+ * 不用 Bean Validation 注解 —— 那条路走全局异常处理，业务码是 500。规则一览：
+ * 来源单位（未选单位时名称必填，≤ 100 字）、供体姓名（必填，≤ 50 字）、组织类型（必填，≤ 100 字）、
+ * 性别（male / female / unknown）、年龄（≤ 20 字）、住院号（≤ 50 字）、有无病理（Y / N）、备注（≤ 500 字）。
+ * {@code sourceUnitId} 只能是提交人在「我的 → 单位与组别」绑定的单位（FIX V01），其他单位请填名称。
+ *
  * @author AUTH-EXT-001
  */
 @Data
@@ -31,31 +38,31 @@ public class ExtSampleSubmitBo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "来源单位 id（选了列表项时用）")
+    @Schema(description = "来源单位 id（只能是本人绑定的单位；不带时后端按单位名对上本人绑定的单位）")
     private Long sourceUnitId;
 
-    @Schema(description = "来源单位名称（列表里没有时自填）")
+    @Schema(description = "来源单位名称（未带 id 时必填，≤ 100 字）", maxLength = 100)
     private String sourceUnitName;
 
-    @Schema(description = "供体姓名")
+    @Schema(description = "供体姓名（必填，≤ 50 字）", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 50)
     private String donorName;
 
-    @Schema(description = "性别 male / female / unknown")
+    @Schema(description = "性别", allowableValues = {"male", "female", "unknown"})
     private String gender;
 
-    @Schema(description = "年龄（文本）")
+    @Schema(description = "年龄（文本，≤ 20 字）", maxLength = 20)
     private String age;
 
-    @Schema(description = "住院号")
+    @Schema(description = "住院号（≤ 50 字）", maxLength = 50)
     private String hospitalNo;
 
-    @Schema(description = "组织类型")
+    @Schema(description = "组织类型（必填，≤ 100 字）", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 100)
     private String tissueType;
 
-    @Schema(description = "有无病理 Y / N")
+    @Schema(description = "有无病理", allowableValues = {"Y", "N"})
     private String hasPathology;
 
-    @Schema(description = "备注")
+    @Schema(description = "备注（≤ 500 字）", maxLength = 500)
     private String remark;
 
 }

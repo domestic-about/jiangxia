@@ -13,9 +13,11 @@ import org.dromara.lqg.doc.render.mapper.DocFileMapper;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.mapper.EmbedMapper;
 import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.guard.SampleKindRules;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.verify.VerifyTransitions;
 import org.dromara.lqg.sys.home.domain.vo.HomeRecentVo;
+import org.dromara.lqg.sys.home.domain.vo.HomeRenderIssueVo;
 import org.dromara.lqg.sys.home.domain.vo.HomeTodoVo;
 import org.springframework.stereotype.Service;
 
@@ -26,11 +28,11 @@ import java.util.List;
  * 工作台首页的<b>计数唯一来源</b>（UI:admin.home，REQ-SYS-901）—— ticket §0 口径 2：
  *
  * <pre>
- * GET /lqg/home/todo    五个待办数（卡片与侧边菜单角标取同一次调用的结果）
+ * GET /lqg/home/todo    七个待办数（卡片与侧边菜单角标取同一次调用的结果）
  * GET /lqg/home/recent  最近提交 10 条
  * </pre>
  *
- * <p>★★ <b>五个数全部读时计算</b>（ticket §0 口径 1）：库里没有计数字段、没有缓存、没有定时刷新，
+ * <p>★★ <b>七个数全部读时计算</b>（ticket §0 口径 1）：库里没有计数字段、没有缓存、没有定时刷新，
  * 每一次请求都现查现算 —— 外部新交一条送样、有人核验掉一条、渲染由 failed 变 done，
  * 下一次请求的数字就跟着变（accept 1 会真造数据来验这一点）。
  *
@@ -39,10 +41,12 @@ import java.util.List;
  * <table border="1">
  *   <tr><th>数</th><th>取自</th><th>为什么不在这里写条件</th></tr>
  *   <tr>
- *     <td>{@code pendingSamples}</td>
- *     <td>{@link SampleMapper} + {@link VerifyTransitions#PENDING}</td>
- *     <td>核验状态的取值只有一个真相源（{@code VerifyTransitions}）；组织与类器官<b>都算</b>，
- *         所以条件里<b>没有</b> {@code sample_kind}（只数组织正是 accept 的 counterfeit）</td>
+ *     <td>{@code pendingTissue} / {@code pendingOrganoid} / {@code pendingSamples}</td>
+ *     <td>{@link SampleMapper} + {@link VerifyTransitions#PENDING} + {@link SampleKindRules}</td>
+ *     <td>核验状态的取值只有一个真相源（{@code VerifyTransitions}）。CR-20260924-10 把工作台样本总表
+ *         拆成两页、首页卡片拆成两张，所以<b>按类别各数一次</b>；{@code pendingSamples}
+ *         <b>不另查</b>，就是这两个数相加 —— 同一次响应里三个数必然对得上
+ *         （「只数组织」仍是 accept 的 counterfeit：总数必须两类都算）</td>
  *   </tr>
  *   <tr>
  *     <td>{@code pendingEmbeds}</td>
@@ -64,13 +68,13 @@ import java.util.List;
  *   </tr>
  *   <tr>
  *     <td>{@code renderFailed}</td>
- *     <td>★ {@link DocFileMapper#countFailedGroups()}</td>
- *     <td>DOC 域的读口（写在被调方）：一次渲染失败会写 <b>两行</b>（docx header + pdf），
- *         按行数数会翻倍 —— 口径是 (样本, 文档种类, 受众) <b>组数</b></td>
+ *     <td>★ {@link DocFileMapper#countRenderIssueGroups()}</td>
+ *     <td>DOC 域的读口（写在被调方）：渲染失败 + 内部版缺图，口径是 (样本, 文档种类, 受众) <b>组数</b>，
+ *         与首页「渲染失败与缺图」清单同一段 WHERE</td>
  *   </tr>
  * </table>
  *
- * <p>★ 读侧一律包 {@link DataPermissionHelper#ignore}：这五个数是<b>全中心</b>的待办
+ * <p>★ 读侧一律包 {@link DataPermissionHelper#ignore}：这些数是<b>全中心</b>的待办
  * （不是「我负责的那些」），带数据范围的上下文会把它们静默滤小，
  * 于是「首页显示 1 条、点进去列表里有 5 条」——AUTH-LOGIN-001 报告坑 1 踩过。
  *
@@ -103,12 +107,19 @@ public class HomeCounterService {
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * 五个待办数（每次调用现算）。
+     * 七个待办数（每次调用现算）。
+     *
+     * <p>★ {@code pendingSamples} 用<b>同一次</b>取到的两个分类数相加（不再单独数一遍）：
+     * 分开查的话，两次查询之间有人核验掉一条，就会出现「总数 ≠ 两张卡之和」。
      */
     public HomeTodoVo todo() {
         return DataPermissionHelper.ignore(() -> {
             HomeTodoVo vo = new HomeTodoVo();
-            vo.setPendingSamples(pendingSamples());
+            long tissue = pendingSamplesOf(SampleKindRules.KIND_TISSUE);
+            long organoid = pendingSamplesOf(SampleKindRules.KIND_ORGANOID);
+            vo.setPendingTissue(tissue);
+            vo.setPendingOrganoid(organoid);
+            vo.setPendingSamples(tissue + organoid);
             vo.setPendingEmbeds(pendingEmbeds());
             vo.setCryoOverdue(cryoOverdue());
             vo.setPendingExtUsers(pendingExtUsers());
@@ -118,15 +129,26 @@ public class HomeCounterService {
     }
 
     /**
-     * 待核验样本数：{@code t_lqg_sample} 里 {@code verify_status='pending'} 的<b>全部</b>行。
-     *
-     * <p>★ 组织（{@code sample_kind='tissue'}）与类器官（{@code 'organoid'}）都算 ——
-     * 2026-09-17 晚起外部也能交类器官收样记录（CR-20260917-05），所以<b>没有</b> kind 条件。
-     * <p>★ {@code del_flag='0'} 由 {@code @TableLogic} 兜住，本方法不手写。
+     * 待核验样本数 = 待核验组织样本 + 待核验类器官收样（两类都算 —— 2026-09-17 晚起外部也能交类器官
+     * 收样记录，CR-20260917-05）。给只要一个总数的调用方（小程序首页）用；工作台首页走 {@link #todo()}。
      */
     public Long pendingSamples() {
-        return sampleMapper.selectCount(new LambdaQueryWrapper<Sample>()
-            .eq(Sample::getVerifyStatus, VerifyTransitions.PENDING));
+        return pendingSamplesOf(SampleKindRules.KIND_TISSUE) + pendingSamplesOf(SampleKindRules.KIND_ORGANOID);
+    }
+
+    /**
+     * 某一类的待核验样本数：{@code verify_status='pending' AND sample_kind=<kind>}
+     * （CR-20260924-10：工作台「样本记录信息表」「类器官收样记录」两页各自的待办卡与菜单角标）。
+     *
+     * <p>★ {@code del_flag='0'} 由 {@code @TableLogic} 兜住，本方法不手写。
+     *
+     * @param kind {@link SampleKindRules#KIND_TISSUE} / {@link SampleKindRules#KIND_ORGANOID}
+     */
+    public long pendingSamplesOf(String kind) {
+        Long n = sampleMapper.selectCount(new LambdaQueryWrapper<Sample>()
+            .eq(Sample::getVerifyStatus, VerifyTransitions.PENDING)
+            .eq(Sample::getSampleKind, kind));
+        return n == null ? 0L : n;
     }
 
     /**
@@ -159,11 +181,53 @@ public class HomeCounterService {
     }
 
     /**
-     * 文档渲染失败数 —— DOC 域的读口 {@link DocFileMapper#countFailedGroups()}：
-     * {@code render_status='failed'} 的 (样本, 文档种类, 受众) <b>组数</b>。
+     * 文档渲染异常数 —— DOC 域的读口 {@link DocFileMapper#countRenderIssueGroups()}：
+     * 渲染失败（{@code render_status='failed'}）+ 内部版照出但缺图（#217 口径）的
+     * (样本, 文档种类, 受众) <b>组数</b>。JSON 键仍叫 {@code renderFailed}（契约键名不变）。
      */
     public Long renderFailed() {
-        return docFileMapper.countFailedGroups();
+        return docFileMapper.countRenderIssueGroups();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // GET /lqg/home/render-issues（独立验收 V29：渲染失败卡片点开的清单）
+    // ══════════════════════════════════════════════════════════════════════
+
+    /** 清单最多几行（异常积压时也不一次拉爆页面）。 */
+    public static final int RENDER_ISSUE_LIMIT = 200;
+
+    /**
+     * 渲染失败与缺图清单 —— 与 {@link #renderFailed()} 同一个 DOC 域读口的同一段 WHERE，
+     * 卡片上的数 == 清单行数（不超过上限时）。样本已软删的行不列（样本主档查不到）。
+     */
+    public List<HomeRenderIssueVo> renderIssues() {
+        return DataPermissionHelper.ignore(() -> {
+            List<DocFile> rows = docFileMapper.selectRenderIssues(RENDER_ISSUE_LIMIT);
+            List<HomeRenderIssueVo> out = new ArrayList<>(rows == null ? 0 : rows.size());
+            if (rows == null) {
+                return out;
+            }
+            for (DocFile row : rows) {
+                Sample sample = row.getSampleId() == null ? null : sampleMapper.selectById(row.getSampleId());
+                if (sample == null) {
+                    continue;
+                }
+                HomeRenderIssueVo vo = new HomeRenderIssueVo();
+                vo.setSampleId(row.getSampleId());
+                vo.setInternalNo(sample.getInternalNo());
+                vo.setSubmitNo(sample.getSubmitNo());
+                vo.setSourceUnitName(sample.getSourceUnitName());
+                vo.setDocKind(row.getDocKind());
+                vo.setAudience(row.getAudience());
+                vo.setIssue("failed".equals(row.getRenderStatus()) ? "failed" : "missing_images");
+                vo.setErrorMsg(row.getErrorMsg());
+                vo.setMissingImageCount(row.getMissingImageCount() == null ? 0 : row.getMissingImageCount());
+                vo.setMissingImages(row.getMissingImages());
+                vo.setTime(row.getUpdateTime() != null ? row.getUpdateTime() : row.getRenderedTime());
+                out.add(vo);
+            }
+            return out;
+        });
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -201,6 +265,7 @@ public class HomeCounterService {
         HomeRecentVo vo = new HomeRecentVo();
         vo.setSubmitTime(sample.getCreateTime());
         vo.setSubmitNo(sample.getSubmitNo());
+        vo.setSampleKind(sample.getSampleKind());
         vo.setSourceUnitName(sample.getSourceUnitName());
         vo.setSubmitSource(sample.getSubmitSource());
         vo.setVerifyStatus(sample.getVerifyStatus());

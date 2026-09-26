@@ -19,8 +19,12 @@
 #   H3b 点缩略图后打开层 src == 原图 url 且 ≠ previewUrl                          （DOC-MP-002 acc1）
 #   H4  预览面板真 DOM 下载入口恰好 4 个，逐个点击的 format/合并位正确              （DOC-PUBLISH-001 acc2）
 #
-# 环境：默认 8094 后端 / 8093 工作台 / 9204 小程序 H5（端口纪律：8080/5432/6379 留给 Kevin）。
+# 环境：默认 8094 后端 / 8093 工作台 / 9204 小程序 H5（端口纪律：8080/5432/6379 留给 Kevin）；
+#   可用 LQG_ACCEPT_BACKEND_PORT / LQG_ACCEPT_WEB_PORT / LQG_ACCEPT_MP_PORT / LQG_ACCEPT_OSS_BASE 覆盖。
 #   · 已在跑 → 复用（收尾不动别人的进程）；缺哪个只补起哪个（detach.sh + 按 PID 关停）。
+#   · ★ 后端不在时（2026-09-23 按 CR-20260923-09 更新）：只有调用方**显式**给全 LQG_DB_* / LQG_REDIS_* /
+#     LQG_GOTENBERG_URL 才自己起 JVM（不再走 qa-up —— 它会 source code/deploy/dev/.env，副本里没有这个文件时
+#     JVM 就不带 LQG_DB_* 起来，application-dev.yml 的缺省直接连到 dev 库 5433 / 6380 / 3010）；没给全就 exit 2。
 #   · 本脚本自己起来的进程，在本脚本退出时**按 PID** 关掉。
 # 纪律：关进程只按 PID；**严禁 pkill -f 'ruoyi-admin.jar'**（issue #46）；
 #       `code/miniapp/src/pages.json` 是有意保留的状态（issue #258），本脚本不 checkout 它。
@@ -39,6 +43,8 @@ AS="${ROOT}/doc/waves/regression/D7/accept-strengthened"
 TMP="${ROOT}/.tmp/sys-accept-001"
 LOGDIR="${TMP}/logs"
 BPORT="${LQG_ACCEPT_BACKEND_PORT:-8094}"; WPORT="${LQG_ACCEPT_WEB_PORT:-8093}"; MPORT="${LQG_ACCEPT_MP_PORT:-9204}"
+# 探针（common.mjs）从同名环境变量读工作台 / H5 端口：和本脚本用同一组值
+export LQG_ACCEPT_WEB_PORT="${WPORT}" LQG_ACCEPT_MP_PORT="${MPORT}"
 VERIFY_ONLY=0
 SCOPE="H1a,H1b,H2,H3a,H3b,H4"
 ALL="H1a,H1b,H2,H3a,H3b,H4"
@@ -85,7 +91,7 @@ run_probe() { # $1 = 热点；stdout 同时进终端与日志
 
 # ── 环境：只补缺的（进程只按 PID 起停）────────────────────────────────────────
 port_pid() { lsof -ti "tcp:$1" -sTCP:LISTEN 2>/dev/null | head -1 || true; }
-STARTED_WEB_PID=""; STARTED_MP_PID=""; STARTED_BACKEND=0
+STARTED_WEB_PID=""; STARTED_MP_PID=""; STARTED_BACKEND_PID=""
 cleanup() {
   local rc=$?
   if [ -n "${STARTED_WEB_PID}" ] && kill -0 "${STARTED_WEB_PID}" 2>/dev/null; then
@@ -94,9 +100,11 @@ cleanup() {
   if [ -n "${STARTED_MP_PID}" ] && kill -0 "${STARTED_MP_PID}" 2>/dev/null; then
     kill "${STARTED_MP_PID}" 2>/dev/null || true; echo "[env] 已按 PID 关停本脚本起的小程序 H5 dev（pid ${STARTED_MP_PID}）"
   fi
-  if [ "${STARTED_BACKEND}" = 1 ]; then
-    bash doc/waves/tools/qa-up.sh --down --backend-port "${BPORT}" --web-port "${WPORT}" --mp-port "${MPORT}" >/dev/null 2>&1 || true
-    echo "[env] 已按 PID 关停本脚本起的后端+dev（qa-up --down ${BPORT}）"
+  if [ -n "${STARTED_BACKEND_PID}" ] && kill -0 "${STARTED_BACKEND_PID}" 2>/dev/null; then
+    kill "${STARTED_BACKEND_PID}" 2>/dev/null || true
+    for _ in $(seq 1 20); do kill -0 "${STARTED_BACKEND_PID}" 2>/dev/null || break; sleep 0.5; done
+    kill -0 "${STARTED_BACKEND_PID}" 2>/dev/null && kill -9 "${STARTED_BACKEND_PID}" 2>/dev/null
+    echo "[env] 已按 PID 关停本脚本起的后端（pid ${STARTED_BACKEND_PID}）"
   fi
   exit "${rc}"
 }
@@ -105,11 +113,30 @@ trap cleanup EXIT
 ensure_env() {
   local DETACH="${ROOT}/doc/waves/tools/detach.sh"
   if [ -z "$(port_pid "${BPORT}")" ]; then
-    echo "[env] 后端 ${BPORT} 没在跑 → qa-up（--skip-build --no-reseed；夹具自己会 reseed）"
-    bash doc/waves/tools/qa-up.sh --backend-port "${BPORT}" --web-port "${WPORT}" --mp-port "${MPORT}" \
-      --skip-build --no-reseed >"${LOGDIR}/qa-up.log" 2>&1 \
-      || { echo "[error] qa-up 起不来 → ${LOGDIR}/qa-up.log" >&2; tail -12 "${LOGDIR}/qa-up.log" >&2; exit 2; }
-    STARTED_BACKEND=1
+    local missing=() v code=""
+    for v in LQG_DB_HOST LQG_DB_PORT LQG_DB_NAME LQG_DB_USER LQG_REDIS_HOST LQG_REDIS_PORT LQG_GOTENBERG_URL; do
+      [ -n "${!v:-}" ] || missing+=("${v}")
+    done
+    for v in LQG_DB_PASSWORD LQG_REDIS_PASSWORD; do   # 口令允许是空串，但必须显式给
+      [ -n "${!v+x}" ] || missing+=("${v}")
+    done
+    if [ "${#missing[@]}" -gt 0 ]; then
+      echo "[error] 后端 ${BPORT} 没在跑；拒绝自己起 JVM：调用方没显式给 ${missing[*]}" >&2
+      echo "        （不给的话 application-dev.yml 的缺省会连到 dev 库 / 缓存 / 转换服务）。先把后端起好，或把这些变量 export 全了再跑" >&2
+      exit 2
+    fi
+    local JAR="${ROOT}/code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar"
+    [ -f "${JAR}" ] || { echo "[error] 后端 ${BPORT} 没在跑，且缺 ${JAR}" >&2; exit 2; }
+    echo "[env] 后端 ${BPORT} 没在跑 → 用调用方给的 LQG_DB_*（${LQG_DB_HOST}:${LQG_DB_PORT}/${LQG_DB_NAME}）起 JVM（本脚本负责关；夹具自己会 reseed）"
+    STARTED_BACKEND_PID="$(bash "${DETACH}" "${TMP}/backend.log" java \
+      '-Dhttp.nonProxyHosts=localhost|127.0.0.1|*.local|local' -jar "${JAR}" \
+      --spring.profiles.active=dev --api-decrypt.enabled=false --server.port="${BPORT}")"
+    for _ in $(seq 1 90); do
+      code="$(curl -s -o /dev/null -m 2 -w '%{http_code}' "http://127.0.0.1:${BPORT}/lqg/sys/ping" 2>/dev/null || true)"
+      [ -n "${code}" ] && [ "${code}" != "000" ] && break
+      kill -0 "${STARTED_BACKEND_PID}" 2>/dev/null || break
+      sleep 2
+    done
   fi
   if [ -z "$(port_pid "${WPORT}")" ]; then
     echo "[env] 工作台 ${WPORT} 没在跑 → 起 plus-ui dev（本脚本负责关）"
@@ -294,7 +321,7 @@ echo
 guard_end || FAILED=1
 
 python3 - "${TMP}/mutation-outcomes.ndjson" "${TREE_AFTER:-（guard_end 未产出）}" "${TMP}/outcomes.json" "${SCOPE}" "${BPORT}" <<'PY'
-import json, sys
+import json, os, sys
 ndjson, tree_after, out, scope, bport = sys.argv[1:6]
 mut = {}
 try:
@@ -306,7 +333,8 @@ try:
 except FileNotFoundError:
     pass
 json.dump({"mutations": mut, "tree_after": tree_after,
-           "env": {"backend_port": int(bport), "web_port": 8093, "mp_port": 9204,
+           "env": {"backend_port": int(bport), "web_port": int(os.environ.get("LQG_ACCEPT_WEB_PORT") or 8093),
+            "mp_port": int(os.environ.get("LQG_ACCEPT_MP_PORT") or 9204),
                    "verify_env_file": f".tmp/qa-env/{bport}/verify.env"}},
           open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 PY

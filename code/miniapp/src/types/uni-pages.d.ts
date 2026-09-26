@@ -5,10 +5,6 @@
 
 type _LocationUrl =
   "/pages/index/index" |
-  "/pages/admin/cryo" |
-  "/pages/admin/embed" |
-  "/pages/admin/organoid" |
-  "/pages/admin/sample" |
   "/pages/cryo/form" |
   "/pages/doc/index" |
   "/pages/doc/preview" |
@@ -23,7 +19,10 @@ type _LocationUrl =
   "/pages/me/unit-group" |
   "/pages/organoid/form" |
   "/pages/sample/detail-ext" |
-  "/pages/sample/form";
+  "/pages/sample/form" |
+  "/pages/verify/embed" |
+  "/pages/verify/index" |
+  "/pages/verify/sample";
 
 interface NavigateToOptions {
   url: _LocationUrl;

@@ -17,11 +17,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
+/*
+ * 实现备注（给维护的人看，不进接口文档 / Swagger）：
+ *
  * 文档渲染与下载（doc/api-contract.md 的 QC / DOC 一节，ticket §2）。
  *
  * <pre>
- *   POST /lqg/doc/{sampleId}/{docKind}/render?audience=internal|external
+ *   POST /lqg/doc/{sampleId}/{docKind}/render?audience=internal|external[&force=true]
  *   GET  /lqg/doc/{sampleId}/{docKind}/download?format=docx|pdf&audience=internal|external
  *   GET  /lqg/doc/{sampleId}/{docKind}/pages?audience=internal|external
  * </pre>
@@ -39,6 +41,18 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * @author DOC-RENDER-001
  */
+/**
+ * 文档生成、预览与下载（工作台用）。
+ *
+ * <pre>
+ *   POST /lqg/doc/{sampleId}/{docKind}/render?audience=internal|external[&force=true]   生成（force=true 为「重新生成」）
+ *   GET  /lqg/doc/{sampleId}/{docKind}/pages?audience=internal|external                  页面图、原图、附件、状态
+ *   GET  /lqg/doc/{sampleId}/{docKind}/download?format=docx|pdf&audience=internal|external  10 分钟签名下载链接
+ * </pre>
+ *
+ * <p>docKind 取 sample_qc / organoid_qc / organoid_score / merged；audience 取 internal（含内部编号）
+ * 或 external（送检方看到的那一版，内部人员可以用它核对：内部编号一格随系统参数「合作单位可见内部编号」，默认留空）。
+ */
 @Validated
 @RequiredArgsConstructor
 @RestController
@@ -49,14 +63,15 @@ public class DocRenderController extends BaseController {
     private final DocPagesService docPagesService;
 
     /**
-     * 触发渲染（幂等：指纹未变直接返回 done，不重出）。
+     * 生成文档（内容没变且上一版产物齐全时直接返回，不重出）；{@code force=true} 表示「重新生成」，一定重出一版。
      */
     @SaCheckPermission("lqg:doc:render")
     @PostMapping("/{sampleId}/{docKind}/render")
     public R<DocRenderVo> render(@PathVariable Long sampleId,
                                  @PathVariable String docKind,
-                                 @RequestParam String audience) {
-        return R.ok(docRenderService.render(sampleId, docKind, audience));
+                                 @RequestParam String audience,
+                                 @RequestParam(required = false, defaultValue = "false") boolean force) {
+        return R.ok(docRenderService.render(sampleId, docKind, audience, force));
     }
 
     /**
@@ -72,7 +87,7 @@ public class DocRenderController extends BaseController {
     }
 
     /**
-     * 页面图片 + 图片位 + 附件（小程序预览页 / 工作台预览用，ticket §2）。
+     * 页面图片 + 文档中的图片 + 附件 + 状态（工作台预览面板用）。
      *
      * <p>★ {@code data.status} 取自这份文档的整体状态：{@code failed} 时 {@code pages} 一定是空的，
      * 并带 {@code errorMsg} 说明原因（工作台据此显示失败原因与「重新生成」按钮）。

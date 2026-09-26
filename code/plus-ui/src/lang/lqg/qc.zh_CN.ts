@@ -43,8 +43,8 @@ export default {
   editor: {
     // 页头
     title: '质控文档',
-    readonlyHint: '以下七项从样本主档带出，只读；要改请去样本总表',
-    back: '‹ 返回样本总表',
+    readonlyHint: '以下七项从样本主档带出，只读；要改请去{name}',
+    back: '‹ 返回{name}',
     sourceUnit: '来源单位',
     donorName: '患者姓名',
     gender: '性别',
@@ -84,7 +84,7 @@ export default {
     // 提示与文案
     saved: '草稿已保存',
     loadFailed: '质控文档加载失败',
-    missingSampleId: '地址里缺少 sampleId：请从样本总表的「质控文档」进入',
+    missingSampleId: '地址里缺少 sampleId：请从样本记录信息表或类器官收样记录的「质控文档」进入',
     unsavedTitle: '有未保存的改动',
     unsavedMessage: '这一页还有没保存的改动，离开就会丢掉。确定离开吗？',
     unsavedLeave: '离开',

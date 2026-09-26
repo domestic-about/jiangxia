@@ -7,6 +7,9 @@
       2) 没有包埋记录显示「—」（`blockCount === 0`，后端给的是零值不是 null）；
       3) 悬停**再查一次**石蜡块明细（编号 + 切片时间）——列表接口不带明细，只有 hint 的汇总；
          点整个徽标组 → 带 `sampleId` 跳到工作台「石蜡包埋」页并按该样本过滤。
+    ★ Kevin 2026-09-24 本机验收：块数挪到了固定在右侧的「石蜡包埋 / 冻存」一列（RelationLinks.vue，
+      「蜡块 N」可点），这里不再重复写「石蜡块 N」，只写加工到哪一步：「已切片 / 未切片」+ 染色缩写。
+      （列名「切片染色」不改：它是小程序表格页与工作台共用的追加列，见 ledger-columns-cases.json。）
   -->
   <span class="lqg-hint">
     <span v-if="!hasBlocks" class="lqg-hint__none">{{ t('lqg.sample.hint.none') }}</span>
@@ -26,10 +29,10 @@
           :title="t('lqg.sample.hint.open')"
           @click="openEmbed"
         >
-          <span class="lqg-hint__badge">{{ t('lqg.sample.hint.block', { n: hint?.blockCount ?? 0 }) }}</span>
           <span v-if="hint?.sectioned" class="lqg-hint__badge lqg-hint__badge--sectioned">
             {{ t('lqg.sample.hint.sectioned') }}
           </span>
+          <span v-else class="lqg-hint__badge">{{ t('lqg.sample.hint.notSectioned') }}</span>
           <span v-for="kind in stains" :key="kind" class="lqg-hint__badge lqg-hint__badge--stain">
             {{ stainLabel(kind) }}
           </span>

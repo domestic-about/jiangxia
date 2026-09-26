@@ -42,6 +42,17 @@ class EmbedExportContractTest {
      * （不写死 {@code ../../..} —— 在模块目录跑还是在工作区根跑都能找到）。
      */
     private static Path templatePath() {
+        // V31（F4）：先读本模块测试资源里的副本（classpath 的 export-templates/，与 _input/templates/ 逐字节一致，
+        // FixtureCopiesSyncTest 比对），只检出后端目录也能对账；找不到再按老办法往上找 _input/templates/
+        java.net.URL copy = EmbedExportContractTest.class.getClassLoader()
+            .getResource("export-templates/石蜡包埋送样记录模板.xlsx");
+        if (copy != null) {
+            try {
+                return Path.of(copy.toURI());
+            } catch (java.net.URISyntaxException ignored) {
+                // 落到下面的老办法
+            }
+        }
         Path dir = Path.of("").toAbsolutePath();
         for (int i = 0; i < 6 && dir != null; i++) {
             Path candidate = dir.resolve("_input").resolve("templates").resolve("石蜡包埋送样记录模板.xlsx");

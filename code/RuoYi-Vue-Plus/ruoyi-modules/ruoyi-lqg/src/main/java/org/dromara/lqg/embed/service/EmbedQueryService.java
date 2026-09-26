@@ -289,11 +289,13 @@ public class EmbedQueryService {
             String stain = q.getStain().trim();
             wrapper.apply("(',' || stain_types || ',') LIKE {0}", "%," + stain + ",%");
         }
+        // ★ 「只看我提交的」（mine=true）：一组 OR 包一层；与其它筛选相与（不是并列）。
+        //   FIX #191（同口径）：与 sort 无关 —— 以前只在 sort=recent 下生效，不带 sort 时被静默忽略；
+        //   契约第 63 行与第 49 行同一句「开关打开时才带」，冻存那边本来就与 sort 无关。
+        if (Boolean.TRUE.equals(q.getMine()) && me != null) {
+            wrapper.and(w -> w.eq(Embed::getCreateBy, me).or().eq(Embed::getUpdateBy, me));
+        }
         if (EmbedQueryBo.isRecentSort(q.getSort())) {
-            if (Boolean.TRUE.equals(q.getMine()) && me != null) {
-                // 一组 OR 包一层；与其它筛选相与（不是并列）
-                wrapper.and(w -> w.eq(Embed::getCreateBy, me).or().eq(Embed::getUpdateBy, me));
-            }
             // 表达式排序只能走 last()：MP 3.5.16 的 Func 接口没有「按列名 / 表达式」的重载
             wrapper.last("ORDER BY COALESCE(update_time, create_time) DESC, id DESC");
         } else {
@@ -364,6 +366,7 @@ public class EmbedQueryService {
             vo.setSubmitNo(sample.getSubmitNo());
             vo.setSampleVerifyStatus(sample.getVerifyStatus());
             vo.setSourceUnitName(sample.getSourceUnitName());
+            vo.setSampleKind(sample.getSampleKind());
         }
         vo.setParaffinBlockNo(embed.getParaffinBlockNo());
         vo.setSampleType(embed.getSampleType());

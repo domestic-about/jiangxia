@@ -5,18 +5,24 @@
 
 export default {
   title: 'Workbench',
-  subtitle: 'The five numbers are computed on every request and each card jumps straight to its list (zero is shown too — greyed out means "nothing pending").',
+  subtitle: 'The numbers are computed on every request and each card jumps straight to its list (zero is shown too — greyed out means "nothing pending").',
   refresh: 'Refresh',
   loadFailed: 'Could not load the todo numbers: {msg} (showing 0 — this does not mean there is nothing to do)',
   allDone: 'Nothing pending',
   go: 'Open →',
 
   card: {
-    pendingSamples: {
-      title: 'Samples to verify',
-      hint: 'Tissue and organoid intake records',
-      zero: 'No sample waiting for verification',
-      go: 'Verify in the sample list →'
+    pendingTissue: {
+      title: 'Sample records to verify',
+      hint: 'Tissue samples submitted by partner units',
+      zero: 'No sample record waiting for verification',
+      go: 'Verify in sample records →'
+    },
+    pendingOrganoid: {
+      title: 'Organoid receipts to verify',
+      hint: 'Organoid receipts submitted by partner units',
+      zero: 'No organoid receipt waiting for verification',
+      go: 'Verify in organoid receipts →'
     },
     pendingEmbeds: {
       title: 'Paraffin embeds to verify',
@@ -50,6 +56,7 @@ export default {
     empty: 'No submission yet',
     colSubmitTime: 'Submitted at',
     colSubmitNo: 'Submit no.',
+    colSampleKind: 'Table',
     colSourceUnit: 'Source unit',
     colSubmitSource: 'Internal/External',
     colVerifyStatus: 'Verify status'

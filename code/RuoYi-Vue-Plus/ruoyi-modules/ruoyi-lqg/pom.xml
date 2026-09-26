@@ -20,7 +20,12 @@
         -->
         <lqg.test.groups></lqg.test.groups>
         <lqg.test.excludedGroups></lqg.test.excludedGroups>
-        <!-- 契约测试是 ADR-0008 唯一的机器证据，默认值不能是「跳过」 -->
+        <!--
+          契约测试是 ADR-0008 唯一的机器证据，默认值不能是「跳过」（根 pom 的缺省是 skipTests=true）。
+          ★ V31：这里只是**缺省值**。命令行 -DskipTests / -Dmaven.test.skip=true 照样生效（用户属性优先于
+          pom 属性）；原先 surefire 的 <configuration> 里又写死了一遍 <skipTests>false</skipTests>，
+          插件配置里的字面量会压过命令行，-DskipTests 在本模块形同虚设 —— 那一行已删。
+        -->
         <skipTests>false</skipTests>
     </properties>
 
@@ -168,24 +173,20 @@
 
     <build>
         <!--
-          OCR-IMPL-001：把 doc/verify/fixtures/ocr-cases.json（**权威夹具**，只读区不许复制进仓库）
-          在构建时放进 classpath。放的是 **main** 资源而不是 test 资源 —— dev 环境跑的
-          StubOcrProvider 是**运行期 bean**（打进 jar 的就是它），只拷进 test-classes
-          会「单测绿、接口空」（实测：rawLines 一直是 []，日志报找不到夹具）。
-          解析器单测（OcrFieldParserFixtureTest）读的是同一份文件，两边不会漂。
-          ${project.basedir} = 本模块目录，往上四级是仓库根
-          （ruoyi-lqg → ruoyi-modules → RuoYi-Vue-Plus → code → 仓库根）。
-          路径落空时单测直接红、dev 里 StubOcrProvider 打 ERROR，都不会静默。
+          ★ V31 / V22（独立验收 2026-09-23）：构建只靠后端目录自己。原先这里把
+          ../../../../doc/verify/fixtures/ 当资源目录拷 ocr-cases.json —— 只检出 code/RuoYi-Vue-Plus
+          （将来拆出来的后端仓库）时找不到它，单测红、jar 打不出来，多阶段 Dockerfile 也因此构建不了。
+          现在：
+            · ocr-cases.json 放在本模块 src/main/resources/（dev / test 的 StubOcrProvider 运行时要读，
+              所以是主资源；内容只有测试数据，prod 下桩类不存在、配成 stub 会被护栏拒绝启动）；
+            · 导出对账用的四份甲方 xlsx 模板原件放在 src/test/resources/export-templates/（只进测试 classpath，
+              不进 jar）；
+            · 与仓库里那两份原件（doc/verify/fixtures/ocr-cases.json、_input/templates/*.xlsx）逐字节一致，
+              由 FixtureCopiesSyncTest 在整仓检出时比对（只检出后端目录时这条比对跳过，不算失败）。
         -->
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-            </resource>
-            <resource>
-                <directory>${project.basedir}/../../../../doc/verify/fixtures</directory>
-                <includes>
-                    <include>ocr-cases.json</include>
-                </includes>
             </resource>
         </resources>
         <plugins>
@@ -201,7 +202,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <skipTests>false</skipTests>
                     <groups>${lqg.test.groups}</groups>
                     <excludedGroups>${lqg.test.excludedGroups}</excludedGroups>
                 </configuration>

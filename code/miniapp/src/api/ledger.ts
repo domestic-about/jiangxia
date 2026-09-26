@@ -8,6 +8,7 @@
 // ★ 分页响应是 `{code,msg,rows,total}`（没有 `data` 键）→ 必须带 `raw: true`（SAMPLE-MP-001 坑 3）。
 // ★ 冻结列的两行文案、单元格取值、行底色全部在这里收口：`LedgerTable.vue` 只是一个
 //   不认识业务字段的哑组件（列名也只从 `columns.ts` 来）。
+import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
 
 /** 表格页的一行（`/mp/int/sample/list` 的行形状；四张表共用一个 VO） */
@@ -63,15 +64,16 @@ export function emptyFilters(): LedgerFilters {
 
 /**
  * 拉一页表格数据。`sampleKind` 传给后端（**不在前端筛**，ticket 的 counterfeit 第 1 条）；
- * 两个筛选条件为空时不带该参数。
+ * 两个筛选条件为空时不带该参数。分页（V27）：`pageNum` 从 1 起，页面触底再取下一页。
  */
-export function fetchSampleLedgerRows(sampleKind: 'tissue' | 'organoid', filters: LedgerFilters, pageSize = 100) {
+export function fetchSampleLedgerRows(sampleKind: 'tissue' | 'organoid', filters: LedgerFilters, pageNum = 1, pageSize = PAGE_SIZE) {
   return http.get<{ rows: LedgerRow[], total: number }>(
     '/mp/int/sample/list',
     {
       sampleKind,
       keyword: filters.keyword.trim() || undefined,
       verifyStatus: filters.verifyStatus || undefined,
+      pageNum,
       pageSize,
     },
     // 分页接口的形状是 `{code,msg,rows,total}`（没有 data 键）

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  * POST /lqg/sample/export/tissue      按当前筛选导出「样本记录信息表」（14 列）
- * POST /lqg/sample/export/organoid    按当前筛选导出「类器官收样记录」（7 列）
+ * POST /lqg/sample/export/organoid    按当前筛选导出「类器官收样记录」（模板 7 列 + 插入的「代数」）
  * </pre>
  *
  * <p>★ <b>筛选走 query / 表单参数</b>（不是 JSON body）：参数与 {@code GET /lqg/sample/list}
@@ -53,7 +53,7 @@ public class SampleExportController {
     }
 
     /**
-     * 按当前筛选导出「类器官收样记录」xlsx（表头 7 列照甲方模板原件逐字同序）。
+     * 按当前筛选导出「类器官收样记录」xlsx（表头 = 甲方模板原件 7 列逐字同序，「类器官类型」后插入「代数」）。
      */
     @SaCheckPermission("lqg:sample:export")
     @PostMapping("/organoid")

@@ -42,14 +42,7 @@
             </el-popover>
           </div>
         </el-tooltip>
-        <el-tooltip content="Github" effect="dark" placement="bottom">
-          <ruo-yi-git id="ruoyi-git" class="right-menu-item hover-effect" />
-        </el-tooltip>
-
-        <el-tooltip :content="proxy.$t('navbar.document')" effect="dark" placement="bottom">
-          <ruo-yi-doc id="ruoyi-doc" class="right-menu-item hover-effect" />
-        </el-tooltip>
-
+        <!-- G20：若依的 Gitee 源码与在线文档外链已去掉（甲方用的工作台，不指向上游项目） -->
         <el-tooltip :content="proxy.$t('navbar.full')" effect="dark" placement="bottom">
           <screenfull id="screenfull" class="right-menu-item hover-effect" />
         </el-tooltip>

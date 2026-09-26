@@ -6,10 +6,14 @@
         <span class="lqg-cryo-flow__muted"> · {{ t('lqg.cryo.col.passage') }} {{ batch.passage || '—' }}</span>
       </div>
       <div class="lqg-cryo-flow__muted">{{ t('lqg.cryo.flow.subtitle') }}</div>
-      <!-- ★ 当前剩余取接口的 remainingQty（读时算），前端不自己把流水加起来 -->
+      <!-- ★ 当前剩余取接口读时算的数（最新一次流水响应首行的 remainingQty，没有流水就用列表行上的），
+           前端不自己把流水加起来；改删之后跟着刷新，不停留在打开抽屉那一刻的值 -->
       <div class="lqg-cryo-flow__balance">
-        {{ t('lqg.cryo.flow.currentRemaining', { qty: batch.remainingQty ?? 0 }) }}
-        <span v-if="batch.overdue" class="lqg-cryo-flow__badge">
+        {{ t('lqg.cryo.flow.currentRemaining', { qty: nowRemaining }) }}
+        <span v-if="nowRemaining <= 0" class="lqg-cryo-flow__badge lqg-cryo-flow__badge--emptied">
+          {{ t('lqg.cryo.badge.emptyQty') }}
+        </span>
+        <span v-else-if="batch.overdue" class="lqg-cryo-flow__badge">
           {{ t('lqg.cryo.badge.overdue', { days: batch.overdueDays ?? 0 }) }}
         </span>
       </div>
@@ -91,6 +95,21 @@ const batch = ref<CryoBatchVO | null>(null);
 const rows = ref<CryoFlowVO[]>([]);
 const dialogRef = ref<InstanceType<typeof CryoFlowDialog>>();
 
+/**
+ * 批次现在的剩余：流水接口把它填在时间倒序的第一行（CRYO-FLOW-001）；一笔未删流水都没有时 = 初始支数。
+ * ★ 不用打开抽屉时的 batch.remainingQty 顶到底：在抽屉里改删之后它就过期了。
+ */
+const nowRemaining = computed<number>(() => {
+  const head = rows.value[0];
+  if (head && head.remainingQty !== null && head.remainingQty !== undefined) {
+    return head.remainingQty;
+  }
+  if (!loading.value && rows.value.length === 0 && batch.value?.initQty !== null && batch.value?.initQty !== undefined) {
+    return batch.value.initQty;
+  }
+  return batch.value?.remainingQty ?? 0;
+});
+
 const reload = async () => {
   if (!batch.value) {
     return;
@@ -120,7 +139,7 @@ const handleEdit = (row: CryoFlowVO) => {
   if (!batch.value) {
     return;
   }
-  dialogRef.value?.openEdit(batch.value, row);
+  dialogRef.value?.openEdit(batch.value, row, nowRemaining.value);
 };
 
 const handleRemove = async (row: CryoFlowVO) => {
@@ -160,6 +179,10 @@ defineExpose({ open, reload });
   color: var(--lqg-danger);
   background-color: var(--lqg-danger-soft);
   border-radius: 10px;
+}
+.lqg-cryo-flow__badge--emptied {
+  color: var(--lqg-warn);
+  background-color: var(--lqg-warn-soft);
 }
 .lqg-cryo-flow__row {
   display: flex;

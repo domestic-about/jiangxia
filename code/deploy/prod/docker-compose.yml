@@ -191,6 +191,12 @@ services:
       # 字段加密口令（ADR-0006）：**生产口令与 dev/test 的 LqgTestAesKey#01 不同**，
       # 只存在于服务器 .env（600）。丢了这份数据就读不出来 —— 另存一份给 Kevin（部署手册 §8）。
       LQG_ENCRYPT_PASSWORD: ${LQG_ENCRYPT_PASSWORD:?LQG_ENCRYPT_PASSWORD 未设置——见 .env.example}
+      # ★ V13 / V14（F4）：JWT 签名密钥、接口加解密的两把后端 RSA 密钥 —— 只从 .env 来、没有缺省值。
+      #   缺失时 compose 在这里就报错；就算绕过 compose 起了，后端的 StartupSafetyGuard 也会在连库之前拒绝启动。
+      #   生成：bash gen-secrets.sh（与工作台构建用的 VITE_APP_RSA_* 成对生成）。
+      LQG_JWT_SECRET: ${LQG_JWT_SECRET:?LQG_JWT_SECRET 未设置——先跑 gen-secrets.sh}
+      LQG_API_REQUEST_PRIVATE_KEY: ${LQG_API_REQUEST_PRIVATE_KEY:?LQG_API_REQUEST_PRIVATE_KEY 未设置——先跑 gen-secrets.sh}
+      LQG_API_RESPONSE_PUBLIC_KEY: ${LQG_API_RESPONSE_PUBLIC_KEY:?LQG_API_RESPONSE_PUBLIC_KEY 未设置——先跑 gen-secrets.sh}
       # ★ -Xmx1g（票面 §2 硬要求；2 核 4G，还要养 postgres 1G + gotenberg 1G + redis 256M）。
       #   镜像里那条 JAVA_TOOL_OPTIONS 是给测试机（~2.8G 可用）的 MaxRAMPercentage=60；
       #   这里显式给 -Xmx1g 覆盖它——同一环境变量重复出现时**后者生效**，

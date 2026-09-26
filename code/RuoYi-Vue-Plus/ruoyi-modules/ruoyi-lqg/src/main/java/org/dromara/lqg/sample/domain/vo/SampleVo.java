@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.dromara.lqg.sample.hint.vo.SampleHintVo;
+import org.dromara.lqg.sample.relation.vo.SampleRelationVo;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -80,6 +81,9 @@ public class SampleVo implements Serializable {
 
     @Schema(description = "类器官类型")
     private String organoidType;
+
+    @Schema(description = "代数（类器官收样记录才有，形如 P3；组织样本为空）")
+    private String passage;
 
     @Schema(description = "有无病理 Y / N")
     private String hasPathology;
@@ -198,5 +202,16 @@ public class SampleVo implements Serializable {
      */
     @Schema(description = "切片染色提示（读时计算；没有包埋记录也是零值，不是 null）")
     private SampleHintVo hint;
+
+    /**
+     * 「石蜡包埋 / 冻存」关联数（工作台样本两页的关联列：「蜡块 N · 待核验 N · 冻存 N 批」，
+     * Kevin 2026-09-24 本机验收）。蜡块数沿用上面 {@link #hint} 的 {@code blockCount}，这里只补
+     * 待核验送样数与冻存批次数。
+     *
+     * <p>★ 与 {@code hint} 同一套做法：读时计算、整页一次查询（{@code SampleRelationService.countsOf}）、
+     * 列表每一行都有（零值不是 null）；详情与导出不带。
+     */
+    @Schema(description = "石蜡包埋 / 冻存关联数（读时计算；没有关联记录也是零值，不是 null）")
+    private SampleRelationVo relation;
 
 }

@@ -3,10 +3,15 @@ package org.dromara.common.web.config;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import org.dromara.common.core.utils.ObjectUtils;
+import org.dromara.common.web.handler.DataAccessExceptionHandler;
 import org.dromara.common.web.handler.GlobalExceptionHandler;
 import org.dromara.common.web.interceptor.PlusWebInvokeTimeInterceptor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -70,10 +75,25 @@ public class ResourcesConfig implements WebMvcConfigurer {
     }
 
     /**
-     * 全局异常处理器
+     * 全局异常处理器（上传超限的提示按当前生效的 spring.servlet.multipart 上限给出）
      */
     @Bean
-    public GlobalExceptionHandler globalExceptionHandler() {
-        return new GlobalExceptionHandler();
+    public GlobalExceptionHandler globalExceptionHandler(ObjectProvider<MultipartProperties> multipartProperties) {
+        return new GlobalExceptionHandler(multipartProperties.getIfAvailable());
+    }
+
+    /**
+     * 数据库类异常处理器（V03：只回通用提示；最高优先级，先于上游 MybatisExceptionHandler 与兜底处理器）。
+     * 只在类路径上有 spring-tx（DataAccessException）时注册 —— 本模块对它是 optional 依赖。
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "org.springframework.dao.DataAccessException")
+    static class DataAccessExceptionHandlerConfig {
+
+        @Bean
+        public DataAccessExceptionHandler dataAccessExceptionHandler() {
+            return new DataAccessExceptionHandler();
+        }
+
     }
 }

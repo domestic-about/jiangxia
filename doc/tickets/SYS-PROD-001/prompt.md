@@ -15,6 +15,8 @@ touches:
   - code/deploy/prod/**
   - code/deploy/common/**
   - code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/application-prod.yml
+  - code/plus-ui/.env.production
+  - code/plus-ui/vite.config.ts
   - doc/verify/verify.prod.env.example
   - doc/ops/**
 adr_refs:
@@ -49,13 +51,13 @@ accept:
       ! grep -nE '^[[:space:]]*-[[:space:]]*"?(0\.0\.0\.0:)?(5432|6379|3000|8080):' code/deploy/prod/docker-compose.yml &&
       URL="$(bash -c 'LQG_VERIFY_ENV_FILE=doc/verify/verify.prod.env bash doc/verify/api.sh --as admin GET /lqg/home/recent' >/dev/null; sed -n 's/^LQG_OSS_PROBE_URL=//p' doc/verify/verify.prod.env)" && test -n "${URL}" &&
       test "$(curl -s -o /dev/null -w '%{http_code}' "${URL}")" = 403 &&
-      ! git ls-files | grep -E '(^|/)\.env$|verify\.prod\.env$' | grep -q . &&
+      ! git ls-files | grep -E '(^|/)\.env$|verify\.prod\.env$' | grep -vx 'code/miniapp/env/\.env' | grep -q . &&
       ! git grep -nE 'LTAI[0-9A-Za-z]{12,}|AKID[0-9A-Za-z]{12,}' -- . ':!doc/tickets' | grep -q . &&
       ! grep -nE 'mock-login|paid-enabled|provider:[[:space:]]*stub' code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/application-prod.yml
     counterfeit: |-
       为了方便远程连库，compose 里写了 ports: "5432:5432" → 公网可达，nc 连得上红。不允许的连接被拒才算对。
       OSS bucket 建成了公共读 → 拿一个对象的裸地址（不带签名，填在 verify.prod.env 的 LQG_OSS_PROBE_URL）匿名 GET 得到 200 红：任何拿到链接的人都能看到供体的质控文档。
-      把 .env 或带 AK 的配置提交进了 git → 红。
+      把 .env 或带 AK 的配置提交进了 git → 红。唯一放过的是 `code/miniapp/env/.env`：它是小程序的 vite 模板（全是 `VITE_*`、没有密钥），改名会破坏构建（#313 的收窄，只排除这一个精确路径）。
       在 prod 配置里显式写了 mock-login: false → 红：这个键出现在 prod 文件里，就离被改成 true 只差一次手滑。
 ---
 
@@ -91,6 +93,9 @@ accept:
 - 证书：acme.sh / certbot 自动续期（续期后 reload nginx），写进 crontab。
 - OSS：一个**私有读写**的 bucket，前缀 `lqg/`；后端用 RAM 子账号的 AK（只授这个 bucket）。上游 OSS 配置存在 `sys_oss_config` 表里——用一支 prod 专用的初始化 SQL（不进 Flyway，手工执行一次）写入，AK 不进仓库。
 - `application-prod.yml`：数据库 / Redis 走 compose 内网主机名；字段加密口令、微信 appid / secret 取环境变量；不出现 `mock-login`、`paid-enabled`、`provider: stub`。
+- 生产密钥改注入（CR-20260923-09）：JWT 签名密钥、接口加解密的两对 RSA、字段加密口令都由环境变量注入且**没有缺省值**，缺失、等于若依默认值或长度不合规（字段加密口令须 16 / 24 / 32 位）就拒绝启动；`code/deploy/prod/gen-secrets.sh` 一次生成写进服务器上的 `.env`（幂等，不覆盖已有真值）。
+  工作台 `pnpm build:prod` 从 `.env` 读 `VITE_APP_RSA_*`，检测到默认 RSA 直接构建失败（`code/plus-ui/vite.config.ts`、`code/plus-ui/.env.production`）。
+- actuator（CR-20260923-09）：生产只开 health 与 info，未配口令时随机生成；nginx 对 `/actuator`、`/prod-api/actuator` 一律回 404。上传超 60MB 由 nginx 回 413 与中文 JSON（与后端单文件 50MB、一次请求 60MB 同口径）。
 - 告警 `code/deploy/prod/healthcheck.sh`（cron 每 5 分钟）：容器不健康 / 磁盘 > 80% / 证书剩余 < 15 天 → 往 `LQG_ALERT_WEBHOOK`（飞书机器人）发一条。备份失败的告警在 SYS-BACKUP-001。
 - `doc/ops/部署手册.md`：从一台空服务器到上线的每一步、`.env` 每个键的含义、怎么回滚到上一个镜像、怎么走 SSH 隧道连库。
 - 首个管理员：上线后用超管登录 → 在「内部人员授权」里按甲方管理员的手机号授权 → 停用上游默认的 admin 账号口令（改成随机强口令并记入交接单）。
@@ -111,3 +116,13 @@ accept:
 5. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 6. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 7. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+## 5 票面更新
+
+- 2026-09-23 按 CR-20260923-09 更新：touches 补 `code/plus-ui/.env.production`、`code/plus-ui/vite.config.ts`（`gen-secrets.sh` 已在 `code/deploy/prod/**` 里）；§2 补密钥注入、actuator 与上传上限；accept 2 的 `.env` 检查按 #313 收窄，只放过 `code/miniapp/env/.env` 这个 vite 模板；#311 与三段待补断言记在下面，生产未到位，run 先不动。
+  - #311：生产开着接口加解密与验证码，`doc/verify/api.sh` 是裸 curl，口令登录必然失败。accept 1 改用在服务器上签发的一次性 token，不走口令登录；run 等生产到位再改。
+  - 生产到位后补进 run 的三段（写法供参考）：
+    ① actuator 不对外：`test "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/actuator/health")" = 404 && test "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/prod-api/actuator/env")" = 404`
+    ② 上传超 60MB 回 413：`head -c 62914561 /dev/zero > "${TMPDIR:-/tmp}"/lqg-61m.bin && test "$(curl -s -o "${TMPDIR:-/tmp}"/lqg-413.json -w '%{http_code}' -F "file=@${TMPDIR:-/tmp}/lqg-61m.bin" "${BASE}/prod-api/resource/oss/upload")" = 413 && jq -e '.code==413' "${TMPDIR:-/tmp}"/lqg-413.json`
+    ③ 缺 `LQG_JWT_SECRET` 时 compose 起不来：在生产机的部署目录里，完整 `.env` 下 `docker compose config -q` 成功，去掉 `LQG_JWT_SECRET` 那一行（且 shell 里也没有这个变量）后 `docker compose --env-file <去掉那一行的副本> config -q` 必须失败。
+- 2026-09-24 按 CR-20260924-11 更新：核对两条 accept 没有写死 Kevin 本机的 dev 容器、3010 或 `/tmp/lqg-*`（都经 `verify.prod.env` 连生产机，远程段语义不变，run 不动）；上面待补断言 ② 的两个临时文件改放 `${TMPDIR:-/tmp}`（`-F` 改用双引号才会展开），并入 run 时照此写。

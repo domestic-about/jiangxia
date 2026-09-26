@@ -1,13 +1,11 @@
 package org.dromara.lqg.embed.domain.bo;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import java.io.Serial;
-import java.io.Serializable;
-import java.time.LocalDate;
-import java.util.List;
 
 /**
  * 石蜡包埋送样记录入参（doc/api-contract.md 的 {@code POST /lqg/embed}、{@code PUT /lqg/embed}）。
@@ -25,11 +23,17 @@ import java.util.List;
  * {@code markers} 是唯一例外：<b>传了（哪怕传空数组）就整组替换</b>（ticket §2），
  * 没传（{@code null}）则不动。
  *
+ * <p>FIX V02b（issue #147）：除身份与石蜡块编号外的 15 项整体上移到 {@link EmbedFillBo}
+ * （工作台核验抽屉一并保存的 {@code fill} 也用它），本类只多 {@code id / sampleId / paraffinBlockNo} ——
+ * 普通保存与核验时补填是同一个形状、同一份校验、同一组落库列（{@code EmbedFillWriter}）。
+ *
  * @author EMBED-MODEL-001
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @Schema(description = "石蜡包埋送样记录新增 / 修改入参")
-public class EmbedSubmitBo implements Serializable {
+public class EmbedSubmitBo extends EmbedFillBo {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -42,57 +46,5 @@ public class EmbedSubmitBo implements Serializable {
 
     @Schema(description = "石蜡块编号（内部新增必填、全库唯一；外部送样核验前为空）")
     private String paraffinBlockNo;
-
-    @Schema(description = "样本类型")
-    private String sampleType;
-
-    @Schema(description = "类器官来源类型")
-    private String organoidSourceType;
-
-    @Schema(description = "组织收样时间（新增时默认带样本的收样日期）")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate tissueReceiveTime;
-
-    @Schema(description = "组织处理时间（新增时默认带样本处理时间的日期部分）")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate tissueProcessTime;
-
-    @Schema(description = "琼脂糖包埋样本时间")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate agaroseEmbedTime;
-
-    @Schema(description = "包埋人")
-    private String embedBy;
-
-    @Schema(description = "脱水时间")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate dehydrateTime;
-
-    @Schema(description = "琼脂糖包埋样本送样时间")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate agaroseSendTime;
-
-    @Schema(description = "石蜡包埋时间")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate paraffinEmbedTime;
-
-    @Schema(description = "切片时间（非空 = 已切片）")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate sectionTime;
-
-    @Schema(description = "染色多选（HE / IF / IHC / OTHER / NONE；NONE 与其余互斥；空 = 还没选）")
-    private List<String> stainTypes;
-
-    @Schema(description = "选了 OTHER 时必须写的具体染色名")
-    private String stainOther;
-
-    @Schema(description = "marker 表达（整组替换；没传 = 不动）")
-    private List<EmbedMarkerBo> markers;
-
-    @Schema(description = "操作人")
-    private String operatorName;
-
-    @Schema(description = "备注")
-    private String remark;
 
 }

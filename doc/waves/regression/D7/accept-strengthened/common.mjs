@@ -9,13 +9,22 @@
 import { createRequire } from 'node:module'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-export const ROOT = '/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid'
-export const OUT = path.join(ROOT, 'doc/waves/regression/D7/accept-strengthened')
+// ★ 2026-09-23 按 CR-20260923-09 更新：ROOT 不再写死工作区（副本里重放会连到工作区的 node_modules、把证据写回工作区）
+//   → 从本文件位置推导（accept-strengthened → D7 → regression → waves → doc → 仓库根）；
+//   端口与 OSS 直链前缀从环境变量读，缺省沿用原值（8093 / 9204 / 127.0.0.1:9000）。
+export const OUT = path.dirname(fileURLToPath(import.meta.url))
+export const ROOT = path.resolve(OUT, '..', '..', '..', '..', '..')
+if (!fs.existsSync(path.join(ROOT, 'code/miniapp/src/pages.json'))) {
+  console.error(`[error] ROOT 推导错了：${ROOT} 下没有 code/miniapp/src/pages.json`)
+  process.exit(2)
+}
 export const OBS = path.join(OUT, 'observations')
-export const WEB = 'http://127.0.0.1:8093'
-export const MP = 'http://127.0.0.1:9204'
-export const OSS = 'http://127.0.0.1:9000/'
+export const WEB = `http://127.0.0.1:${process.env.LQG_ACCEPT_WEB_PORT || 8093}`
+export const MP = `http://127.0.0.1:${process.env.LQG_ACCEPT_MP_PORT || 9204}`
+// OSS 直链前缀：sys_oss_config 指向哪台 MinIO 就是哪台（2026-09-23 起 dev 库改指 jiangxia 自己的 MinIO）
+export const OSS = (process.env.LQG_ACCEPT_OSS_BASE || 'http://127.0.0.1:9000').replace(/\/?$/, '/')
 
 export function playwright() {
   const require = createRequire(`${ROOT}/code/miniapp/package.json`)

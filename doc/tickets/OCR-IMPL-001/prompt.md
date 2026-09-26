@@ -13,6 +13,8 @@ depends_on:
 touches:
   - code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/ocr/**
   - code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/test/java/org/dromara/lqg/ocr/**
+  - code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/resources/ocr-cases.json
+  - code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/pom.xml
   - code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/application*.yml
 adr_refs:
   - ADR-0007
@@ -21,7 +23,7 @@ blueprint_refs:
   - FLOW:F-OCR-01.step3
   - FIELD:t_lqg_source_unit.unit_name
 accept:
-  - name: "五个解析用例逐例过：该出现的字段相等、不该出现的字段不出现（噪声里的数字不当年龄、单位名不硬匹配）；识别前后业务表与文件表一行不多"
+  - name: "五个解析用例逐例过：该出现的字段相等、不该出现的字段不出现（噪声里的数字不当年龄、单位名不硬匹配）；dev / test 下不带用例请求头也能识别（桩回 01 号样例，CR-20260923-09）；识别前后业务表与文件表一行不多"
     form: API
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
@@ -32,6 +34,7 @@ accept:
         RESP="$(bash doc/verify/api.sh --as extA --header "X-Ocr-Stub-Case: $(printf '%s' "${CASE}" | jq -r '.case[0:2]')" --form 'file=@doc/verify/fixtures/ocr-sample.png' POST /mp/ocr/recognize)" &&
         printf '%s' "${RESP}" | jq -e --argjson c "${CASE}" '. as $r | $r.code==200 and ($r.data.rawLines == $c.rawLines) and ([$c.expect | to_entries[] | ($r.data.fields[.key] == .value)] | all) and ([$c.absent[] | . as $k | ($r.data.fields | has($k) | not)] | all)' || exit 1
       done &&
+      bash doc/verify/api.sh --as extD --form 'file=@doc/verify/fixtures/ocr-sample.png' POST /mp/ocr/recognize | jq -e --argjson c "$(jq -c '.cases[0]' doc/verify/fixtures/ocr-cases.json)" '.code==200 and .data.rawLines==$c.rawLines' &&
       AFTER="$(python3 doc/verify/db.py --quiet --sql "SELECT (SELECT count(*) FROM t_lqg_sample) + (SELECT count(*) FROM sys_oss)" | head -1)" &&
       test "${BEFORE}" = "${AFTER}"
     counterfeit: |-
@@ -39,6 +42,7 @@ accept:
       住院号用「最长的一串数字」→ 第 03 例的日期 20260917 被当成住院号红。
       单位名做了相似度匹配 → 第 05 例「某某市第九医院」被硬凑成 A 医院红。
       解析不出的字段返回空串而不是不返回 → has(key) 为真，absent 红；前端会拿空串去「预填」。
+      测试桩缺 `X-Ocr-Stub-Case` 就报错（小程序真机与 H5 从来不发这个头）→ extD 那段红：本机与试用环境里永远走不到预填，甲方试用只看到一句报错（CR-20260923-09）。extD 单独一个身份，免得撞上 extA 这一分钟里的限流额度。
       为了方便排查把上传的图存进了 OSS → 前后计数不等红：那是多留了一份供体信息。
   - name: "付费通道默认关且 prod 配置里不出现这个开关；没配 provider 时明确报「请手动填写」而不是 500；限流生效"
     form: STATE
@@ -82,7 +86,8 @@ accept:
 - `POST /mp/ocr/recognize`（内外部都能调；multipart `file`，≤ 5MB，只收 jpg / png）→ `{rawLines, fields}`，形状见 `doc/api-contract.md`。
 - `OcrProvider` 接口：`List<String> recognize(byte[] image)`；实现：
   - `NoneOcrProvider`（缺省）：直接抛「识别暂不可用，请手动填写」——没配 provider 时小程序照常能手填。
-  - `StubOcrProvider`（仅 dev / test）：按请求头 `X-Ocr-Stub-Case` 的前两位，从 classpath 里的 `ocr-cases.json` 副本（构建时从 `doc/verify/fixtures/` 拷）取 `rawLines`。prod 下配置成 stub → 拒绝启动（同 mock 登录护栏的思路）。
+  - `StubOcrProvider`（仅 dev / test）：按请求头 `X-Ocr-Stub-Case` 的前两位取那一组 `rawLines`；**缺请求头时返回 01 号样例**（小程序真机与 H5 不会发这个头，缺头就报错的话本机与试用环境永远走不到预填）。
+    夹具读模块内的 `src/main/resources/ocr-cases.json`（classpath 根），它与 doc 原件 `doc/verify/fixtures/ocr-cases.json` 逐字节一致，由 `FixtureCopiesSyncTest`（`ruoyi-lqg/src/test/java/org/dromara/lqg/`）比对；后端构建只靠自身目录，不再从 `doc/` 拷（CR-20260923-09）。prod 下桩类不存在，配置成 stub → 拒绝启动（同 mock 登录护栏的思路）。
   - 真实 provider：等 OCR-SPIKE-001 的结论，另起一个实现类；**按次收费的实现必须同时满足 `lqg.ocr.paid-enabled=true` 才会被选中**，该键缺省 false 且不出现在 prod 配置文件里。
 - `OcrFieldParser`（纯函数，与 provider 无关）：标签词表（姓名 / 患者姓名、性别、年龄、住院号 / 住院号码、标本 / 组织类型）+ 全半角冒号与空格归一 + 值的合法性（年龄 1-120 的整数、性别 男 / 女、住院号 5-20 位字母数字）。
   没有标签的裸数字一律不认。单位名：整行与 active 单位名完全相等才认。
@@ -103,3 +108,7 @@ accept:
 2. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 3. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 4. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+## 5 票面更新
+
+- 2026-09-23 按 CR-20260923-09 更新：§2 桩的描述改为读模块内 `src/main/resources/ocr-cases.json`（与 doc 原件逐字节一致，`FixtureCopiesSyncTest` 比对）、缺请求头回 01 号样例；touches 补上这份夹具与 `ruoyi-lqg/pom.xml`；accept 1 追加一段：extD 不带请求头识别，`rawLines` 等于 01 号样例。

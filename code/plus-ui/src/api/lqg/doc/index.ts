@@ -13,12 +13,15 @@ import { AxiosPromise } from 'axios';
 // ★ 本文件由 DOC-PUBLISH-001 续写：末尾两个「完成并同步 / 撤回」的客户端
 //   （后端在 org.dromara.lqg.doc.publish.DocPublishController，权限 lqg:qc:publish）。
 //
-// ★ 三个语义要点：
-//   1) 「这份文档的整体状态」= docx 那一行（file_format=docx, page_no=0）的 render_status；
-//      流水线任何一步失败（Gotenberg 连不上 / 超时）都是 **failed + errorMsg**，不是 HTTP 500。
-//   2) failed 时 pages 一定是空数组（旧产物保留在库里，但不再被当成最新返回）。
-//      所以「重新生成」= 再调一次 render（幂等：指纹没变就直接返回 done）。
-//   3) 所有 url 都是 **10 分钟短时签名链接**，不要缓存、不要存库、不要拼字符串。
+// ★ 四个语义要点：
+//   1) 「这份文档的整体状态」= 这一版产物（Word / PDF / 页面图三者同指纹）齐不齐：
+//      齐了才是 done；流水线任何一步失败（Gotenberg 连不上 / 超时 / 外部版缺图）都是
+//      **failed + errorMsg**，不是 HTTP 500；成员变了待重出 / 正在出 = pending（页面轮询即可）。
+//   2) failed / pending 时 pages 一定是空数组（旧产物保留在库里，但不再被当成最新返回）。
+//   3) 「预览」= render（内容没变直接返回上一版）；**「重新生成」= render + force=true**，一定重出。
+//   4) 内部版有图片取不到时照样 done，但 missingImageCount / missingImages 说明缺了哪几张
+//      （外部版有缺图直接 failed，不发给送检方）。
+//   所有 url 都是 **10 分钟短时签名链接**，不要缓存、不要存库、不要拼字符串。
 // ============================================================================
 
 export type DocKind = 'sample_qc' | 'organoid_qc' | 'organoid_score' | 'merged';
@@ -39,6 +42,10 @@ export interface DocRenderVO {
   renderedTime?: string | null;
   /** true = 这次命中缓存、没有重新渲染 */
   cached?: boolean;
+  /** 这一版取不到的图片张数（内部版照出并记缺图；外部版有缺图即 failed） */
+  missingImageCount?: number;
+  /** 缺了哪几张（给人看的一句话） */
+  missingImages?: string | null;
 }
 
 /** GET /lqg/doc/{sampleId}/{docKind}/pages 的 data */
@@ -54,7 +61,12 @@ export interface DocPagesVO {
   pages?: { pageNo: number; url: string }[];
   /** 质控图片位：previewUrl 是预览图，url 是原图（都是短时签名链接） */
   images?: { url: string; previewUrl: string }[];
-  attachments?: { fileName: string; fileSize: number; url: string }[];
+  /** 通用附件 + 样本质控表的细胞活率测定附件 */
+  attachments?: { fileName: string; fileSize: number | null; url: string }[];
+  /** 这一版取不到的图片张数（内部版照出并记缺图） */
+  missingImageCount?: number;
+  /** 缺了哪几张（给人看的一句话） */
+  missingImages?: string | null;
 }
 
 /** GET /lqg/doc/{sampleId}/{docKind}/download 的 data */
@@ -63,12 +75,20 @@ export interface DocDownloadVO {
   fileName: string;
 }
 
-/** 触发渲染（幂等：指纹没变直接返回 done；失败返回 failed + errorMsg，可直接重试） */
-export function renderDoc(sampleId: string | number, docKind: DocKind, audience: DocAudience): AxiosPromise<DocRenderVO> {
+/**
+ * 生成文档：内容没变且上一版产物齐全时直接返回（cached=true）；失败返回 failed + errorMsg，可直接重试。
+ * `force=true` = 「重新生成」：不看缓存，一定重出一版（存储恢复后补缺图、模板更新后重出都靠它）。
+ */
+export function renderDoc(
+  sampleId: string | number,
+  docKind: DocKind,
+  audience: DocAudience,
+  force = false
+): AxiosPromise<DocRenderVO> {
   return request({
     url: `/lqg/doc/${sampleId}/${docKind}/render`,
     method: 'post',
-    params: { audience }
+    params: force ? { audience, force: true } : { audience }
   });
 }
 

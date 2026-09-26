@@ -189,6 +189,20 @@ export function fieldLabel(key: EmbedFieldKey): string {
   return LABELS[key]
 }
 
+/** 可输入字段最多几个字（与后端校验、库里的列长同一口径）；「其他」染色的具体名称 100、marker 名称 50 在各自组件里 */
+const MAXLENGTH: Partial<Record<EmbedFieldKey, number>> = {
+  paraffinBlockNo: 64,
+  sampleType: 50,
+  organoidSourceType: 100,
+  embedBy: 50,
+  operatorName: 50,
+  remark: 500,
+}
+
+export function fieldMaxlength(key: EmbedFieldKey): number | undefined {
+  return MAXLENGTH[key]
+}
+
 /** 布局 → 可渲染字段清单：顺序就是显示顺序，`editable` 是**整页可写性**的统一答案 */
 export function fieldSpecs(layout: EmbedLayout, editable: boolean): EmbedFieldSpec[] {
   return layout.fields.map(key => ({

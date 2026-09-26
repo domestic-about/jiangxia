@@ -138,6 +138,13 @@ public class SampleQueryBo extends PageQuery {
     private String tissueType;
 
     /**
+     * 类器官类型（模糊）—— CR-20260924-10 把工作台样本总表拆成「样本记录信息表」「类器官收样记录」两页之后，
+     * 类器官那一页用它代替「组织类型」那一格（两页共用这一个 BO、同一条读路径）。
+     */
+    @Schema(description = "类器官类型（模糊）")
+    private String organoidType;
+
+    /**
      * 操作人（模糊）。
      */
     @Schema(description = "操作人（模糊）")

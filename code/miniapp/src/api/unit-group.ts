@@ -37,3 +37,39 @@ export function fetchUnits() {
 export function saveProfile(payload: ProfileUpdatePayload) {
   return http.put<MpExtProfile | null>('/mp/ext/profile', payload)
 }
+
+/**
+ * 本人档案里**绑定**的单位（V01 与后端同口径）：档案里有 `unitId` 且核验状态是待核验或已核验。
+ * 自填单位（只有 `unitNameInput`）、未绑定、被驳回的都没有可用的单位 id。
+ */
+export function boundUnitOf(ext: MpExtProfile | null | undefined): SelectorUnit | null {
+  if (!ext || ext.unitId === null || ext.unitId === undefined || ext.unitId === '' || !ext.unitName) {
+    return null
+  }
+  if (ext.bindStatus !== 'pending' && ext.bindStatus !== 'verified') {
+    return null
+  }
+  return { unitId: ext.unitId, unitName: ext.unitName, groups: [] }
+}
+
+/**
+ * 填写页「来源单位」选择面板里列哪些单位（组织样本、类器官两张表共用）：
+ *   · 内部：全部启用单位（内部路径**只认 id**，后端不按名字回找，所以要能从列表里选）；
+ *   · 外部：**只有本人绑定的那一个**（后端只收本人绑定单位的 id，列全部单位会让人选到别的单位被 400）；
+ *   · 身份不明：一个都不列。
+ * 两种身份都另有「列表里没有，手动填写」（只落单位名，不带 id）。
+ */
+export function unitOptionsFor(
+  identity: unknown,
+  units: SelectorUnit[],
+  ext: MpExtProfile | null | undefined,
+): SelectorUnit[] {
+  if (identity === 'internal') {
+    return units
+  }
+  if (identity === 'external') {
+    const bound = boundUnitOf(ext)
+    return bound ? [bound] : []
+  }
+  return []
+}

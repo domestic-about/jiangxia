@@ -64,6 +64,7 @@ function remove(index: number) {
           <wd-input
             :model-value="row.markerName"
             placeholder="marker 名称（可空）"
+            :maxlength="50"
             no-border
             @update:model-value="(v: string) => patch(index, { markerName: v })"
           />

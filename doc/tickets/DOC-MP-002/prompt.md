@@ -87,6 +87,7 @@ accept:
   3. 下载有两处入口、同一套实现：预览页底部的 `DownloadBar`，和文档列表每份 / 每组上的「下载」「合并下载」（点开 `DownloadSheet` 弹层，里面就是 `DownloadBar`）——甲方 2026-09-17 看设计稿后要求列表上直接能下（CR-20260917-04）。
   4. 顶部 `DocTabs` 取这个样本已完成的几份（`…/doc/list?sampleId=`），复用 DOC-MP-001 的 `groupDocs` 决定顺序与要不要「合并」，别另写排序；外部走外部接口，拿到的也是三份。
   5. 文件名 = 文档名 + 编号：外部用送检单号、内部用内部编号；合并文件叫「质控文档（合并）」。
+  6. **外部预览同样有原图与附件**（CR-20260923-09；「外部那条只给页面图（#254）」的做法作废）：外部按 `UI:mp.doc.preview` 与 `FLOW:F-DOC-02.step2` 给原图与附件，活率附件排最前，走同一隔离咽喉（签发前逐个核对对象只属于本样本外部版）。外部 `pages` 的形状是 `{docKind, status, pages, images, attachments}`，没有失败原因、指纹与缺图明细；「文档中的图片」「附件」两段内外部都要接上，别按身份藏掉。
 
 ## 1 背景与口径
 
@@ -94,9 +95,9 @@ accept:
 
 ## 2 实现要点
 
-- 后端：`GET /mp/int/doc/{sampleId}/{docKind}/pages`、`…/download`（内部，audience 固定 internal）。外部用 AUTH-EXT-003 的。
+- 后端：`GET /mp/int/doc/{sampleId}/{docKind}/pages`、`…/download`（内部，audience 固定 internal）。外部用 AUTH-EXT-003 的（两条形状不同：内部那条与工作台同款，另带 `errorMsg` 与缺图字段；外部那条是 `{docKind, status, pages, images, attachments}`，见 §0 第 6 条）。
 - `pages/doc/preview`：路由参数 `sampleId, docKind`（含 `merged`）；按身份选内部 / 外部接口。
-  - `DocTabs`：顶部切换条（该样本已完成的几份 + ≥2 份时的「合并」），切换时重新取 pages。
+  - `DocTabs`：顶部切换条（该样本已完成的几份 + ≥2 份时的「合并」），切换时重新取 pages。CR-20260924-11 起一行排开、文字仍是全称（D7 回归脚本 scenarioA 按全称找这几个页签），放不下时横向滑动，当前那一份自动滑进可见范围（从「合并预览」进来时「合并」就在眼前）；等切换条画出来之后再设 `scroll-into-view`。
   - `PageImageViewer`：逐页 `image`（`mode="widthFix"`，懒加载）；点任一页 → `wx.previewImage({urls: 全部页, current})`。
   - `ThumbStrip`：`images` 的 `previewUrl` 作缩略图，点开 `wx.previewImage` 用 `url`（原图）。原图是 TIFF 等小程序打不开的格式时退回预览图并提示。
   - `AttachmentList`：点开 → `wx.downloadFile` → `wx.openDocument`（pdf / doc / xls 等）或 `wx.previewImage`（图片）。
@@ -120,3 +121,6 @@ accept:
 4. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 5. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 6. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-23 按 CR-20260923-09 更新：「外部那条只给页面图（#254）」的做法作废，外部预览按 UI:mp.doc.preview 给原图与附件（活率附件排最前）、走同一隔离咽喉，外部 pages 形状写明为 {docKind, status, pages, images, attachments}；两条 accept 走的都是内部身份与内部接口，不依赖外部形状，未改。
+- 2026-09-24 按 CR-20260924-11 更新：§2 `DocTabs` 补一行排开、横向滑动、当前那一份自动滑进可见范围（文字不改短名）。accept 不动（H 批已在隔离环境重放 2/2 绿）。

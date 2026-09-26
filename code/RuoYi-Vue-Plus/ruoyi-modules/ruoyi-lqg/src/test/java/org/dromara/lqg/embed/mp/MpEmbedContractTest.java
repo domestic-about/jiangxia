@@ -78,7 +78,11 @@ class MpEmbedContractTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("MpEmbedController 没有 PUT 处理方法"));
         assertEquals(1, update.getParameterCount(), "PUT /mp/int/embed 只收请求体，不该有路径变量");
-        assertEquals(EmbedSubmitBo.class, update.getParameterTypes()[0], "PUT 的入参类型应是 EmbedSubmitBo");
+        // FIX V33：收原始 JSON（没带 = 不动、带了空值 = 清空），形状仍是 EmbedSubmitBo（接口文档里标着）
+        assertEquals(com.fasterxml.jackson.databind.JsonNode.class, update.getParameterTypes()[0],
+            "PUT 收原始 JSON 再按 EmbedSubmitBo 解析（PatchBody）");
+        assertEquals(EmbedSubmitBo.class, update.getParameters()[0]
+            .getAnnotation(io.swagger.v3.oas.annotations.parameters.RequestBody.class).content()[0].schema().implementation());
         assertEquals(0, update.getAnnotationsByType(PathVariable.class).length);
     }
 
@@ -135,7 +139,12 @@ class MpEmbedContractTest {
 
     @Test
     void submitBoHasNoVerifyStatusSoSavingCannotBypassVerification() {
-        assertFalse(Arrays.stream(EmbedSubmitBo.class.getDeclaredFields())
+        // 连同父类（FIX V02b 起补填段上移到 EmbedFillBo）一起看：继承来的也不许有
+        java.util.List<Field> fields = new java.util.ArrayList<>();
+        for (Class<?> k = EmbedSubmitBo.class; k != null && k != Object.class; k = k.getSuperclass()) {
+            fields.addAll(Arrays.asList(k.getDeclaredFields()));
+        }
+        assertFalse(fields.stream()
                 .anyMatch(f -> "verifyStatus".equals(f.getName())),
             "★ 入参里不许有 verifyStatus：状态只经 PUT /lqg/embed/{id}/verify 改，"
                 + "一次普通保存绕不过核验（accept 2 最后一段断的就是它）");

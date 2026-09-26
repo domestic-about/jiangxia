@@ -6,6 +6,7 @@ import { presentationOf } from '@/components/biz/entry-presentation'
 // 「我的 · 内部管理」板块（UI:mp.me）：
 // **只给内部人员**——外部整块不渲染（不是置灰），由页面按 `meSections(identity)` 决定挂不挂。
 // 四个入口进表格页（SAMPLE-MP-002 起建，本张先放占位页）；底部小字逐字照 UI:mp.me。
+// 图标与首页宫格同一张表同一个（`entry-presentation.ts`）；行与分隔线的样子由 MeRow 统一给。
 defineProps<{
   entries: EntryKey[]
   note: string
@@ -21,9 +22,9 @@ const emit = defineEmits<{
     <MeRow
       v-for="(key, index) in entries"
       :key="key"
-      :mark="presentationOf(key).mark"
+      :icon="presentationOf(key).icon"
       :title="presentationOf(key).title"
-      :class="{ 'adm__row--line': index > 0 }"
+      :line="index > 0"
       @click="emit('pick', key)"
     />
     <view class="adm__note">
@@ -33,8 +34,9 @@ const emit = defineEmits<{
 </template>
 
 <style lang="scss" scoped>
-.adm__row--line {
-  border-top: 1px solid var(--lqg-line);
+/* 整块卡片左右留屏边距（落地规范 §7：屏边距 16，G14） */
+.adm {
+  margin: 0 var(--lqg-gutter);
 }
 
 .adm__note {

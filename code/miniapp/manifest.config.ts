@@ -41,6 +41,9 @@ export default defineManifestConfig({
     },
     usingComponents: true,
     lazyCodeLoading: 'requiredComponents',
+    // 隐私保护指引（V06 / SYS-RELEASE-001）：登录页强制勾选《用户协议》《隐私政策》，
+    // 手机号快捷登录、拍照识别用到的相机与相册都是微信的隐私接口 —— 显式声明按隐私指引校验。
+    __usePrivacyCheck__: true,
   },
   h5: {
     router: {

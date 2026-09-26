@@ -1,7 +1,19 @@
 package org.dromara.lqg.doc.render;
 
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import java.util.zip.CRC32;
 
 /**
@@ -27,7 +39,10 @@ import java.util.zip.CRC32;
  *
  * <p>标记值取自「种类 + 图片位 + 第几张」，同一个输入永远得到同一份字节（确定性渲染）。
  *
- * @author DOC-RENDER-001
+ * <p>G 批 C 组加了两个小工具（图片区排版，{@link DocImageLayout}）：{@link #dimensions} 只读图头拿宽高
+ * （不整张解码）；{@link #withWhiteBorder} 给多张并排 / 上下摞的图包一圈白边当缝（行内图挨着放没有间距）。
+ *
+ * @author DOC-RENDER-001 · G 批 C 组
  */
 public final class DocImageBytes {
 
@@ -60,6 +75,81 @@ public final class DocImageBytes {
             }
         }
         return data;
+    }
+
+    /**
+     * 只读图头拿宽高（不整张解码）；读不出（TIFF 等本机 ImageIO 不认的）返回 {@code null}。
+     */
+    public static DocImageLayout.Size dimensions(byte[] data) {
+        if (data == null || data.length == 0) {
+            return null;
+        }
+        try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
+            if (in == null) {
+                return null;
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) {
+                return null;
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(in, true, true);
+                return new DocImageLayout.Size(reader.getWidth(0), reader.getHeight(0));
+            } finally {
+                reader.dispose();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 四周加一圈白边（{@code border} 是<b>原图像素</b>）：多张图排在一格里时当图与图之间的缝。
+     * PNG 进 PNG 出，其余一律出 JPEG（质量 0.92，与预览图同档）；读不出 / 写不出返回 {@code null}（调用方退回不加白边）。
+     */
+    public static byte[] withWhiteBorder(byte[] data, int border) {
+        if (data == null || data.length == 0 || border <= 0) {
+            return null;
+        }
+        try {
+            BufferedImage src = ImageIO.read(new ByteArrayInputStream(data));
+            if (src == null) {
+                return null;
+            }
+            boolean png = isPng(data);
+            BufferedImage out = new BufferedImage(src.getWidth() + 2 * border, src.getHeight() + 2 * border,
+                png ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = out.createGraphics();
+            try {
+                g.setColor(Color.WHITE);
+                g.fillRect(0, 0, out.getWidth(), out.getHeight());
+                g.drawImage(src, border, border, null);
+            } finally {
+                g.dispose();
+            }
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream(data.length + 1024);
+            if (png) {
+                return ImageIO.write(out, "png", bytes) ? bytes.toByteArray() : null;
+            }
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+            if (!writers.hasNext()) {
+                return null;
+            }
+            ImageWriter writer = writers.next();
+            try (ImageOutputStream ios = ImageIO.createImageOutputStream(bytes)) {
+                ImageWriteParam param = writer.getDefaultWriteParam();
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(0.92f);
+                writer.setOutput(ios);
+                writer.write(null, new IIOImage(out, null, null), param);
+            } finally {
+                writer.dispose();
+            }
+            return bytes.toByteArray();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static boolean isPng(byte[] data) {

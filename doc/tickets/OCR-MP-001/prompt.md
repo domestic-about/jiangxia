@@ -78,6 +78,8 @@ accept:
 - 纯函数 `mergeOcrPrefill(form, ocrFields)`（`src/pages/sample/ocr/prefill.ts`）→ `{form, marks}`；`prefill.fixture.spec.ts` 从 `doc/verify/fixtures/prefill-cases.json` 读用例。
 - 表单页：被预填的项右侧出「识别 · 请核对」小标（`marks` 驱动）；用户改动该项 → 从 `marks` 里移除。提交的永远是表单当前值。
 - 隐私：首次使用相机 / 相册前，走小程序隐私授权弹窗（`wx.requirePrivacyAuthorize`）；用途说明写进隐私保护指引（SYS-RELEASE-001 汇总）。
+- 本机与试用环境的演示：dev / test 下后端的识别桩在请求**不带** `X-Ocr-Stub-Case` 时回 01 号样例（印刷标签，六项齐全），所以直接拍照或选图就会预填，**不需要在页面地址上加 `?stubCase=01`**（CR-20260923-09）。
+  页面的 `?stubCase=` 参数只是端侧取证逐例取样用的旁路（透成那个请求头），生产上没人读，不接任何业务分支。
 
 ## 3 边界（明确不做）
 
@@ -92,3 +94,7 @@ accept:
 3. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 4. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 5. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+## 5 票面更新
+
+- 2026-09-23 按 CR-20260923-09 更新：§2 写明 dev / test 下不带 `stubCase` 也会预填（识别桩缺请求头回 01 号样例），演示不再需要 `?stubCase=01`；accept 不依赖旧行为，不动。

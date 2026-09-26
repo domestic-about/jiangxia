@@ -67,9 +67,9 @@ import java.util.Objects;
  * <p>★ <b>被拒时库里必须什么都不变</b>（每条 accept 的「被拒」后面都跟库内断言）：
  * 所有校验都在第一条写操作之前，且整个方法一个事务；抛 {@link ServiceException} 即回滚。
  *
- * <p>★ <b>写接口只在 {@code /lqg/cryo/**}（工作台）</b>（CR-20260917-05）：
- * 小程序侧只有 {@code GET …/flows} 一个只读口（CRYO-MP-001），本类不向 {@code /mp/int/cryo/**}
- * 暴露任何写方法。
+ * <p>★ <b>写接口只在 {@code /lqg/cryo/**}</b>：工作台与（2026-09-24 起）小程序内部人员的批次详情弹层
+ * 都调这一套（甲方「小程序和工作台界面都能操作」），本类不向 {@code /mp/int/cryo/**} 暴露任何写方法 ——
+ * 两端共用同一把锁、同一套逐笔校验，被拒时的中文消息两端原样显示。
  *
  * @author CRYO-FLOW-001
  */
@@ -89,6 +89,9 @@ public class CryoFlowService {
 
     /** 入参时间格式（verify/README 坑 4：contract 与 accept 都用空格分隔，不用 ISO 的 {@code T}）。 */
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /** 被拒提示里指那一笔用的短时间（{@code MM-dd HH:mm}，与两端列表上的写法一致）。 */
+    private static final DateTimeFormatter SHORT_TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 
     /** 纯日期（{@code to-ln2} 的 {@code toLn2Time}）。 */
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -181,7 +184,7 @@ public class CryoFlowService {
         // ⑥ 锁批次行 → 用「改后的流水集合」逐笔重算
         CryoBatch batch = lockBatch(batchId);
         requireNonNegative(initQtyOf(batch),
-            merge(undeletedFlows(batchId), new CryoBalanceChecker.Flow(flowId, flowTime, delta)));
+            merge(undeletedFlows(batchId), new CryoBalanceChecker.Flow(flowId, flowTime, delta)), "这样改");
 
         Long userId = currentUserId();
         CryoFlow patch = buildEditPatch(exists, delta, purpose, flowTime, bo.getOperatorName());
@@ -191,6 +194,14 @@ public class CryoFlowService {
         //   ② 非 null 的字段才进 SET，所以 operatorName 不传时不会被清空；
         //   ③ @TableLogic 会给 UPDATE 补 del_flag='0'，改不到已软删的行。
         cryoFlowMapper.updateById(patch);
+        // ★ FIX V33：用途被清空（取走 / 补入可以不写用途）—— updateById 跳过 null 列，
+        //   于是「清空用途、点保存」提示已保存而库里还是旧值。这一列单独显式写 NULL（同一事务）。
+        //   盘点调整清空用途在上面 purposeOf 里就被拒（400「盘点调整必须写原因」），走不到这里。
+        if (bo.getPurpose() != null && purpose == null && exists.getPurpose() != null) {
+            cryoFlowMapper.update(null, new LambdaUpdateWrapper<CryoFlow>()
+                .eq(CryoFlow::getId, exists.getId())
+                .set(CryoFlow::getPurpose, null));
+        }
         log.info("修改冻存登记：batchId={} flowId={} type={} delta={} operator={}",
             batchId, flowId, flowType, delta, userId);
     }
@@ -243,7 +254,7 @@ public class CryoFlowService {
         CryoFlow exists = requireFlow(batchId, flowId);
         // 锁批次行 → 去掉这一笔之后的序列逐笔重算
         CryoBatch batch = lockBatch(batchId);
-        requireNonNegative(initQtyOf(batch), exclude(undeletedFlows(batchId), flowId));
+        requireNonNegative(initQtyOf(batch), exclude(undeletedFlows(batchId), flowId), "删掉这一笔");
         cryoFlowMapper.deleteById(flowId);
         log.info("软删冻存登记：batchId={} flowId={} type={} delta={} operator={}",
             batchId, flowId, exists.getFlowType(), exists.getDelta(), currentUserId());
@@ -377,8 +388,35 @@ public class CryoFlowService {
     /**
      * 逐笔校验：从初始支数出发，任一步 &lt; 0 → 400（复用上游唯一判据，别另写一套）。
      */
-    static void requireNonNegative(int initQty, List<CryoBalanceChecker.Flow> flows) {
-        CryoBalanceChecker.requireNonNegative(initQty, flows);
+    static void requireNonNegative(int initQty, List<CryoBalanceChecker.Flow> flows, String action) {
+        try {
+            CryoBalanceChecker.requireNonNegative(initQty, flows);
+        } catch (ServiceException e) {
+            // ★ 判定仍是上游那一个；这里只把提示换成「改 / 删登记」的话并指出是哪一笔 ——
+            //   上游那句「已取走 N 支，冻存数量不能少于 N」是给改初始支数的，改一笔取走时看到它会以为要去改冻存数量
+            //   （2026-09-24 起小程序也能改删登记，两端都原样显示这句话）
+            throw new ServiceException(overdraftMessage(initQty, flows, action), 400);
+        }
+    }
+
+    /**
+     * 改 / 删一笔被拒时的提示：按时间正序逐笔累加，<b>第一次</b>变负的那一笔是谁、变成了多少。
+     *
+     * <p>例：「这样改会让 09-24 10:27 那一笔（-3 支）之后的剩余变成 -1 支，没有保存」。
+     *
+     * @param action 「这样改」/「删掉这一笔」
+     */
+    static String overdraftMessage(int initQty, List<CryoBalanceChecker.Flow> flows, String action) {
+        int balance = initQty;
+        for (CryoBalanceChecker.Flow flow : CryoBalanceChecker.ordered(flows)) {
+            balance += flow.delta();
+            if (balance < 0) {
+                String when = flow.flowTime() == null ? "" : flow.flowTime().format(SHORT_TIME) + " ";
+                String delta = flow.delta() > 0 ? "+" + flow.delta() : String.valueOf(flow.delta());
+                return action + "会让 " + when + "那一笔（" + delta + " 支）之后的剩余变成 " + balance + " 支，没有保存";
+            }
+        }
+        return action + "会让某一步的剩余变成负数，没有保存";
     }
 
     /**

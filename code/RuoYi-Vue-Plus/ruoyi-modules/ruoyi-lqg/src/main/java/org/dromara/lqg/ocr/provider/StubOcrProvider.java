@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.dromara.common.core.exception.ServiceException;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -17,15 +16,25 @@ import java.util.Map;
 
 /**
  * 测试桩 provider（<b>只允许 dev / test</b>）：按请求头 {@code X-Ocr-Stub-Case} 的前两位，
- * 从 classpath 的 {@code ocr-cases.json} 里取那一组 {@code rawLines}。
+ * 从 classpath 的 {@code ocr-cases.json} 里取那一组 {@code rawLines}；<b>没带这个头时取
+ * {@link #DEFAULT_CASE} 号样例</b>。
+ *
+ * <p>★ 为什么缺头时给缺省样例而不是报错（F4 修复，独立验收 V10 / 合同功能对照 G1）：
+ * 小程序真机与 H5 都不会发 {@code X-Ocr-Stub-Case}（那是验收脚本专用的头），
+ * 旧实现缺头就抛「测试桩需要请求头…」，本机与试用环境里<b>永远走不到预填流程</b>，
+ * 甲方试用时只能看到一句报错。现在缺头返回第 01 号样例（印刷标签，六个字段齐全），
+ * 拍照 → 识别 → 预填 → 标「请核对」整条链路在 dev / test 都能演示；
+ * 验收脚本照旧用请求头逐例取（accept 1 不受影响）。prod 下本类不存在（{@code @Profile}），
+ * 配成 stub 仍被 {@link org.dromara.lqg.ocr.guard.OcrProviderGuard} 拒绝启动。
  *
  * <p>★ 为什么需要它：本票<b>不接真实识别服务</b>（ticket §3，等 OCR-SPIKE-001），
  * 但 accept 1 必须能逐例验证「解析规则对噪声不猜」—— 于是由测试桩把 fixture 的文本行
  * 原样吐给解析器，链路（接口 → provider → 解析器 → 响应）还是真的。
  *
- * <p>★ 夹具从哪来：构建时由 {@code ruoyi-lqg/pom.xml} 的 main {@code <resources>} 把
- * {@code doc/verify/fixtures/ocr-cases.json} 拷到 classpath 根（**那份是权威，不复制第二份**
- * 到仓库里；解析器单测读的是同一个文件）。
+ * <p>★ 夹具从哪来：本模块 {@code src/main/resources/ocr-cases.json}（classpath 根）。它是
+ * {@code doc/verify/fixtures/ocr-cases.json}（验收脚本读的那份）的<b>逐字节副本</b> ——
+ * V31 起后端构建只靠后端目录自己，不再跨目录去拷；两份是否一致由 {@code FixtureCopiesSyncTest}
+ * 在整仓检出时比对。解析器单测读的也是这一份。
  *
  * <p>★ prod 下配成 stub → <b>应用拒绝启动</b>（{@link org.dromara.lqg.ocr.guard.OcrProviderGuard}，
  * 与 {@code MockLoginGuard} 同一思路）：否则生产上会返回测试用例的假文本、用户以为识别坏了。
@@ -50,7 +59,13 @@ public class StubOcrProvider implements OcrProvider {
     public static final String CASE_HEADER = "X-Ocr-Stub-Case";
 
     /**
-     * classpath 里的夹具名（pom 的 main {@code <resources>} 拷进来的那一份）。
+     * 没带 {@link #CASE_HEADER} 时返回的样例（第 01 号：印刷标签，姓名 / 性别 / 年龄 / 住院号 /
+     * 组织类型 / 来源单位六项齐全，最能演示预填）。
+     */
+    public static final String DEFAULT_CASE = "01";
+
+    /**
+     * classpath 里的夹具名（本模块 main resources 里的那一份）。
      */
     static final String FIXTURE_RESOURCE = "ocr-cases.json";
 
@@ -79,8 +94,7 @@ public class StubOcrProvider implements OcrProvider {
     private void loadFixture() {
         try (InputStream in = StubOcrProvider.class.getClassLoader().getResourceAsStream(FIXTURE_RESOURCE)) {
             if (in == null) {
-                log.error("识别测试桩找不到夹具 {}（构建时应由 ruoyi-lqg/pom.xml 的 <resources> 从 "
-                    + "doc/verify/fixtures/ 拷进 classpath）", FIXTURE_RESOURCE);
+                log.error("识别测试桩找不到夹具 {}（应在 ruoyi-lqg 的 src/main/resources/ 下）", FIXTURE_RESOURCE);
                 return;
             }
             String text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -114,18 +128,20 @@ public class StubOcrProvider implements OcrProvider {
     }
 
     /**
-     * 按 case 前缀取原始文本行（{@code null} / 认不得的前缀 → 空列表）。
+     * 按 case 前缀取原始文本行：没给（{@code null} / 空白）→ {@link #DEFAULT_CASE}；
+     * 认不得的前缀 → 空列表（解析器产出空字段，前端提示「没识别出来，请手动填写」）。
      */
     public List<String> recognize(String caseKey) {
+        String key = caseKey == null || caseKey.isBlank() ? DEFAULT_CASE : caseKey.strip();
         if (caseKey == null || caseKey.isBlank()) {
-            throw new ServiceException("测试桩需要请求头 " + CASE_HEADER + "（用例名前两位，如 01）");
+            log.debug("识别测试桩：请求没带 {}，返回缺省样例 {}", CASE_HEADER, DEFAULT_CASE);
         }
-        List<String> lines = cases.get(caseKey.strip());
+        List<String> lines = cases.get(key);
         return lines == null ? List.of() : lines;
     }
 
     /**
-     * 夹具文件的外层结构（{@code doc/verify/fixtures/ocr-cases.json}）。
+     * 夹具文件的外层结构（{@code ocr-cases.json}）。
      */
     static final class Fixture {
         public List<FixtureCase> cases;

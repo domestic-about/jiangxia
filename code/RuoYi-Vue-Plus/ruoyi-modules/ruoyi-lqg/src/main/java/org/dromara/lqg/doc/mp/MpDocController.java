@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
+/*
+ * 实现备注（给维护的人看，不进接口文档 / Swagger）：
+ *
  * 小程序<b>内部人员</b>侧「文档」的三个端点（FLOW:F-DOC-02.step1 / step2 / step3、
  * UI:mp.doc.list + UI:mp.doc.preview）。
  *
@@ -41,6 +43,11 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * @author DOC-MP-001（list） / DOC-MP-002（pages + download）
  */
+/**
+ * 小程序内部人员的「文档」：清单、预览（页面图、文档中的图片、附件）、下载（10 分钟签名链接）。
+ *
+ * <p>只给内部角色；这里给的是内部版（含内部编号）。外部人员走外部文档接口。
+ */
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/mp/int/doc")
@@ -59,17 +66,10 @@ public class MpDocController {
     }
 
     /**
-     * 预览页图 + 「文档中的图片」图片位 + 附件（UI:mp.doc.preview 的上/中/下三段）。
+     * 预览：逐页页面图 + 文档中的图片（缩略 previewUrl、原图 url）+ 附件（含细胞活率测定附件）。
      *
-     * <p>形状与工作台那条 {@code /lqg/doc/{sampleId}/{docKind}/pages}（契约第 85 行）**同一个**
-     * {@link DocPagesVo}：页面图自带 {@code pageNo}，图片位带 {@code url}（原图，看细节用）与
-     * {@code previewUrl}（缩略图），附件带 {@code fileName / fileSize / url}。
-     * 所有 url 都是 10 分钟签名链接，前端不缓存（DOC-MP-001 §7.5）。
-     *
-     * <p>★ 不可用（草稿 / 内部版没渲染成功 / 合并件这一版不完整）一律业务码 <b>404</b>，
-     * 与「没这份文档」不可区分 —— 判据是 {@code DocAvailabilityService}（与清单同一处）。
-     * 合并件「份数够但还没渲染好」在小程序侧由清单里有没有 {@code merged} 行判定并轮询
-     * （doc/waves/reports/DOC-MP-002.md §merged）。
+     * <p>所有链接都是 10 分钟签名链接，前端别缓存。这一份不可用（草稿 / 内部版没生成好）一律 404，
+     * 与「没这份文档」不可区分。
      */
     @GetMapping("/{sampleId}/{docKind}/pages")
     public R<DocPagesVo> pages(@PathVariable Long sampleId, @PathVariable String docKind) {
@@ -79,10 +79,7 @@ public class MpDocController {
     /**
      * 取 10 分钟签名下载链接 + 文件名（{@code format=docx|pdf}，默认 docx）。
      *
-     * <p>列表上每份的「下载」、组底「合并下载」与预览页底部 {@code DownloadBar} 调的都是这一个
-     * （CR-20260917-04：两处入口一套实现）。文件名由后端按身份给
-     * （内部 = 文档名-内部编号），前端不自己拼（只有平台 API 需要文件名的兜底才用
-     * {@code pages/doc/download.ts#downloadFileName}）。
+     * <p>列表上的「下载」「合并下载」与预览页底部用的都是这一个；文件名由后端给（文档名-内部编号）。
      */
     @GetMapping("/{sampleId}/{docKind}/download")
     public R<DocDownloadVo> download(@PathVariable Long sampleId,

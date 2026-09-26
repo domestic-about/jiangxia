@@ -18,18 +18,29 @@
       />
     </el-card>
 
-    <!-- 五张待办卡片（UI:admin.home）：数字全部来自 todoStore 的那一次 /lqg/home/todo，
+    <!-- 待办卡片（UI:admin.home）：数字全部来自 todoStore 的那一次 /lqg/home/todo，
          侧边菜单角标读的是同一份结果。★ 每张卡片都写出来（不用 v-for）——
-         卡片文案、跳转目标、为 0 时的说明各不相同，摊开比一张配置表好读。 -->
+         卡片文案、跳转目标、为 0 时的说明各不相同，摊开比一张配置表好读。
+         ★ CR-20260924-10：原「待核验样本」一张卡拆成「待核验样本记录」「待核验类器官收样」两张，
+         各自点进对应的那一页并带「待核验」筛选（路径取自 views/lqg/sample/pages.ts）。 -->
     <div class="lqg-home__cards">
       <TodoCard
-        :title="t('lqg.home.card.pendingSamples.title')"
-        :value="todo.pendingSamples"
-        :hint="t('lqg.home.card.pendingSamples.hint')"
-        :zero-hint="t('lqg.home.card.pendingSamples.zero')"
-        :go-text="t('lqg.home.card.pendingSamples.go')"
+        :title="t('lqg.home.card.pendingTissue.title')"
+        :value="todo.pendingTissue"
+        :hint="t('lqg.home.card.pendingTissue.hint')"
+        :zero-hint="t('lqg.home.card.pendingTissue.zero')"
+        :go-text="t('lqg.home.card.pendingTissue.go')"
         :loading="todoStore.loading"
-        :to="{ path: '/sample', query: { verifyStatus: 'pending' } }"
+        :to="{ path: samplePageOf('tissue').path, query: { verifyStatus: 'pending' } }"
+      />
+      <TodoCard
+        :title="t('lqg.home.card.pendingOrganoid.title')"
+        :value="todo.pendingOrganoid"
+        :hint="t('lqg.home.card.pendingOrganoid.hint')"
+        :zero-hint="t('lqg.home.card.pendingOrganoid.zero')"
+        :go-text="t('lqg.home.card.pendingOrganoid.go')"
+        :loading="todoStore.loading"
+        :to="{ path: samplePageOf('organoid').path, query: { verifyStatus: 'pending' } }"
       />
       <TodoCard
         :title="t('lqg.home.card.pendingEmbeds.title')"
@@ -58,16 +69,20 @@
         :loading="todoStore.loading"
         :to="{ path: '/auth/extuser', query: { bindStatus: 'pending' } }"
       />
+      <!-- ★ 独立验收 V29：渲染失败卡片不再直达开发调试页，点开是「渲染失败与缺图」清单抽屉
+           （数字与清单同一个口径：失败 + 内部版缺图）；清单里点行进该样本的质控页、可一键重新生成 -->
       <TodoCard
-        :title="t('lqg.home.card.renderFailed.title')"
+        :title="t('lqg.home.issues.cardTitle')"
         :value="todo.renderFailed"
-        :hint="t('lqg.home.card.renderFailed.hint')"
-        :zero-hint="t('lqg.home.card.renderFailed.zero')"
-        :go-text="t('lqg.home.card.renderFailed.go')"
+        :hint="t('lqg.home.issues.cardHint')"
+        :zero-hint="t('lqg.home.issues.cardZero')"
+        :go-text="t('lqg.home.issues.cardGo')"
         :loading="todoStore.loading"
-        :to="{ path: '/qc-console/doc-console' }"
+        @open="issuesOpen = true"
       />
     </div>
+
+    <RenderIssuesDrawer v-model="issuesOpen" @changed="todoStore.refresh()" />
 
     <el-card shadow="never" class="mt-3">
       <template #header>
@@ -77,9 +92,13 @@
         </div>
       </template>
 
-      <el-table v-loading="recentLoading" :data="recent" size="small" border>
+      <!-- 点一行按类别进对应的样本表（CR-20260924-10：组织样本 → 样本记录信息表，类器官 → 类器官收样记录） -->
+      <el-table v-loading="recentLoading" :data="recent" size="small" border class="lqg-home__recent-table" @row-click="openRecent">
         <el-table-column prop="submitTime" :label="t('lqg.home.recent.colSubmitTime')" width="180" />
         <el-table-column prop="submitNo" :label="t('lqg.home.recent.colSubmitNo')" width="140" />
+        <el-table-column :label="t('lqg.home.recent.colSampleKind')" width="130">
+          <template #default="{ row }">{{ t(samplePageOf(row.sampleKind).titleKey) }}</template>
+        </el-table-column>
         <el-table-column prop="sourceUnitName" :label="t('lqg.home.recent.colSourceUnit')" min-width="160" show-overflow-tooltip />
         <el-table-column :label="t('lqg.home.recent.colSubmitSource')" width="110">
           <template #default="{ row }">{{ sourceLabel(row.submitSource) }}</template>
@@ -97,15 +116,17 @@
 
 <script setup lang="ts" name="LqgHome">
 import TodoCard from './components/TodoCard.vue';
+import RenderIssuesDrawer from './components/RenderIssuesDrawer.vue';
 import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
 import { getHomeRecent, HomeRecentVO } from '@/api/lqg/home';
 import { useLqgTodoStore } from '@/store/modules/lqgTodo';
+import { samplePageOf } from '@/views/lqg/sample/pages';
 
 // ============================================================================
 // 工作台首页（SYS-HOME-001 · UI:admin.home）
 //
-// ★ 五个数字**只从 store 读**（`store/modules/lqgTodo.ts`）：本页面不发 `/lqg/home/todo`
+// ★ 待办数字**只从 store 读**（`store/modules/lqgTodo.ts`）：本页面不发 `/lqg/home/todo`
 //   请求，侧边菜单角标也读同一个 store —— 两处的数字必然一致（ticket §0.1 硬要求 ③）。
 //   accept 2 最后两段断的就是「Sidebar 里出现 lqgTodo、不许出现 home/todo」。
 //
@@ -113,8 +134,12 @@ import { useLqgTodoStore } from '@/store/modules/lqgTodo';
 // ============================================================================
 
 const { t } = useI18n();
+const router = useRouter();
 const todoStore = useLqgTodoStore();
 const { todo } = storeToRefs(todoStore);
+
+/** 「渲染失败与缺图」清单抽屉 */
+const issuesOpen = ref(false);
 
 const recent = ref<HomeRecentVO[]>([]);
 const recentLoading = ref(false);
@@ -137,6 +162,11 @@ const loadRecent = async () => {
 /** 刷新按钮：数字与最近提交一起重来（数字仍然是**同一个 store**，角标跟着一起变） */
 const reload = async () => {
   await Promise.all([todoStore.refresh(), loadRecent()]);
+};
+
+/** 最近提交点一行：按类别进「样本记录信息表」或「类器官收样记录」 */
+const openRecent = (row: HomeRecentVO) => {
+  router.push({ path: samplePageOf(row.sampleKind).path });
 };
 
 const sourceLabel = (value?: string) => {
@@ -226,6 +256,10 @@ onActivated(() => {
   &__recent-sub {
     font-size: 12px;
     color: var(--lqg-ink-3);
+  }
+
+  &__recent-table :deep(.el-table__row) {
+    cursor: pointer;
   }
 }
 </style>

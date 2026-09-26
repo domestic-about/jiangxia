@@ -9,17 +9,25 @@ import {
   CRYO_FLOW_TEXT,
   cryoFormProblem,
   cryoLedgerCell,
+  cryoLedgerSub,
+  cryoLedgerTone,
+  cryoPlaceText,
   cryoQtyText,
   cryoTabText,
+  cryoViewOfTab,
   emptyCryoForm,
+  toCryoFormValue,
 } from '@/api/cryo'
 import {
+  canChangeFlow,
   editedText,
   flowBalanceText,
   flowDeltaText,
+  flowFromText,
   flowKindText,
   flowOperatorText,
   isEdited,
+  mpFlowKindOf,
 } from '@/pages/cryo/flow'
 
 /** 一个最小可用的冻存行（其余字段按需覆写） */
@@ -28,17 +36,79 @@ function row(patch: Partial<CryoBatchRow> = {}): CryoBatchRow {
 }
 
 describe('cryoTabText：页签数字只认接口给的 tabCounts', () => {
-  it('三个页签都带上整表口径的数字', () => {
-    expect(cryoTabText({ all: 7, overdue: 2, ln2: 2 })).toEqual({
+  it('四个页签都带上整表口径的数字（2026-09-24 加「已取空」）', () => {
+    expect(cryoTabText({ all: 7, overdue: 2, ln2: 2, emptied: 1 })).toEqual({
       '': '全部 7',
       overdue: '-80 超期 2',
       ln2: '液氮 2',
+      emptied: '已取空 1',
     })
   })
 
+  it('老后端没给 emptied：那一格写「—」，不拿 rows 去数', () => {
+    expect(cryoTabText({ all: 7, overdue: 2, ln2: 2 }).emptied).toBe('已取空 —')
+  })
+
   it('拿不到 tabCounts 时退回不带数字的短名（绝不拿 rows 冒充）', () => {
-    expect(cryoTabText(null)).toEqual({ '': '全部', overdue: '-80 超期', ln2: '液氮' })
+    expect(cryoTabText(null)).toEqual({ '': '全部', overdue: '-80 超期', ln2: '液氮', emptied: '已取空' })
     expect(cryoTabText(undefined).overdue).toBe('-80 超期')
+  })
+})
+
+describe('cryoViewOfTab：表格页 ?tab= 直达冻存的某个页签', () => {
+  it('认 overdue / ln2 / emptied 三个值', () => {
+    expect(cryoViewOfTab('overdue')).toBe('overdue')
+    expect(cryoViewOfTab('ln2')).toBe('ln2')
+    expect(cryoViewOfTab('emptied')).toBe('emptied')
+  })
+
+  it('all / 缺省 / 不认识的值一律回到「全部」', () => {
+    expect(cryoViewOfTab('all')).toBe('')
+    expect(cryoViewOfTab(undefined)).toBe('')
+    expect(cryoViewOfTab('')).toBe('')
+    expect(cryoViewOfTab('OVERDUE')).toBe('')
+    expect(cryoViewOfTab('pending')).toBe('')
+  })
+})
+
+describe('已取空：冻结格小字、单元格、行底色', () => {
+  it('取空的行把「已取空」放在冻结格小字最前（冻结格窄，放句尾会被挤掉）', () => {
+    expect(cryoLedgerSub(row({ remainingQty: 0, initQty: 3, emptied: true }))).toBe('已取空 · 初始 3 支')
+    expect(cryoLedgerSub(row({ remainingQty: 6, initQty: 8, emptied: false }))).toBe('剩 6 / 初始 8 支')
+  })
+
+  it('「当前剩余/支」那一格也写明已取空；没取空照旧只写数字', () => {
+    expect(cryoLedgerCell(row({ remainingQty: 0, emptied: true }), 'remainingQty')).toBe('0 · 已取空')
+    expect(cryoLedgerCell(row({ remainingQty: 4, emptied: false }), 'remainingQty')).toBe('4')
+  })
+
+  it('行底色：超期 > 已取空 > 无；只认后端的 overdue / emptied，不自己拿剩余判', () => {
+    expect(cryoLedgerTone(row({ overdue: true }))).toBe('overdue')
+    expect(cryoLedgerTone(row({ emptied: true, overdue: false }))).toBe('emptied')
+    // 剩余 0 但后端没标 emptied（老后端）→ 不自己推
+    expect(cryoLedgerTone(row({ remainingQty: 0 }))).toBe('')
+  })
+})
+
+describe('cryoPlaceText：批次详情上方「放在哪」', () => {
+  it('还在 -80：「-80℃ 暂存 · 冻存 N 天」（天数取后端的 frozenDays）', () => {
+    expect(cryoPlaceText(row({ location: 'minus80', inMinus80: 'Y', frozenDays: 20 }))).toBe('-80℃ 暂存 · 冻存 20 天')
+    expect(cryoPlaceText(row({ location: 'minus80', inMinus80: 'Y', frozenDays: 0 }))).toBe('-80℃ 暂存 · 冻存 0 天')
+    expect(cryoPlaceText(row({ location: 'minus80' }))).toBe('-80℃ 暂存')
+  })
+
+  it('已转液氮：「液氮 · 位置 xxx · 转入 yyyy-mm-dd」', () => {
+    expect(cryoPlaceText(row({ location: 'ln2', inMinus80: 'Y', ln2Location: '2号罐-3架-B5', toLn2Time: '2026-08-25' })))
+      .toBe('液氮 · 位置 2号罐-3架-B5 · 转入 2026-08-25')
+  })
+
+  it('冻存当天直接进液氮：没有转入日期，写「直接进液氮」', () => {
+    expect(cryoPlaceText(row({ location: 'ln2', inMinus80: 'N', ln2Location: '1号罐-1架-A2', toLn2Time: null })))
+      .toBe('液氮 · 位置 1号罐-1架-A2 · 直接进液氮')
+  })
+
+  it('位置空着也不渲染成 undefined', () => {
+    expect(cryoPlaceText(row({ location: 'ln2', inMinus80: 'Y', toLn2Time: '2026-09-01' }))).toBe('液氮 · 位置 — · 转入 2026-09-01')
   })
 })
 
@@ -105,13 +175,21 @@ describe('cryoFormProblem：只管「填没填、格式对不对」', () => {
     expect(cryoFormProblem({ ...valid(), inMinus80: 'Y', ln2Location: '' })).toBe('')
   })
 
+  it('已登记转液氮的批次不能把液氮位置清掉（转移时间只显示、不提交）', () => {
+    const moved = toCryoFormValue({ inMinus80: 'Y', toLn2Time: '2026-08-25', ln2Location: null })
+    expect(moved.toLn2Time).toBe('2026-08-25')
+    expect(moved.ln2Location).toBe('')
+    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-08-25', ln2Location: '' })).toContain('液氮储存位置')
+    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-08-25', ln2Location: '2号罐' })).toBe('')
+  })
+
   it('★ 不管支数够不够（「会让某一步为负」只有后端能判，前端不写第二份）', () => {
     // 冻存数量改成 1（库里已有取走）在前端不算「填错」，交后端 400
     expect(cryoFormProblem({ ...valid(), initQty: '1' })).toBe('')
   })
 })
 
-describe('取用登记行的纯文案（只读）', () => {
+describe('取用登记行的纯文案', () => {
   const take = { flowType: 'take', delta: -2, balanceAfter: 6, operatorName: '李工' }
   const add = { flowType: 'add', delta: 2, balanceAfter: 8, operatorName: '王工' }
   const adjust = { flowType: 'adjust', delta: -1, balanceAfter: 7, operatorName: '李工' }
@@ -130,6 +208,20 @@ describe('取用登记行的纯文案（只读）', () => {
     expect(flowBalanceText(take)).toBe('剩 6')
     expect(flowBalanceText({})).toBe('剩 —')
     expect(flowOperatorText(take)).toBe('李工')
+  })
+
+  it('取走那一行写明从哪取（登记那一刻的位置）；别的类型不写', () => {
+    expect(flowFromText({ ...take, fromLocation: 'ln2' })).toBe('液氮')
+    expect(flowFromText({ ...take, fromLocation: 'minus80' })).toBe('-80℃')
+    expect(flowFromText({ ...add, fromLocation: 'ln2' })).toBe('')
+  })
+
+  it('小程序里只有取走 / 补入两种能改删；第三种只在工作台改', () => {
+    expect(canChangeFlow(take)).toBe(true)
+    expect(canChangeFlow(add)).toBe(true)
+    expect(canChangeFlow(adjust)).toBe(false)
+    expect(mpFlowKindOf(take)).toBe('take')
+    expect(mpFlowKindOf(adjust)).toBeNull()
   })
 
   it('改过的标「已改 · 某某」，没改过不渲染那一段', () => {

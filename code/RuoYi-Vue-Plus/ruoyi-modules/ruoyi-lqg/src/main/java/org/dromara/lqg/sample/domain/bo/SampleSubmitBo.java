@@ -63,6 +63,9 @@ public class SampleSubmitBo implements Serializable {
     @Schema(description = "类器官类型（organoid 类必填）")
     private String organoidType;
 
+    @Schema(description = "代数（organoid 类选填，形如 P3；tissue 类不落库）", example = "P3")
+    private String passage;
+
     @Schema(description = "有无病理 Y / N")
     private String hasPathology;
 

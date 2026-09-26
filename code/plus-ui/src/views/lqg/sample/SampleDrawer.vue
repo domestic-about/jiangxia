@@ -14,9 +14,6 @@
           </span>
         </div>
 
-        <el-alert v-if="mode === 'create'" type="info" :closable="false" show-icon class="mb8">
-          {{ t('lqg.sample.drawer.kindFirst') }}
-        </el-alert>
 
         <!-- 送检信息 -->
         <div class="lqg-sample-drawer__section">{{ t('lqg.sample.drawer.sectionSubmit') }}</div>
@@ -24,12 +21,8 @@
           <el-row :gutter="12">
             <el-col :span="12">
               <el-form-item :label="t('lqg.sample.field.sampleKind')" prop="sampleKind">
-                <SegButtons
-                  v-model="form.sampleKind"
-                  :options="kindOptions"
-                  :clearable="false"
-                  :disabled="mode !== 'create'"
-                />
+                <!-- 类别由所在页面定（样本记录信息表 / 类器官收样记录，CR-20260924-10）：只显示、不给改 -->
+                <SegButtons v-model="form.sampleKind" :options="kindOptions" :clearable="false" disabled />
               </el-form-item>
             </el-col>
             <el-col v-if="mode !== 'create'" :span="12">
@@ -50,20 +43,14 @@
 
             <el-col :span="12">
               <el-form-item :label="t('lqg.sample.field.sourceUnit')" prop="sourceUnitId">
-                <el-select v-model="form.sourceUnitId" :disabled="mode === 'verify'" clearable filterable class="lqg-sample-drawer__control">
+                <el-select v-model="form.sourceUnitId" clearable filterable class="lqg-sample-drawer__control">
                   <el-option v-for="unit in units" :key="String(unit.unitId)" :label="unit.unitName" :value="unit.unitId" />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col v-if="!form.sourceUnitId" :span="12">
               <el-form-item :label="t('lqg.sample.field.sourceUnitName')" prop="sourceUnitName">
-                <el-input
-                  v-model="form.sourceUnitName"
-                  :disabled="mode === 'verify'"
-                  :placeholder="t('lqg.sample.field.sourceUnitPlaceholder')"
-                  maxlength="100"
-                  clearable
-                />
+                <el-input v-model="form.sourceUnitName" :placeholder="t('lqg.sample.field.sourceUnitPlaceholder')" maxlength="100" clearable />
               </el-form-item>
             </el-col>
 
@@ -107,6 +94,12 @@
             <el-col v-if="!isTissue" :span="12">
               <el-form-item :label="t('lqg.sample.field.organoidType')" prop="organoidType">
                 <el-input v-model="form.organoidType" maxlength="100" clearable />
+              </el-form-item>
+            </el-col>
+            <!-- 代数（CR-20260924-10：甲方 2026-09-24 第 18 行）：紧跟类器官类型，送检段 = 外部能填能改、核验时实验室能改 -->
+            <el-col v-if="!isTissue" :span="12">
+              <el-form-item :label="t('lqg.sample.field.passage')" prop="passage">
+                <el-input v-model="form.passage" maxlength="4" clearable :placeholder="t('lqg.sample.field.passagePlaceholder')" />
               </el-form-item>
             </el-col>
             <el-col :span="24">
@@ -231,11 +224,17 @@
 <script setup name="LqgSampleDrawer" lang="ts">
 import SegButtons from '@/components/lqg/SegButtons/index.vue';
 import { addSample, getSample, neverModified, updateSample, verifySample } from '@/api/lqg/sample';
-import type { SampleForm, SampleVO, SampleVerifyForm } from '@/api/lqg/sample';
+import type { SampleForm, SampleSubmitSegment, SampleVO, SampleVerifyForm } from '@/api/lqg/sample';
 import type { SourceUnitVO } from '@/api/lqg/auth/group';
+import type { SampleKind } from './pages';
+import { isPassageValue, normalizePassage } from './passage';
 import { useI18n } from 'vue-i18n';
 
-defineProps<{ units: SourceUnitVO[] }>();
+const props = defineProps<{
+  units: SourceUnitVO[];
+  /** 所在页面的样本类别（新增时按它建；CR-20260924-10 起两页各新增各的） */
+  kind?: SampleKind;
+}>();
 
 const emit = defineEmits<{ (e: 'saved'): void }>();
 
@@ -276,6 +275,7 @@ const emptyForm = (): SampleForm & Partial<SampleVO> => ({
   hospitalNo: null,
   tissueType: null,
   organoidType: null,
+  passage: null,
   hasPathology: null,
   receiveDate: null,
   internalNo: null,
@@ -295,8 +295,13 @@ const invalidDialog = reactive<{ visible: boolean; reason: string }>({ visible: 
 
 const isTissue = computed(() => form.value.sampleKind !== 'organoid');
 /**
- * 整表只读 —— 本抽屉没有只读档：核验模式的送检段是**按字段**禁用的
- * （来源单位 / 来源单位名称；类器官类型与备注仍可改，CR-20260917-05），
+ * 整表只读 —— 本抽屉没有只读档。
+ *
+ * ★ FIX V02（issue #147）：核验模式下送检段**全部可改、并且真的会保存**——
+ *   「判为有效并保存」/「判为无效」把整份送检段随 `PUT /lqg/sample/{id}/verify` 的 `submitSegment`
+ *   一起带上，后端与核验结论同一个事务落库（规则与「保存」走的 `PUT /lqg/sample` 同一份）。
+ *   以前送检段显示成可编辑、请求体里却没有它，改了也被静默丢弃。
+ *   来源单位也放开：外部只填了单位名（没挂上单位 id）的样本，核验时就能在下拉里归口到正式单位（V01）。
  * 收样段在核验模式下正是要填的部分。这里常量 false 只是让两个 el-form 的 disabled 绑定留着口子。
  */
 const readonly = computed(() => false);
@@ -325,10 +330,20 @@ const flagOptions = computed(() => [
   { label: t('lqg.sample.flag.no'), value: 'N' }
 ]);
 
+/** 代数：选填；填了必须形如 P3（小写 p 提交时转大写）—— 后端同一规则兜底 */
+const validatePassage = (_rule: unknown, value: string | null | undefined, callback: (e?: Error) => void) => {
+  if (isPassageValue(value)) {
+    callback();
+  } else {
+    callback(new Error(t('lqg.sample.drawer.passageInvalid')));
+  }
+};
+
 const rules = computed<ElFormRules>(() => ({
   sampleKind: [{ required: true, message: t('lqg.sample.drawer.kindRequired'), trigger: 'change' }],
   tissueType: isTissue.value ? [{ required: true, message: t('lqg.sample.drawer.tissueRequired'), trigger: 'blur' }] : [],
-  organoidType: isTissue.value ? [] : [{ required: true, message: t('lqg.sample.drawer.organoidRequired'), trigger: 'blur' }]
+  organoidType: isTissue.value ? [] : [{ required: true, message: t('lqg.sample.drawer.organoidRequired'), trigger: 'blur' }],
+  passage: isTissue.value ? [] : [{ validator: validatePassage, trigger: 'blur' }]
 }));
 
 const receiveRules = computed<ElFormRules>(() => ({
@@ -341,9 +356,9 @@ const invalidRules: ElFormRules = {
 };
 
 // ── 打开 ────────────────────────────────────────────────────────────────────
-const openAdd = (kind: string) => {
+const openAdd = (kind?: string) => {
   form.value = emptyForm();
-  form.value.sampleKind = kind === 'organoid' ? 'organoid' : 'tissue';
+  form.value.sampleKind = (kind ?? props.kind) === 'organoid' ? 'organoid' : 'tissue';
   hasChildren.value = false;
   mode.value = 'create';
   visible.value = true;
@@ -383,6 +398,7 @@ const payload = (): SampleForm => {
     hospitalNo: f.hospitalNo ?? null,
     tissueType: f.tissueType ?? null,
     organoidType: f.organoidType ?? null,
+    passage: normalizePassage(f.passage),
     hasPathology: f.hasPathology ?? null,
     receiveDate: f.receiveDate ?? null,
     internalNo: f.internalNo ?? null,
@@ -433,6 +449,29 @@ const submitEdit = async () => {
   }
 };
 
+/**
+ * 送检段（整段）：抽屉上半部分展示的全部送检字段。
+ *
+ * ★ 与 payload() 里的同名键一一对应（同一份表单、同一份后端规则），只是不带收样段与身份列。
+ */
+const submitSegmentPayload = (): SampleSubmitSegment => {
+  const f = form.value;
+  return {
+    sourceUnitId: f.sourceUnitId ?? null,
+    sourceUnitName: f.sourceUnitName ?? null,
+    donorName: f.donorName ?? null,
+    gender: f.gender ?? null,
+    age: f.age ?? null,
+    hospitalNo: f.hospitalNo ?? null,
+    tissueType: f.tissueType ?? null,
+    organoidType: f.organoidType ?? null,
+    // ★ 代数属于送检段（整段替换）：核验时实验室改了就随核验一起落库；不带 = 清空，所以一定要带上
+    passage: normalizePassage(f.passage),
+    hasPathology: f.hasPathology ?? null,
+    remark: f.remark ?? null
+  };
+};
+
 const verifyPayload = (action: 'valid' | 'invalid', reason?: string): SampleVerifyForm => {
   const f = form.value;
   return {
@@ -444,7 +483,9 @@ const verifyPayload = (action: 'valid' | 'invalid', reason?: string): SampleVeri
     hasQcSheet: f.hasQcSheet ?? null,
     hasViabilityReport: f.hasViabilityReport ?? null,
     operatorName: f.operatorName ?? null,
-    reason: reason ?? null
+    reason: reason ?? null,
+    // ★ FIX V02：送检段随核验一起保存（不带这个键，送检段的修改会被静默丢弃）
+    submitSegment: submitSegmentPayload()
   };
 };
 
@@ -471,6 +512,22 @@ const openInvalidDialog = () => {
 const submitInvalid = () => {
   invalidRef.value?.validate(async (valid: boolean) => {
     if (!valid) {
+      return;
+    }
+    // 送检段随判无效一起保存（FIX V02）：先过一遍送检段的必填，免得在弹窗里才看到后端 400
+    const submitOk =
+      (await formRef.value
+        ?.validate()
+        .then(() => true)
+        .catch(() => false)) ?? true;
+    if (!submitOk) {
+      proxy?.$modal.msgWarning(
+        isTissue.value
+          ? t('lqg.sample.drawer.tissueRequired')
+          : isPassageValue(form.value.passage)
+            ? t('lqg.sample.drawer.organoidRequired')
+            : t('lqg.sample.drawer.passageInvalid')
+      );
       return;
     }
     submitting.value = true;

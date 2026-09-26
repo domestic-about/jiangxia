@@ -98,6 +98,8 @@ public class QcDocService {
     private final QcScoreDictionary scoreDictionary;
     private final QcImagePreviewResolver previewResolver;
     private final SampleFieldCipher fieldCipher;
+    /** 图片 / 附件的访问地址：私有桶签临时链接，公有桶原样（Kevin 本机验收「网页工作台」第 3 行） */
+    private final QcOssUrls ossUrlSigner;
 
     /**
      * ★★ <b>发布状态机</b>（DOC-PUBLISH-001）：本类每个写接口保存成功后调
@@ -184,7 +186,7 @@ public class QcDocService {
             if (bo.getPretreatDesc() != null) {
                 patch.set(QcSampleDoc::getPretreatDesc, trimToNull(bo.getPretreatDesc()));
             }
-            // ★ 细胞活率测定附件：null = 不动，0 = 摘掉（这一格在文档里印文件名，不走通用附件）
+            // ★ 细胞活率测定附件：null = 不动，0 = 摘掉（这一格在 Word 里嵌入附件本身、显示图标 + 文件名，不走通用附件）
             if (bo.getViabilityOssId() != null) {
                 if (bo.getViabilityOssId() == 0L) {
                     patch.set(QcSampleDoc::getViabilityOssId, null)
@@ -679,17 +681,19 @@ public class QcDocService {
         return out;
     }
 
-    /** 读时带出 oss 的 URL（查不到 → null，不抛）。 */
-    private Map<Long, String> ossUrls(List<Long> ossIds) {
+    /**
+     * 读时带出 oss 的访问地址（查不到 → null，不抛）。
+     *
+     * <p>★ 不能原样给 {@code sys_oss.url}：私有桶上那是 403 的直链（缩略图、放大图、附件全打不开）。
+     * 私有桶签 10 分钟临时链接、公有桶照旧，口径见 {@link QcOssUrls}。
+     * （包可见：{@code QcDocServiceUrlTest} 钉「读路径真的走签名」）
+     */
+    Map<Long, String> ossUrls(List<Long> ossIds) {
         List<Long> ids = ossIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
-        Map<Long, String> urls = new LinkedHashMap<>();
         if (ids.isEmpty()) {
-            return urls;
+            return new LinkedHashMap<>();
         }
-        for (SysOss oss : sysOssMapper.selectByIds(ids)) {
-            urls.put(oss.getOssId(), oss.getUrl());
-        }
-        return urls;
+        return ossUrlSigner.urlsOf(sysOssMapper.selectByIds(ids));
     }
 
     // ══════════════════════════════════════════════════════════════════════

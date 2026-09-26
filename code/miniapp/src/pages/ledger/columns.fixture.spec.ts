@@ -7,23 +7,42 @@
 //
 // 三组断言：
 //   1. 逐表：`ledgerColumns(sheet).frozen.label` === fixture 的 `frozen`，
-//      `columns.map(label)` 深相等 fixture 的 `expect`（= 模板去掉冻结列 + 追加列）；
-//   2. 结构守卫：fixture 的 `expect` 必须等于 `template 去掉 frozen 再拼 extra`
-//      （与 accept 那条 jq 同源；防止有人只改 expect 不改 template）；
+//      `columns.map(label)` 深相等 fixture 的 `expect`（= 模板去掉冻结列 + 插入列 + 追加列）；
+//   2. 结构守卫：fixture 的 `expect` 必须等于 `template 去掉 frozen、插入 inserted、再拼 extra`
+//      （与 accept 那条 jq 同源；防止有人只改 expect 不改 template）；插入列必须写明来源、
+//      锚点列必须是模板列、插入列不许与模板列重名（「代数」只能以插入列的身份出现，不许混进 template）；
 //   3. 交叉守卫：冻结列不得在其余列里再出现一次（否则「内部编号」出现两遍）。
 import { describe, expect, it } from 'vitest'
 import fixture from '@doc/verify/fixtures/ledger-columns-cases.json'
 import { SHEET_KEYS, ledgerColumns } from './columns'
 
+/** 甲方后来要求加、模板原件里没有的列：插在 `after` 列后面（CR-20260924-10 起才有） */
+interface InsertedColumn {
+  label: string
+  after: string
+  source: string
+}
+
 interface SheetCase {
   templateFile: string
   template: string[]
   frozen: string
+  /** 没有这个键 = 没有插入列 */
+  inserted?: InsertedColumn[]
   extra: string[]
   expect: string[]
 }
 
 const sheets = fixture.sheets as Record<string, SheetCase>
+
+/** 模板去掉冻结列 → 插入 inserted（依次插到各自 after 后面）→ 追加 extra */
+function composeColumns(s: SheetCase): string[] {
+  const out = s.template.filter(label => label !== s.frozen)
+  for (const col of s.inserted ?? []) {
+    out.splice(out.indexOf(col.after) + 1, 0, col.label)
+  }
+  return [...out, ...s.extra]
+}
 
 describe('ledgerColumns（fixture 驱动）', () => {
   it('fixture 覆盖四张工作表，且每张都有原件与期望', () => {
@@ -35,10 +54,23 @@ describe('ledgerColumns（fixture 驱动）', () => {
     })
   })
 
-  it('每张表的 expect 都等于「模板去掉冻结列 + 追加列」（与 accept 的 jq 同源）', () => {
+  it('每张表的 expect 都等于「模板去掉冻结列 + 插入列 + 追加列」（与 accept 的 jq 同源）', () => {
     Object.entries(sheets).forEach(([key, s]) => {
-      expect([...s.template.filter(label => label !== s.frozen), ...s.extra], key).toEqual(s.expect)
+      expect(composeColumns(s), key).toEqual(s.expect)
     })
+  })
+
+  it('插入列：写明来源、锚点是模板列（且不是冻结列）、不与模板列重名', () => {
+    Object.entries(sheets).forEach(([key, s]) => {
+      for (const col of s.inserted ?? []) {
+        expect(col.source, `${key}.${col.label} 缺来源`).toBeTruthy()
+        expect(s.template, `${key}.${col.label} 的锚点`).toContain(col.after)
+        expect(col.after, `${key}.${col.label} 不能插在冻结列后面`).not.toBe(s.frozen)
+        expect(s.template, `${key}.${col.label} 与模板列重名`).not.toContain(col.label)
+      }
+    })
+    // 目前唯一的插入列：类器官收样记录「类器官类型」后的「代数」（甲方 2026-09-24 第 18 行）
+    expect(sheets.organoid.inserted?.map(c => [c.label, c.after])).toEqual([['代数', '类器官类型']])
   })
 
   SHEET_KEYS.forEach((key) => {

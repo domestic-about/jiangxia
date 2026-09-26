@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
+/*
+ * 实现备注（给维护的人看，不进接口文档 / Swagger）：
+ *
  * 外部「质控文档」的三个端点（doc/api-contract.md 的 QC / DOC 一节，
  * FLOW:F-DOC-02.step1 / step3）：
  *
@@ -35,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code audience}，请求里带 {@code audience=internal} 只是被 Spring 忽略的一个陌生查询参数。
  * 真正的 external 是在 doc 域读口 {@code DocExternalQueryService} 里写死的 ——
  * 不是「读进来再覆盖」，是外部这条路拿不到第二个取值。内部版里那一格是内部编号，
- * 外部版里那一格留空，两份产物的对象键与指纹都不同（ADR-0005）。
+ * 外部版里那一格随系统参数 {@code lqg.ext.show-internal-no}（默认留空），两份产物的对象键与指纹都不同（ADR-0005）。
  *
  * <p>★ <b>类级 {@code @SaCheckRole("lqg_external")}</b>（ADR-0004 的 I1）：
  * 内部账号打这里天然 403；外部账号打 {@code /lqg/doc/**} 也天然 403
@@ -47,6 +49,11 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * @author AUTH-EXT-003
  */
+/**
+ * 外部人员的「质控文档」：清单、预览（页面图、文档中的图片、附件）、下载（10 分钟签名链接）。
+ *
+ * <p>只给外部角色；只含可见样本里已完成、且外部版生成成功的文档。拿不到的一律按「不存在」返回 404。
+ */
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/mp/ext/doc")
@@ -56,10 +63,7 @@ public class ExtDocController {
     private final ExtDocAssemblyService extDocAssemblyService;
 
     /**
-     * 清单：可见样本 ∩ 已完成 ∩ 外部版渲染成功。
-     *
-     * <p>{@code sampleId} 是「先与可见集合求交、再按样本过滤」—— 异组用户拿猜到的 id
-     * 换到的是**空列表**（accept 1 拿 extC 带 {@code sampleId=9000001001} 钉这一条）。
+     * 清单：可见样本里已完成、且外部版生成成功的文档（可按样本、文档种类、完成时间筛）。
      */
     @GetMapping("/list")
     public TableDataInfo<ExtDocVo> list(ExtDocQueryBo query) {
@@ -67,8 +71,7 @@ public class ExtDocController {
     }
 
     /**
-     * 预览页图。不可见 / 没这份 / 还是草稿 / 外部版没渲染成功 → 一律业务码 404
-     * （不泄露存在性，也不告诉外部「渲染失败在哪里」）。
+     * 预览：页面图 + 文档中的图片（缩略与原图）+ 附件。看不到 / 没有这一份一律 404。
      */
     @GetMapping("/{sampleId}/{docKind}/pages")
     public R<ExtDocPagesVo> pages(@PathVariable Long sampleId, @PathVariable String docKind) {
@@ -76,10 +79,7 @@ public class ExtDocController {
     }
 
     /**
-     * 下载（{@code format=docx|pdf}，默认 docx）。
-     *
-     * <p>★ 签发前由 doc 域读口再核一遍对象键里的 audience 段必须是 {@code external}
-     * （ticket §0 口径 3）—— 外部永远拿不到带内部编号的那一份。
+     * 下载（{@code format=docx|pdf}，默认 docx）：10 分钟签名链接 + 文件名（文档名-送检单号）。
      */
     @GetMapping("/{sampleId}/{docKind}/download")
     public R<ExtDocDownloadVo> download(@PathVariable Long sampleId,

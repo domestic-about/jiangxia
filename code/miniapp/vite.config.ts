@@ -21,6 +21,11 @@ export default defineConfig(({ mode }) => {
   const { UNI_PLATFORM } = process.env
 
   const env = loadEnv(mode, path.resolve(process.cwd(), 'env'))
+  // 测试身份登录入口（ADR-0008）的构建期开关：只有 development / test 两种 mode 且 VITE_MOCK_LOGIN=1
+  // 才为 true（生产构建恒 false）。用 define 在**每个模块里**原样替换成字面量，打包器才能把关掉时的
+  // 身份清单、面板文案、拼 mock 串的代码整段摇掉 —— 跨模块 import 一个常量再判断，打包器不会跨模块
+  // 折叠（D8 独立验收实测：旧写法的生产包里 api/mock-seeds.js 带着全部 seed 手机号）。
+  const MOCK_LOGIN = (mode === 'development' || mode === 'test') && env.VITE_MOCK_LOGIN === '1'
   const {
     VITE_APP_PORT,
     VITE_SERVER_BASEURL,
@@ -86,6 +91,7 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       __VITE_APP_PROXY__: JSON.stringify(VITE_APP_PROXY_ENABLE),
+      __LQG_MOCK_LOGIN__: JSON.stringify(MOCK_LOGIN),
     },
     resolve: {
       alias: {

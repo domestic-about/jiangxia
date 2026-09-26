@@ -1,6 +1,9 @@
 package org.dromara.lqg.cryo.batch.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +16,7 @@ import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchVo;
 import org.dromara.lqg.cryo.batch.service.CryoBatchService;
 import org.dromara.lqg.cryo.batch.service.CryoQueryService;
 import org.dromara.lqg.cryo.export.CryoExportService;
+import org.dromara.lqg.sample.service.PatchBodyReader;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,12 +64,15 @@ public class CryoBatchController {
     private final CryoBatchService cryoBatchService;
     private final CryoQueryService cryoQueryService;
     private final CryoExportService cryoExportService;
+    /** 补丁要知道「哪些键出现过」（没带 = 不改、带了空值 = 清空，FIX V28 / V33） */
+    private final PatchBodyReader patchBodyReader;
 
     /**
      * 列表（分页）。
      *
      * <p>★ 响应体是 {@link CryoBatchPageVo}（{@code TableDataInfo} 的子类）：在
-     * {@code total / rows} 之上多带 {@code tabCounts:{all, overdue, ln2}}（CRYO-REMIND-001）。
+     * {@code total / rows} 之上多带 {@code tabCounts:{all, overdue, ln2, emptied}}（CRYO-REMIND-001；
+     * {@code emptied} 与筛选 {@code emptiedOnly} 是 2026-09-24 甲方「支数取空的要提示」加的）。
      * 返回类型必须写成子类，Jackson 才会把这个键序列化出来。
      */
     @SaCheckPermission("lqg:cryo:list")
@@ -101,8 +108,9 @@ public class CryoBatchController {
      */
     @SaCheckPermission("lqg:cryo:edit")
     @PutMapping
-    public R<Void> edit(@Valid @RequestBody CryoBatchSubmitBo bo) {
-        cryoBatchService.update(bo);
+    public R<Void> edit(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+        content = @Content(schema = @Schema(implementation = CryoBatchSubmitBo.class))) @RequestBody JsonNode body) {
+        cryoBatchService.update(patchBodyReader.read(body, CryoBatchSubmitBo.class));
         return R.ok();
     }
 

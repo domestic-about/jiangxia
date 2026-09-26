@@ -15,6 +15,17 @@
         ruoyi-common-web web服务
     </description>
 
+    <properties>
+        <!--
+          本模块跑自己的单测（全局异常处理 V03 / 上传超限 V05 / 请求日志脱敏 V19）。
+          根 pom 的缺省是 skipTests=true（「打包默认跳过测试」），这里改成 false；
+          它只是**缺省值**：命令行 -DskipTests / -Dmaven.test.skip=true 照样生效（用户属性优先于 pom 属性）。
+        -->
+        <skipTests>false</skipTests>
+        <!-- 根 pom 给 surefire 配了 groups=${profiles.active}（只跑 @Tag("dev") 之类）；本模块的用例不打 Tag，摘掉过滤 -->
+        <common.web.test.groups></common.web.test.groups>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.dromara</groupId>
@@ -52,6 +63,48 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-crypto</artifactId>
         </dependency>
+
+        <!--
+          DataAccessExceptionHandler 要认 DataAccessException / TransactionException（spring-tx）。
+          optional：不往下游传；运行时的 spring-tx 由 mybatis 那条依赖链带进来。
+          注册处有 @ConditionalOnClass 兜底，类路径上没有 spring-tx 时不注册这个处理器。
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 单元测试（MockHttpServletRequest 来自 spring-test；版本交给 Spring Boot 的依赖管理） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <groups>${common.web.test.groups}</groups>
+                    <!--
+                      很多票面 accept 用 `mvn -pl ruoyi-modules/ruoyi-lqg -am test -Dtest=某个lqg测试
+                      -Dsurefire.failIfNoSpecifiedTests=true`：-am 会把本模块也带进来，而本模块里没有那个测试。
+                      这里写死 false = 「-Dtest 过滤在本模块一个都没命中不算失败」；
+                      lqg 模块不写它，命令行的 true 在那里照常生效（该有的测试没跑到仍然会红）。
+                    -->
+                    <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

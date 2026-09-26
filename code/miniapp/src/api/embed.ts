@@ -14,6 +14,7 @@
 //   所以外部的提交体**永远两个字段都带**。
 import type { EmbedMarker, EmbedRow, SampleRow } from '@/api/sample'
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
+import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
 
 // ── 行 / 详情形状 ────────────────────────────────────────────────────────────
@@ -213,9 +214,9 @@ export function internalEmbedPayload(form: EmbedFormValue): Record<string, unkno
 /**
  * 内部**修改 / 补填**（`PUT /mp/int/embed`）：同一个提交体 + `id`。
  *
- * ★ 后端是**补丁**语义（没传的字段沿用库里现值）：日期空着 = 不动库里的值
- *   （「小程序清不掉一个日期」是已知边界，与 SAMPLE-MP-001 的 `mergePatch` 同口径 ——
- *   误清一个工序时间的代价 > 清不掉一个工序时间）。
+ * ★ 后端是**补丁**语义：**没出现的键不改**；出现且为 `null` / 空串的键**清空**；把必填项清空回 400。
+ *   本提交体把页面上的每一格都带上（空着的日期是 `null`）—— 所以在页面上清掉一个工序时间、
+ *   保存后库里也就清掉了（以前「清不掉」的边界已经没有了）。
  * ★ `stainTypes` / `markers` **总是带**：后端对这两个是「传了就整组替换」，
  *   而它们反映的就是页面上的当前选择（空数组 = 用户把它们都去掉了）。
  * ★ `paraffinBlockNo` 总是带：改编号撞到别的石蜡块会被后端拒（编号全库唯一）。
@@ -248,6 +249,7 @@ export function fetchIntEmbedList(params: {
   stain?: string
   sort?: string
   mine?: boolean
+  pageNum?: number
   pageSize?: number
 }) {
   return http.get<{ rows: EmbedDetail[], total: number }>(
@@ -259,7 +261,8 @@ export function fetchIntEmbedList(params: {
       sort: params.sort,
       // 开关关着时不带这个参数（不带 = 中心全员，CR-20260918-07）
       mine: params.mine ? true : undefined,
-      pageSize: params.pageSize ?? 100,
+      pageNum: params.pageNum ?? 1,
+      pageSize: params.pageSize ?? PAGE_SIZE,
     },
     // 分页接口的形状是 `{code,msg,rows,total}`（没有 data 键）
     { raw: true },
@@ -282,13 +285,15 @@ export function updateIntEmbed(payload: Record<string, unknown>) {
  * 内部「选择样本」的候选：**只列已核验有效的样本**（UI:mp.embed.form / FLOW:F-EMBED-01.step1）。
  *
  * 复用样本域那条内部读路径（`keyword` = 内部编号等值 / 来源单位模糊，SAMPLE-MP-002 落的）。
+ * 分页（V27）：弹层里滑到底再取下一页。
  */
-export function fetchIntValidSamples(keyword: string, pageSize = 20) {
+export function fetchIntValidSamples(keyword: string, pageNum = 1, pageSize = PAGE_SIZE) {
   return http.get<{ rows: SampleRow[], total: number }>(
     '/mp/int/sample/list',
     {
       verifyStatus: 'valid',
       keyword: keyword.trim() || undefined,
+      pageNum,
       pageSize,
     },
     { raw: true },
@@ -298,12 +303,13 @@ export function fetchIntValidSamples(keyword: string, pageSize = 20) {
 // ── 外部（小程序 · 合作单位）────────────────────────────────────────────────
 
 /** 外部列表（历史编辑记录的「石蜡包埋」页签）：外部接口本来就按最近倒序，不另收 sort */
-export function fetchExtEmbedList(params: { onlyMine?: boolean, pageSize?: number }) {
+export function fetchExtEmbedList(params: { onlyMine?: boolean, pageNum?: number, pageSize?: number }) {
   return http.get<{ rows: EmbedDetail[], total: number }>(
     '/mp/ext/embed/list',
     {
       onlyMine: params.onlyMine ? true : undefined,
-      pageSize: params.pageSize ?? 100,
+      pageNum: params.pageNum ?? 1,
+      pageSize: params.pageSize ?? PAGE_SIZE,
     },
     { raw: true },
   )
@@ -322,19 +328,25 @@ export function updateExtEmbed(id: string | number, payload: Record<string, unkn
 }
 
 /**
- * 外部「选择样本」的候选：`onlyMine=true` + **排除已判无效的**（ticket §2 / UI:mp.embed.form）。
+ * 外部「选择样本」的候选：`onlyMine=true` 的**一页**（V27：分页取，不再写死 100 条）。
  *
+ * ★ **排除已判无效的**在显示层做（{@link isPickableExtSample}），不在这里筛：
+ *   在取数函数里筛掉会让「这一页不满」被误判成「已经取完」，后面的页就再也取不到了。
  * ★ 待核验的样本**可以**挂（外部自己刚送检、还没核验的时候就要能送石蜡包埋）——
  *   后端 `EmbedExternalService.submit` 的口径也是「本人送检过、没被判无效」。
  * ★ 候选里**不出现内部编号**：显示送检单号 + 掩码供体姓名（REQ-AUTH-013）。
  */
-export async function fetchExtMySamples(pageSize = 100): Promise<SampleRow[]> {
-  const page = await http.get<{ rows: SampleRow[], total: number }>(
+export function fetchExtMySamplesPage(pageNum = 1, pageSize = PAGE_SIZE) {
+  return http.get<{ rows: SampleRow[], total: number }>(
     '/mp/ext/sample/list',
-    { onlyMine: true, pageSize },
+    { onlyMine: true, pageNum, pageSize },
     { raw: true },
   )
-  return (page.rows ?? []).filter(row => row.verifyStatus !== 'invalid')
+}
+
+/** 外部「选择样本」能不能选这一条：没被判无效（ticket §2 / UI:mp.embed.form） */
+export function isPickableExtSample(row: SampleRow): boolean {
+  return row.verifyStatus !== 'invalid'
 }
 
 /** 样本类型那一格的联想词：字典接口 `/mp/dict/hints?type=sample`（拉不到不挡填写） */
@@ -350,13 +362,14 @@ export function fetchSampleTypeHints() {
  * ★ **不带** `sort=recent` / `mine`：带了这页就变成「有人经手过的」而不是全表
  *   （那两个参数是「历史编辑记录」的取数口，CR-20260918-07）。
  */
-export function fetchEmbedLedgerRows(filters: LedgerFilters, pageSize = 100) {
+export function fetchEmbedLedgerRows(filters: LedgerFilters, pageNum = 1, pageSize = PAGE_SIZE) {
   return http.get<{ rows: LedgerRow[], total: number }>(
     '/mp/int/embed/list',
     {
       keyword: filters.keyword.trim() || undefined,
       verifyStatus: filters.verifyStatus || undefined,
       stain: filters.stain || undefined,
+      pageNum,
       pageSize,
     },
     // 分页接口的形状是 `{code,msg,rows,total}`（没有 data 键）

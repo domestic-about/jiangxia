@@ -130,8 +130,8 @@ export function formLayout(
   }
 }
 
-/** 字段的呈现方式：文本输入 / 数字（字符串）输入 / 底部弹框选日期 / 按钮组 / 多行文本框 */
-export type FieldControl = 'text' | 'digit' | 'date' | 'datetime' | 'seg' | 'textarea'
+/** 字段的呈现方式：文本输入 / 数字（字符串）输入 / 底部弹框选日期 / 底部弹框选单位 / 按钮组 / 多行文本框 */
+export type FieldControl = 'text' | 'digit' | 'date' | 'datetime' | 'select' | 'seg' | 'textarea'
 
 /** 一个可渲染的字段：key + 标签 + 控件类型 + 是否可改（取不到详情时按不可改） */
 export interface FieldSpec {
@@ -160,8 +160,16 @@ const LABELS: Record<FormFieldKey, string> = {
   operatorName: '操作人',
 }
 
-/** 字段的控件类型（落地规范 §5.4 / §5.5：日期走底部弹框，按钮组不换成下拉或开关） */
+/**
+ * 字段的控件类型（落地规范 §5.4 / §5.5：日期与选择走底部弹框，按钮组不换成下拉或开关）。
+ *
+ * ★ 年龄是**文本**（G15）：字段是 `VARCHAR(20)`，SSOT 注明「年龄（文本：56 / 3月龄，模板没限定单位）」；
+ *   以前用数字键盘，「3月龄」这类值根本敲不进去。没登记的键一律按文本。
+ * ★ 来源单位是**选择**（V01）：与类器官表单同一个面板 —— 内部从启用单位里选（内部路径后端只认 id）、
+ *   外部只有本人绑定的单位；两边都能「列表里没有，手动填写」。
+ */
 const CONTROLS: Partial<Record<FormFieldKey, FieldControl>> = {
+  sourceUnitName: 'select',
   gender: 'seg',
   hasPathology: 'seg',
   isFixed: 'seg',
@@ -170,12 +178,30 @@ const CONTROLS: Partial<Record<FormFieldKey, FieldControl>> = {
   receiveDate: 'date',
   processTime: 'datetime',
   remark: 'textarea',
-  age: 'digit',
 }
 
 /** 字段中文标签（详情页与只读表单共用） */
 export function fieldLabel(key: FormFieldKey): string {
   return LABELS[key]
+}
+
+/**
+ * 可输入字段最多几个字（与后端校验、库里的列长同一口径）；没登记的（按钮组、日期）不限。
+ * 来源单位的手填名在单位面板里（100）。
+ */
+const MAXLENGTH: Partial<Record<FormFieldKey, number>> = {
+  sourceUnitName: 100,
+  donorName: 50,
+  age: 20,
+  hospitalNo: 50,
+  tissueType: 100,
+  remark: 500,
+  internalNo: 64,
+  operatorName: 50,
+}
+
+export function fieldMaxlength(key: FormFieldKey): number | undefined {
+  return MAXLENGTH[key]
 }
 
 // 布局 → 可渲染的字段清单：顺序就是显示顺序，`editable` 是**整页可写性**的统一答案

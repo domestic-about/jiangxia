@@ -14,8 +14,10 @@ import java.util.List;
  * 外部样本详情（{@code GET /mp/ext/sample/{id}}，doc/api-contract.md 第 51 行）。
  *
  * <p>★ <b>键集合就是白名单</b>：{@code id, submitNo, sampleKind, sourceUnitName, donorName, gender,
- * age, hospitalNo, tissueType, organoidType, hasPathology, remark, verifyStatus, invalidReason,
+ * age, hospitalNo, tissueType, organoidType, passage, hasPathology, remark, verifyStatus, invalidReason,
  * submitterName, mine, editable, createTime, embeds, docs}。
+ * {@code passage}（代数）是 CR-20260924-10 加的：外部自己在类器官收样记录里填的一项，<b>不是内部字段</b>
+ * （外部改后重提是整段替换，详情不带它的话，改一次备注就会把代数洗成空）。
  * accept 第 2 条拿这份清单做<b>差集</b>断言 —— 多一个键（{@code receiveDate} / {@code operatorName}
  * / {@code internalNo} / {@code verifyBy} / 冻存信息）就红。
  *
@@ -71,6 +73,9 @@ public class ExtSampleDetailVo implements Serializable {
 
     @Schema(description = "类器官类型")
     private String organoidType;
+
+    @Schema(description = "代数（类器官收样记录才有，形如 P3；外部自己填的，外部可见）")
+    private String passage;
 
     @Schema(description = "有无病理 Y / N")
     private String hasPathology;

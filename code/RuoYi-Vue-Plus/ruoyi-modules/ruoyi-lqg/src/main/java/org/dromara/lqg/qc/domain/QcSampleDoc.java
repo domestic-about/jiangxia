@@ -77,7 +77,7 @@ public class QcSampleDoc extends BaseEntity {
     private Long viabilityOssId;
 
     /**
-     * 细胞活率测定附件的原始文件名（文档里这一格印文件名，不做 OLE 嵌入）
+     * 细胞活率测定附件的原始文件名（文档里这一格嵌入附件本身，图标旁边印这个文件名；H 批起做 OLE 嵌入）
      */
     private String viabilityFileName;
 

@@ -121,6 +121,13 @@ public class Sample extends BaseEntity {
     private String organoidType;
 
     /**
+     * 代数（CR-20260924-10：甲方 2026-09-24 要求类器官收样记录加这一项）：只有 organoid 类有，选填，
+     * 形如 {@code P3}（与冻存批次代数同一规则，见 {@code SubmitSegmentRules#normalizePassage}）；
+     * tissue 类恒为空（写路径一律写 NULL）。
+     */
+    private String passage;
+
+    /**
      * 有无病理 Y / N
      */
     private String hasPathology;

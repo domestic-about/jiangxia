@@ -1,11 +1,15 @@
 package org.dromara.lqg.embed.mp;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.lqg.embed.domain.bo.EmbedSubmitBo;
+import org.dromara.lqg.sample.service.PatchBodyReader;
 import org.dromara.lqg.embed.domain.vo.EmbedVo;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +53,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class MpEmbedController {
 
     private final MpEmbedService mpEmbedService;
+    /** 补丁要知道「哪些键出现过」（没带 = 不改、带了空值 = 清空，FIX V28 / V33） */
+    private final PatchBodyReader patchBodyReader;
 
     /**
      * 列表：内部管理表格页（搜索 + 核验状态 + 染色）与历史编辑记录（{@code sort=recent}）共用。
@@ -75,11 +81,13 @@ public class MpEmbedController {
     }
 
     /**
-     * 补填 / 修改（历史编辑记录点一条进来，或内部管理只读页右上角切修改模式）。
+     * 补填 / 修改（历史编辑记录点一条进来，或内部管理只读页右上角切修改模式）——
+     * 补丁语义（FIX V33）：没带的键不动；带了空值 = 清空（工序时间填错了能清掉）；清必填项 → 400。
      */
     @PutMapping
-    public R<Void> update(@RequestBody EmbedSubmitBo bo) {
-        mpEmbedService.update(bo);
+    public R<Void> update(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+        content = @Content(schema = @Schema(implementation = EmbedSubmitBo.class))) @RequestBody JsonNode body) {
+        mpEmbedService.update(patchBodyReader.read(body, EmbedSubmitBo.class));
         return R.ok();
     }
 

@@ -8,6 +8,8 @@ import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.auth.domain.ExtProfile;
 import org.dromara.lqg.auth.group.guard.ExtBindStateMachine;
 import org.dromara.lqg.auth.mapper.ExtProfileMapper;
+import org.dromara.lqg.embed.domain.Embed;
+import org.dromara.lqg.embed.mapper.EmbedMapper;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.guard.SampleKindRules;
 import org.dromara.lqg.sample.mapper.SampleMapper;
@@ -53,6 +55,11 @@ public class ExtScopeServiceImpl implements ExtScopeService {
 
     private final SampleMapper sampleMapper;
     private final ExtProfileMapper extProfileMapper;
+    /**
+     * FIX V17：石蜡包埋记录的可见性也收口在这里（记录 → 所挂样本 → 可见集合），
+     * embed 包的外部写侧不再自己 {@code selectById} 判「有没有 / 是不是别人的」。
+     */
+    private final EmbedMapper embedMapper;
 
     /**
      * {@inheritDoc}
@@ -103,7 +110,46 @@ public class ExtScopeServiceImpl implements ExtScopeService {
     @Override
     public void assertVisible(Long userId, Long sampleId) {
         if (sampleId == null || !visibleSampleIds(userId).contains(sampleId)) {
-            throw new ServiceException("样本不存在", 404);
+            throw new ServiceException(SAMPLE_NOT_FOUND, 404);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>★ 先按 id 取记录（{@code @TableLogic}：软删的取不到），再看它挂的样本在不在可见集合里 ——
+     * 任何一步不成立都抛<b>同一个</b>异常，调用方拿不到「有没有这条记录」的任何信号。
+     */
+    @Override
+    public Long assertEmbedVisible(Long userId, Long embedId) {
+        if (userId == null || embedId == null) {
+            throw new ServiceException(EMBED_NOT_FOUND, 404);
+        }
+        Embed embed = DataPermissionHelper.ignore(() -> embedMapper.selectById(embedId));
+        if (embed == null || embed.getSampleId() == null || !visibleSampleIds(userId).contains(embed.getSampleId())) {
+            throw new ServiceException(EMBED_NOT_FOUND, 404);
+        }
+        return embed.getSampleId();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void assertUsableForEmbed(Long userId, Long sampleId) {
+        // ① 可见（不可见 / 不存在 / 软删 → 同一个 404）
+        assertVisible(userId, sampleId);
+        Sample sample = DataPermissionHelper.ignore(() -> sampleMapper.selectById(sampleId));
+        if (sample == null) {
+            throw new ServiceException(SAMPLE_NOT_FOUND, 404);
+        }
+        // ② 本人（可见才走到这里：同组的样本看得到，但不能替他送样）
+        if (!userId.equals(sample.getSubmitterId())) {
+            throw new ServiceException("只能挂本人送检过的样本（同组的样本可以看，但不能替他送样）", 400);
+        }
+        // ③ 没被判无效（待核验的可以挂）
+        if (VerifyTransitions.INVALID.equals(sample.getVerifyStatus())) {
+            throw new ServiceException("这条样本已判无效，不能提交石蜡包埋送样", 400);
         }
     }
 
@@ -214,7 +260,7 @@ public class ExtScopeServiceImpl implements ExtScopeService {
      */
     public static String rejectionMessage(Sample sample, Long userId) {
         if (sample == null) {
-            return "样本不存在";
+            return SAMPLE_NOT_FOUND;
         }
         if (!userId.equals(sample.getSubmitterId())) {
             return "只能修改重提本人提交的样本（同组的样本可以看，但不能改）";

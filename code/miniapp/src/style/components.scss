@@ -111,7 +111,12 @@ page {
   margin: var(--lqg-sp-5) var(--lqg-gutter) 0; padding: var(--lqg-sp-1);
   background: var(--lqg-card); border-radius: var(--lqg-radius-ctl); box-shadow: var(--lqg-shadow-sm); display: flex;
 }
-.lqg-sheets__item { flex: 1; text-align: center; padding: var(--lqg-sp-3) 0; font-size: var(--lqg-fs-body); color: var(--lqg-ink-2); border-radius: var(--lqg-radius-seg); }
+/* 页签文字一律不折行（Kevin 2026-09-24 本机验收）：页签用短名（entries.ts#ENTRY_SHORT），万一窄屏放不下就省略号收尾，
+   不折成两行、也不把切换条撑出屏幕 */
+.lqg-sheets__item {
+  flex: 1; min-width: 0; text-align: center; padding: var(--lqg-sp-3) 0; font-size: var(--lqg-fs-body); color: var(--lqg-ink-2); border-radius: var(--lqg-radius-seg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .lqg-sheets__item--on { background: var(--lqg-primary); color: var(--lqg-on-primary); font-weight: var(--lqg-fw-semibold); }
 .lqg-filter { display: flex; gap: var(--lqg-sp-3); margin: var(--lqg-sp-5) var(--lqg-gutter) 0; }
 .lqg-filter__chip {
@@ -127,7 +132,6 @@ page {
 .lqg-ledger__row--pending .lqg-ledger__td { background: var(--lqg-warn-row); }
 .lqg-ledger__row--pending .lqg-ledger__fz-sub { color: var(--lqg-warn); font-weight: var(--lqg-fw-semibold); }
 .lqg-ledger__row--overdue .lqg-ledger__td { background: var(--lqg-danger-row); }
-.lqg-ledger__row--overdue .lqg-ledger__fz-sub { color: var(--lqg-danger); font-weight: var(--lqg-fw-semibold); }
 
 /* —— 底部弹层内容（wd-popup 里用）—— */
 .lqg-sheet { padding: var(--lqg-sp-7) var(--lqg-gutter) calc(var(--lqg-sp-7) + env(safe-area-inset-bottom)); }

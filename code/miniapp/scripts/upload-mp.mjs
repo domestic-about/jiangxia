@@ -1,91 +1,252 @@
 #!/usr/bin/env node
 /**
- * SYS-STAGING-001 · 小程序测试环境（体验版）上传
+ * 小程序上传（SYS-STAGING-001 起；V07 补发布守卫与参数）
  *
- *   LQG_WX_APPID=wx.... \
- *   LQG_WX_PRIVATE_KEY=/abs/path/private.wx....key \
- *   pnpm upload:mp --mode=test
+ *   LQG_WX_APPID=wx.... LQG_WX_PRIVATE_KEY=/abs/path/private.wx....key \
+ *   pnpm upload:mp --mode=test|staging|production [--robot=N] [--version=x.y.z] [--desc=说明] [--skip-build]
+ *
+ * 参数：
+ *   --mode=        vite mode，决定加载 env/.env + env/.env.<mode>，缺省 test（与旧用法一致）
+ *   --robot=N      miniprogram-ci 机器人编号 1–30；缺省 production=1，其余=2（与 dongjiaoshan 同一分工）
+ *   --version=     上传版本号；缺省 production = package.json 的 version，其余 = <version>.<mode>.<提交号>
+ *   --desc=        版本描述（微信后台「项目备注」列）；缺省按 mode 生成一句中文
+ *   --skip-build   不重新构建，直接上传 dist/build/mp-weixin-<mode> 里现成的产物（守卫照样检查它）
  *
  * 流程（栈包 gotchas §6.5：**只走本地构建 + miniprogram-ci，不用 CI 机器构建**）：
- *   1. 本地 `uni build -p mp-weixin --mode <mode>`；
- *      ★ 产物写到 dist/build/mp-weixin-<mode>（UNI_OUTPUT_DIR 覆盖默认目录），
- *        这样不会覆盖 dist/build/mp-weixin —— 那是**生产构建**的产物，
- *        SYS-MP-001 的 accept 会 grep 它「不许出现 mock:ext」。测试构建里有 mock 调试入口，
- *        两者混在一个目录就会互相打脸。
- *   2. miniprogram-ci upload → 版本出现在微信公众平台的「版本管理」（体验版由平台侧设置/发布）
- *   3. miniprogram-ci preview → 生成体验版二维码 PNG（发给 Kevin，**不进仓库**）
+ *   0. **发布守卫**（只在 production 模式拦截，其它模式只提示）：
+ *        接口地址不是 https / 是回环或内网地址 / 是测试环境域名 / 为空，
+ *        appid 为空或是 wx0000000000000000 这类占位，
+ *        mock 登录开着（env 里 VITE_MOCK_LOGIN=1，或产物里搜得到 mock: 前缀）
+ *      —— 任一条命中就拒绝上传，逐条说明原因，退出码 3。
+ *      ★ 守卫只在上传脚本里：普通的 `pnpm build:mp-weixin` 不受影响（票面 accept 要跑它）。
+ *   1. 本地 `uni build -p mp-weixin --mode <mode>`，产物写到 dist/build/mp-weixin-<mode>
+ *      （UNI_OUTPUT_DIR 覆盖默认目录，不覆盖 dist/build/mp-weixin —— 那是 accept 检查的生产构建产物）；
+ *      appid 与接口地址以**本次生效的值**注入构建（进程环境变量 > env/.env.<mode> > env/.env）。
+ *   2. 构建后再对**产物**过一遍守卫（接口地址、mock 痕迹、回环地址），防「env 看着对、包里不对」。
+ *   3. miniprogram-ci upload → 微信公众平台「版本管理」；非 production 另出一张体验版二维码（不进仓库）。
  *
- * 为什么必须本地构建：不同 OS 上 uni-app 的编译产物不同，CI 机器（Linux）编出来的包在真机上
- * 组件会渲染为空（栈包 gotchas §6.5）。
- *
- * 缺 appid / 上传密钥时**不会假装成功**：打印「需要 Kevin 做」的清单并以非零码退出，
- * 但构建产物已经落在 dist/build/mp-weixin-<mode>，拿到凭据后可直接重跑。
+ * 缺 appid / 上传密钥时**不会假装成功**：打印缺什么并以非零码退出，构建产物已经就位，拿到凭据后可直接重跑。
  */
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-const modeArg = process.argv.find(a => a.startsWith('--mode='))
-const MODE = modeArg ? modeArg.split('=')[1] : 'test'
 const HERE = path.resolve(import.meta.dirname, '..')
-const OUT_DIR = path.join(HERE, 'dist', 'build', `mp-weixin-${MODE}`)
 
-const die = (msg) => {
-  console.error(`\n[upload:mp] ✗ ${msg}\n`)
-  process.exit(2)
+// ── 参数 ──────────────────────────────────────────────────────────────────────
+function parseArgs(argv) {
+  const out = { mode: 'test', robot: null, version: null, desc: null, skipBuild: false }
+  for (const arg of argv) {
+    if (arg.startsWith('--mode=')) out.mode = arg.slice('--mode='.length)
+    else if (arg.startsWith('--robot=')) out.robot = arg.slice('--robot='.length)
+    else if (arg.startsWith('--version=')) out.version = arg.slice('--version='.length)
+    else if (arg.startsWith('--desc=')) out.desc = arg.slice('--desc='.length)
+    else if (arg === '--skip-build') out.skipBuild = true
+    else {
+      console.error(`[upload:mp] 不认识的参数：${arg}`)
+      process.exit(2)
+    }
+  }
+  return out
 }
 
-// ── 0. 读 env/.env 与 env/.env.<mode>（与 vite.config.ts 的 envDir 一致）──────
+const die = (msg, code = 2) => {
+  console.error(`\n[upload:mp] ✗ ${msg}\n`)
+  process.exit(code)
+}
+
+const args = parseArgs(process.argv.slice(2))
+const MODE = args.mode
+if (!/^[a-z]+$/.test(MODE)) die(`--mode 只收小写字母（如 test / staging / production），收到「${MODE}」`)
+const IS_PROD = MODE === 'production'
+const OUT_DIR = path.join(HERE, 'dist', 'build', `mp-weixin-${MODE}`)
+
+const ROBOT = args.robot === null ? (IS_PROD ? 1 : 2) : Number(args.robot)
+if (!Number.isInteger(ROBOT) || ROBOT < 1 || ROBOT > 30) die(`--robot 必须是 1–30 的整数，收到「${args.robot}」`)
+
+// ── 0. 读 env/.env 与 env/.env.<mode>（与 vite.config.ts 的 envDir 一致；进程环境变量优先）────
 function loadEnvFile(file) {
   if (!existsSync(file)) return {}
   const out = {}
   for (const line of readFileSync(file, 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
+    if (/^\s*#/.test(line)) continue
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/)
     if (m) out[m[1]] = m[2].replace(/^['"]|['"]$/g, '').trim()
   }
   return out
 }
-const env = { ...loadEnvFile(path.join(HERE, 'env', '.env')), ...loadEnvFile(path.join(HERE, 'env', `.env.${MODE}`)) }
-const APPID = process.env.LQG_WX_APPID || env.VITE_WX_APPID || ''
-const KEY_PATH = process.env.LQG_WX_PRIVATE_KEY || ''
+if (!existsSync(path.join(HERE, 'env', `.env.${MODE}`))) die(`没有 env/.env.${MODE}：mode 写错了？`)
+const fileEnv = { ...loadEnvFile(path.join(HERE, 'env', '.env')), ...loadEnvFile(path.join(HERE, 'env', `.env.${MODE}`)) }
+/** 生效值：进程环境变量 > env 文件（vite 的 loadEnv 也是这个优先级） */
+const effective = key => (process.env[key] !== undefined ? process.env[key] : fileEnv[key]) ?? ''
 
-console.log(`[upload:mp] mode=${MODE}  appid=${APPID || '(未提供)'}`)
-console.log(`[upload:mp] serverBaseUrl=${env.VITE_SERVER_BASEURL || '(未设置)'}  mockLogin=${env.VITE_MOCK_LOGIN || '(关)'}`)
+const APPID = process.env.LQG_WX_APPID || effective('VITE_WX_APPID')
+const KEY_PATH = process.env.LQG_WX_PRIVATE_KEY || ''
+const BASE_URL = effective('VITE_SERVER_BASEURL')
+const MOCK = effective('VITE_MOCK_LOGIN')
+
+// ── 守卫 ──────────────────────────────────────────────────────────────────────
+/** 回环 / 内网 / 本机名：正式包里一个都不能有 */
+function privateHostReason(host) {
+  const h = host.toLowerCase().replace(/^\[|\]$/g, '')
+  if (h === 'localhost' || h.endsWith('.localhost')) return '本机名 localhost'
+  if (h === '::1' || h === '0.0.0.0') return '回环 / 未指定地址'
+  if (h.endsWith('.local') || h.endsWith('.lan') || h.endsWith('.internal')) return '局域网主机名'
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])]
+    if (a === 127) return '回环地址 127.x'
+    if (a === 10) return '内网地址 10.x'
+    if (a === 172 && b >= 16 && b <= 31) return '内网地址 172.16–31.x'
+    if (a === 192 && b === 168) return '内网地址 192.168.x'
+    if (a === 169 && b === 254) return '链路本地地址 169.254.x'
+    if (a === 0) return '未指定地址 0.x'
+  }
+  if (/^f[cd][0-9a-f]{2}:/.test(h) || h.startsWith('fe80:')) return '内网 IPv6 地址'
+  return ''
+}
+
+/** 接口地址的问题清单（空数组 = 通过） */
+function baseUrlProblems(url) {
+  const problems = []
+  if (!url) {
+    problems.push('接口地址 VITE_SERVER_BASEURL 为空（env/.env.production 里还没填正式域名，也没用环境变量注入）')
+    return problems
+  }
+  let parsed
+  try {
+    parsed = new URL(url)
+  }
+  catch {
+    problems.push(`接口地址不是合法 URL：${url}`)
+    return problems
+  }
+  if (parsed.protocol !== 'https:') problems.push(`接口地址不是 https：${url}（小程序正式版的 request 合法域名只认 https）`)
+  const why = privateHostReason(parsed.hostname)
+  if (why) problems.push(`接口地址是${why}：${url}（真机上连不到，正式包里不许出现）`)
+  // 测试环境域名只对 production 算问题（test / staging 本来就指它）
+  if (IS_PROD && /(^|\.)tianda\.studio$/i.test(parsed.hostname)) problems.push(`接口地址是测试环境域名：${url}（线上用户的数据会写进测试库）`)
+  if (/(^|\.)(example\.(com|org|net)|invalid|test)$/i.test(parsed.hostname)) problems.push(`接口地址是占位域名：${url}`)
+  if (parsed.pathname && parsed.pathname !== '/') problems.push(`接口地址不要带路径：${url}`)
+  return problems
+}
+
+function appidProblems(appid) {
+  if (!appid) return ['小程序 appid 为空（设置 LQG_WX_APPID，或在 env 里写 VITE_WX_APPID）']
+  if (/^wx0+$/i.test(appid) || /^wxmock/i.test(appid) || appid === 'touristappid') return [`小程序 appid 是占位值「${appid}」，用它上传一定被微信拒`]
+  if (!/^wx[0-9a-f]{16}$/i.test(appid)) return [`小程序 appid 格式不对「${appid}」（应为 wx + 16 位十六进制）`]
+  return []
+}
+
+function mockProblems() {
+  return MOCK === '1' ? [`mock 登录开着（VITE_MOCK_LOGIN=1）：正式版里会留一个不用微信就能冒充任意身份的入口`] : []
+}
+
+/** 产物检查：mock 痕迹、回环 / 内网地址、接口地址是否真的打进了包 */
+function artifactProblems(dir, url) {
+  const problems = []
+  if (!existsSync(path.join(dir, 'app.json'))) return [`产物不完整：${path.relative(HERE, dir)}/app.json 不存在`]
+  const files = []
+  const walk = (d) => {
+    for (const n of readdirSync(d)) {
+      const p = path.join(d, n)
+      if (statSync(p).isDirectory()) walk(p)
+      else if (/\.(js|json|wxml)$/.test(n)) files.push(p)
+    }
+  }
+  walk(dir)
+  const hits = { mock: [], loopback: [] }
+  let hasBase = !url
+  for (const f of files) {
+    const s = readFileSync(f, 'utf8')
+    const rel = path.relative(dir, f)
+    if (/mock:|mock-openid-|1380000\d{4}/.test(s)) hits.mock.push(rel)
+    if (/(?:https?:)?\/\/(?:127\.\d+\.\d+\.\d+|localhost|0\.0\.0\.0|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(?::\d+)?/.test(s)) hits.loopback.push(rel)
+    if (url && s.includes(url)) hasBase = true
+  }
+  if (hits.mock.length) problems.push(`产物里有 mock 登录的痕迹：${hits.mock.slice(0, 5).join('、')}`)
+  if (hits.loopback.length) problems.push(`产物里有回环 / 内网地址：${hits.loopback.slice(0, 5).join('、')}`)
+  if (!hasBase) problems.push(`产物里找不到接口地址 ${url}（构建时没吃到这个值？）`)
+  return problems
+}
+
+function report(stage, problems) {
+  if (problems.length === 0) {
+    console.log(`[upload:mp] ✓ 发布守卫（${stage}）通过`)
+    return
+  }
+  const title = IS_PROD ? `✗ 发布守卫（${stage}）拒绝上传 production：` : `! 发布守卫（${stage}）提示（${MODE} 模式只提示，不拦）：`
+  console.error(`\n[upload:mp] ${title}`)
+  problems.forEach((p, i) => console.error(`  ${i + 1}. ${p}`))
+  if (IS_PROD) {
+    console.error('\n  改好 env/.env.production（或用环境变量注入 VITE_SERVER_BASEURL / LQG_WX_APPID）后重跑；')
+    console.error('  普通的 pnpm build:mp-weixin 不受这道守卫影响。\n')
+    process.exit(3)
+  }
+}
+
+console.log(`[upload:mp] mode=${MODE}  robot=${ROBOT}  appid=${APPID || '(未提供)'}`)
+console.log(`[upload:mp] serverBaseUrl=${BASE_URL || '(未设置)'}  mockLogin=${MOCK === '1' ? '开' : '关'}`)
+
+// 构建前：配置层面的守卫（production 下命中即退出，不白跑一次构建）
+report('配置', [...baseUrlProblems(BASE_URL), ...appidProblems(APPID), ...mockProblems()])
 
 // ── 1. 本地构建 ─────────────────────────────────────────────────────────────
-mkdirSync(OUT_DIR, { recursive: true })
-console.log(`[upload:mp] 构建 → ${path.relative(HERE, OUT_DIR)}`)
-execFileSync('pnpm', ['exec', 'uni', 'build', '-p', 'mp-weixin', '--mode', MODE], {
-  cwd: HERE,
-  stdio: 'inherit',
-  env: { ...process.env, UNI_OUTPUT_DIR: OUT_DIR },
-})
-if (!existsSync(path.join(OUT_DIR, 'app.json'))) die(`构建产物不完整：${OUT_DIR}/app.json 不存在`)
+if (args.skipBuild) {
+  console.log(`[upload:mp] --skip-build：不重新构建，直接用 ${path.relative(HERE, OUT_DIR)}`)
+}
+else {
+  mkdirSync(OUT_DIR, { recursive: true })
+  console.log(`[upload:mp] 构建 → ${path.relative(HERE, OUT_DIR)}`)
+  execFileSync('pnpm', ['exec', 'uni', 'build', '-p', 'mp-weixin', '--mode', MODE], {
+    cwd: HERE,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      UNI_OUTPUT_DIR: OUT_DIR,
+      // 以本次生效的值构建：manifest 里的 appid 与请求根地址都和上传的一致
+      ...(APPID ? { VITE_WX_APPID: APPID } : {}),
+      VITE_SERVER_BASEURL: BASE_URL,
+    },
+  })
+}
+
+// 构建后：产物层面的守卫
+report('产物', artifactProblems(OUT_DIR, BASE_URL))
 
 // ── 2. 凭据检查（缺了就说清楚缺什么，不硬猜）────────────────────────────────
-if (!APPID || APPID === 'wx0000000000000000') {
+if (appidProblems(APPID).length) {
   die(
-    `缺小程序 appid：设置 LQG_WX_APPID（或在 env/.env 里改 VITE_WX_APPID）。\n` +
-    `  当前是占位值 "${APPID}"，用占位 appid 上传一定被微信拒。\n` +
-    `  需要 Kevin 做：① 给出测试用 appid（乙方测试号或甲方主体号）；\n` +
-    `                ② 在「微信公众平台 → 开发管理 → 开发设置」生成**上传密钥**并下载 private.<appid>.key；\n` +
-    `                ③ 把 songjian.tianda.studio 加进「服务器域名 → request 合法域名」（必须 https 且已备案）。\n` +
-    `  构建产物已就位：${path.relative(HERE, OUT_DIR)}（拿到凭据后重跑本命令即可）`,
+    `${appidProblems(APPID)[0]}。\n`
+    + `  需要 Kevin 做：① 给出小程序 appid（测试用乙方测试号或甲方主体号）；\n`
+    + `                ② 在「微信公众平台 → 开发管理 → 开发设置」生成**上传密钥**并下载 private.<appid>.key；\n`
+    + `                ③ 把接口域名加进「服务器域名 → request 合法域名」（必须 https 且已备案）。\n`
+    + `  构建产物已就位：${path.relative(HERE, OUT_DIR)}（拿到凭据后重跑，可加 --skip-build）`,
   )
 }
 if (!KEY_PATH || !existsSync(KEY_PATH)) {
   die(
-    `缺上传密钥：设置 LQG_WX_PRIVATE_KEY=<private.${APPID}.key 的绝对路径>。\n` +
-    `  构建产物已就位：${path.relative(HERE, OUT_DIR)}（拿到密钥后重跑本命令即可）`,
+    `缺上传密钥：设置 LQG_WX_PRIVATE_KEY=<private.${APPID}.key 的绝对路径>。\n`
+    + `  构建产物已就位：${path.relative(HERE, OUT_DIR)}（拿到密钥后重跑，可加 --skip-build）`,
   )
 }
 
-// ── 3. 上传 + 出体验版二维码 ────────────────────────────────────────────────
-const ci = (await import('miniprogram-ci')).default
+// ── 3. 上传 ──────────────────────────────────────────────────────────────────
 const pkg = JSON.parse(readFileSync(path.join(HERE, 'package.json'), 'utf8'))
-const commit = process.env.LQG_BUILD_COMMIT || execFileSync('git', ['rev-parse', '--short=10', 'HEAD'], { cwd: HERE }).toString().trim()
-const version = `${pkg.version}.${MODE}.${commit}`
+const commit = process.env.LQG_BUILD_COMMIT || (() => {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=10', 'HEAD'], { cwd: HERE }).toString().trim()
+  }
+  catch {
+    return 'nogit'
+  }
+})()
+const version = args.version || (IS_PROD ? pkg.version : `${pkg.version}.${MODE}.${commit}`)
+if (IS_PROD && !/^\d+\.\d+\.\d+$/.test(version)) die(`production 的版本号必须是 x.y.z，收到「${version}」`)
+const desc = args.desc || (IS_PROD ? `正式版 ${version}` : `测试环境体验版（${MODE}，提交 ${commit}）`)
+
+const ci = (await import('miniprogram-ci')).default
 const project = new ci.Project({
   appid: APPID,
   type: 'miniProgram',
@@ -94,24 +255,28 @@ const project = new ci.Project({
   ignores: ['node_modules/**/*'],
 })
 
-console.log(`[upload:mp] 上传版本 ${version} …`)
+console.log(`[upload:mp] 上传版本 ${version}（robot ${ROBOT}）…`)
 await ci.upload({
   project,
   version,
-  desc: `SYS-STAGING-001 测试环境体验版（${MODE}，commit ${commit}）`,
+  desc,
+  robot: ROBOT,
   setting: { es6: true, minify: true, urlCheck: false },
-  onProgressUpdate: (t) => process.stdout.write(`\r  ${String(t).slice(0, 120)}`),
+  onProgressUpdate: t => process.stdout.write(`\r  ${String(t).slice(0, 120)}`),
 })
-console.log('\n[upload:mp] ✓ 上传完成 —— 到「微信公众平台 → 版本管理」把它设为体验版')
+console.log(`\n[upload:mp] ✓ 上传完成 —— 到「微信公众平台 → 版本管理」${IS_PROD ? '提交审核' : '把它设为体验版'}`)
 
-const qr = path.join(HERE, 'dist', `体验版二维码-${MODE}-${commit}.png`)
-console.log('[upload:mp] 生成体验版二维码 …')
-await ci.preview({
-  project,
-  desc: `测试环境体验版二维码（${commit}）`,
-  qrcodeFormat: 'image',
-  qrcodeOutputDest: qr,
-  setting: { es6: true, minify: true, urlCheck: false },
-})
-console.log(`[upload:mp] ✓ 二维码：${qr}`)
-console.log('[upload:mp] 二维码**不要提交进仓库**（已经落在 dist/，git 忽略了 code/miniapp/dist）')
+if (!IS_PROD) {
+  const qr = path.join(HERE, 'dist', `体验版二维码-${MODE}-${commit}.png`)
+  console.log('[upload:mp] 生成体验版二维码 …')
+  await ci.preview({
+    project,
+    desc: `${MODE} 体验版二维码（${commit}）`,
+    robot: ROBOT,
+    qrcodeFormat: 'image',
+    qrcodeOutputDest: qr,
+    setting: { es6: true, minify: true, urlCheck: false },
+  })
+  console.log(`[upload:mp] ✓ 二维码：${qr}`)
+  console.log('[upload:mp] 二维码**不要提交进仓库**（已经落在 dist/，git 忽略了 code/miniapp/dist）')
+}

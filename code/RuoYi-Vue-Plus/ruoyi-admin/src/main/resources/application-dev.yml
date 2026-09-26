@@ -5,6 +5,23 @@ spring.boot.admin.client:
   # 增加客户端开关
   enabled: false
 
+--- # 本机 dev 的口令与端口：自动读 code/deploy/dev/.env（gitignored，和 dev compose 同一份）
+# 这样 `mvn spring-boot:run -pl ruoyi-admin` 或 IDE 直接起 dev，不用先 export LQG_*。
+# 三个候选对应三种工作目录：ruoyi-admin（spring-boot:run / IDE）、RuoYi-Vue-Plus、工作区根（local.sh / qa-up.sh）。
+# optional：找不到就跳过，退回下面各处的缺省值；命令行与真实环境变量的优先级仍高于它（隔离环境靠环境变量覆盖）。
+spring.config.import:
+  - optional:file:../../deploy/dev/.env[.properties]
+  - optional:file:../deploy/dev/.env[.properties]
+  - optional:file:code/deploy/dev/.env[.properties]
+
+--- # api 接口加解密（dev 关掉，与 test 同一口径）
+# 小程序与工作台的 dev 构建都不加密请求（plus-ui/.env.development 的 VITE_APP_ENCRYPT=false），
+# doc/verify/api.sh 也是裸 curl。原先靠启动参数 --api-decrypt.enabled=false 关，IDE 里直接用 dev profile 启动时
+# 没带这个参数，CryptoFilter 把不带加密头的登录请求一律拒成 403「没有访问权限」（2026-09-24 Kevin 本机实测）。
+# 写进 dev 文件，怎么启动都一样；prod 仍然刻意不出现这个键。
+api-decrypt:
+  enabled: false
+
 --- # snail-job 配置
 # 本项目不用 SnailJob（ADR-0001：定时任务用 Spring @Scheduled）。上游默认 true，这里关掉，
 # 免得它去连 17888 的调度服务、报连接错。
@@ -290,9 +307,10 @@ lqg:
   # 拍照识别（OCR-IMPL-001 / ADR-0007）：一个方案一个 OcrProvider 实现类，配置切换。
   #   provider=none（缺省）→ 直接提示「识别暂不可用，请手动填写」，小程序照常能手填；
   #   provider=stub        → **仅 dev / test** 的测试桩：按请求头 X-Ocr-Stub-Case 的前两位
-  #                          从 classpath 的 ocr-cases.json 取 rawLines（夹具由 ruoyi-lqg/pom.xml
-  #                          的 testResources 从 doc/verify/fixtures/ 拷进来）。真实识别服务
-  #                          等 OCR-SPIKE-001 的探路结论，本票不接。
+  #                          从 classpath 的 ocr-cases.json 取 rawLines（ruoyi-lqg 的 src/main/resources/，
+  #                          与 doc/verify/fixtures/ 那份逐字节一致）；**没带这个头时回 01 号样例**
+  #                          （小程序不发这个头，本机 / 试用环境靠它演示「拍照 → 预填 → 请核对」）。
+  #                          真实识别服务等 OCR-SPIKE-001 的探路结论，本票不接。
   #   paid-enabled 缺省 false，**prod 配置文件里刻意不出现这个键**（与 mock-login 同一思路）：
   #   真要在生产打开按次收费通道，由部署方显式注入并留下甲方书面同意（合同第二条第 5 款）。
   ocr:

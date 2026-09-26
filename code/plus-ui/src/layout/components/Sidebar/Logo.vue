@@ -5,14 +5,13 @@
     :style="{ backgroundColor: sideTheme === 'theme-dark' ? variables.menuBackground : variables.menuLightBackground }"
   >
     <transition :enter-active-class="proxy?.animate.logoAnimate.enter" mode="out-in">
-      <router-link v-if="collapse" key="collapse" class="sidebar-logo-link" to="/">
-        <img v-if="logo" :src="logo" class="sidebar-logo" />
-        <h1 v-else class="sidebar-title" :style="{ color: sideTheme === 'theme-dark' ? variables.logoTitleColor : variables.logoLightTitleColor }">
-          {{ title }}
+      <!-- G20：不再用若依的默认 logo 图，只显示项目标题（收起时显示标题首字） -->
+      <router-link v-if="collapse" key="collapse" class="sidebar-logo-link" to="/" :title="title">
+        <h1 class="sidebar-title" :style="{ color: sideTheme === 'theme-dark' ? variables.logoTitleColor : variables.logoLightTitleColor }">
+          {{ shortTitle }}
         </h1>
       </router-link>
       <router-link v-else key="expand" class="sidebar-logo-link" to="/">
-        <img v-if="logo" :src="logo" class="sidebar-logo" />
         <h1 class="sidebar-title" :style="{ color: sideTheme === 'theme-dark' ? variables.logoTitleColor : variables.logoLightTitleColor }">
           {{ title }}
         </h1>
@@ -23,7 +22,6 @@
 
 <script setup lang="ts">
 import variables from '@/assets/styles/variables.module.scss';
-import logo from '@/assets/logo/logo.png';
 import { useSettingsStore } from '@/store/modules/settings';
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 
@@ -35,6 +33,8 @@ defineProps({
 });
 
 const title = import.meta.env.VITE_APP_LOGO_TITLE;
+// 侧栏收起时只有 54px 宽：放标题的第一个字
+const shortTitle = title ? Array.from(title as string)[0] : '';
 const settingsStore = useSettingsStore();
 const sideTheme = computed(() => settingsStore.sideTheme);
 </script>

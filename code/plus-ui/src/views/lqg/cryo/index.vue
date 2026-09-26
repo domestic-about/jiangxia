@@ -8,8 +8,22 @@
         </div>
       </template>
 
-      <!-- 顶部页签（UI:admin.cryo.list）：全部 / -80 超期 / 液氮。
-           ★ 三个数字全部取后端响应里的 tabCounts（整表口径，翻页、换筛选都不变）；
+      <!-- ★ 带 sampleId 进来（样本表「石蜡包埋 / 冻存」一列点「冻存 N 批」，2026-09-24 本机验收）：
+           顶部写明「只看××的冻存批次 · 共 N 批」；「看全部」只清这个样本筛选，「打开样本」回到它所在那一页。
+           页签上的数字仍是整表口径（后端 tabCounts），提示条上的「共 N 批」才是这个样本的 -->
+      <div v-if="queryParams.sampleId" class="lqg-cryo__scope">
+        <i18n-t keypath="lqg.cryo.scope.only" tag="span" class="lqg-cryo__scope-text">
+          <template #sample>
+            <strong class="lqg-cryo__scope-sample">{{ scopeLabel }}</strong>
+          </template>
+        </i18n-t>
+        <span class="lqg-cryo__scope-count">{{ t('lqg.cryo.scope.total', { n: total }) }}</span>
+        <el-button link type="primary" @click="openScopeSample">{{ t('lqg.cryo.scope.openSample') }}</el-button>
+        <el-button link type="primary" @click="clearSampleFilter">{{ t('lqg.cryo.scope.showAll') }}</el-button>
+      </div>
+
+      <!-- 顶部页签（UI:admin.cryo.list）：全部 / -80 超期 / 液氮 / 已取空（2026-09-24 甲方「支数取空的要提示」）。
+           ★ 四个数字全部取后端响应里的 tabCounts（整表口径，翻页、换筛选都不变）；
              对当前页 rows 自己数会在翻页时立刻错（accept 2 counterfeit 第一条）。 -->
       <el-tabs v-model="activeTab" class="lqg-cryo__tabs">
         <el-tab-pane name="all">
@@ -28,6 +42,12 @@
           <template #label>
             {{ t('lqg.cryo.tab.ln2') }}
             <span class="lqg-cryo__count">{{ tabCounts.ln2 }}</span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane name="emptied">
+          <template #label>
+            {{ t('lqg.cryo.tab.emptied') }}
+            <span class="lqg-cryo__count lqg-cryo__count--warn">{{ tabCounts.emptied }}</span>
           </template>
         </el-tab-pane>
       </el-tabs>
@@ -106,16 +126,11 @@
         <el-col :span="1.5">
           <el-button plain icon="Refresh" @click="getList">{{ t('lqg.cryo.toolbar.refresh') }}</el-button>
         </el-col>
-        <!-- 从样本总表带 sampleId 跳进来的提示 + 一键清除 -->
-        <el-col v-if="queryParams.sampleId" :span="6">
-          <el-tag type="info" closable class="lqg-cryo__sample-tag" @close="clearSampleFilter">
-            {{ t('lqg.cryo.filter.sampleFilter', { id: queryParams.sampleId }) }}
-          </el-tag>
-        </el-col>
       </el-row>
 
-      <!-- 宽表：模板 9 列 + 内部编号 / 代数 / 当前剩余 / 当前位置 + 最后修改 + 操作。
-           超期行整行浅红 +「已超 N 天」徽标，并由后端置顶（前端不重排）。 -->
+      <!-- 宽表：模板 9 列（先后逐字照甲方 -80 冻存模板）+ 代数 / 当前剩余（与导出同序）
+           + 内部编号 / 当前位置 / 最后修改 + 操作。
+           超期行整行浅红 +「已超 N 天」徽标，并由后端置顶（前端不重排）；已取空的「当前剩余」旁标「已取空」。 -->
       <el-table
         v-loading="loading"
         :data="rows"
@@ -163,19 +178,33 @@
         <el-table-column :label="t('lqg.cryo.col.remark')" prop="remark" min-width="140" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.remark || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.internalNo')" prop="internalNo" width="120" :show-overflow-tooltip="true">
-          <template #default="scope">
-            <span class="lqg-cryo__mono">{{ scope.row.internalNo || '—' }}</span>
-          </template>
-        </el-table-column>
         <el-table-column :label="t('lqg.cryo.col.passage')" prop="passage" width="80" align="center">
           <template #default="scope">{{ scope.row.passage || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.remainingQty')" prop="remainingQty" width="120" align="center">
+        <el-table-column :label="t('lqg.cryo.col.remainingQty')" prop="remainingQty" width="130" align="center">
           <template #default="scope">
-            <span :class="{ 'lqg-cryo__empty-qty': (scope.row.remainingQty ?? 0) <= 0 }">
-              {{ scope.row.remainingQty ?? '—' }}
-            </span>
+            <div class="lqg-cryo__cell">
+              <span :class="{ 'lqg-cryo__empty-qty': scope.row.emptied }">{{ scope.row.remainingQty ?? '—' }}</span>
+              <!-- ★ 已取空（2026-09-24 甲方「支数取空的要提示」）：判据只认后端行上的 emptied，不自己拿剩余判 -->
+              <span v-if="scope.row.emptied" class="lqg-cryo__badge lqg-cryo__badge--emptied">{{ t('lqg.cryo.badge.emptyQty') }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <!-- 以下三列模板里没有，工作台自己要看：所挂样本的内部编号、当前位置、最后修改。
+             ★ 内部编号点回样本（2026-09-24 本机验收「反向可回」）：按样本类别回到它所在那一页并打开它 -->
+        <el-table-column :label="t('lqg.cryo.col.internalNo')" prop="internalNo" width="120" :show-overflow-tooltip="true">
+          <template #default="scope">
+            <el-link
+              v-if="scope.row.sampleId && scope.row.internalNo"
+              type="primary"
+              underline="never"
+              class="lqg-cryo__mono"
+              :title="t('lqg.cryo.cell.openSample')"
+              @click="openSample(scope.row)"
+            >
+              {{ scope.row.internalNo }}
+            </el-link>
+            <span v-else class="lqg-cryo__mono">—</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('lqg.cryo.col.location')" prop="location" width="110" align="center">
@@ -219,10 +248,10 @@
       />
     </el-card>
 
-    <cryo-drawer ref="drawerRef" @saved="getList" />
-    <cryo-flow-drawer ref="flowDrawerRef" @changed="getList" />
-    <cryo-flow-dialog ref="flowDialogRef" @saved="getList" />
-    <cryo-to-ln2-dialog ref="toLn2Ref" @saved="getList" />
+    <cryo-drawer ref="drawerRef" @saved="handleSaved" />
+    <cryo-flow-drawer ref="flowDrawerRef" @changed="handleSaved" />
+    <cryo-flow-dialog ref="flowDialogRef" @saved="handleSaved" />
+    <cryo-to-ln2-dialog ref="toLn2Ref" @saved="handleSaved" />
   </div>
 </template>
 
@@ -237,6 +266,10 @@ import {
   overdueDaysText
 } from '@/api/lqg/cryo';
 import type { CryoBatchVO, CryoQuery } from '@/api/lqg/cryo';
+import { useLqgTodoStore } from '@/store/modules/lqgTodo';
+// ★ 四张表之间的来回（2026-09-24 本机验收）：路径、query 解析、提示条样本名都在 relation.ts
+import { CRYO_PATH, flagOfQuery, queryWithout, routeKeyOf, sampleIdOfQuery, sampleOf, sampleScopeLabel } from '@/views/lqg/sample/relation';
+import { useScopeSample } from '@/views/lqg/sample/useScopeSample';
 import CryoDrawer from './CryoDrawer.vue';
 import CryoFlowDialog from './CryoFlowDialog.vue';
 import CryoFlowDrawer from './CryoFlowDrawer.vue';
@@ -259,13 +292,15 @@ import { useI18n } from 'vue-i18n';
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
+const todoStore = useLqgTodoStore();
 
 const loading = ref(false);
 const exporting = ref(false);
 const rows = ref<CryoBatchVO[]>([]);
 const total = ref(0);
 /** ★ 页签数字的唯一来源：后端 tabCounts（初始给整表 0，拉到就覆盖） */
-const tabCounts = reactive<{ all: number; overdue: number; ln2: number }>({ all: 0, overdue: 0, ln2: 0 });
+const tabCounts = reactive<{ all: number; overdue: number; ln2: number; emptied: number }>({ all: 0, overdue: 0, ln2: 0, emptied: 0 });
 const freezeTimeRange = ref<[string, string] | null>(null);
 
 const drawerRef = ref<InstanceType<typeof CryoDrawer>>();
@@ -282,17 +317,20 @@ const queryParams = reactive<CryoQuery>({
   sampleId: null,
   location: null,
   overdueOnly: null,
+  emptiedOnly: null,
   freezeTimeBegin: null,
   freezeTimeEnd: null
 });
 
-// ★ 页签 / 位置下拉 / 只看超期勾选**共用一个真相源**：queryParams.location 与
-//   queryParams.overdueOnly。页签是派生值（computed），不是另一份状态 ——
+// ★ 页签 / 位置下拉 / 只看超期勾选**共用一个真相源**：queryParams.location、
+//   queryParams.overdueOnly 与 queryParams.emptiedOnly。页签是派生值（computed），不是另一份状态 ——
 //   两份状态迟早会不一致（点了「液氮」页签但下拉还显示「全部」）。
-const activeTab = computed<'all' | 'overdue' | 'ln2'>({
-  get: () => (queryParams.overdueOnly ? 'overdue' : queryParams.location === LOCATION_LN2 ? 'ln2' : 'all'),
+//   「已取空」与「-80 超期」互斥（取空的永不超期，叠加就是空集）。
+const activeTab = computed<'all' | 'overdue' | 'ln2' | 'emptied'>({
+  get: () => (queryParams.overdueOnly ? 'overdue' : queryParams.emptiedOnly ? 'emptied' : queryParams.location === LOCATION_LN2 ? 'ln2' : 'all'),
   set: (value) => {
     queryParams.overdueOnly = value === 'overdue' ? true : null;
+    queryParams.emptiedOnly = value === 'emptied' ? true : null;
     queryParams.location = value === 'ln2' ? LOCATION_LN2 : null;
     handleQuery();
   }
@@ -304,8 +342,9 @@ const overdueOnlyModel = computed({
   set: (value: boolean) => {
     queryParams.overdueOnly = value ? true : null;
     if (value) {
-      // 超期与液氮是互斥的两档（液氮批次永不超期），别叠加成空集
+      // 超期与液氮、已取空都是互斥的两档（液氮批次、取空批次永不超期），别叠加成空集
       queryParams.location = null;
+      queryParams.emptiedOnly = null;
     }
     handleQuery();
   }
@@ -331,11 +370,12 @@ const getList = async () => {
     rows.value = (res.rows ?? []) as CryoBatchVO[];
     total.value = (res.total ?? 0) as number;
     // ★ 页签数字来自后端（整表口径）；缺键时保持上一次的值，不用 rows 长度顶替
-    const counts = res.tabCounts as { all: number; overdue: number; ln2: number } | undefined;
+    const counts = res.tabCounts as { all: number; overdue: number; ln2: number; emptied?: number } | undefined;
     if (counts) {
       tabCounts.all = counts.all ?? 0;
       tabCounts.overdue = counts.overdue ?? 0;
       tabCounts.ln2 = counts.ln2 ?? 0;
+      tabCounts.emptied = counts.emptied ?? 0;
     }
   } finally {
     loading.value = false;
@@ -348,7 +388,8 @@ const handleQuery = () => {
   getList();
 };
 
-const resetQuery = () => {
+/** 清空全部筛选（不发请求；「重置」与「按地址重新套筛选」共用） */
+const clearFilters = () => {
   queryRef.value?.resetFields();
   freezeTimeRange.value = null;
   queryParams.internalNo = null;
@@ -356,16 +397,112 @@ const resetQuery = () => {
   queryParams.sampleId = null;
   queryParams.location = null;
   queryParams.overdueOnly = null;
+  queryParams.emptiedOnly = null;
+};
+
+// ── 地址里带的筛选（样本表「石蜡包埋 / 冻存」一列、首页超期卡片、小程序同款直达） ─────────
+//
+// ★ 页面被 keep-alive 缓存（key 是 route.path，不含 query）：已经打开过本页，再从别的样本点「冻存 N 批」
+//   进来，onMounted 不会再跑。所以看整条地址：地址里的筛选与上一次套上的不一样，才清掉旧筛选、
+//   按地址重新套一遍并重拉；一样就不动（从标签页切回来保留页面上的手动筛选）。
+
+/** 本页认的地址筛选；`add` 不在里面（它只是「到了就开新增抽屉」的一次性动作） */
+const ROUTE_KEYS = ['sampleId', 'overdueOnly', 'emptiedOnly'];
+
+/** 上一次按地址套上的筛选指纹；null = 还没套过 */
+let appliedRouteKey: string | null = null;
+
+/** 带 sampleId 进来时那条样本（提示条上的名字、「新增」预选、「打开样本」都用它） */
+const { sample: scopeSample, load: loadScopeSample } = useScopeSample();
+
+const scopeLabel = computed(() =>
+  sampleScopeLabel(scopeSample.value, t('lqg.cryo.scope.sampleFallback', { id: queryParams.sampleId ?? '' }))
+);
+
+/** 按地址套筛选并重拉；地址里的筛选没变就什么都不做（返回 false） */
+const applyRouteScope = async (): Promise<boolean> => {
+  const key = routeKeyOf(route.query, ROUTE_KEYS);
+  if (key === appliedRouteKey) {
+    return false;
+  }
+  appliedRouteKey = key;
+  clearFilters();
+  // 从样本表「石蜡包埋 / 冻存」一列带 sampleId 进来 → 自动按样本过滤（只认纯数字）
+  queryParams.sampleId = sampleIdOfQuery(route.query.sampleId);
+  // 工作台首页「-80 超期批次」卡片带 ?overdueOnly=true 进来（SYS-HOME-001）→ 直接落在「超期」页签。
+  // ★ 页签是高亮**派生**值（activeTab 由 overdueOnly 算出来），所以设这一个字段就够了。
+  queryParams.overdueOnly = flagOfQuery(route.query.overdueOnly) ? true : null;
+  // 与小程序表格页同一种直达写法：?emptiedOnly=true 落在「已取空」页签（与超期互斥，超期优先）
+  queryParams.emptiedOnly = !queryParams.overdueOnly && flagOfQuery(route.query.emptiedOnly) ? true : null;
+  queryParams.pageNum = 1;
+  await Promise.all([getList(), loadScopeSample(queryParams.sampleId)]);
+  return true;
+};
+
+/**
+ * 样本表数量为 0 时的「新增」带 `?add=1` 进来：列表与样本都就绪后直接打开新增抽屉（样本已预选），
+ * 然后把 add 从地址里拿掉（replace）—— 刷新 / 从标签页回来不会再弹一次。
+ */
+const openAddFromRoute = () => {
+  if (route.path !== CRYO_PATH || route.query.add !== '1') {
+    return;
+  }
+  router.replace({ path: CRYO_PATH, query: queryWithout(route.query, ['add']) });
+  handleAdd();
+};
+
+/**
+ * 页面上清掉了筛选之后，让地址跟上：把 `keys` 从地址里拿掉（replace），并把拿掉之后的地址记成
+ * 「已套上」—— 否则 watch 看到地址变了，会把页面上别的手动筛选又清一遍。
+ */
+const syncRouteScope = (keys: string[]) => {
+  if (route.path !== CRYO_PATH || !keys.some((key) => route.query[key] !== undefined)) {
+    return;
+  }
+  const query = queryWithout(route.query, keys);
+  appliedRouteKey = routeKeyOf(query, ROUTE_KEYS);
+  router.replace({ path: CRYO_PATH, query });
+};
+
+const resetQuery = () => {
+  clearFilters();
+  syncRouteScope([...ROUTE_KEYS, 'add']);
   handleQuery();
 };
 
+/** 「看全部」：只清这个样本筛选（页签与别的筛选原样留着），地址里的 sampleId 一并拿掉 */
 const clearSampleFilter = () => {
   queryParams.sampleId = null;
+  syncRouteScope(['sampleId', 'add']);
   handleQuery();
 };
 
+/** 「打开样本」：回到这个样本所在那一页并打开它（push：后退能回到这里） */
+const openScopeSample = () => {
+  if (!queryParams.sampleId) {
+    return;
+  }
+  router.push(sampleOf(scopeSample.value?.sampleKind, queryParams.sampleId));
+};
+
+/** 行上的「内部编号」点回样本（组织 → 样本记录信息表，类器官 → 类器官收样记录） */
+const openSample = (row: CryoBatchVO) => {
+  router.push(sampleOf(row.sampleKind, row.sampleId));
+};
+
+/**
+ * 「新增」：只看某个样本时默认挂这个样本（抽屉里已选好，可改）。
+ * ★ 只预选已核验有效的样本 —— 抽屉的样本下拉本来就只列有效样本。
+ */
 const handleAdd = () => {
-  drawerRef.value?.openAdd();
+  const preset = queryParams.sampleId && scopeSample.value?.verifyStatus === 'valid' ? scopeSample.value : null;
+  drawerRef.value?.openAdd(preset);
+};
+
+/** 登记 / 取放 / 转液氮之后：重拉本页，并刷新首页卡片与菜单角标共用的超期数 */
+const handleSaved = () => {
+  getList();
+  todoStore.refresh();
 };
 
 const handleEdit = (row: CryoBatchVO) => {
@@ -393,6 +530,7 @@ const handleDelete = async (row: CryoBatchVO) => {
     proxy?.$modal.msgError(e instanceof Error && e.message && e.message !== 'error' ? e.message : t('lqg.cryo.msg.saveFailed'));
   }
   await getList();
+  todoStore.refresh();
 };
 
 /** 按当前筛选导出（POST /lqg/cryo/batch/export；表头 = 模板 9 列 + 代数 + 当前剩余/支） */
@@ -446,18 +584,21 @@ const overdueBadge = (row: CryoBatchVO) => {
 };
 
 onMounted(async () => {
-  // 从样本总表带 sampleId 跳入（样本总表「冻存」行操作）→ 自动按样本过滤
-  const sampleId = route.query.sampleId;
-  if (sampleId) {
-    queryParams.sampleId = String(sampleId);
-  }
-  // 工作台首页「-80 超期批次」卡片带 ?overdueOnly=true 进来（SYS-HOME-001）→ 直接落在「超期」页签。
-  // ★ 页签是高亮**派生**值（activeTab 由 overdueOnly 算出来），所以设这一个字段就够了。
-  if (route.query.overdueOnly === 'true' || route.query.overdueOnly === '1') {
-    queryParams.overdueOnly = true;
-  }
-  await getList();
+  await applyRouteScope();
+  openAddFromRoute();
 });
+
+// 已经打开过本页（keep-alive），再带着别的筛选进来 → 按新地址重新套（只认本页路径）
+watch(
+  () => route.fullPath,
+  async () => {
+    if (route.path !== CRYO_PATH) {
+      return;
+    }
+    await applyRouteScope();
+    openAddFromRoute();
+  }
+);
 </script>
 
 <style scoped lang="scss">
@@ -496,6 +637,10 @@ onMounted(async () => {
     color: var(--lqg-danger);
     background-color: var(--lqg-danger-soft);
   }
+  .lqg-cryo__count--warn {
+    color: var(--lqg-warn);
+    background-color: var(--lqg-warn-soft);
+  }
   .lqg-cryo__filter {
     margin-bottom: 4px;
   }
@@ -516,6 +661,11 @@ onMounted(async () => {
     background-color: var(--lqg-danger-soft);
     border-radius: 10px;
   }
+  // 已取空：琥珀色（与超期的红区分开：超期是「该处理」，取空是「没了」）
+  .lqg-cryo__badge--emptied {
+    color: var(--lqg-warn);
+    background-color: var(--lqg-warn-soft);
+  }
   .lqg-cryo__mono {
     font-family: var(--lqg-font-mono);
   }
@@ -527,8 +677,26 @@ onMounted(async () => {
     font-weight: 600;
     color: var(--lqg-ink-3);
   }
-  .lqg-cryo__sample-tag {
-    margin-top: 4px;
+  // 「只看××的冻存批次」提示条（主色浅底 + 左边线；token，不写字面色值）
+  .lqg-cryo__scope {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    border-left: 3px solid var(--lqg-primary);
+    border-radius: 4px;
+    background: var(--lqg-primary-soft);
+    color: var(--lqg-ink);
+  }
+  .lqg-cryo__scope-sample {
+    margin: 0 4px;
+    font-family: var(--lqg-font-mono);
+    font-weight: 600;
+  }
+  .lqg-cryo__scope-count {
+    color: var(--lqg-ink-2);
   }
 
   // 超期行整行浅红（UI:admin.cryo.list；token = --lqg-danger-soft）

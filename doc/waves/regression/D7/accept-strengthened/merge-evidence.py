@@ -14,8 +14,14 @@ import os
 import sys
 from datetime import datetime, timezone
 
-ROOT = "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid"
-OUT = os.path.join(ROOT, "doc/waves/regression/D7/accept-strengthened")
+# ★ 2026-09-23 按 CR-20260923-09 更新：ROOT 不再写死工作区绝对路径（独立验收查实：谁在副本里重放，
+#   写死的 ROOT 都会把变异写进工作区源码、在工作区执行 git checkout）→ 从脚本自身位置推导：
+#   accept-strengthened → D7 → regression → waves → doc → 仓库根（上溯 5 级）。
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", ".."))
+if not os.path.isfile(os.path.join(ROOT, "code", "miniapp", "src", "pages.json")):
+    sys.stderr.write(f"[error] ROOT 推导错了：{ROOT} 下没有 code/miniapp/src/pages.json\n")
+    sys.exit(2)
+OUT = os.path.dirname(os.path.abspath(__file__))
 OBS = os.path.join(OUT, "observations")
 
 EXPECT = ["H1a", "H1b", "H2", "H3a", "H3b", "H4"]

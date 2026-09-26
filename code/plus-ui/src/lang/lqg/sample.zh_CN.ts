@@ -1,5 +1,6 @@
 // ============================================================================
-// 域内 i18n（zh_CN）· SAMPLE 域 —— SAMPLE-WEB-001（工作台样本总表）
+// 域内 i18n（zh_CN）· SAMPLE 域 —— SAMPLE-WEB-001（工作台样本表；CR-20260924-10 起拆成
+//   「样本记录信息表」「类器官收样记录」两页，文案见 page.*）
 //
 // 约定（SYS-WEB-001 立）：键路径 = `lqg.sample.<key>`；
 //   文件名 `sample[-<票>].zh_CN.ts` 都归并进 `lqg.sample`（src/lang/index.ts 按 '-' 前段归并）。
@@ -10,8 +11,18 @@
 
 export default {
   // ── 页面与筛选区 ──────────────────────────────────────────────────────────
-  title: '样本总表',
-  subtitle: '所有样本都在这一张表里：按来源单位、组别、类别、内外部、核验状态批量筛选后查询。',
+  // 两张样本表（CR-20260924-10：甲方 2026-09-24 第 25 行，组织样本与类器官样本分开两张表）
+  // 页头一句话（2026-09-24 本机验收，四张表统一口径）：这张表是什么、和别的表什么关系
+  page: {
+    tissue: {
+      title: '样本记录信息表',
+      subtitle: '一行是一个组织样本；它做出的石蜡块、冻存批次看「石蜡包埋 / 冻存」一列，点数字直接过去。合作单位送来待核验的浅黄色标出，点「核验」处理。'
+    },
+    organoid: {
+      title: '类器官收样记录',
+      subtitle: '一行是一条类器官收样；它做出的石蜡块、冻存批次看「石蜡包埋 / 冻存」一列，点数字直接过去。合作单位送来待核验的浅黄色标出，点「核验」处理。'
+    }
+  },
   search: '搜索',
   reset: '重置',
 
@@ -25,6 +36,7 @@ export default {
     receiveDateBegin: '收样日期起',
     receiveDateEnd: '收样日期止',
     tissueType: '组织类型',
+    organoidType: '类器官类型',
     internalNo: '内部编号',
     operatorName: '操作人',
     donorName: '供体姓名',
@@ -37,6 +49,7 @@ export default {
     internalNoPlaceholder: '内部编号（精确）',
     operatorPlaceholder: '操作人（模糊）',
     tissuePlaceholder: '组织类型（模糊）',
+    organoidPlaceholder: '类器官类型（模糊）',
     donorPlaceholder: '供体姓名（精确匹配）',
     hospitalPlaceholder: '住院号（精确匹配）'
   },
@@ -67,7 +80,9 @@ export default {
     gender: '性别',
     age: '年龄',
     hospitalNo: '住院号',
-    tissueType: '组织类型 / 类器官类型',
+    tissueType: '组织类型',
+    organoidType: '类器官类型',
+    passage: '代数',
     receiveDate: '收样日期',
     isFixed: '有无固定',
     processTime: '处理时间',
@@ -80,14 +95,16 @@ export default {
     hint: '切片染色',
     updateTime: '最后修改',
     remark: '备注',
+    relation: '石蜡包埋 / 冻存',
     action: '操作'
   },
 
   // ── 切片染色提示（SAMPLE-HINT-001 / UI:admin.sample.list.hint） ────────────
   // 读时计算、不可编辑；没有包埋记录显示「—」；悬停列出各石蜡块编号与切片时间。
+  // 块数在「石蜡包埋 / 冻存」一列（relation.*），这里只写已切片 / 未切片与染色（2026-09-24 本机验收）。
   hint: {
-    block: '石蜡块 {n}',
     sectioned: '已切片',
+    notSectioned: '未切片',
     none: '—',
     blockNo: '石蜡块编号',
     sectionTime: '切片时间',
@@ -120,6 +137,24 @@ export default {
     female: '女',
     unknown: '未知'
   },
+  // ── 石蜡包埋 / 冻存一列（2026-09-24 本机验收「四种表之间的关系看着有点乱」） ─────
+  // 蜡块 = 已核验有效的石蜡块；待核验 = 合作单位送来、还没核验的石蜡包埋送样；冻存 = 冻存批次。
+  relation: {
+    blocks: '蜡块 {n}',
+    blocksLabel: '蜡块',
+    pending: '待核验 {n}',
+    cryo: '冻存 {n} 批',
+    cryoLabel: '冻存',
+    cryoCount: '{n} 批',
+    none: '—',
+    add: '新增',
+    openBlocks: '看这个样本的石蜡包埋记录',
+    openPending: '看合作单位送来、还没核验的石蜡包埋送样',
+    openCryo: '看这个样本的冻存批次',
+    addBlocks: '给这个样本新增石蜡包埋记录（样本已选好）',
+    addCryo: '给这个样本新增冻存批次（样本已选好）',
+    sampleGone: '这条样本已删除或找不到了'
+  },
   neverModified: '从未修改',
   empty: '没有符合条件的样本',
   rowAction: {
@@ -127,8 +162,6 @@ export default {
     verify: '核验',
     qcDoc: '质控文档',
     qcDocInvalid: '只有已核验有效的样本能打开质控文档',
-    embed: '石蜡包埋',
-    cryo: '冻存',
     notYet: '在后续任务接入',
     delete: '删除',
     deleteConfirm: '确认删除样本「{no}」？（软删，内部编号可重用）',
@@ -144,7 +177,6 @@ export default {
     view: '样本详情',
     sectionSubmit: '送检信息',
     sectionReceive: '收样信息',
-    kindFirst: '先选类别：组织样本 / 类器官，两类的字段不一样。',
     lastModified: '最后修改：{name} · {time}',
     lastModifiedNever: '从未修改',
     save: '保存',
@@ -167,6 +199,7 @@ export default {
     kindRequired: '请选样本类别',
     tissueRequired: '请填组织类型',
     organoidRequired: '请填类器官类型',
+    passageInvalid: '代数请填 P 加数字，如 P3',
     internalNoTaken: '这个内部编号已经被占用了'
   },
 
@@ -183,6 +216,8 @@ export default {
     hospitalNo: '住院号',
     tissueType: '组织类型',
     organoidType: '类器官类型',
+    passage: '代数',
+    passagePlaceholder: '选填，如 P3',
     hasPathology: '有无病理',
     receiveDate: '收样日期',
     internalNo: '内部编号',
@@ -200,7 +235,7 @@ export default {
   },
 
   // ── 主体（核验的是外部送来的：组织样本走送检 + 收样，类器官按 CR-20260917-05 切字段） ──
-  verifyHintOrganoid: '外部送来的类器官收样：送检段只核来源单位、类器官类型、备注；收样段填收样日期、内部编号、处理时间、细胞活率报告、操作人。',
+  verifyHintOrganoid: '外部送来的类器官收样：送检段只核来源单位、类器官类型、代数、备注；收样段填收样日期、内部编号、处理时间、细胞活率报告、操作人。',
   verifyHintTissue: '外部送来的组织样本：收样日期与内部编号必填，内部编号全库唯一。',
   allSamples: '全部样本',
   loading: '加载中…'

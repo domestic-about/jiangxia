@@ -24,6 +24,7 @@
           fit="cover"
           class="lqg-image-slot__pic"
           @click="openPreview(img)"
+          @error="handleImageError"
         >
           <template #error>
             <div class="lqg-image-slot__broken">{{ t('lqg.qc.image.broken') }}</div>
@@ -55,7 +56,7 @@
     </div>
 
     <div class="lqg-image-slot__tip">
-      {{ t('lqg.qc.image.tip', { max: MAX_PER_SLOT }) }}
+      {{ t('lqg.qc.image.tip', { max: MAX_PER_SLOT }) }}；{{ t('lqg.qc.integrity.imageSizeTip', { max: MAX_SIZE_MB }) }}
     </div>
   </div>
 </template>
@@ -71,6 +72,8 @@ import {
   type QcDocType
 } from '@/api/lqg/qc';
 import { useI18n } from 'vue-i18n';
+import { uploadBizErrorMessage, uploadErrorMessage } from './uploadFeedback';
+import { QC_FRESH_URLS } from './freshUrls';
 
 // ============================================================================
 // 一个图片位的上传区（QC-WEB-001 / UI:admin.qc.editor）
@@ -81,6 +84,8 @@ import { useI18n } from 'vue-i18n';
 //   · 删除：DELETE …/image/{id}（只解绑；101/102 没有 system:oss:remove，别去删 OSS 对象）；
 //   · 点图放大：el-image 的 preview-src-list —— 显示的可能是后端给的 JPEG 预览图
 //     （TIFF 等格式），点开放大的默认是原图；原图是 TIFF 时退回预览图（浏览器放不出 TIFF）。
+//   · 地址是 10 分钟签名链接（私有桶）：缩略图加载失败、点图放大之前，先让编辑页看一眼
+//     这批地址老没老，老了重取一次（freshUrls.ts）；刚取的地址也打不开 → 真坏了，显示「图片加载失败」。
 // ============================================================================
 
 const props = defineProps<{
@@ -120,8 +125,18 @@ const setImageRef = (id: string | number, el: any) => {
     imageRefs.set(String(id), el);
   }
 };
-const openPreview = (img: DocImageVO) => {
+/** 编辑页提供的「用之前先保鲜」（单独用本组件、没有编辑页时是空操作） */
+const ensureFreshUrls = inject(QC_FRESH_URLS, async () => {});
+
+const openPreview = async (img: DocImageVO) => {
+  // 先保鲜再放大：页面开久了原图地址过期，放大层里就是一张打不开的图
+  await ensureFreshUrls();
   imageRefs.get(String(img.id))?.showPreview?.();
+};
+
+/** 缩略图加载失败：多半是签名地址过期了 → 重取一次（地址还新就不重取，显示「图片加载失败」） */
+const handleImageError = () => {
+  ensureFreshUrls();
 };
 
 /** 展示用：优先后端预览图（TIFF 等格式浏览器只认它），没有才退回原图 */
@@ -144,28 +159,31 @@ const handleBeforeUpload = (file: File) => {
     return false;
   }
   if (file.size / 1024 / 1024 > MAX_SIZE_MB) {
-    proxy?.$modal.msgError(t('lqg.qc.image.tooLarge', { max: MAX_SIZE_MB }));
+    proxy?.$modal.msgError(`「${file.name}」` + t('lqg.qc.image.tooLarge', { max: MAX_SIZE_MB }));
     return false;
   }
   proxy?.$modal.loading(t('lqg.qc.uploading'));
   return true;
 };
 
-const handleUploadError = () => {
+/** 上传请求本身失败（超限的空 400 / 413 / 登录过期 / 网络断了 …）：说清原因，不只说「上传失败」 */
+const handleUploadError = (error: unknown, file: any) => {
   proxy?.$modal.closeLoading();
-  proxy?.$modal.msgError(t('lqg.qc.uploadFailed'));
+  proxy?.$modal.msgError(uploadErrorMessage(t, error, file?.name, MAX_SIZE_MB));
 };
 
 /** 上传到 OSS 成功后：再把它绑到这个图片位上 */
-const handleUploadSuccess = async (res: any) => {
+const handleUploadSuccess = async (res: any, file: any) => {
   try {
     if (res?.code !== 200) {
-      proxy?.$modal.msgError(res?.msg || t('lqg.qc.uploadFailed'));
+      proxy?.$modal.msgError(uploadBizErrorMessage(t, res, file?.name));
       return;
     }
     await addDocImage(props.sampleId, props.docType, { slot: props.slot, ossId: res.data.ossId });
     proxy?.$modal.msgSuccess(t('lqg.qc.image.added'));
     emit('changed');
+  } catch {
+    // 绑定失败（例如这个位已满 3 张）：请求层已经把后端的原因弹出来了，这里不再重复弹
   } finally {
     proxy?.$modal.closeLoading();
   }

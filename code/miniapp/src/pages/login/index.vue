@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import type { MockSeed } from '@/api/mock-seeds'
 import { HOME_PAGE } from '@/router/config'
-import { MOCK_SEEDS, mockCodes } from '@/api/mock-seeds'
+import { MOCK_PANEL, MOCK_SEEDS, mockCodes } from '@/api/mock-seeds'
+import { LEGAL_OPERATOR } from '@/config/legal'
 import { useUserStore } from '@/store/user'
 
 // 登录页（UI:mp.login）。
@@ -14,9 +15,8 @@ import { useUserStore } from '@/store/user'
 // 流程：wx.login 拿 code → 按钮回调拿 phoneCode → POST /auth/login（grantType=xcx）
 // → 存 token → GET /mp/me 入 store → 进首页。
 //
-// 调试入口（ADR-0008）：VITE_MOCK_LOGIN=1 的 dev 构建里才有；生产构建里
-// VITE_MOCK_LOGIN 不存在 → `mockEnabled` 恒 false、拼 `mock:<key>` 的分支成死代码，
-// 产物里搜不到 `mock:ext`（accept 第 1 条）。
+// 测试身份登录入口（ADR-0008）：开了 mock 登录的构建（本地开发、测试环境体验版）里才有；
+// 生产构建里整段是死代码被摇掉，产物里搜不到 seed 清单、`mock:` 前缀与面板文案（见 api/mock-seeds.ts）。
 definePage({
   style: {
     navigationBarTitleText: '登录',
@@ -24,26 +24,29 @@ definePage({
 })
 
 const store = useUserStore()
+/** 实验室名称（UI:mp.login「实验室名称与一句话说明」，G23）= 协议里的运营方，同一个配置 */
+const labName = LEGAL_OPERATOR
 const agreed = ref(false)
 const submitting = ref(false)
 
-// 只有 dev / test 构建 + VITE_MOCK_LOGIN=1 才挂调试入口。生产构建里 .env.production
-// 没有 VITE_MOCK_LOGIN → 常量替换成 false，调试面板整块不渲染。
+// 只有 dev / test 构建 + VITE_MOCK_LOGIN=1 才挂这个入口；判据只有一份：vite.config.ts 里 define 的
+// 构建期常量 `__LQG_MOCK_LOGIN__`。面板文案、身份清单在 api/mock-seeds.ts —— 关着时这里直接取
+// null / 空数组，模板里只剩一个恒假的 wx:if，文案、清单与 mock-seeds 模块都不进生产包。
+//
+// ★ 必须在**本模块里**直接用 `__LQG_MOCK_LOGIN__` 判断，不能包 computed、也不能只靠 import 进来的常量：
+//   那两种写法打包器都看不出它恒假，`onMockLogin` 与整份 seed 清单会原样留在生产包里
+//   （D8 独立验收实测过：旧写法的生产包里 api/mock-seeds.js 带着全部手机号）。
 //
 // ★ SYS-STAGING-001 起 test 也算：测试环境的体验版就是给甲方试用 seed 数据的，
 //   而甲方主体的 appid 还没拿到（SYS-RELEASE-001），真实微信登录换不出 seed 里绑定的 openid
 //   → 登进去是个空系统。ADR-0008 本来就允许 test profile 开 mock（后端 application-test.yml
-//   的 mock-login=true）。生产构建（mode=production）不在此列，`MODE === 'production'` 这个
-//   比较在打包时同样被静态折叠成 false，`mock:ext` 字面量照样被摇掉（SYS-MP-001 accept 第 1 条）。
+//   的 mock-login=true）。生产构建（mode=production）不在此列。
 //
 // 注意：模板里**不要**写 `<!-- #ifdef/#ifndef -->` 条件编译注释——uni 的 html
 // 预处理器会和 @uni-ku/root 的根节点注入打架，构建报
 // `Cannot destructure property 'tabBar' of 'this.meta'`（本票踩过，已实测）。
-const mockEnabled = computed(
-  () =>
-    (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'test') &&
-    import.meta.env.VITE_MOCK_LOGIN === '1'
-)
+const mockPanel = __LQG_MOCK_LOGIN__ ? MOCK_PANEL : null
+const mockSeeds = __LQG_MOCK_LOGIN__ ? MOCK_SEEDS : []
 
 function toast(title: string) {
   uni.showToast({ title, icon: 'none' })
@@ -102,13 +105,21 @@ async function onGetPhoneNumber(e: any) {
   }
 }
 
-// 调试入口：选一个 seed 身份直接登（只在 dev 构建里存在）
+// 测试身份入口：选一个 seed 身份直接登（只在开了 mock 登录的构建里存在）。
+// ★ 第一行的常量判断别删：模板里对 setup 绑定的引用会包一层 unref，打包器折叠不掉那个恒假分支，
+//   本函数仍被引用；靠这一行让函数体在生产构建里成为死代码，mock-seeds 模块才整个不进包。
 function onMockLogin(seed: MockSeed) {
+  if (!__LQG_MOCK_LOGIN__) {
+    return
+  }
   if (!agreed.value) {
     toast('请先阅读并勾选《用户协议》与《隐私政策》')
     return
   }
   const codes = mockCodes(seed)
+  if (!codes) {
+    return
+  }
   doLogin(codes.xcxCode, codes.phoneCode)
 }
 
@@ -124,6 +135,7 @@ function openPrivacy() {
 <template>
   <view class="login">
     <view class="login__hero">
+      <text class="login__lab">{{ labName }}</text>
       <text class="login__title">类器官送检</text>
       <text class="login__slogan">送检、收样、包埋、冻存，一个入口记到底</text>
     </view>
@@ -153,17 +165,17 @@ function openPrivacy() {
       <text class="login__tip">首次登录会用你的微信手机号创建账号，不需要注册</text>
     </view>
 
-    <!-- 调试入口：只在 dev 构建里存在（VITE_MOCK_LOGIN=1） -->
-    <view v-if="mockEnabled" class="lqg-card login__mock">
-      <text class="login__mock-t">调试登录（仅本地开发构建）</text>
-      <text class="login__mock-d">选一个 seed 身份直接登录，走后端 mock 路径</text>
+    <!-- 测试身份入口：只在开了 mock 登录的构建里有内容（文案与清单都来自 api/mock-seeds.ts） -->
+    <view v-if="mockPanel" class="lqg-card login__mock">
+      <text class="login__mock-t">{{ mockPanel.title }}</text>
+      <text class="login__mock-d">{{ mockPanel.desc }}</text>
       <button
-        v-for="seed in MOCK_SEEDS"
-        :key="seed.key"
+        v-for="item in mockSeeds"
+        :key="item.key"
         class="login__mock-btn"
-        @click="onMockLogin(seed)"
+        @click="onMockLogin(item)"
       >
-        {{ seed.label }}
+        {{ item.label }}
       </button>
     </view>
   </view>
@@ -179,6 +191,12 @@ function openPrivacy() {
   flex-direction: column;
   gap: var(--lqg-sp-3);
   padding: 40px 0 var(--lqg-sp-8);
+}
+
+.login__lab {
+  font-size: var(--lqg-fs-base);
+  font-weight: var(--lqg-fw-medium);
+  color: var(--lqg-primary);
 }
 
 .login__title {

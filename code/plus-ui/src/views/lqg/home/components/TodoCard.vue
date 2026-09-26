@@ -45,8 +45,8 @@ const props = withDefaults(
     hint?: string;
     /** 为 0 时的说明（默认「现在没有待办」——和「坏了」区分开） */
     zeroHint?: string;
-    /** 点击跳哪里（带筛选条件） */
-    to: RouteLocationRaw;
+    /** 点击跳哪里（带筛选条件）；不给就不跳路由，改为抛 `open` 事件（例如首页上直接打开一个清单抽屉） */
+    to?: RouteLocationRaw;
     /** 右上角那句「去处理」的文案 */
     goText?: string;
     /** 首屏还没拿到数时给个轻提示 */
@@ -62,13 +62,19 @@ const props = withDefaults(
   }
 );
 
+const emit = defineEmits<{ (e: 'open'): void }>();
+
 const router = useRouter();
 
 const isZero = computed(() => !props.value);
 const display = computed(() => (props.value === null || props.value === undefined ? 0 : props.value));
 
 const open = () => {
-  router.push(props.to);
+  if (props.to) {
+    router.push(props.to);
+  } else {
+    emit('open');
+  }
 };
 </script>
 

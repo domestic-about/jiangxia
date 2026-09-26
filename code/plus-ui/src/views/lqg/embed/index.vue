@@ -8,9 +8,40 @@
         </div>
       </template>
 
-      <!-- 筛选区（UI:admin.embed.list）：石蜡块编号 / 内部编号 / 染色 / 切片时间区间 / 核验状态 / 内-外部 -->
+      <!-- ★ 带 sampleId 进来（样本表「石蜡包埋 / 冻存」一列点数字，2026-09-24 本机验收）：
+           顶部写明「只看××的石蜡包埋记录 · 共 N 条」，一眼看得出是被这个样本筛过的；
+           「看全部」只清这个样本筛选，「打开样本」回到它所在那一页并打开它 -->
+      <div v-if="queryParams.sampleId" class="lqg-embed__scope">
+        <i18n-t keypath="lqg.embed.scope.only" tag="span" class="lqg-embed__scope-text">
+          <template #sample>
+            <strong class="lqg-embed__scope-sample">{{ scopeLabel }}</strong>
+          </template>
+        </i18n-t>
+        <span class="lqg-embed__scope-count">{{ t('lqg.embed.scope.total', { n: total }) }}</span>
+        <el-button link type="primary" @click="openScopeSample">{{ t('lqg.embed.scope.openSample') }}</el-button>
+        <el-button link type="primary" @click="clearSampleFilter">{{ t('lqg.embed.scope.showAll') }}</el-button>
+      </div>
+
+      <!-- 筛选区（UI:admin.embed.list）：核验状态 / 来源 / 石蜡块编号 / 内部编号 / 染色 / 切片时间区间。
+           ★ 核验状态、来源排最前（2026-09-24 本机验收「外部送来的记录好找」）：合作单位送来的在这里核验 -->
       <el-form ref="queryRef" :model="queryParams" label-width="86px" class="lqg-embed__filter">
         <el-row :gutter="12">
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.embed.filter.verifyStatus')" prop="verifyStatus">
+              <el-select v-model="queryParams.verifyStatus" clearable class="lqg-embed__control">
+                <el-option v-for="d in lqg_verify_status" :key="d.value" :label="d.label" :value="d.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <!-- 来源：值仍是 lqg_submit_source 的 external / internal，选项写成人话「合作单位 / 中心内部」 -->
+            <el-form-item :label="t('lqg.embed.filter.submitSource')" prop="submitSource">
+              <el-select v-model="queryParams.submitSource" clearable class="lqg-embed__control">
+                <el-option :label="t('lqg.embed.filter.sourceExternal')" value="external" />
+                <el-option :label="t('lqg.embed.filter.sourceInternal')" value="internal" />
+              </el-select>
+            </el-form-item>
+          </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.embed.filter.paraffinBlockNo')" prop="paraffinBlockNo">
               <el-input
@@ -52,20 +83,6 @@
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
-            <el-form-item :label="t('lqg.embed.filter.verifyStatus')" prop="verifyStatus">
-              <el-select v-model="queryParams.verifyStatus" clearable class="lqg-embed__control">
-                <el-option v-for="d in lqg_verify_status" :key="d.value" :label="d.label" :value="d.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :xs="24" :sm="12" :md="8" :lg="6">
-            <el-form-item :label="t('lqg.embed.filter.submitSource')" prop="submitSource">
-              <el-select v-model="queryParams.submitSource" clearable class="lqg-embed__control">
-                <el-option v-for="d in lqg_submit_source" :key="d.value" :label="d.label" :value="d.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item label=" ">
               <el-button type="primary" icon="Search" @click="handleQuery">{{ t('lqg.embed.search') }}</el-button>
               <el-button icon="Refresh" @click="resetQuery">{{ t('lqg.embed.reset') }}</el-button>
@@ -89,11 +106,13 @@
         <el-col :span="1.5">
           <el-button plain icon="Refresh" @click="getList">{{ t('lqg.embed.toolbar.refresh') }}</el-button>
         </el-col>
-        <!-- 从样本总表带 sampleId 跳进来的提示 + 一键清除 -->
-        <el-col v-if="queryParams.sampleId" :span="6">
-          <el-tag type="info" closable class="lqg-embed__sample-tag" @close="clearSampleFilter">
-            {{ t('lqg.embed.filter.sampleFilter', { id: queryParams.sampleId }) }}
-          </el-tag>
+        <!-- 一键「合作单位送来、待核验」= 来源 external + 核验状态 pending（再点一下取消）；
+             数字与首页卡片、左侧菜单红点同一份（lqgTodo 的 pendingEmbeds） -->
+        <el-col :span="1.5">
+          <el-button type="warning" :plain="!partnerPendingOn" icon="Stamp" @click="togglePartnerPending">
+            {{ t('lqg.embed.toolbar.partnerPending') }}
+            <span v-if="pendingEmbeds > 0" class="lqg-embed__quick-count">{{ pendingEmbeds }}</span>
+          </el-button>
         </el-col>
       </el-row>
 
@@ -121,9 +140,21 @@
             <span v-else class="lqg-embed__pending">{{ t('lqg.embed.badge.pendingBlockNo') }}</span>
           </template>
         </el-table-column>
+        <!-- ★ 样本编号点回样本（2026-09-24 本机验收「反向可回」）：按样本类别回到它所在那一页并打开它；
+             待核验的样本还没有内部编号 → 显示送检单号（灰字），同样能点回去 -->
         <el-table-column :label="t('lqg.embed.col.internalNo')" prop="internalNo" width="130" :show-overflow-tooltip="true">
           <template #default="scope">
-            <span class="lqg-embed__mono">{{ scope.row.internalNo || '—' }}</span>
+            <el-link
+              v-if="scope.row.sampleId && (scope.row.internalNo || scope.row.submitNo)"
+              type="primary"
+              underline="never"
+              :class="['lqg-embed__mono', { 'lqg-embed__submit-no': !scope.row.internalNo }]"
+              :title="scope.row.internalNo ? t('lqg.embed.cell.openSample') : t('lqg.embed.cell.openSampleBySubmitNo')"
+              @click="openSample(scope.row)"
+            >
+              {{ scope.row.internalNo || scope.row.submitNo }}
+            </el-link>
+            <span v-else class="lqg-embed__mono">—</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('lqg.embed.col.sampleType')" prop="sampleType" width="100" :show-overflow-tooltip="true">
@@ -207,19 +238,35 @@
       />
     </el-card>
 
-    <embed-drawer ref="drawerRef" @saved="getList" />
+    <embed-drawer ref="drawerRef" @saved="handleSaved" />
   </div>
 </template>
 
 <script setup name="LqgEmbed" lang="ts">
 import { delEmbed, exportEmbeds, isEditable, isExternalPending, listEmbeds, neverModified } from '@/api/lqg/embed';
 import type { EmbedQuery, EmbedVO } from '@/api/lqg/embed';
+import { useLqgTodoStore } from '@/store/modules/lqgTodo';
+// ★ 四张表之间的来回（2026-09-24 本机验收）：路径、query 解析、提示条样本名都在 relation.ts
+import {
+  EMBED_PATH,
+  SUBMIT_SOURCES,
+  VERIFY_STATUSES,
+  oneOfQuery,
+  queryWithout,
+  routeKeyOf,
+  sampleIdOfQuery,
+  sampleOf,
+  sampleScopeLabel
+} from '@/views/lqg/sample/relation';
+import { useScopeSample } from '@/views/lqg/sample/useScopeSample';
 import EmbedDrawer from './EmbedDrawer.vue';
 import { useI18n } from 'vue-i18n';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
+const todoStore = useLqgTodoStore();
 
 // ★ useDict 的参数必须是库里真名（lqg_stain_type / lqg_verify_status / lqg_submit_source）——
 //   写错一个名字，下拉永远「无数据」而页面不报错（SAMPLE-WEB-001 踩过）
@@ -267,7 +314,8 @@ const handleQuery = () => {
   getList();
 };
 
-const resetQuery = () => {
+/** 清空全部筛选（不发请求；「重置」与「按地址重新套筛选」共用） */
+const clearFilters = () => {
   queryRef.value?.resetFields();
   sectionTimeRange.value = null;
   queryParams.paraffinBlockNo = null;
@@ -276,16 +324,130 @@ const resetQuery = () => {
   queryParams.verifyStatus = null;
   queryParams.submitSource = null;
   queryParams.sampleId = null;
+};
+
+// ── 地址里带的筛选（样本表「石蜡包埋 / 冻存」一列、首页待核验卡片） ────────────────
+//
+// ★ 页面被 keep-alive 缓存（key 是 route.path，不含 query）：已经打开过本页，再从别的样本点「蜡块 N」
+//   进来，onMounted 不会再跑。所以看整条地址：地址里的筛选（sampleId / verifyStatus / submitSource）
+//   与上一次套上的不一样，才清掉旧筛选、按地址重新套一遍并重拉；一样就不动（从标签页切回来保留手动筛选）。
+
+/** 本页认的地址筛选；`add` 不在里面（它只是「到了就开新增抽屉」的一次性动作） */
+const ROUTE_KEYS = ['sampleId', 'verifyStatus', 'submitSource'];
+
+/** 上一次按地址套上的筛选指纹；null = 还没套过 */
+let appliedRouteKey: string | null = null;
+
+/** 带 sampleId 进来时那条样本（提示条上的名字、「新增」预选、「打开样本」都用它） */
+const { sample: scopeSample, load: loadScopeSample } = useScopeSample();
+
+const scopeLabel = computed(() =>
+  sampleScopeLabel(scopeSample.value, t('lqg.embed.scope.sampleFallback', { id: queryParams.sampleId ?? '' }))
+);
+
+/** 按地址套筛选并重拉；地址里的筛选没变就什么都不做（返回 false） */
+const applyRouteScope = async (): Promise<boolean> => {
+  const key = routeKeyOf(route.query, ROUTE_KEYS);
+  if (key === appliedRouteKey) {
+    return false;
+  }
+  appliedRouteKey = key;
+  clearFilters();
+  // 从样本表「石蜡包埋 / 冻存」一列带 sampleId 进来 → 自动按样本过滤（只认纯数字）
+  queryParams.sampleId = sampleIdOfQuery(route.query.sampleId);
+  // 工作台首页「待核验石蜡包埋送样」卡片带 ?verifyStatus=pending 进来（SYS-HOME-001）、
+  // 样本表「待核验 N」带 sampleId + verifyStatus=pending 进来 → 自动套上筛选（只认字典里的值）
+  queryParams.verifyStatus = oneOfQuery(route.query.verifyStatus, VERIFY_STATUSES);
+  queryParams.submitSource = oneOfQuery(route.query.submitSource, SUBMIT_SOURCES);
+  queryParams.pageNum = 1;
+  await Promise.all([getList(), loadScopeSample(queryParams.sampleId)]);
+  return true;
+};
+
+/**
+ * 样本表数量为 0 时的「新增」带 `?add=1` 进来：列表与样本都就绪后直接打开新增抽屉（样本已预选），
+ * 然后把 add 从地址里拿掉（replace）—— 刷新 / 从标签页回来不会再弹一次。
+ */
+const openAddFromRoute = () => {
+  if (route.path !== EMBED_PATH || route.query.add !== '1') {
+    return;
+  }
+  router.replace({ path: EMBED_PATH, query: queryWithout(route.query, ['add']) });
+  handleAdd();
+};
+
+const resetQuery = () => {
+  clearFilters();
+  syncRouteScope(['sampleId', 'verifyStatus', 'submitSource', 'add']);
   handleQuery();
 };
 
+/**
+ * 「看全部」：只清这个样本筛选，别的筛选原样留着；地址里的 sampleId 一并拿掉（replace）——
+ * 刷新不会又筛回去，浏览器后退仍回到样本表。
+ */
 const clearSampleFilter = () => {
   queryParams.sampleId = null;
+  syncRouteScope(['sampleId', 'add']);
   handleQuery();
 };
 
+/**
+ * 页面上清掉了筛选之后，让地址跟上：把 `keys` 从地址里拿掉（replace），并把拿掉之后的地址记成
+ * 「已套上」—— 否则 watch 看到地址变了，会把页面上别的手动筛选又清一遍。
+ */
+const syncRouteScope = (keys: string[]) => {
+  if (route.path !== EMBED_PATH || !keys.some((key) => route.query[key] !== undefined)) {
+    return;
+  }
+  const query = queryWithout(route.query, keys);
+  appliedRouteKey = routeKeyOf(query, ROUTE_KEYS);
+  router.replace({ path: EMBED_PATH, query });
+};
+
+/** 「打开样本」：回到这个样本所在那一页并打开它（push：后退能回到这里） */
+const openScopeSample = () => {
+  if (!queryParams.sampleId) {
+    return;
+  }
+  router.push(sampleOf(scopeSample.value?.sampleKind, queryParams.sampleId));
+};
+
+/** 行上的「样本编号」点回样本（组织 → 样本记录信息表，类器官 → 类器官收样记录） */
+const openSample = (row: EmbedVO) => {
+  router.push(sampleOf(row.sampleKind, row.sampleId));
+};
+
+/**
+ * 「新增」：只看某个样本时默认挂这个样本（抽屉里已选好，可改）。
+ * ★ 只预选已核验有效的样本 —— 抽屉的样本下拉本来就只列有效样本，待核验 / 无效的样本不能挂石蜡块。
+ */
 const handleAdd = () => {
-  drawerRef.value?.openAdd();
+  const preset = queryParams.sampleId && scopeSample.value?.verifyStatus === 'valid' ? scopeSample.value : null;
+  drawerRef.value?.openAdd(preset);
+};
+
+/** 保存 / 核验之后：重拉本页，并刷新首页卡片与菜单红点共用的待办数（刚核验掉的要马上减掉） */
+const handleSaved = () => {
+  getList();
+  todoStore.refresh();
+};
+
+// ── 「合作单位送来、待核验」一键筛选 ─────────────────────────────────────────
+
+const pendingEmbeds = computed(() => Number(todoStore.todo.pendingEmbeds) || 0);
+
+const partnerPendingOn = computed(() => queryParams.submitSource === 'external' && queryParams.verifyStatus === 'pending');
+
+const togglePartnerPending = () => {
+  if (partnerPendingOn.value) {
+    queryParams.submitSource = null;
+    queryParams.verifyStatus = null;
+  } else {
+    queryParams.submitSource = 'external';
+    queryParams.verifyStatus = 'pending';
+  }
+  handleQuery();
 };
 
 /** 行操作：待核验 / 无效的外部送样 = 核验抽屉；其余 = 编辑抽屉 */
@@ -302,6 +464,7 @@ const handleDelete = async (row: EmbedVO) => {
   await delEmbed(row.id);
   proxy?.$modal.msgSuccess(t('lqg.embed.rowAction.deleted'));
   await getList();
+  todoStore.refresh();
 };
 
 /** 按当前筛选导出（POST /lqg/embed/export，筛选走 query 参数） */
@@ -371,18 +534,22 @@ const markerText = (row: EmbedVO) => {
 };
 
 onMounted(async () => {
-  // 从样本总表带 sampleId 跳入（样本总表「石蜡包埋」行操作）→ 自动按样本过滤
-  const sampleId = route.query.sampleId;
-  if (sampleId) {
-    queryParams.sampleId = String(sampleId);
-  }
-  // 工作台首页「待核验石蜡包埋送样」卡片带 ?verifyStatus=pending 进来（SYS-HOME-001）→ 自动套上筛选
-  const verifyStatus = route.query.verifyStatus;
-  if (typeof verifyStatus === 'string' && ['pending', 'valid', 'invalid'].includes(verifyStatus)) {
-    queryParams.verifyStatus = verifyStatus;
-  }
-  await getList();
+  todoStore.ensureLoaded();
+  await applyRouteScope();
+  openAddFromRoute();
 });
+
+// 已经打开过本页（keep-alive），再带着别的筛选进来 → 按新地址重新套（只认本页路径）
+watch(
+  () => route.fullPath,
+  async () => {
+    if (route.path !== EMBED_PATH) {
+      return;
+    }
+    await applyRouteScope();
+    openAddFromRoute();
+  }
+);
 </script>
 
 <style scoped lang="scss">
@@ -418,8 +585,33 @@ onMounted(async () => {
     color: var(--lqg-warn);
     font-weight: 600;
   }
-  .lqg-embed__sample-tag {
-    margin-top: 4px;
+  // 「只看××的石蜡包埋记录」提示条（主色浅底 + 左边线；token，不写字面色值）
+  .lqg-embed__scope {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-left: 3px solid var(--lqg-primary);
+    border-radius: 4px;
+    background: var(--lqg-primary-soft);
+    color: var(--lqg-ink);
+  }
+  .lqg-embed__scope-sample {
+    margin: 0 4px;
+    font-family: var(--lqg-font-mono);
+    font-weight: 600;
+  }
+  .lqg-embed__scope-count {
+    color: var(--lqg-ink-2);
+  }
+  .lqg-embed__submit-no {
+    opacity: 0.75;
+  }
+  .lqg-embed__quick-count {
+    margin-left: 4px;
+    font-weight: 600;
   }
 
   // 待核验行浅黄底（UI:admin.embed.list；token = --lqg-warn-soft）

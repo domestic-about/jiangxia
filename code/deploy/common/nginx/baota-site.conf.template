@@ -64,8 +64,16 @@ server {
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
         proxy_connect_timeout 15s;
-        client_max_body_size 50m;
+        # 60m = 后端 multipart 的 max-request-size；超限回 JSON（见下面的 @lqg_413，V05）
+        client_max_body_size 60m;
+        error_page 413 = @lqg_413;
         proxy_buffering off;
+    }
+
+    # 上传体积超限：回与后端同口径的 JSON（{code,msg}），不回 nginx 默认的 413 HTML
+    location @lqg_413 {
+        default_type "application/json; charset=utf-8";
+        return 413 '{"code":413,"msg":"上传的文件太大：单个文件不能超过 50MB，一次上传合计不能超过 60MB","data":null}';
     }
 
     access_log /www/wwwlogs/${DOMAIN}.log;

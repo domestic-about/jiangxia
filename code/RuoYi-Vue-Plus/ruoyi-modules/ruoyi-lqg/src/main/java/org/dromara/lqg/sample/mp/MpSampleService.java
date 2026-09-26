@@ -4,12 +4,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.lqg.auth.group.guard.UnitGroupRules;
 import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.domain.bo.PatchBody;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitBo;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
+import org.dromara.lqg.sample.guard.SampleKindRules;
 import org.dromara.lqg.sample.service.SampleQueryService;
 import org.dromara.lqg.sample.service.SampleService;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 小程序<b>内部人员</b>侧「样本记录信息表」的读写
@@ -34,6 +42,11 @@ import org.springframework.stereotype.Service;
  *   <li><b>{@code PUT} 收的是补丁</b>（见 {@link #mergePatch}）：票面与 accept 的请求体只有
  *       {@code {"id":…,"tissueType":…}} 这种<b>部分字段</b>，没传的字段要沿用库里现值，
  *       不能整表置空 —— 否则「小程序改一个字段顺手清掉住院号」是最容易出的数据事故。</li>
+ *   <li><b>★ FIX V28：显式空值 = 清空</b>。键<b>没出现</b> = 不改；键出现、值是 {@code null} 或空串 = 清空；
+ *       清空必填项（组织类型 / 类器官类型、内部编号、收样日期、来源单位）→ 400 并写明是哪一项
+ *       （由 {@code SampleService.update} 的同一份校验报出），<b>不再假装保存成功</b>。
+ *       以前是「空值 = 不改」：用户清空备注点保存，提示「已保存」、库里还是旧值。
+ *       给本类别<b>没有</b>的字段传了值（例如给类器官样本传供体姓名）→ 400，同样不假装成功。</li>
  * </ol>
  *
  * <p>★ 详情带上 {@code updateByName} / {@code updateTime} / {@code handlerName} / {@code mine} /
@@ -89,20 +102,22 @@ public class MpSampleService {
      * <p>★ <b>类目身份不可越类改</b>（issue #105 的第二半，防再次发生）：补丁里的
      * {@code sampleKind} 与库里不一致 → 400，见 {@link #assertKindUnchanged}。
      */
-    public void update(SampleSubmitBo bo) {
+    public void update(PatchBody<SampleSubmitBo> patch) {
+        SampleSubmitBo bo = patch == null ? null : patch.value();
         if (bo == null || bo.getId() == null) {
-            throw new ServiceException("缺少样本 id");
+            throw new ServiceException("缺少样本 id", 400);
         }
         Sample exists = sampleQueryService.entity(bo.getId());
         if (exists == null) {
             throw new ServiceException("样本不存在", 404);
         }
         if (!SampleQueryService.isEditable(exists)) {
-            throw new ServiceException("待核验与无效的样本只能在网页工作台核验或改判，小程序里不能改");
+            throw new ServiceException("待核验与无效的样本只能在网页工作台核验或改判，小程序里不能改", 400);
         }
         assertKindUnchanged(exists, bo);
-        sampleService.update(mergePatch(exists, bo));
-        log.info("小程序内部修改样本：id={} internalNo={}", bo.getId(), bo.getInternalNo());
+        assertNoForeignFields(exists, patch);
+        sampleService.update(mergePatch(exists, patch));
+        log.info("小程序内部修改样本：id={} 改动键={}", bo.getId(), patch.keys());
     }
 
     /**
@@ -143,9 +158,62 @@ public class MpSampleService {
     }
 
     /**
-     * 把「部分字段的补丁」合并成 {@link SampleService#update} 要的完整入参：
-     * <b>没传的字段沿用库里现值</b>，传了就用传的（不是「传空串 = 清空」：契约与票面都没有
-     * 「小程序清字段」这条口径，而误清一个字段的代价远大于清不掉一个字段）。
+     * 本类别<b>没有</b>的字段 → 键名（给错误提示用）。组织样本没有类器官类型与代数（代数是
+     * CR-20260924-10 给类器官收样记录加的）；类器官收样记录只有来源单位、类器官类型、代数与收样段
+     * （REQ-SAMPLE-007），没有供体姓名等组织样本字段。
+     */
+    private static final Map<String, String> TISSUE_ONLY = new LinkedHashMap<>();
+    private static final Map<String, String> ORGANOID_ONLY = new LinkedHashMap<>();
+
+    static {
+        TISSUE_ONLY.put("donorName", "供体姓名");
+        TISSUE_ONLY.put("gender", "性别");
+        TISSUE_ONLY.put("age", "年龄");
+        TISSUE_ONLY.put("hospitalNo", "住院号");
+        TISSUE_ONLY.put("tissueType", "组织类型");
+        TISSUE_ONLY.put("hasPathology", "有无病理");
+        ORGANOID_ONLY.put("organoidType", "类器官类型");
+        ORGANOID_ONLY.put("passage", "代数");
+    }
+
+    /**
+     * 给本类别没有的字段传了<b>非空</b>值 → 400（FIX V28：以前被静默忽略、照样提示已保存）。
+     * 传空值不算（前端整份表单带着空的另一类字段是常见形状，本来就是空的，不必报错）。
+     */
+    static void assertNoForeignFields(Sample exists, PatchBody<SampleSubmitBo> patch) {
+        boolean organoid = SampleKindRules.KIND_ORGANOID.equals(SampleKindRules.normalize(exists.getSampleKind()));
+        Map<String, String> foreign = organoid ? TISSUE_ONLY : ORGANOID_ONLY;
+        SampleSubmitBo p = patch.value();
+        List<String> hit = new ArrayList<>();
+        for (Map.Entry<String, String> e : foreign.entrySet()) {
+            if (patch.has(e.getKey()) && !isBlank(valueOf(p, e.getKey()))) {
+                hit.add(e.getValue());
+            }
+        }
+        if (!hit.isEmpty()) {
+            throw new ServiceException((organoid ? "类器官收样记录" : "组织样本") + "没有这些字段，不能修改："
+                + String.join("、", hit), 400);
+        }
+    }
+
+    /**
+     * 把「补丁」合并成 {@link SampleService#update} 要的完整入参（FIX V28 的语义）：
+     * <ul>
+     *   <li>键<b>没出现</b> → 沿用库里现值；</li>
+     *   <li>键出现、值为 {@code null} / 空串 → <b>清空</b>（写 NULL）；清的是必填项时由
+     *       {@code SampleService.update} 的同一份校验报 400「××不能为空」，不会静默成功；</li>
+     *   <li>键出现、有值 → 用它。</li>
+     * </ul>
+     *
+     * <p>★ 来源单位的 id 与名称是一对（这条路上「单位名」与「单位 id」必须同源）：
+     * <ul>
+     *   <li>带了非空 {@code sourceUnitId} → 以它为准（名称快照由 {@code SampleService} 从单位表取）；</li>
+     *   <li>只带名称：与现有名称同名（去空白、大小写不敏感）→ 连 id 一起沿用；改成别的名字 → 自填单位名（id 置空）；
+     *       名称为空 → 清空来源单位（必填，{@code SampleService} 报 400）；</li>
+     *   <li>只带 {@code sourceUnitId: null} → 解除与单位表的关联，名称沿用；</li>
+     *   <li>都没带 → 都沿用。</li>
+     * </ul>
+     * 以前「没带 id 就连名称一起沿用」—— 小程序组织样本表单只发名称，于是改了单位名也不生效（V28 同一病灶）。
      *
      * <p>合并基准用 {@link SampleQueryService#entity} 读出来的实体 —— 它在 sample 包内
      * 已完成两个加密列的解密，所以这里拿到的是明文（再经 service 层加密落库，不会二次加密）。
@@ -153,37 +221,88 @@ public class MpSampleService {
      * <p>刻意<b>不搬</b> {@code submitNo / submitSource / submitterId / verifyBy / verifyTime /
      * verifyStatus / createBy / createTime / updateBy / updateTime / delFlag}：前三个是契约写死的
      * 「不可改」，状态与核验人是核验路径的地盘，审计时间戳由写路径自己填
-     * （{@code SampleSubmitBo} 里也根本没有这些字段）。
+     * （{@code SampleSubmitBo} 里也根本没有这些字段）。{@code sampleKind} 是类目身份，永远取库里的。
      */
-    static SampleSubmitBo mergePatch(Sample exists, SampleSubmitBo patch) {
+    static SampleSubmitBo mergePatch(Sample exists, PatchBody<SampleSubmitBo> patch) {
+        SampleSubmitBo p = patch.value();
         SampleSubmitBo merged = new SampleSubmitBo();
         merged.setId(exists.getId());
-        merged.setSampleKind(isBlank(patch.getSampleKind()) ? exists.getSampleKind() : patch.getSampleKind());
-        if (patch.getSourceUnitId() == null) {
-            // 没换单位：连名称快照一起沿用（这条路上「单位名」与「单位 id」必须同源）
-            merged.setSourceUnitId(exists.getSourceUnitId());
-            merged.setSourceUnitName(exists.getSourceUnitName());
-        } else {
-            merged.setSourceUnitId(patch.getSourceUnitId());
-            merged.setSourceUnitName(patch.getSourceUnitName());
-        }
-        merged.setDonorName(isBlank(patch.getDonorName()) ? exists.getDonorName() : patch.getDonorName());
-        merged.setGender(isBlank(patch.getGender()) ? exists.getGender() : patch.getGender());
-        merged.setAge(isBlank(patch.getAge()) ? exists.getAge() : patch.getAge());
-        merged.setHospitalNo(isBlank(patch.getHospitalNo()) ? exists.getHospitalNo() : patch.getHospitalNo());
-        merged.setTissueType(isBlank(patch.getTissueType()) ? exists.getTissueType() : patch.getTissueType());
-        merged.setOrganoidType(isBlank(patch.getOrganoidType()) ? exists.getOrganoidType() : patch.getOrganoidType());
-        merged.setHasPathology(isBlank(patch.getHasPathology()) ? exists.getHasPathology() : patch.getHasPathology());
-        merged.setReceiveDate(patch.getReceiveDate() != null ? patch.getReceiveDate() : exists.getReceiveDate());
-        merged.setInternalNo(isBlank(patch.getInternalNo()) ? exists.getInternalNo() : patch.getInternalNo());
-        merged.setIsFixed(isBlank(patch.getIsFixed()) ? exists.getIsFixed() : patch.getIsFixed());
-        merged.setProcessTime(patch.getProcessTime() != null ? patch.getProcessTime() : exists.getProcessTime());
-        merged.setHasQcSheet(isBlank(patch.getHasQcSheet()) ? exists.getHasQcSheet() : patch.getHasQcSheet());
-        merged.setHasViabilityReport(isBlank(patch.getHasViabilityReport())
-            ? exists.getHasViabilityReport() : patch.getHasViabilityReport());
-        merged.setOperatorName(isBlank(patch.getOperatorName()) ? exists.getOperatorName() : patch.getOperatorName());
-        merged.setRemark(isBlank(patch.getRemark()) ? exists.getRemark() : patch.getRemark());
+        merged.setSampleKind(exists.getSampleKind());
+        mergeUnit(exists, patch, merged);
+        merged.setDonorName(pick(patch, "donorName", p.getDonorName(), exists.getDonorName()));
+        merged.setGender(pick(patch, "gender", p.getGender(), exists.getGender()));
+        merged.setAge(pick(patch, "age", p.getAge(), exists.getAge()));
+        merged.setHospitalNo(pick(patch, "hospitalNo", p.getHospitalNo(), exists.getHospitalNo()));
+        merged.setTissueType(pick(patch, "tissueType", p.getTissueType(), exists.getTissueType()));
+        merged.setOrganoidType(pick(patch, "organoidType", p.getOrganoidType(), exists.getOrganoidType()));
+        merged.setPassage(pick(patch, "passage", p.getPassage(), exists.getPassage()));
+        merged.setHasPathology(pick(patch, "hasPathology", p.getHasPathology(), exists.getHasPathology()));
+        merged.setReceiveDate(patch.has("receiveDate") ? p.getReceiveDate() : exists.getReceiveDate());
+        merged.setInternalNo(pick(patch, "internalNo", p.getInternalNo(), exists.getInternalNo()));
+        merged.setIsFixed(pick(patch, "isFixed", p.getIsFixed(), exists.getIsFixed()));
+        merged.setProcessTime(patch.has("processTime") ? p.getProcessTime() : exists.getProcessTime());
+        merged.setHasQcSheet(pick(patch, "hasQcSheet", p.getHasQcSheet(), exists.getHasQcSheet()));
+        merged.setHasViabilityReport(pick(patch, "hasViabilityReport", p.getHasViabilityReport(),
+            exists.getHasViabilityReport()));
+        merged.setOperatorName(pick(patch, "operatorName", p.getOperatorName(), exists.getOperatorName()));
+        merged.setRemark(pick(patch, "remark", p.getRemark(), exists.getRemark()));
         return merged;
+    }
+
+    private static void mergeUnit(Sample exists, PatchBody<SampleSubmitBo> patch, SampleSubmitBo merged) {
+        SampleSubmitBo p = patch.value();
+        if (patch.has("sourceUnitId") && p.getSourceUnitId() != null) {
+            merged.setSourceUnitId(p.getSourceUnitId());
+            merged.setSourceUnitName(p.getSourceUnitName());
+            return;
+        }
+        if (patch.has("sourceUnitName")) {
+            String name = blankToNull(p.getSourceUnitName());
+            if (name == null) {
+                // 清空来源单位：必填项，SampleService 的同一份校验报 400「来源单位不能为空」
+                merged.setSourceUnitId(null);
+                merged.setSourceUnitName(null);
+            } else if (exists.getSourceUnitId() != null && UnitGroupRules.sameName(name, exists.getSourceUnitName())) {
+                // 名字没改：连单位 id 一起沿用（别因为前端只发名称就把单位关联弄丢）
+                merged.setSourceUnitId(exists.getSourceUnitId());
+                merged.setSourceUnitName(exists.getSourceUnitName());
+            } else {
+                merged.setSourceUnitId(null);
+                merged.setSourceUnitName(name);
+            }
+            return;
+        }
+        if (patch.has("sourceUnitId")) {
+            // 显式 sourceUnitId:null、没给名称：解除与单位表的关联，名称沿用
+            merged.setSourceUnitId(null);
+            merged.setSourceUnitName(exists.getSourceUnitName());
+            return;
+        }
+        merged.setSourceUnitId(exists.getSourceUnitId());
+        merged.setSourceUnitName(exists.getSourceUnitName());
+    }
+
+    /** 键出现 → 用请求里的值（空白 = 清空）；没出现 → 沿用现值。 */
+    private static String pick(PatchBody<?> patch, String key, String incoming, String current) {
+        return patch.has(key) ? blankToNull(incoming) : current;
+    }
+
+    private static String valueOf(SampleSubmitBo p, String key) {
+        return switch (key) {
+            case "donorName" -> p.getDonorName();
+            case "gender" -> p.getGender();
+            case "age" -> p.getAge();
+            case "hospitalNo" -> p.getHospitalNo();
+            case "tissueType" -> p.getTissueType();
+            case "hasPathology" -> p.getHasPathology();
+            case "organoidType" -> p.getOrganoidType();
+            case "passage" -> p.getPassage();
+            default -> null;
+        };
+    }
+
+    private static String blankToNull(String value) {
+        return isBlank(value) ? null : value.trim();
     }
 
     private static boolean isBlank(String value) {

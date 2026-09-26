@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { cryoViewOfTab } from '@/api/cryo'
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
 import { emptyFilters } from '@/api/ledger'
+import { VERIFIED_EVENT } from '@/api/verify'
 import CryoBatchSheet from '@/components/lqg/CryoBatchSheet.vue'
 import EmptyState from '@/components/lqg/EmptyState.vue'
 import ErrorState from '@/components/lqg/ErrorState.vue'
@@ -11,6 +13,7 @@ import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
 import { downloadToTemp, openFile, shareFile } from '@/utils/fileHandoff'
+import { pagingFooterText, usePagedList } from '@/utils/paging'
 import { openDocumentType } from '@/pages/doc/download'
 import { authHeader, exportFileName, exportUrl, isExportSheet } from './export'
 import type { LedgerFilterKey, LedgerFilterSpec, LedgerSheet, LedgerTableRow } from './sheets'
@@ -25,13 +28,18 @@ import { columnsOf, ledgerTableWidth, sheetOf, sheetsFor, toTableRows } from './
 //      本文件一个列名都不写 —— 表头文案从 `columnsOf(sheet)` 拿。
 //   3. **点一行进该表填写页的只读模式**（`mode=view`，在 `sheets.ts` 的 `target` 里）；
 //      「修改」在只读页右上角、由那一页自己切（CR-20260918-07）。
-//      ★ 例外：**-80 冻存那一档点一行打开只读的批次详情弹层**（`CryoBatchSheet`，
-//      UI:mp.cryo.flow），要改记录走弹层右上角「修改」→ `pages/cryo/form?id=&mode=edit`。
+//      ★ 合作单位送来、待核验的那一条点进去是**核验页**（甲方 2026-09-24 第 20 行，去向也在 `target` 里）；
+//      核验完回到本页时重新取数（听 `VERIFIED_EVENT`），那一行不再是浅黄的待核验。
+//      ★ 例外：**-80 冻存那一档点一行打开批次详情弹层**（`CryoBatchSheet`，UI:mp.cryo.flow；
+//      2026-09-24 起弹层里可取走 / 补入 / 转液氮 / 改删登记），要改记录本身走弹层右上角「修改」。
 //   4. **页签 / 筛选项上的数字只认接口给的 `tabCounts`**：不拿当前页 rows 去数
 //      （冻存那三个页签切到「超期」只剩 2 行时，数字仍是整表的 7 / 2 / 2）。
+//   5. **触底分页**（V27）：先取一页，滑到底再取下一页；「共 N 条」的 N 只认接口的 `total`
+//      （以前写死取 100 行，却照 total 写「共 N 条」，第 101 行以后永远看不到）。
 //
-// 页底小字逐字照 UI:mp.ledger —— 表格页已有修改入口，这行里**没有「修改」二字**。
-const INTERNAL_ADMIN_NOTE = '核验、冻存取用请到网页工作台'
+// 页底小字（UI:mp.ledger）—— 表格页已有修改入口，这行里**没有「修改」二字**（CR-20260918-07）；
+// 甲方 2026-09-24 第 20 行起核验、冻存登记小程序里也能做，不再把人支到网页工作台。
+const INTERNAL_ADMIN_NOTE = '核验、冻存登记在小程序和网页工作台都能做'
 
 definePage({
   style: {
@@ -43,12 +51,32 @@ const store = useUserStore()
 
 const sheet = ref<LedgerSheet>(sheetOf(undefined))
 const filters = ref<LedgerFilters>(emptyFilters())
-const rows = ref<LedgerRow[]>([])
-const total = ref(0)
 /** 接口顶层的页签计数（整表口径）；只有冻存那张会给，别的表保持 null */
 const tabCounts = ref<Record<string, number> | null>(null)
-const loading = ref(false)
-const failed = ref(false)
+
+const pager = usePagedList<LedgerRow>({
+  fetchPage: (pageNum, pageSize) => sheet.value.fetch(filters.value, pageNum, pageSize),
+  keyOf: row => String(row.id),
+  // ★ 页签数字只认**第一页**响应顶层的 `tabCounts`（整表口径）；这张表不给就清成 null，
+  //   绝不退回 `rows.length`（那正是 ticket 的 counterfeit 抓的形态）
+  onPage: (page, first) => {
+    if (first) {
+      tabCounts.value = (page as { tabCounts?: Record<string, number> | null }).tabCounts ?? null
+    }
+  },
+})
+const rows = pager.rows
+/** 「共 N 条」：接口的 total（整表口径），不是已经加载了几行 */
+const total = pager.total
+const loading = pager.loading
+const failed = pager.failed
+const footerText = computed(() => pagingFooterText({
+  loadingMore: pager.loadingMore.value,
+  moreFailed: pager.moreFailed.value,
+  finished: pager.finished.value,
+  total: pager.total.value,
+  count: rows.value.length,
+}))
 /** 冻存那一档点一行打开的只读批次详情弹层（其它表点一行直接进只读填写页） */
 const cryoSheetRef = ref<{ open: (row: LedgerRow) => void } | null>(null)
 
@@ -68,35 +96,32 @@ function titleOf(key: string): string {
 }
 
 async function load() {
-  loading.value = true
-  failed.value = false
-  try {
-    // ★ 身份的唯一来源是 `/mp/me`：本页常常是深链直接进来的（H5 / 分享），
-    //   这时 store 里还没有 me，不先拉一次就会「一个请求都不发」。
-    if (!store.me) {
+  // ★ 身份的唯一来源是 `/mp/me`：本页常常是深链直接进来的（H5 / 分享），
+  //   这时 store 里还没有 me，不先拉一次就会「一个请求都不发」。
+  if (!store.me) {
+    try {
       await store.loadMe()
     }
-    if (normalizeIdentity(store.identity) !== 'internal') {
-      rows.value = []
-      total.value = 0
+    catch {
+      pager.clear()
+      pager.failed.value = true
       tabCounts.value = null
       return
     }
-    const page = await sheet.value.fetch(filters.value, 100)
-    rows.value = page.rows ?? []
-    total.value = page.total ?? rows.value.length
-    // ★ 页签数字只认接口顶层的 `tabCounts`（整表口径）；这张表不给就清成 null，
-    //   绝不退回 `rows.length`（那正是 ticket 的 counterfeit 抓的形态）
-    tabCounts.value = page.tabCounts ?? null
   }
-  catch {
-    failed.value = true
-    rows.value = []
-    total.value = 0
+  if (normalizeIdentity(store.identity) !== 'internal') {
+    pager.clear()
     tabCounts.value = null
+    return
   }
-  finally {
-    loading.value = false
+  tabCounts.value = null
+  await pager.reload()
+}
+
+/** 表格底部那一行：取下一页失败时点它重试 */
+function onFooterTap() {
+  if (pager.moreFailed.value) {
+    pager.loadMore()
   }
 }
 
@@ -153,8 +178,8 @@ function onRowTap(row: LedgerTableRow) {
   if (!raw) {
     return
   }
-  // ★ 冻存这一档点一行开的是**只读的批次详情弹层**（UI:mp.cryo.flow），
-  //   不是填写页；要改记录走弹层右上角「修改」（CR-20260918-07）。
+  // ★ 冻存这一档点一行开的是**批次详情弹层**（UI:mp.cryo.flow），不是填写页：
+  //   取用登记在弹层里做；要改记录本身走弹层右上角「修改」（CR-20260918-07）。
   if (sheet.value.key === 'cryo') {
     cryoSheetRef.value?.open(raw)
     return
@@ -242,6 +267,10 @@ onLoad((options) => {
   if (status) {
     filters.value.verifyStatus = status
   }
+  // 冻存那张的页签直达：`?sheet=cryo&tab=overdue|ln2|emptied|all`（首页「-80 超期」跳 tab=overdue）
+  if (sheet.value.key === 'cryo') {
+    filters.value.cryoView = cryoViewOfTab(options?.tab)
+  }
   uni.setNavigationBarTitle({ title: sheet.value.title })
   load()
 })
@@ -258,6 +287,15 @@ function start() {
 
 onMounted(start)
 onShow(start)
+
+// 从本页点进核验页、核验完回来：重新取这张表（那一条已经不是待核验了）
+uni.$on(VERIFIED_EVENT, load)
+onUnload(() => uni.$off(VERIFIED_EVENT, load))
+
+// 滑到底取下一页（表格只横滑，纵向跟着页面走，所以用页面的触底事件）
+onReachBottom(() => {
+  pager.loadMore()
+})
 </script>
 
 <template>
@@ -318,7 +356,13 @@ onShow(start)
       @row-tap="onRowTap"
     />
 
-    <view class="lqg-bar-spacer" />
+    <!-- 触底分页的底部一行：正在加载 / 失败点这里重试 / 已加载到第几行 -->
+    <view v-if="!loading && !failed && !isExternal && rows.length > 0" class="ledger-page__more" @click="onFooterTap">
+      <text class="ledger-page__more-t">{{ footerText }}</text>
+    </view>
+
+    <!-- 本页底栏比别的页高一截（按钮下面还有一行小字）：垫高一点，最后几行与底部那行字不被底栏盖住 -->
+    <view class="lqg-bar-spacer ledger-page__spacer" />
 
     <!-- ④ 底部只有「导出 Excel」：按当前筛选导出，导出后选「打开 / 发送到微信」
          （SYS-EXPORT-001 点亮；页底小字仍是 CR-20260918-07 的新口径，没有「修改」二字） -->
@@ -329,8 +373,8 @@ onShow(start)
       <text class="ledger-page__note">{{ INTERNAL_ADMIN_NOTE }}</text>
     </view>
 
-    <!-- 冻存那一档点一行打开的只读批次详情弹层（唯一动作 = 右上角「修改」） -->
-    <CryoBatchSheet ref="cryoSheetRef" />
+    <!-- 冻存那一档点一行打开的批次详情弹层：可取走 / 补入 / 转液氮 / 改删登记，做完表格与页签数字当场刷新 -->
+    <CryoBatchSheet ref="cryoSheetRef" @changed="load" />
   </view>
 </template>
 
@@ -388,6 +432,20 @@ onShow(start)
 
 .ledger-page__export::after {
   border: none;
+}
+
+.ledger-page__spacer {
+  height: calc(var(--lqg-btn-h) + 56px + env(safe-area-inset-bottom));
+}
+
+.ledger-page__more {
+  padding: var(--lqg-sp-5) var(--lqg-gutter) 0;
+  text-align: center;
+}
+
+.ledger-page__more-t {
+  font-size: var(--lqg-fs-sm);
+  color: var(--lqg-ink-3);
 }
 
 .ledger-page__note {

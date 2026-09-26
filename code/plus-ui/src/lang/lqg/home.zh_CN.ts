@@ -6,18 +6,25 @@
 
 export default {
   title: '工作台',
-  subtitle: '五个待办数每次进来现算，点卡片直达对应列表（为 0 也显示，灰掉的就是「现在没有」）。',
+  subtitle: '待办数每次进来现算，点卡片直达对应列表（为 0 也显示，灰掉的就是「现在没有」）。',
   refresh: '刷新',
   loadFailed: '待办数字没拉到：{msg}（显示的是 0，不代表没有待办）',
   allDone: '现在没有待办',
   go: '去处理 →',
 
   card: {
-    pendingSamples: {
-      title: '待核验样本',
-      hint: '组织与类器官收样记录都在里面',
-      zero: '没有等待核验的样本',
-      go: '去样本总表核验 →'
+    // CR-20260924-10：原「待核验样本」一张卡拆成两张，各进各的样本表
+    pendingTissue: {
+      title: '待核验样本记录',
+      hint: '合作单位送来的组织样本等待核验',
+      zero: '没有等待核验的样本记录',
+      go: '去样本记录信息表核验 →'
+    },
+    pendingOrganoid: {
+      title: '待核验类器官收样',
+      hint: '合作单位送来的类器官收样记录等待核验',
+      zero: '没有等待核验的类器官收样',
+      go: '去类器官收样记录核验 →'
     },
     pendingEmbeds: {
       title: '待核验石蜡包埋送样',
@@ -51,6 +58,7 @@ export default {
     empty: '还没有提交记录',
     colSubmitTime: '提交时间',
     colSubmitNo: '送检单号',
+    colSampleKind: '所在表',
     colSourceUnit: '来源单位',
     colSubmitSource: '内外部',
     colVerifyStatus: '核验状态'

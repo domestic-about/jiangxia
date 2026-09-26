@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.dromara.lqg.embed.domain.bo.EmbedFillBo;
 import org.dromara.lqg.embed.domain.bo.EmbedQueryBo;
 import org.dromara.lqg.embed.domain.bo.EmbedSubmitBo;
 import org.dromara.lqg.embed.domain.bo.EmbedVerifyBo;
@@ -49,10 +50,22 @@ class EmbedShapeContractTest {
             .collect(Collectors.toSet());
     }
 
+    /**
+     * 连同父类一起的字段（FIX V02b：{@link EmbedSubmitBo} 的 15 项补填段上移到 {@link EmbedFillBo}，
+     * 只看本类声明的字段会漏掉继承来的 —— 这里按整条继承链看，钉得更严）。
+     */
+    private static Set<String> allFieldNames(Class<?> type) {
+        Set<String> out = new java.util.LinkedHashSet<>();
+        for (Class<?> k = type; k != null && k != Object.class; k = k.getSuperclass()) {
+            out.addAll(declaredFieldNames(k));
+        }
+        return out;
+    }
+
     @Test
     @DisplayName("① 普通保存入参没有 verifyStatus（也没有核验段 / 来源段）")
     void submitBoCannotCarryVerifyStatus() {
-        Set<String> names = declaredFieldNames(EmbedSubmitBo.class);
+        Set<String> names = allFieldNames(EmbedSubmitBo.class);
         for (String forbidden : List.of("verifyStatus", "verifyBy", "verifyTime", "invalidReason",
             "submitSource", "submitterId", "submitNo", "internalNo")) {
             assertFalse(names.contains(forbidden), "EmbedSubmitBo 不该有 " + forbidden + "：" + names);
@@ -62,15 +75,21 @@ class EmbedShapeContractTest {
     }
 
     @Test
-    @DisplayName("①b 核验入参只有 action / paraffinBlockNo / reason")
+    @DisplayName("①b 核验入参只有 action / paraffinBlockNo / reason，外加可选的补填段 fill（FIX V02b）")
     void verifyBoShape() {
-        assertEquals(Set.of("action", "paraffinBlockNo", "reason"), declaredFieldNames(EmbedVerifyBo.class));
+        assertEquals(Set.of("action", "paraffinBlockNo", "reason", "fill"), allFieldNames(EmbedVerifyBo.class));
+        assertEquals(EmbedFillBo.class, fieldType(EmbedVerifyBo.class, "fill"));
+        // 补填段里没有状态、没有身份、没有石蜡块编号（编号只认顶层那一个）
+        Set<String> fill = allFieldNames(EmbedFillBo.class);
+        for (String forbidden : List.of("verifyStatus", "invalidReason", "id", "sampleId", "paraffinBlockNo")) {
+            assertFalse(fill.contains(forbidden), "EmbedFillBo 不该有 " + forbidden + "：" + fill);
+        }
     }
 
     @Test
     @DisplayName("② 七个工序时间一个不少（可空、保存不要求填完）")
     void sevenProcessTimes() {
-        Set<String> submit = declaredFieldNames(EmbedSubmitBo.class);
+        Set<String> submit = allFieldNames(EmbedSubmitBo.class);
         Set<String> entity = declaredFieldNames(Embed.class);
         Set<String> vo = declaredFieldNames(EmbedVo.class);
         for (String field : PROCESS_TIMES) {

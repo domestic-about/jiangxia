@@ -6,7 +6,9 @@
 //
 // ★ 本张注册 `tissue` / `organoid`（SAMPLE-MP-002）、**`embed`**（EMBED-MP-001）
 //   与 **`cryo`**（CRYO-MP-001）；四张表在 `columns.ts` 里都已定完列。
-// ★ 点行动作只有两种：该表填写页的**只读模式**（`mode=view`），或（冻存）**只读的批次详情弹层**。
+// ★ 点行动作三种：该表填写页的**只读模式**（`mode=view`）；（冻存）**只读的批次详情弹层**；
+//   **合作单位送来、待核验的那一条 → 核验页**（甲方 2026-09-24 第 20 行：小程序里也能核验，
+//   去向与「待核验」列表页同一个函数 `verifyTarget`）。
 //   「修改」在只读页 / 弹层右上角、由那一处自己切成修改模式（CR-20260918-07）；
 //   表格页这里没有、也不许有「直接进修改模式」那种目标串（accept 第 2 条的两段 grep 断的就是它）。
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
@@ -32,6 +34,8 @@ import {
   cryoTabText,
   fetchCryoLedgerRows,
 } from '@/api/cryo'
+import { ENTRY_SHORT, ENTRY_TITLE } from '@/pages/index/entries'
+import { isPending, verifyTarget } from '@/pages/verify/tabs'
 import type { SheetKey } from './columns'
 import { ledgerColumns } from './columns'
 
@@ -48,25 +52,25 @@ export interface LedgerFilterSpec {
 /** 已注册工作表的一行配置 */
 export interface LedgerSheet {
   key: SheetKey
-  /** 顶部切换条的短名（UI:mp.ledger ①） */
+  /** 顶部切换条的短名（UI:mp.ledger ①；取 `entries.ts#ENTRY_SHORT`，历史编辑记录、待核验的页签用同一份） */
   short: string
-  /** 导航栏标题 = 当前表全称 */
+  /** 导航栏标题 = 当前表全称（取 `entries.ts#ENTRY_TITLE`） */
   title: string
   /** 搜索框的占位提示（**放在这里**，页面不写死任何一张表的列名 / 字段名）；空串 = 这张表没有搜索框 */
   searchPlaceholder: string
   /** 该表的筛选项（搜索框各表共用，见页面） */
   filters: LedgerFilterSpec[]
-  /** 取数；冻存那张会另外把响应顶层的 `tabCounts` 带回来（页签数字只认它） */
-  fetch(filters: LedgerFilters, pageSize?: number): Promise<{
+  /** 取一页（`pageNum` 从 1 起，V27 触底分页）；冻存那张会另外把响应顶层的 `tabCounts` 带回来（页签数字只认它） */
+  fetch(filters: LedgerFilters, pageNum: number, pageSize: number): Promise<{
     rows: LedgerRow[]
     total: number
     tabCounts?: Record<string, number> | null
   }>
   /** 冻结格第二行小字 */
   frozenSub(row: LedgerRow): string
-  /** 行底色 */
-  rowTone(row: LedgerRow): '' | 'pending' | 'overdue'
-  /** 点一行去哪（**一律只读模式**） */
+  /** 行底色（`emptied` = 冻存那张已取空的行，冻结格小字醒目） */
+  rowTone(row: LedgerRow): '' | 'pending' | 'overdue' | 'emptied'
+  /** 点一行去哪：只读模式；待核验的那一条去核验页 */
   target(row: LedgerRow): string
   /**
    * 这张表的行 → 表格矩阵（可选）。
@@ -124,11 +128,11 @@ function sampleSheet(key: 'tissue' | 'organoid', short: string, title: string, f
     title,
     searchPlaceholder: placeholder,
     filters: [VERIFY_FILTER],
-    fetch: (filters, pageSize) => fetchSampleLedgerRows(key, filters, pageSize),
+    fetch: (filters, pageNum, pageSize) => fetchSampleLedgerRows(key, filters, pageNum, pageSize),
     frozenSub: ledgerFrozenSub,
     rowTone: ledgerRowTone,
-    // 只读详情：`mode=view`（修改从只读页右上角进，CR-20260918-07）
-    target: row => `${form}?id=${row.id}&mode=view`,
+    // 只读详情：`mode=view`（修改从只读页右上角进，CR-20260918-07）；待核验的进核验页
+    target: row => (isPending(row) ? verifyTarget(key, row.id) : `${form}?id=${row.id}&mode=view`),
   }
 }
 
@@ -137,18 +141,18 @@ function sampleSheet(key: 'tissue' | 'organoid', short: string, title: string, f
  *
  * 冻结格 = 石蜡块编号（外部提交还没核验的显示送检单号 +「待核验」，在 `api/embed.ts` 里算）；
  * 第二行小字 = 工序进度小圆点（七个工序时间 + 包埋人，填了几个亮几个）。
- * 表格本身仍然只读：点一行只进只读详情。
+ * 表格本身仍然只读：点一行进只读详情；外部送来还没核验的那一条进核验页。
  */
 const embedSheet: LedgerSheet = {
   key: 'embed',
-  short: '石蜡包埋',
-  title: '石蜡包埋送样记录',
+  short: ENTRY_SHORT.embed,
+  title: ENTRY_TITLE.embed,
   searchPlaceholder: '搜石蜡块编号或内部编号',
   filters: [VERIFY_FILTER, STAIN_FILTER],
-  fetch: (filters, pageSize) => fetchEmbedLedgerRows(filters, pageSize),
+  fetch: (filters, pageNum, pageSize) => fetchEmbedLedgerRows(filters, pageNum, pageSize),
   frozenSub: row => embedLedgerSub(row),
   rowTone: row => embedLedgerTone(row),
-  target: row => `/pages/embed/form?id=${row.id}&mode=view`,
+  target: row => (isPending(row) ? verifyTarget('embed', row.id) : `/pages/embed/form?id=${row.id}&mode=view`),
   toRows: (rows) => {
     const cols = ledgerColumns('embed')
     if (!cols) {
@@ -167,8 +171,9 @@ const embedSheet: LedgerSheet = {
 /**
  * -80 冻存这张表（CRYO-MP-001 / UI:mp.cryo.list）。
  *
- * ★ 筛选行**只有三个页签**（没有搜索框）：全部 / -80 超期（`overdueOnly=true`）/
- *   液氮（`location=ln2`）—— 三个值走后端参数，前端不自己筛。
+ * ★ 筛选行**只有四个页签**（没有搜索框）：全部 / -80 超期（`overdueOnly=true`）/
+ *   液氮（`location=ln2`）/ 已取空（`emptiedOnly=true`，2026-09-24 甲方「支数取空的要提示」）
+ *   —— 四个值走后端参数，前端不自己筛。表格页 `?sheet=cryo&tab=overdue|ln2|emptied|all` 直达其中一档。
  * ★ 页签上的数字来自响应顶层的 `tabCounts`（`chipsText` 把文案补全），**不数当前页 rows**：
  *   切到「-80 超期」只剩 2 行时，数字仍然是 `全部 7 / -80 超期 2 / 液氮 2`（整表口径）。
  * ★ 冻结格 = 冻存样品；第二行小字 =「剩 N / 初始 M 支」（超期再加「已超 N 天」）。
@@ -183,17 +188,18 @@ const CRYO_VIEW_FILTER: LedgerFilterSpec = {
     { value: '', label: '全部' },
     { value: 'overdue', label: '-80 超期' },
     { value: 'ln2', label: '液氮' },
+    { value: 'emptied', label: '已取空' },
   ],
 }
 
 const cryoSheet: LedgerSheet = {
   key: 'cryo',
-  short: '-80 冻存',
-  title: '-80 冻存记录',
+  short: ENTRY_SHORT.cryo,
+  title: ENTRY_TITLE.cryo,
   // 空串 = 这张表没有搜索框（UI:mp.cryo.list 的筛选行只有三个页签）
   searchPlaceholder: '',
   filters: [CRYO_VIEW_FILTER],
-  fetch: (filters, pageSize) => fetchCryoLedgerRows(filters, pageSize),
+  fetch: (filters, pageNum, pageSize) => fetchCryoLedgerRows(filters, pageNum, pageSize),
   frozenSub: row => cryoLedgerSub(row),
   rowTone: row => cryoLedgerTone(row),
   target: row => `/pages/cryo/form?id=${row.id}&mode=view`,
@@ -215,8 +221,9 @@ const cryoSheet: LedgerSheet = {
 
 /** 本张注册的工作表（顺序 = 顶部切换条顺序 = 甲方模板顺序） */
 export const LEDGER_SHEETS: LedgerSheet[] = [
-  sampleSheet('tissue', '样本记录', '样本记录信息表', '/pages/sample/form', '搜编号或单位'),
-  sampleSheet('organoid', '类器官收样', '类器官收样记录', '/pages/organoid/form', '搜编号或单位'),
+  // 工作表 key 是 tissue，对应入口 key sample（同一张「样本记录信息表」）
+  sampleSheet('tissue', ENTRY_SHORT.sample, ENTRY_TITLE.sample, '/pages/sample/form', '搜编号或单位'),
+  sampleSheet('organoid', ENTRY_SHORT.organoid, ENTRY_TITLE.organoid, '/pages/organoid/form', '搜编号或单位'),
   embedSheet,
   cryoSheet,
 ]

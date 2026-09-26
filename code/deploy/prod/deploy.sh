@@ -64,10 +64,56 @@ load_env() {
   case "${LQG_PROD_HOST}" in 118.178.109.11) die "LQG_PROD_HOST 是测试机 IP（上面跑的是 test 环境，profile=test）—— 不许当生产用（B2）";; esac
   case "${LQG_ENCRYPT_PASSWORD:-}" in ""|change-me-encrypt) die "LQG_ENCRYPT_PASSWORD 还是占位值 —— 生产字段加密口令必须是真的（且 ≠ LqgTestAesKey#01）";; esac
   case "${LQG_ENCRYPT_PASSWORD}" in LqgTestAesKey#01) die "LQG_ENCRYPT_PASSWORD 是**测试口令** —— 生产必须换一个（ADR-0006）";; esac
+  case "${#LQG_ENCRYPT_PASSWORD}" in 16|24|32) ;; *) die "LQG_ENCRYPT_PASSWORD 长度 ${#LQG_ENCRYPT_PASSWORD}：AES 口令必须是 16 / 24 / 32 个字符（gen-secrets.sh 生成 32 位）";; esac
+  # ★ V13 / V14（F4）：JWT 签名密钥与接口加解密的两把后端 RSA 密钥只从 .env 来、没有缺省值；
+  #   后端的 StartupSafetyGuard 也会拒绝启动，这里提前在本机拦下来（省一次上机）。缺的话先跑 gen-secrets.sh。
+  case "${LQG_JWT_SECRET:-}" in ""|change-me*|abcdefghijklmnopqrstuvwxyz) die "LQG_JWT_SECRET 缺失或还是若依默认值 —— 先跑 bash gen-secrets.sh";; esac
+  [ "${#LQG_JWT_SECRET}" -ge 32 ] || die "LQG_JWT_SECRET 太短（${#LQG_JWT_SECRET} 个字符，至少 32）"
+  : "${LQG_API_REQUEST_PRIVATE_KEY:?LQG_API_REQUEST_PRIVATE_KEY 未填 —— 先跑 bash gen-secrets.sh（接口加密请求私钥）}"
+  : "${LQG_API_RESPONSE_PUBLIC_KEY:?LQG_API_RESPONSE_PUBLIC_KEY 未填 —— 先跑 bash gen-secrets.sh（接口加密响应公钥）}"
 
   BUILD_COMMIT="$(git -C "${ROOT}" rev-parse --short=7 HEAD)"
   SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 -p "${LQG_PROD_SSH_PORT}" "${LQG_PROD_SSH}")
   RSYNC_RSH="ssh -o BatchMode=yes -p ${LQG_PROD_SSH_PORT}"
+}
+
+# ── 接口加解密两对 RSA 的核对（V14，F4）─────────────────────────────────────────────
+# rsa_bits <Base64 PKCS#8 私钥>：输出位数；解析不了输出 0
+rsa_bits() {
+  local dir bits
+  dir="$(mktemp -d)"
+  if printf '%s' "$1" | openssl base64 -d -A > "${dir}/k.der" 2>/dev/null; then
+    bits="$(openssl pkey -inform DER -in "${dir}/k.der" -noout -text 2>/dev/null | sed -n 's/.*(\([0-9]*\) bit.*/\1/p' | head -1)"
+  fi
+  rm -rf "${dir}"
+  printf '%s' "${bits:-0}"
+}
+
+# rsa_pair_ok <Base64 PKCS#8 私钥> <Base64 X.509 公钥>：两者是同一对返回 0
+rsa_pair_ok() {
+  local dir derived=""
+  dir="$(mktemp -d)"
+  if printf '%s' "$1" | openssl base64 -d -A > "${dir}/k.der" 2>/dev/null; then
+    derived="$(openssl pkey -inform DER -in "${dir}/k.der" -pubout -outform DER 2>/dev/null | openssl base64 -A)"
+  fi
+  rm -rf "${dir}"
+  [ -n "${derived}" ] && [ "${derived}" = "$2" ]
+}
+
+# 前后端各拿一半：请求 = 前端公钥加密 / 后端私钥解密；响应 = 后端公钥加密 / 前端私钥解密。
+# 不成对 = 生产工作台登录一律失败（而且报错看不出原因），所以部署前必须核。
+check_api_crypto_keys() {
+  : "${VITE_APP_RSA_PUBLIC_KEY:?VITE_APP_RSA_PUBLIC_KEY 未填 —— 先跑 bash gen-secrets.sh（工作台构建要用）}"
+  : "${VITE_APP_RSA_PRIVATE_KEY:?VITE_APP_RSA_PRIVATE_KEY 未填 —— 先跑 bash gen-secrets.sh（工作台构建要用）}"
+  local bits
+  bits="$(rsa_bits "${LQG_API_REQUEST_PRIVATE_KEY}")"
+  [ "${bits}" -ge 2048 ] || die "LQG_API_REQUEST_PRIVATE_KEY 解析不了或只有 ${bits} 位（要 PKCS#8 Base64、≥ 2048 位）"
+  bits="$(rsa_bits "${VITE_APP_RSA_PRIVATE_KEY}")"
+  [ "${bits}" -ge 2048 ] || die "VITE_APP_RSA_PRIVATE_KEY 解析不了或只有 ${bits} 位（要 PKCS#8 Base64、≥ 2048 位）"
+  rsa_pair_ok "${LQG_API_REQUEST_PRIVATE_KEY}" "${VITE_APP_RSA_PUBLIC_KEY}" \
+    || die "请求那一对不成对：VITE_APP_RSA_PUBLIC_KEY 不是 LQG_API_REQUEST_PRIVATE_KEY 的公钥"
+  rsa_pair_ok "${VITE_APP_RSA_PRIVATE_KEY}" "${LQG_API_RESPONSE_PUBLIC_KEY}" \
+    || die "响应那一对不成对：LQG_API_RESPONSE_PUBLIC_KEY 不是 VITE_APP_RSA_PRIVATE_KEY 的公钥"
 }
 
 # 把 LQG_BUILD_COMMIT 写回 .env（compose 的镜像 tag / build arg 都读它）
@@ -90,6 +136,10 @@ phase_preflight() {
   say "  ✓ 库名=${LQG_DB_NAME}（不含 test）"
   case "${LQG_OSS_BUCKET:-}" in "") warn "LQG_OSS_BUCKET 空 —— oss-init 阶段会跳过（OSS 断言 blocked，B1）";; *) say "  ✓ OSS 桶=${LQG_OSS_BUCKET} 前缀=${LQG_OSS_PREFIX:-lqg/}";; esac
   case "${LQG_ALERT_WEBHOOK:-}" in "") warn "LQG_ALERT_WEBHOOK 空 —— healthcheck 告警会退化成打日志";; *) say "  ✓ 告警 webhook 已配";; esac
+
+  say "①b 接口加解密两对 RSA：≥ 2048 位、前后端成对（V14）"
+  check_api_crypto_keys
+  say "  ✓ 请求 / 响应两对都成对"
 
   say "② compose 校验（用真实 .env 展开；任一必填缺失会在这里红）"
   ( cd "${HERE}" && docker compose config -q ) || die "compose 校验失败"
@@ -148,6 +198,9 @@ phase_artifacts() {
   say "② 网页工作台 dist（**production 模式**：VITE_APP_ENCRYPT=true + VITE_APP_BASE_API=/prod-api）"
   say "   ★ 生产要用 build:prod（.env.production）；test 的 build:test 会把接口加密关掉，"
   say "     而后端 prod 的 api-decrypt.enabled 是 true → 两者不一致会让工作台登录一律失败。"
+  say "   ★ V14：.env.production 不再写死 RSA 密钥 —— VITE_APP_RSA_PUBLIC_KEY / VITE_APP_RSA_PRIVATE_KEY"
+  say "     来自本机 .env（load_env 已 export），Vite 不覆盖已存在的进程环境变量。缺了或不成对就不构建。"
+  check_api_crypto_keys
   ( cd "${ROOT}/code/plus-ui" && pnpm build:prod ) || die "pnpm build:prod 失败"
   [ -f "${ROOT}/code/plus-ui/dist/index.html" ] || die "没有产出 plus-ui/dist/index.html"
   say "  ✓ plus-ui dist ($(du -sh "${ROOT}/code/plus-ui/dist" | cut -f1))"

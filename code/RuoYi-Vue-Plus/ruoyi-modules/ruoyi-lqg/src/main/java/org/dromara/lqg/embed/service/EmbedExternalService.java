@@ -8,8 +8,8 @@ import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.mapper.EmbedMapper;
-import org.dromara.lqg.sample.domain.Sample;
-import org.dromara.lqg.sample.mapper.SampleMapper;
+import org.dromara.lqg.ext.service.ExtScopeService;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules;
 import org.dromara.lqg.sample.verify.VerifyTransitions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +34,16 @@ import java.util.Date;
  * 改完回到 {@code pending} 并清 {@code invalid_reason / verify_by / verify_time}。
  * 状态回退经 {@link VerifyTransitions}（外部那条边），不另写一份判据。
  *
+ * <p>★ FIX V17（issue #299）：<b>可见性一律经 {@link ExtScopeService}</b>。以前本类直接
+ * {@code selectById} 记录与样本，「别人的」回 400、「不存在的」回 404 —— 两者之差就是存在性预言机。
+ * 现在：记录先过 {@link ExtScopeService#assertEmbedVisible}、所挂样本先过
+ * {@link ExtScopeService#assertUsableForEmbed}，不可见与不存在是同一个 404、同一句话；
+ * 只有<b>看得见</b>的记录 / 样本才会走到「不是本人的 → 400」。本类因此不再持有样本的 mapper
+ * （{@code EmbedExternalScopeContractTest} 钉住）。
+ *
+ * <p>★ FIX V03：必填与长度先过 {@link SubmitSegmentRules#externalEmbedViolations}（缺所挂样本、
+ * 样本类型超过 50 字等 → 400），不再走到数据库约束上把 SQL 回吐给外部。
+ *
  * @author EMBED-MODEL-001
  */
 @Slf4j
@@ -42,7 +52,7 @@ import java.util.Date;
 public class EmbedExternalService {
 
     private final EmbedMapper embedMapper;
-    private final SampleMapper sampleMapper;
+    private final ExtScopeService extScopeService;
 
     /**
      * 外部提交石蜡包埋送样（{@code POST /mp/ext/embed}）。
@@ -56,10 +66,10 @@ public class EmbedExternalService {
     @Transactional(rollbackFor = Exception.class)
     public Long submit(Long userId, Long sampleId, String sampleType, String organoidSourceType) {
         requireLogin(userId);
-        if (sampleId == null) {
-            throw new ServiceException("缺少所挂样本 id");
-        }
-        requireUsableSample(userId, sampleId);
+        SubmitSegmentRules.throwIfAny(
+            SubmitSegmentRules.externalEmbedViolations(sampleId, true, sampleType, organoidSourceType));
+        // 能挂哪个样本只在范围解析器里判：不可见 / 不存在 → 同一个 404；可见但不是本人的 / 已无效 → 400
+        extScopeService.assertUsableForEmbed(userId, sampleId);
         return DataPermissionHelper.ignore(() -> {
             Embed entity = new Embed();
             entity.setSampleId(sampleId);
@@ -86,22 +96,26 @@ public class EmbedExternalService {
     /**
      * 外部修改后重提（{@code PUT /mp/ext/embed/{id}}），可一并改所挂样本。
      *
+     * <p>★ 校验顺序：可见（不可见 / 不存在 / 软删 → 同一个 404）→ 本人 → 状态 → 字段 → 新挂的样本。
+     *
      * @param sampleId 新的样本 id；{@code null} 或与现值相同 = 不动
      */
     @Transactional(rollbackFor = Exception.class)
     public void resubmit(Long userId, Long embedId, Long sampleId, String sampleType, String organoidSourceType) {
         requireLogin(userId);
-        if (embedId == null) {
-            throw new ServiceException("缺少石蜡包埋记录 id");
-        }
+        // ① 可见性：记录 → 所挂样本 → 可见集合（FIX V17：与读接口同一个判据、同一句 404）
+        extScopeService.assertEmbedVisible(userId, embedId);
         DataPermissionHelper.ignore(() -> {
             Embed embed = embedMapper.selectById(embedId);
             if (embed == null) {
-                throw new ServiceException("石蜡包埋记录不存在", 404);
+                // 与上一步之间被删掉的极端情况：仍按「不存在」回同一句
+                throw new ServiceException(ExtScopeService.EMBED_NOT_FOUND, 404);
             }
+            // ② 本人（看得见才走到这里：同组的记录可以看、不能改）
             if (!userId.equals(embed.getSubmitterId())) {
                 throw new ServiceException("只能修改重提本人提交的送样（同组的可以看，但不能改）", 400);
             }
+            // ③ 状态
             String from = embed.getVerifyStatus();
             boolean backToPending = VerifyTransitions.INVALID.equals(from);
             if (!backToPending && !VerifyTransitions.PENDING.equals(from)) {
@@ -110,8 +124,11 @@ public class EmbedExternalService {
             if (backToPending && !VerifyTransitions.check(from, VerifyTransitions.PENDING, false)) {
                 // 转移表是唯一判据：这一句在表变动时立刻生效，不是硬编码的假设
                 throw new ServiceException(
-                    VerifyTransitions.rejectionMessage(from, VerifyTransitions.PENDING, false));
+                    VerifyTransitions.rejectionMessage(from, VerifyTransitions.PENDING, false), 400);
             }
+            // ④ 字段（FIX V03）
+            SubmitSegmentRules.throwIfAny(
+                SubmitSegmentRules.externalEmbedViolations(sampleId, false, sampleType, organoidSourceType));
             LambdaUpdateWrapper<Embed> patch = new LambdaUpdateWrapper<Embed>()
                 .eq(Embed::getId, embedId)
                 // 显式补 update_by / update_time（wrapper 不自动填 update_by）
@@ -119,8 +136,9 @@ public class EmbedExternalService {
                 .set(Embed::getUpdateTime, new Date())
                 .set(Embed::getSampleType, trimToNull(sampleType))
                 .set(Embed::getOrganoidSourceType, trimToNull(organoidSourceType));
+            // ⑤ 换挂样本：新样本同样只经范围解析器判（不可见 / 不存在 → 同一个 404）
             if (sampleId != null && !sampleId.equals(embed.getSampleId())) {
-                requireUsableSample(userId, sampleId);
+                extScopeService.assertUsableForEmbed(userId, sampleId);
                 patch.set(Embed::getSampleId, sampleId);
             }
             if (backToPending) {
@@ -138,29 +156,9 @@ public class EmbedExternalService {
 
     // ── 私有 ─────────────────────────────────────────────────────────────────
 
-    /**
-     * 能挂的样本：存在（未软删）、<b>本人</b>送检、<b>没被判无效</b>。
-     *
-     * <p>★ 待核验的样本<b>可以</b>挂（ticket §2 第 4 条）：外部刚提交的样本正是待核验的，
-     * 不许挂就等于外部永远挂不上自己的样本。
-     */
-    private Sample requireUsableSample(Long userId, Long sampleId) {
-        Sample sample = DataPermissionHelper.ignore(() -> sampleMapper.selectById(sampleId));
-        if (sample == null) {
-            throw new ServiceException("样本不存在", 404);
-        }
-        if (!userId.equals(sample.getSubmitterId())) {
-            throw new ServiceException("只能挂本人送检过的样本", 400);
-        }
-        if (VerifyTransitions.INVALID.equals(sample.getVerifyStatus())) {
-            throw new ServiceException("这条样本已判无效，不能提交石蜡包埋送样", 400);
-        }
-        return sample;
-    }
-
     private static void requireLogin(Long userId) {
         if (userId == null) {
-            throw new ServiceException("未登录");
+            throw new ServiceException("未登录", 401);
         }
     }
 

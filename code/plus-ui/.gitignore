@@ -22,7 +22,7 @@ selenium-debug.log
 
 package-lock.json
 yarn.lock
-pnpm-lock.yaml
+# pnpm-lock.yaml **要进仓库**（V32）：CI 用 pnpm install --frozen-lockfile，锁文件不在就直接失败、构建也不可复现
 
 # 编译生成的文件
 auto-imports.d.ts

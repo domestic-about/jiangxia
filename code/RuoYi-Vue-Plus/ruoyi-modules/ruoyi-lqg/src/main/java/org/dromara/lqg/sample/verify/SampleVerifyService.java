@@ -9,14 +9,16 @@ import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
-import org.dromara.lqg.auth.group.domain.SourceUnit;
-import org.dromara.lqg.auth.group.service.UnitQueryService;
 import org.dromara.lqg.auth.staff.guard.StaffGrantRules;
 import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.domain.bo.SampleSubmitSegmentBo;
 import org.dromara.lqg.sample.guard.SampleChildrenCheckers;
 import org.dromara.lqg.sample.guard.SampleKindRules;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules.UnitRef;
+import org.dromara.lqg.sample.guard.SubmitSegmentRules.Writer;
 import org.dromara.lqg.sample.mapper.SampleMapper;
-import org.dromara.lqg.sample.service.SampleFieldCipher;
+import org.dromara.lqg.sample.service.SampleSubmitSegmentWriter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,13 @@ import java.util.List;
  *       本类里没有任何 {@code if (organoid)} 分支决定状态，只有「送检段该写哪几列」按类别分化。</li>
  * </ol>
  *
+ * <p>★ FIX V02（issue #147）：核验请求可以带 {@code submitSegment}（核验抽屉里改过的送检段），
+ * 与核验结论<b>拼进同一条 UPDATE</b>：先校验送检段（{@code SubmitSegmentRules}，与工作台修改同一份）、
+ * 再判转移与必填，全部通过才写库 —— 被拒时库里一个字都不变。送检段的列由
+ * {@link SampleSubmitSegmentWriter} 写（与工作台修改、外部重提同一组列）。
+ *
+ * <p>★ FIX V03：本类的业务拒绝一律 {@code code=400}（样本不存在 404），不再是默认的 500。
+ *
  * @author SAMPLE-VERIFY-001
  */
 @Slf4j
@@ -54,9 +63,8 @@ import java.util.List;
 public class SampleVerifyService {
 
     private final SampleMapper sampleMapper;
-    private final SampleFieldCipher fieldCipher;
     private final SampleChildrenCheckers childrenCheckers;
-    private final UnitQueryService unitQueryService;
+    private final SampleSubmitSegmentWriter segmentWriter;
 
     /**
      * 核验（{@code PUT /lqg/sample/{id}/verify}）：pending→valid / pending→invalid /
@@ -68,35 +76,55 @@ public class SampleVerifyService {
     @Transactional(rollbackFor = Exception.class)
     public void verify(Long id, SampleVerifyBo bo) {
         if (id == null) {
-            throw new ServiceException("缺少样本 id");
+            throw new ServiceException("缺少样本 id", 400);
         }
         if (bo == null) {
-            throw new ServiceException("请求体不能为空");
+            throw new ServiceException("请求体不能为空", 400);
         }
         String action = StringUtils.trim(bo.getAction());
         if (!VerifyTransitions.isKnownAction(action)) {
-            throw new ServiceException("核验动作只能是 valid（判有效）或 invalid（判无效）");
+            throw new ServiceException("核验动作只能是 valid（判有效）或 invalid（判无效）", 400);
+        }
+        verifyAs(id, bo, currentUserIsInternal(), LoginHelper.getUserId());
+    }
+
+    /**
+     * {@link #verify} 的主体（包内可见：契约测试不起 Sa-Token 上下文，直接给定操作者身份调它）。
+     *
+     * @param actorIsInternal 操作者是不是内部人员（只用于判转移表）
+     * @param operatorId      操作者 user_id（写 verify_by / update_by）
+     */
+    void verifyAs(Long id, SampleVerifyBo bo, boolean actorIsInternal, Long operatorId) {
+        if (id == null) {
+            throw new ServiceException("缺少样本 id", 400);
+        }
+        if (bo == null) {
+            throw new ServiceException("请求体不能为空", 400);
+        }
+        String action = StringUtils.trim(bo.getAction());
+        if (!VerifyTransitions.isKnownAction(action)) {
+            throw new ServiceException("核验动作只能是 valid（判有效）或 invalid（判无效）", 400);
         }
         // 目标状态只由 action 经转移表推出来：请求体里夹带 verifyStatus 不生效
         String target = VerifyTransitions.targetOf(action);
-        boolean actorIsInternal = currentUserIsInternal();
-        Long operatorId = LoginHelper.getUserId();
 
         DataPermissionHelper.ignore(() -> {
             Sample sample = sampleMapper.selectById(id);
             if (sample == null) {
                 // 已软删的行 selectById 也查不到（@TableLogic）→ 与「不存在」同样处理
-                throw new ServiceException("样本不存在（或已删除）");
+                throw new ServiceException("样本不存在（或已删除）", 404);
             }
             String from = sample.getVerifyStatus();
             // ① 先判转移表（不合法就到此为止 —— 库里一个字都不动）
             if (!VerifyTransitions.check(from, target, actorIsInternal)) {
-                throw new ServiceException(VerifyTransitions.rejectionMessage(from, target, actorIsInternal));
+                throw new ServiceException(VerifyTransitions.rejectionMessage(from, target, actorIsInternal), 400);
             }
+            // ② 送检段（核验抽屉一并保存，FIX V02）：校验 + 解析单位名快照，都在任何写库之前
+            SegmentWrite segment = prepareSegment(sample, bo.getSubmitSegment());
             if (VerifyTransitions.VALID.equals(target)) {
-                applyValid(sample, bo, operatorId);
+                applyValid(sample, bo, operatorId, segment);
             } else {
-                applyInvalid(sample, bo, operatorId);
+                applyInvalid(sample, bo, operatorId, segment);
             }
             return null;
         });
@@ -121,7 +149,7 @@ public class SampleVerifyService {
      * <p>★ 语义 = 「送检段整体替换」（与 AUTH-GROUP-001 的 {@code PUT /mp/ext/profile} 同款）：
      * 没传的送检段字段按清空处理，外部填写页是整份提交的。本类只写**本类别**的送检段列
      * （tissue：来源单位、供体姓名、性别、年龄、住院号、组织类型、有无病理、备注；
-     * organoid：来源单位、类器官类型、备注）。
+     * organoid：来源单位、类器官类型、代数、备注）。
      *
      * @param sampleId 样本 id
      * @param userId   提交人 user_id（外部 controller 从 token 取，不从请求体取）
@@ -130,7 +158,7 @@ public class SampleVerifyService {
     @Transactional(rollbackFor = Exception.class)
     public void resubmitByExternal(Long sampleId, Long userId, SampleResubmitBo bo) {
         if (sampleId == null) {
-            throw new ServiceException("缺少样本 id");
+            throw new ServiceException("缺少样本 id", 400);
         }
         if (userId == null) {
             throw new ServiceException("取不到当前登录用户，无法重提");
@@ -139,48 +167,36 @@ public class SampleVerifyService {
         DataPermissionHelper.ignore(() -> {
             Sample sample = sampleMapper.selectById(sampleId);
             if (sample == null) {
-                throw new ServiceException("样本不存在（或已删除）");
+                throw new ServiceException("样本不存在", 404);
             }
             if (!userId.equals(sample.getSubmitterId())) {
-                throw new ServiceException("只能修改重提本人提交的样本");
+                throw new ServiceException("只能修改重提本人提交的样本", 400);
             }
             String from = sample.getVerifyStatus();
             boolean backToPending = VerifyTransitions.INVALID.equals(from);
             if (!backToPending && !VerifyTransitions.PENDING.equals(from)) {
                 // valid（或任何其它值）的样本外部只读：这里不给「重提」留后门
-                throw new ServiceException("样本当前是「" + from + "」，外部不能修改重提（只有待核验、无效的样本可以）");
+                throw new ServiceException("样本当前是「" + from + "」，外部不能修改重提（只有待核验、无效的样本可以）", 400);
             }
             if (backToPending && !VerifyTransitions.check(from, VerifyTransitions.PENDING, false)) {
                 // 转移表是唯一判据：这一句在表变动时立刻生效，不是硬编码的假设
                 throw new ServiceException(
-                    VerifyTransitions.rejectionMessage(from, VerifyTransitions.PENDING, false));
+                    VerifyTransitions.rejectionMessage(from, VerifyTransitions.PENDING, false), 400);
             }
             String kind = SampleKindRules.normalize(sample.getSampleKind());
+            // 送检段的必填与格式（外部口径：组织样本多一个供体姓名必填），任何写库之前
+            SubmitSegmentRules.throwIfAny(SubmitSegmentRules.submitViolations(kind, fields, Writer.EXTERNAL));
+            // 单位归属已由调用方（ExtSampleSubmitService）按「外部只能挂自己可用的单位」定好；
+            // 这里只把 id 换成单位表的当前名称快照（同一份写法）
+            UnitRef unit = segmentWriter.resolveInternalUnit(fields.getSourceUnitId(), fields.getSourceUnitName());
             LambdaUpdateWrapper<Sample> patch = new LambdaUpdateWrapper<Sample>()
                 .eq(Sample::getId, sampleId)
                 // 用 `update(null, wrapper)` 时必须显式补 update_by / update_time：MP 的 updateFill
                 // 只在参数对象是 BaseEntity 时才填 update_by（SAMPLE-MODEL-001 坑 1）。
                 .set(Sample::getUpdateBy, userId)
-                .set(Sample::getUpdateTime, new Date())
-                .set(Sample::getSourceUnitId, fields.getSourceUnitId())
-                .set(Sample::getSourceUnitName, resolveUnitName(fields))
-                .set(Sample::getRemark, trimToNull(fields.getRemark()));
-            if (SampleKindRules.KIND_ORGANOID.equals(kind)) {
-                if (StringUtils.isBlank(fields.getOrganoidType())) {
-                    throw new ServiceException("「类器官」类样本缺少必填项：类器官类型");
-                }
-                patch.set(Sample::getOrganoidType, trimToNull(fields.getOrganoidType()));
-            } else {
-                if (StringUtils.isBlank(fields.getTissueType())) {
-                    throw new ServiceException("「组织」类样本缺少必填项：组织类型");
-                }
-                patch.set(Sample::getTissueType, trimToNull(fields.getTissueType()))
-                    .set(Sample::getDonorName, fieldCipher.encrypt(fields.getDonorName()))
-                    .set(Sample::getGender, trimToNull(fields.getGender()))
-                    .set(Sample::getAge, trimToNull(fields.getAge()))
-                    .set(Sample::getHospitalNo, fieldCipher.encrypt(fields.getHospitalNo()))
-                    .set(Sample::getHasPathology, trimToNull(fields.getHasPathology()));
-            }
+                .set(Sample::getUpdateTime, new Date());
+            // 送检段：与工作台修改、核验抽屉同一组列（SampleSubmitSegmentWriter）
+            segmentWriter.applyTo(patch, kind, fields, unit);
             if (backToPending) {
                 patch.set(Sample::getVerifyStatus, VerifyTransitions.PENDING)
                     .set(Sample::getInvalidReason, null)
@@ -197,10 +213,33 @@ public class SampleVerifyService {
     // ── 私有 ─────────────────────────────────────────────────────────────────
 
     /**
-     * 判有效：收样日期 + 内部编号**两个都必填**、内部编号全库唯一（软删后可重用），
-     * 通过后一并落核验段字段，并清掉旧的无效原因。
+     * 核验时一并保存的送检段（FIX V02）：校验过、单位名快照已解析好，等着拼进核验那条 UPDATE。
+     *
+     * @param kind 样本自己的类别（送检段按它写本类别的列）
+     * @param seg  请求里的送检段
+     * @param unit 解析好的来源单位
      */
-    private void applyValid(Sample sample, SampleVerifyBo bo, Long operatorId) {
+    private record SegmentWrite(String kind, SampleSubmitSegmentBo seg, UnitRef unit) {
+    }
+
+    /**
+     * 请求带了送检段 → 按工作台修改同一份规则校验（内部口径），并解析来源单位；没带 → null（送检段不动）。
+     */
+    private SegmentWrite prepareSegment(Sample sample, SampleSubmitSegmentBo seg) {
+        if (seg == null) {
+            return null;
+        }
+        String kind = SampleKindRules.normalize(sample.getSampleKind());
+        SubmitSegmentRules.throwIfAny(SubmitSegmentRules.submitViolations(kind, seg, Writer.INTERNAL));
+        UnitRef unit = segmentWriter.resolveInternalUnit(seg.getSourceUnitId(), seg.getSourceUnitName());
+        return new SegmentWrite(kind, seg, unit);
+    }
+
+    /**
+     * 判有效：收样日期 + 内部编号**两个都必填**、内部编号全库唯一（软删后可重用），
+     * 通过后一并落核验段字段，并清掉旧的无效原因；带了送检段就拼进同一条 UPDATE。
+     */
+    private void applyValid(Sample sample, SampleVerifyBo bo, Long operatorId, SegmentWrite segment) {
         List<String> missing = new ArrayList<>();
         if (bo.getReceiveDate() == null) {
             missing.add("收样日期");
@@ -209,8 +248,10 @@ public class SampleVerifyService {
             missing.add("内部编号");
         }
         if (!missing.isEmpty()) {
-            throw new ServiceException("判有效必须同时给收样日期与内部编号，缺少：" + String.join("、", missing));
+            throw new ServiceException("判有效必须同时给收样日期与内部编号，缺少：" + String.join("、", missing), 400);
         }
+        SubmitSegmentRules.throwIfAny(SubmitSegmentRules.receiveViolations(bo.getInternalNo(), bo.getIsFixed(),
+            bo.getHasQcSheet(), bo.getHasViabilityReport(), bo.getOperatorName()));
         String internalNo = SampleKindRules.normalize(bo.getInternalNo());
         requireInternalNoUnique(internalNo, sample.getId());
         Date now = new Date();
@@ -232,23 +273,28 @@ public class SampleVerifyService {
             .set(bo.getHasViabilityReport() != null, Sample::getHasViabilityReport,
                 trimToNull(bo.getHasViabilityReport()))
             .set(bo.getOperatorName() != null, Sample::getOperatorName, trimToNull(bo.getOperatorName()));
+        applySegment(patch, segment);
         sampleMapper.update(null, patch);
-        log.info("核验判有效：id={} internalNo={} receiveDate={} verifyBy={}",
-            sample.getId(), internalNo, bo.getReceiveDate(), operatorId);
+        log.info("核验判有效：id={} internalNo={} receiveDate={} verifyBy={} 一并保存送检段={}",
+            sample.getId(), internalNo, bo.getReceiveDate(), operatorId, segment != null);
     }
 
     /**
      * 判无效：原因必填；{@code valid → invalid} 是「误判纠正」，名下已有下游记录时不许改判。
+     * 带了送检段就拼进同一条 UPDATE（收样段不落：判无效的样本不补收样信息）。
      */
-    private void applyInvalid(Sample sample, SampleVerifyBo bo, Long operatorId) {
+    private void applyInvalid(Sample sample, SampleVerifyBo bo, Long operatorId, SegmentWrite segment) {
         String reason = trimToNull(bo.getReason());
         if (reason == null) {
-            throw new ServiceException("判无效必须写原因");
+            throw new ServiceException("判无效必须写原因", 400);
+        }
+        if (reason.codePointCount(0, reason.length()) > SubmitSegmentRules.MAX_INVALID_REASON) {
+            throw new ServiceException("无效原因不能超过 " + SubmitSegmentRules.MAX_INVALID_REASON + " 字", 400);
         }
         // FLOW:F-SAMPLE-01.step5：valid→invalid 只在「该样本名下没有包埋 / 冻存 / 质控文档」时允许。
         // 下游三张表分别属于 EMBED / CRYO / QC 的票，实现由它们各自注册（本票预期注册数 = 0）。
         if (VerifyTransitions.VALID.equals(sample.getVerifyStatus()) && childrenCheckers.hasChildren(sample.getId())) {
-            throw new ServiceException("该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效");
+            throw new ServiceException("该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效", 400);
         }
         Date now = new Date();
         LambdaUpdateWrapper<Sample> patch = new LambdaUpdateWrapper<Sample>()
@@ -259,8 +305,16 @@ public class SampleVerifyService {
             .set(Sample::getInvalidReason, reason)
             .set(Sample::getVerifyBy, operatorId)
             .set(Sample::getVerifyTime, now);
+        applySegment(patch, segment);
         sampleMapper.update(null, patch);
-        log.info("核验判无效：id={} reason={} verifyBy={}", sample.getId(), reason, operatorId);
+        log.info("核验判无效：id={} reason={} verifyBy={} 一并保存送检段={}",
+            sample.getId(), reason, operatorId, segment != null);
+    }
+
+    private void applySegment(LambdaUpdateWrapper<Sample> patch, SegmentWrite segment) {
+        if (segment != null) {
+            segmentWriter.applyTo(patch, segment.kind(), segment.seg(), segment.unit());
+        }
     }
 
     /**
@@ -278,22 +332,8 @@ public class SampleVerifyService {
             .eq(Sample::getInternalNo, internalNo)
             .ne(excludeId != null, Sample::getId, excludeId);
         if (sampleMapper.selectCount(wrapper) > 0) {
-            throw new ServiceException("内部编号「" + internalNo + "」已存在，请换一个");
+            throw new ServiceException("内部编号「" + internalNo + "」已存在，请换一个", 400);
         }
-    }
-
-    /**
-     * 来源单位名称快照：选了单位就取单位表的当前名称，否则用请求里的名称（同 SAMPLE-MODEL-001）。
-     */
-    private String resolveUnitName(SampleResubmitBo bo) {
-        if (bo.getSourceUnitId() != null) {
-            SourceUnit unit = unitQueryService.findUnit(bo.getSourceUnitId());
-            if (unit == null) {
-                throw new ServiceException("来源单位不存在");
-            }
-            return unit.getUnitName();
-        }
-        return trimToNull(bo.getSourceUnitName());
     }
 
     /**

@@ -204,10 +204,10 @@ defineExpose({ retry })
       </view>
 
       <view class="db__acts">
-        <button class="db__btn db__btn--s" :disabled="busy" @click="run('open')">
+        <button class="db__btn db__btn--s" :class="{ 'db__btn--disabled': busy }" :disabled="busy" @click="run('open')">
           打开
         </button>
-        <button class="db__btn db__btn--p" :disabled="busy" @click="run('share')">
+        <button class="db__btn db__btn--p" :class="{ 'db__btn--disabled': busy }" :disabled="busy" @click="run('share')">
           发送到微信
         </button>
       </view>
@@ -284,7 +284,8 @@ defineExpose({ retry })
   box-shadow: var(--lqg-shadow-brand);
 }
 
-.db__btn[disabled] {
+/* 禁用态用 class，不用属性选择器：微信小程序的 WXSS 不支持 [disabled] 这类属性选择器（独立验收 S3） */
+.db__btn--disabled {
   opacity: 0.6;
 }
 

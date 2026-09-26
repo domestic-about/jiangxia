@@ -1,12 +1,20 @@
 // ============================================================================
-// 域内 i18n（en_US）· SAMPLE 域 —— SAMPLE-WEB-001（工作台样本总表）
+// 域内 i18n（en_US）· SAMPLE 域 —— SAMPLE-WEB-001（工作台样本表；CR-20260924-10 起拆成两页）
 //
 // 键集合必须与 sample.zh_CN.ts 完全一致（SYS-WEB-001 的约定）。
 // ============================================================================
 
 export default {
-  title: 'Samples',
-  subtitle: 'Every sample lives in this one table: filter by source unit, group, kind, source, verify status, then query.',
+  page: {
+    tissue: {
+      title: 'Sample records',
+      subtitle: 'One row per tissue sample; its paraffin blocks and cryo batches are in the "Paraffin / Cryo" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
+    },
+    organoid: {
+      title: 'Organoid receipts',
+      subtitle: 'One row per organoid receipt; its paraffin blocks and cryo batches are in the "Paraffin / Cryo" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
+    }
+  },
   search: 'Search',
   reset: 'Reset',
 
@@ -20,6 +28,7 @@ export default {
     receiveDateBegin: 'Receive from',
     receiveDateEnd: 'Receive to',
     tissueType: 'Tissue type',
+    organoidType: 'Organoid type',
     internalNo: 'Internal no.',
     operatorName: 'Operator',
     donorName: 'Donor name',
@@ -32,6 +41,7 @@ export default {
     internalNoPlaceholder: 'Internal no. (exact)',
     operatorPlaceholder: 'Operator (fuzzy)',
     tissuePlaceholder: 'Tissue type (fuzzy)',
+    organoidPlaceholder: 'Organoid type (fuzzy)',
     donorPlaceholder: 'Donor name (exact)',
     hospitalPlaceholder: 'Hospital no. (exact)'
   },
@@ -60,7 +70,9 @@ export default {
     gender: 'Gender',
     age: 'Age',
     hospitalNo: 'Hospital no.',
-    tissueType: 'Tissue / organoid type',
+    tissueType: 'Tissue type',
+    organoidType: 'Organoid type',
+    passage: 'Passage',
     receiveDate: 'Receive date',
     isFixed: 'Fixed',
     processTime: 'Process time',
@@ -73,13 +85,14 @@ export default {
     hint: 'Slicing / staining',
     updateTime: 'Last modified',
     remark: 'Remark',
+    relation: 'Paraffin / Cryo',
     action: 'Actions'
   },
 
   // ── Slicing / staining hint (SAMPLE-HINT-001 / UI:admin.sample.list.hint) ──
   hint: {
-    block: 'Blocks {n}',
     sectioned: 'Sectioned',
+    notSectioned: 'Not sectioned',
     none: '—',
     blockNo: 'Block no.',
     sectionTime: 'Section time',
@@ -111,6 +124,22 @@ export default {
     female: 'Female',
     unknown: 'Unknown'
   },
+  relation: {
+    blocks: 'Blocks {n}',
+    blocksLabel: 'Blocks',
+    pending: 'Pending {n}',
+    cryo: 'Cryo {n} batches',
+    cryoLabel: 'Cryo',
+    cryoCount: '{n} batches',
+    none: '—',
+    add: 'Add',
+    openBlocks: 'Paraffin embedding records of this sample',
+    openPending: 'Partner submissions of this sample waiting for verification',
+    openCryo: 'Cryo batches of this sample',
+    addBlocks: 'Add a paraffin embedding record for this sample (sample preselected)',
+    addCryo: 'Add a cryo batch for this sample (sample preselected)',
+    sampleGone: 'This sample was deleted or cannot be found'
+  },
   neverModified: 'Never modified',
   empty: 'No samples match the filters',
   rowAction: {
@@ -118,8 +147,6 @@ export default {
     verify: 'Verify',
     qcDoc: 'QC documents',
     qcDocInvalid: 'QC documents open only for verified valid samples',
-    embed: 'Paraffin embedding',
-    cryo: 'Cryo',
     notYet: 'lands in a later task',
     delete: 'Delete',
     deleteConfirm: 'Delete sample "{no}"? (soft delete; the internal no. can be reused)',
@@ -134,7 +161,6 @@ export default {
     view: 'Sample detail',
     sectionSubmit: 'Submission info',
     sectionReceive: 'Receiving info',
-    kindFirst: 'Pick the kind first: tissue and organoid carry different fields.',
     lastModified: 'Last modified: {name} · {time}',
     lastModifiedNever: 'Never modified',
     save: 'Save',
@@ -157,6 +183,7 @@ export default {
     kindRequired: 'Sample kind is required',
     tissueRequired: 'Tissue type is required',
     organoidRequired: 'Organoid type is required',
+    passageInvalid: 'Passage must be P followed by digits, e.g. P3',
     internalNoTaken: 'This internal no. is already taken'
   },
 
@@ -172,6 +199,8 @@ export default {
     hospitalNo: 'Hospital no.',
     tissueType: 'Tissue type',
     organoidType: 'Organoid type',
+    passage: 'Passage',
+    passagePlaceholder: 'Optional, e.g. P3',
     hasPathology: 'Pathology',
     receiveDate: 'Receive date',
     internalNo: 'Internal no.',
@@ -189,7 +218,7 @@ export default {
   },
 
   verifyHintOrganoid:
-    'Organoid receipt submitted outside: the submission part verifies source unit, organoid type and remark; the receiving part fills receive date, internal no., process time, viability report and operator.',
+    'Organoid receipt submitted outside: the submission part verifies source unit, organoid type, passage and remark; the receiving part fills receive date, internal no., process time, viability report and operator.',
   verifyHintTissue: 'Tissue sample submitted outside: receive date and internal no. are required, and the internal no. is unique.',
   allSamples: 'All samples',
   loading: 'Loading…'

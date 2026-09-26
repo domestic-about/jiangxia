@@ -6,14 +6,15 @@ import org.dromara.common.core.exception.ServiceException;
  * 文档版本（字典 {@code lqg_doc_audience}，FIELD:t_lqg_doc_file.audience）。
  *
  * <p>★★ <b>两份独立缓存的产物，不是在下载时临时抹</b>（ticket §0 口径复述 2）：
- * 内部版有内部编号，外部版那一格<b>一律留空</b>。{@code audience} 进内容指纹、进对象键路径，
- * 所以「谁后渲染谁覆盖」在结构上不可能发生 —— 外部永远取不到带内部编号的那一份。
+ * 内部版一直印内部编号；外部版那一格<b>按系统参数 {@code lqg.ext.show-internal-no} 决定，默认留空</b>。
+ * {@code audience} 进内容指纹、进对象键路径，所以「谁后渲染谁覆盖」在结构上不可能发生。
  *
- * <p>★ CR-20260918-07 的系统参数 {@code lqg.ext.show-internal-no} 只管**页面数据**，
- * 不管这里的预渲染产物：开关切换不会重出历史文档，外部版文档里那一格仍然是空的
- * （范围已在 CR 里写死；要放开另记变更）。
+ * <p>★ 甲方 2026-09-24 意见第 23 行起，这个开关<b>也管外部版文档</b>（此前 CR-20260918-07 只管页面数据）：
+ * 「外部版这一格印什么」进内容指纹（{@code DocRenderModel#isInternalNoShown}），切换后已完成的文档
+ * 在后台按新设置重出；开关关着时，印了内部编号的外部版在任何路径上都不给出去
+ * （{@code t_lqg_doc_file.show_internal_no} + {@code DocRenderService#deliverable}）。
  *
- * @author DOC-RENDER-001
+ * @author DOC-RENDER-001 · G 批 C 组（内部编号开关作用到外部版文档）
  */
 public final class DocAudiences {
 
@@ -22,7 +23,7 @@ public final class DocAudiences {
 
     /** 内部版：含内部编号。 */
     public static final String INTERNAL = "internal";
-    /** 外部版：内部编号一格留空。 */
+    /** 外部版：内部编号一格按系统参数 {@code lqg.ext.show-internal-no}（默认关 = 留空）。 */
     public static final String EXTERNAL = "external";
 
     /**

@@ -75,7 +75,7 @@ D7 的 QA 门 r1 里，**一条真 S1 被一个源码 grep 型断言放跑了**�
 |---|---|---|---|---|
 | **H1a** | `SYS-EXPORT-001` acc2 | 文件里有没有 `Authorization` 这个词 | **导出请求**（真发一次）必须带 `Authorization` + `clientid`，且 200/真 xlsx | 去掉 `ledger/index.vue` 里 `header: authHeader()` |
 | **H1b** | `SYS-EXPORT-001` acc2 | 同上 | **文档下载请求**（真点一次单份下载）必须**不带** `Authorization`（且 200） | 给 `DownloadBar.vue` 的 `downloadToTemp` 传回 `authHeader()` |
-| **H2** | `SYS-HOME-001` acc2 | 只 grep「卡片接了接口」 | 真 DOM 读五张卡片的数字 **== `/lqg/home/todo` 的返回值** | 把某张卡的 `:value="todo.pendingSamples"` 改成写死的 `7` |
+| **H2** | `SYS-HOME-001` acc2 | 只 grep「卡片接了接口」 | 真 DOM 读六张卡片的数字 **== `/lqg/home/todo` 的返回值**（CR-20260924-10 起两张样本卡分别对 `pendingTissue` / `pendingOrganoid`，原先是五张卡、样本卡对 `pendingSamples`） | 把某张卡的 `:value="todo.pendingTissue"` 改成写死的 `7`（原先是 `todo.pendingSamples`） |
 | **H3a** | `DOC-MP-002` acc1 | `grep 'showMenu:[[:space:]]*true'` | `showMenu: true` 必须出现在**真代码**里（**注释不算**：把注释里的字面量换掉后仍须命中） | 删掉真代码那一行、只在注释保留字面量 |
 | **H3b** | `DOC-MP-002` acc1 | 对 ThumbStrip 只有一句 `grep previewImage` | 点缩略图后打开层拿到的 src **== 原图 URL**（且 `≠ previewUrl`） | 把「看原图」改成打开 `previewUrl` |
 | **H4** | `DOC-PUBLISH-001` acc2 | 「四个下载入口」只有字面量 | 真 DOM 数渲染出的下载入口**恰好 4 个**，且各自 `format` 正确 | 删掉「下载合并 PDF」按钮 |
@@ -94,12 +94,18 @@ D7 的 QA 门 r1 里，**一条真 S1 被一个源码 grep 型断言放跑了**�
 ## 4. 环境与纪律
 
 - 起环境：`bash doc/waves/tools/qa-up.sh --backend-port 8094 --web-port 8093 --mp-port 9204`（工作台 8093 / H5 9204 / 后端 8094）；`export LQG_VERIFY_ENV_FILE="$PWD/.tmp/qa-env/8094/verify.env"`（★ 不导出的话 DATA accept 会落到默认 8081 报 exit 2「连不上后端」——那是工具红不是产品红）。
+- **隔离环境重放**（CR-20260924-11）：两条 accept 只调 `mutation-assert.sh`，它的端口全部读环境变量——`LQG_ACCEPT_BACKEND_PORT / LQG_ACCEPT_WEB_PORT / LQG_ACCEPT_MP_PORT`（缺省 8094 / 8093 / 9204）、`LQG_ACCEPT_OSS_BASE`、`LQG_VERIFY_ENV_FILE`；后端不在时只有显式给全 `LQG_DB_* / LQG_REDIS_* / LQG_GOTENBERG_URL` 才自己起 JVM，否则 exit 2。在别的机器、别的容器组上重放，这几个变量与 `TMPDIR` 必须设成自己那一套（清单见 doc/verify/README.md「隔离环境重放」）；缺省值就是 Kevin 本机的，照原样跑会连到 Kevin 的后端与库。
 - **关进程只许按 PID**；**严禁 `pkill -f 'ruoyi-admin.jar'`**（8080 是别的项目，issue #46）。端口纪律：**8080/5432/6379 留给 Kevin**。
 - ★ **`code/miniapp/src/pages.json` 是有意保留的状态**（tabBar `[index,doc,me]`）——**不要 `git checkout` 它**；要重生成就先 `rm` 再 build（issue #258）。
 - **Playwright 的 require 锚点用 `code/miniapp/package.json`**（用 plus-ui 会 `MODULE_NOT_FOUND`，issue #229）。**绝对不要把 PNG/截图读进自己的上下文**。
-- `lqg-dev-gotenberg` 在 running——**别停**。**seed 的图是假地址**（渲染时跳过+WARN、文档仍 done，issue #217 裁定①）；`t_lqg_doc_file` **reseed 后是空的**，要验下载/预览得先 `publish`+`render` 造出产物（或用真图）。
+- 转换服务容器（`${LQG_GOTENBERG_CONTAINER:-lqg-dev-gotenberg}`，健康检查 `${LQG_GOTENBERG_URL:-http://127.0.0.1:3010}/health`）在 running——**别停**。**seed 的图是假地址**：seed 假图 → 外部版 failed 不对外；内部版 done 但记缺图（`missing_image_count` / `missing_images`，计入首页渲染异常；CR-20260923-09）。`t_lqg_doc_file` **reseed 后是空的**，要验下载/预览得先 `publish`+`render` 造出产物；1001 的样本质控表、类器官质控表以及合并件，外部版必然 failed，要验外部版得先把假图换成真图。
 - 跑 accept：`python3 doc/waves/tools/accept-run.py --ticket SYS-ACCEPT-001 --run --json .tmp/sys-accept.json --logdir .tmp/sys-accept-logs`。
 
 ## 5. 完工报告要求
 
 `doc/waves/reports/SYS-ACCEPT-001.md`：六个热点各自的「旧判据 → 新判据」对照、**变异前后实际观测值**（真请求头 / 真 DOM 数 / 真 URL）、两个 accept 的实际输出、`evidence.json` 摘要、越界与 WARN、给 D7 门复跑的说明；并如实说明**哪几条仍做不到行为化**（若真有）。
+
+- 2026-09-23 按 CR-20260923-09 更新：§4 里「seed 假图渲染时跳过 + WARN、文档仍 done（#217 裁定①）」改为「seed 假图 → 外部版 failed 不对外；内部版 done 但记缺图」，并写明验外部版要先换真图。
+- ⚠️ 已知会红（2026-09-24）：工作台首页按 CR-20260924-10 拆成六张卡后，`doc/waves/regression/D7/accept-strengthened/probe.mjs` 的 H2 仍断「五张卡」且按「样本 → pendingSamples」对数，`mutate.py` 的 H2 变异仍替换 `:value="todo.pendingSamples"`（首页已没有这一处）——两条 accept 都会因 H2 红，**不是产品缺陷**。需把 H2 改为六张卡、两张样本卡对 `pendingTissue` / `pendingOrganoid`、变异写死 `todo.pendingTissue` 后重跑；`doc/waves/**` 不在本次文档组的改动范围，由调度者处理。
+- 2026-09-24 按 CR-20260924-10 更新：§1 表 H2 一行改为六张卡、样本卡对 `pendingTissue` / `pendingOrganoid`、变异改写死 `todo.pendingTissue`；accept 的 run 不动，写明 H2 回归资产要同步改。
+- 2026-09-24 按 CR-20260924-11 更新：核对两条 accept 的 run 里没有写死 dev 容器、3010、`/tmp/lqg-*`（端口都经 `mutation-assert.sh` 读环境变量），run 不动；§4 的转换服务容器名改写成读 `LQG_GOTENBERG_CONTAINER` / `LQG_GOTENBERG_URL`，补「隔离环境重放」要设的变量。

@@ -11,14 +11,17 @@
 //   两个都带上，快照那一列永远是名字，不会空（ticket 的 counterfeit 第 2 条）。
 import type { SampleDetail } from '@/api/sample'
 import { http } from '@/utils/request'
+import { normalizePassage } from './layout'
 
-/** 类器官收样表单值（内外部共用一份；外部只渲染其中的三项） */
+/** 类器官收样表单值（内外部共用一份；外部只渲染其中的四项） */
 export interface OrganoidFormValue {
   /** 选中的单位 id（手填单位时为 null） */
   sourceUnitId: string | number | null
   /** 来源单位名称快照（显示 + 提交都要） */
   sourceUnitName: string
   organoidType: string
+  /** 代数（CR-20260924-10：甲方 2026-09-24 第 18 行要加的一项；选填，形如 P3） */
+  passage: string
   receiveDate: string
   internalNo: string
   processTime: string
@@ -33,6 +36,7 @@ export function emptyOrganoidForm(): OrganoidFormValue {
     sourceUnitId: null,
     sourceUnitName: '',
     organoidType: '',
+    passage: '',
     receiveDate: '',
     internalNo: '',
     processTime: '',
@@ -56,6 +60,7 @@ export function toOrganoidFormValue(detail: Partial<SampleDetail> | null | undef
     sourceUnitId: (detail as { sourceUnitId?: string | number | null }).sourceUnitId ?? null,
     sourceUnitName: str(detail.sourceUnitName),
     organoidType: str(detail.organoidType),
+    passage: str(detail.passage),
     receiveDate: str(detail.receiveDate),
     internalNo: str(detail.internalNo),
     processTime: str(detail.processTime),
@@ -94,6 +99,8 @@ export function internalOrganoidPatch(form: OrganoidFormValue): Record<string, u
     sourceUnitId: form.sourceUnitId,
     sourceUnitName: form.sourceUnitName.trim(),
     organoidType: form.organoidType.trim(),
+    // 代数选填：清空也要发空串（补丁语义「带了空值 = 清空」），不能省略这个键
+    passage: normalizePassage(form.passage),
     receiveDate: form.receiveDate || null,
     internalNo: form.internalNo.trim(),
     processTime: form.processTime ? form.processTime.replace('T', ' ') : null,
@@ -102,12 +109,13 @@ export function internalOrganoidPatch(form: OrganoidFormValue): Record<string, u
   }
 }
 
-/** 外部提交体（只有三项；夹带的内部字段后端一律不落库，这里也一个都不带） */
+/** 外部提交体（只有四项；夹带的内部字段后端一律不落库，这里也一个都不带） */
 export function externalOrganoidPayload(form: OrganoidFormValue): Record<string, unknown> {
   return {
     sourceUnitId: form.sourceUnitId,
     sourceUnitName: form.sourceUnitName.trim(),
     organoidType: form.organoidType.trim(),
+    passage: normalizePassage(form.passage),
     remark: form.remark.trim(),
   }
 }

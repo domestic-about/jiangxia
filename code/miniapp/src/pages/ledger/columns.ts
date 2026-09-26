@@ -7,7 +7,9 @@
 //   要改列名只能改甲方原件（再重生成 fixture），**不许改 fixture 迁就这里**。
 //
 // ★ 规则（fixture 的 `_doc` 逐字）：
-//   冻结列 = `frozen`；其余列 = 模板第 1 行去掉冻结列后按原顺序，再追加 `extra`。
+//   冻结列 = `frozen`；其余列 = 模板第 1 行去掉冻结列后按原顺序，把 `inserted` 插到各自的 `after` 列后面，
+//   再追加 `extra`。`inserted` 是甲方后来要求加、模板原件里没有的列（目前只有类器官收样记录的「代数」，
+//   甲方 2026-09-24 第 18 行 / CR-20260924-10），模板列本身一个字不动。
 //
 // ★ 本文件四张表一次定完（ticket §2）：本张只**注册** tissue / organoid 两个工作表
 //   （`sheets.ts`），embed / cryo 的列在这里备好，由 EMBED-MP-001 / CRYO-MP-001 注册。
@@ -57,12 +59,14 @@ const COLUMNS: Record<SheetKey, LedgerColumns> = {
       { key: 'stainHint', label: '切片染色' },
     ],
   },
-  // 类器官收样记录（模板 B，7 列 → 冻结「内部编号」后 6 列，末尾追加「切片染色」）
+  // 类器官收样记录（模板 B，7 列 → 冻结「内部编号」后 6 列，「类器官类型」后插入「代数」，末尾追加「切片染色」）
   organoid: {
     frozen: { key: 'internalNo', label: '内部编号' },
     columns: [
       { key: 'sourceUnitName', label: '来源单位' },
       { key: 'organoidType', label: '类器官类型' },
+      // 插入列（模板里没有，甲方 2026-09-24 第 18 行要加）：fixture 的 organoid.inserted
+      { key: 'passage', label: '代数' },
       { key: 'receiveDate', label: '收样日期' },
       { key: 'processTime', label: '处理时间' },
       { key: 'hasViabilityReport', label: '细胞活率报告' },

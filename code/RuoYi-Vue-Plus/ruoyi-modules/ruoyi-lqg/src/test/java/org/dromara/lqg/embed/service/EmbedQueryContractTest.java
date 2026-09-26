@@ -77,7 +77,7 @@ class EmbedQueryContractTest {
     }
 
     @Test
-    @DisplayName("② mine=true 的 OR 包成一组（AND (create_by = ? OR update_by = ?)），不带 sort 时不出现")
+    @DisplayName("② mine=true 的 OR 包成一组（AND (create_by = ? OR update_by = ?)）；与 sort 无关（FIX #191）")
     void mineOrIsGrouped() {
         EmbedQueryBo q = query();
         q.setSort("recent");
@@ -88,11 +88,19 @@ class EmbedQueryContractTest {
             "一组 OR 必须被括号包住、并与前面的条件相与（顶层裸 OR 会退化成 (A AND B) OR C）："
                 + wrapper.getTargetSql());
 
+        // FIX #191：不带 sort=recent（内部管理表格页）时 mine=true 同样收窄 —— 以前被静默忽略、返回全表；
+        //   契约第 63 行只说「开关打开时才带」，与冻存那边同一口径。排序仍是「待核验置顶」。
         EmbedQueryBo noSort = query();
         noSort.setMine(true);
+        noSort.setVerifyStatus("valid");
         LambdaQueryWrapper<Embed> noSortWrapper = EmbedQueryService.buildWrapper(noSort, null, 9000000101L);
-        assertFalse(noSortWrapper.getTargetSql().contains("create_by"),
-            "不带 sort=recent 时 mine 没有范围可收窄，不该多出经手人条件：" + noSortWrapper.getTargetSql());
+        assertTrue(noSortWrapper.getTargetSql().contains("AND (create_by = ? OR update_by = ?)"),
+            "★ 不带 sort=recent 时 mine=true 也必须收窄（不能静默忽略）：" + noSortWrapper.getTargetSql());
+        assertTrue(noSortWrapper.getSqlSegment().contains("ORDER BY (verify_status = 'pending') DESC"),
+            "不带 sort 仍是待核验置顶：" + noSortWrapper.getSqlSegment());
+        EmbedQueryBo mineOff = query();
+        assertFalse(EmbedQueryService.buildWrapper(mineOff, null, 9000000101L).getTargetSql().contains("create_by"),
+            "不带 mine = 中心全部（默认不是本人）");
 
         // 取不到登录人时不造「我」：条件不出现（也不报错）
         EmbedQueryBo noMe = query();

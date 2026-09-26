@@ -77,7 +77,13 @@ class MpSampleContractTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("MpSampleController 没有 PUT 处理方法"));
         assertEquals(1, update.getParameterCount(), "PUT /mp/int/sample 只收请求体，不该有路径变量");
-        assertEquals(SampleSubmitBo.class, update.getParameterTypes()[0], "PUT 的入参类型应是 SampleSubmitBo");
+        // FIX V28：收原始 JSON（要知道哪些键出现过：没带 = 不改、带了空值 = 清空），形状仍是 SampleSubmitBo
+        assertEquals(com.fasterxml.jackson.databind.JsonNode.class, update.getParameterTypes()[0],
+            "PUT 收原始 JSON 再按 SampleSubmitBo 解析（PatchBody）");
+        io.swagger.v3.oas.annotations.parameters.RequestBody doc = update.getParameters()[0]
+            .getAnnotation(io.swagger.v3.oas.annotations.parameters.RequestBody.class);
+        assertNotNull(doc, "接口文档里请求体的形状要标成 SampleSubmitBo");
+        assertEquals(SampleSubmitBo.class, doc.content()[0].schema().implementation());
         assertEquals(0, update.getAnnotationsByType(org.springframework.web.bind.annotation.PathVariable.class).length);
     }
 
@@ -151,7 +157,8 @@ class MpSampleContractTest {
         patch.setId(9000001001L);
         patch.setTissueType("肝组织（更正）");
 
-        SampleSubmitBo merged = MpSampleService.mergePatch(exists, patch);
+        SampleSubmitBo merged = MpSampleService.mergePatch(exists,
+            org.dromara.lqg.sample.domain.bo.PatchBody.of(patch, java.util.Set.of("id", "tissueType")));
         assertEquals(9000001001L, merged.getId());
         assertEquals("肝组织（更正）", merged.getTissueType(), "传了的字段要被覆盖");
         assertEquals("tissue", merged.getSampleKind(), "没传的字段沿用库里现值");

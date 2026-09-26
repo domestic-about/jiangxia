@@ -9,8 +9,13 @@
         <span v-else>{{ t('lqg.cryo.drawer.lastModified', { name: form.updateByName || '—', time: form.updateTime }) }}</span>
       </div>
 
-      <div class="lqg-cryo-drawer__section">{{ t('lqg.cryo.drawer.sectionBatch') }}</div>
+      <!-- ★ 字段先后逐字照甲方 -80 冻存模板（2026-09-24「请参照我发你的模板，理解先后顺序」）：
+           冻存时间、冻存样品、冻存数量/支、冻存密度、暂存-80、冻存人、转移至液氮时间、液氮储存位置、备注；
+           模板没有的「代数」放在最后。「选择样本」是挂样本用的，放在最前。
+           ★ 一个 el-form 包全部字段：以前「存放位置」那一段是第二个没挂 rules 的 el-form，
+             液氮储存位置的必填校验根本没跑（只靠后端 400 兜底）。 -->
       <el-form ref="formRef" :model="form" :rules="rules" label-width="150px">
+        <div class="lqg-cryo-drawer__section">{{ t('lqg.cryo.drawer.sectionBatch') }}</div>
         <el-row :gutter="12">
           <el-col :span="24">
             <el-form-item :label="t('lqg.cryo.drawer.sample')" prop="sampleId">
@@ -36,6 +41,12 @@
             </el-form-item>
           </el-col>
 
+          <el-col :span="12">
+            <el-form-item :label="t('lqg.cryo.drawer.freezeTime')" prop="freezeTime">
+              <el-date-picker v-model="form.freezeTime" type="date" value-format="YYYY-MM-DD" class="lqg-cryo-drawer__control" clearable />
+            </el-form-item>
+          </el-col>
+
           <el-col :span="24">
             <el-form-item :label="t('lqg.cryo.drawer.cryoName')" prop="cryoName">
               <el-input
@@ -45,17 +56,6 @@
                 clearable
                 class="lqg-cryo-drawer__mono-input"
               />
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="12">
-            <el-form-item :label="t('lqg.cryo.drawer.passage')" prop="passage">
-              <el-input v-model="form.passage" :placeholder="t('lqg.cryo.drawer.passagePlaceholder')" maxlength="10" clearable />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('lqg.cryo.drawer.freezeTime')" prop="freezeTime">
-              <el-date-picker v-model="form.freezeTime" type="date" value-format="YYYY-MM-DD" class="lqg-cryo-drawer__control" clearable />
             </el-form-item>
           </el-col>
 
@@ -73,19 +73,16 @@
               <el-input v-model="form.density" :placeholder="t('lqg.cryo.drawer.densityPlaceholder')" maxlength="50" clearable />
             </el-form-item>
           </el-col>
+        </el-row>
 
+        <div class="lqg-cryo-drawer__section">{{ t('lqg.cryo.drawer.sectionStore') }}</div>
+        <el-row :gutter="12">
           <el-col :span="24">
             <el-form-item :label="t('lqg.cryo.drawer.inMinus80')" prop="inMinus80">
               <!-- ★ 是 / 否 两个按钮，不是开关（模板写的就是「是 否（按钮）」） -->
               <SegButtons v-model="form.inMinus80" :options="flagOptions" />
             </el-form-item>
           </el-col>
-        </el-row>
-      </el-form>
-
-      <div class="lqg-cryo-drawer__section">{{ t('lqg.cryo.drawer.sectionStore') }}</div>
-      <el-form label-width="150px">
-        <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item :label="t('lqg.cryo.drawer.frozenBy')">
               <el-input v-model="form.frozenBy" maxlength="50" clearable />
@@ -109,6 +106,15 @@
           <el-col :span="24">
             <el-form-item :label="t('lqg.cryo.drawer.remark')">
               <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <div class="lqg-cryo-drawer__section">{{ t('lqg.cryo.drawer.sectionExtra') }}</div>
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item :label="t('lqg.cryo.drawer.passage')" prop="passage">
+              <el-input v-model="form.passage" :placeholder="t('lqg.cryo.drawer.passagePlaceholder')" maxlength="10" clearable />
             </el-form-item>
           </el-col>
         </el-row>

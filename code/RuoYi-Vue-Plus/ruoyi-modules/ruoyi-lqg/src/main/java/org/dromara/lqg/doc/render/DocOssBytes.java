@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.oss.core.OssClient;
+import org.dromara.common.oss.exception.OssException;
 import org.dromara.common.oss.factory.OssFactory;
 import org.dromara.system.domain.SysOss;
 import org.dromara.system.mapper.SysOssMapper;
@@ -18,16 +19,18 @@ import java.io.InputStream;
  * {@code sys_oss.service='minio'} 的行要用 minio 那套配置，不能一律用默认配置键 ——
  * 上传侧可能用了非默认的存储服务。
  *
- * <p>★★ <b>取不到一律返回 {@code null}，不抛异常</b>（本票如实登记的口径，见完工报告 WARN）：
- * 本机确定性数据里 {@code sys_oss.service='seed'}、URL 是 {@code https://seed.invalid/...}
- * 的假地址，根本取不到字节。accept 2 要渲染的
- * {@code 9000001001/organoid_qc} 名下正好有一张这种假图，而它<b>必须渲染成 {@code done}</b>
- * ——「取不到图就整份 failed」会让那条断言永远红。所以：取不到的图**跳过并打 WARN**，
- * 文档照样出，页面上少一张图不会比「送检方永远拿不到文档」更糟。
- * （DOC-PDF-001 的 counterfeit 里写的是「应整体 failed」，与本票 accept 冲突，
- * 已在完工报告的「给下游的坑」里点名，请下游按本票的行为对齐。）
+ * <p>★★ <b>取不到不抛异常，但一定带回原因</b>（{@link #fetch}）：
+ * 取图失败不是「跳过就算了」的小事（#217，2026-09-23 定的口径）——
+ * <ul>
+ *   <li><b>外部版</b>：只要有一张图取不到，整份按渲染失败处理（{@code render_status='failed'}），
+ *       外部清单、页面图、下载一律不可见；图补上后重新生成才恢复；</li>
+ *   <li><b>内部版</b>：照样出，但缺了哪几张要<b>持久化</b>到渲染记录上
+ *       （{@code t_lqg_doc_file.missing_image_count / missing_images}），工作台质控页与首页都看得见，
+ *       并计入首页的「渲染失败」数。</li>
+ * </ul>
+ * 判定与落库在 {@link DocxRenderer} / {@code DocRenderService}，本类只负责「取到了什么、没取到为什么」。
  *
- * @author DOC-RENDER-001
+ * @author DOC-RENDER-001 · 独立验收 V23 修复（取图失败带原因）
  */
 @Slf4j
 @Component
@@ -37,38 +40,79 @@ public class DocOssBytes {
     private final SysOssMapper sysOssMapper;
 
     /**
-     * @param ossId 原图 / 预览图的 oss_id
-     * @return 字节；取不到（没有元数据 / 没配 OSS / 对象不在 / 网络不通）返回 {@code null}
+     * 一次取图的结果：{@code bytes} 非空 = 取到了；否则 {@code reason} 是给人看的原因。
      */
-    public byte[] read(Long ossId) {
+    public record Fetched(byte[] bytes, String reason) {
+
+        public boolean ok() {
+            return bytes != null && bytes.length > 0;
+        }
+
+        static Fetched of(byte[] bytes) {
+            return new Fetched(bytes, null);
+        }
+
+        static Fetched missing(String reason) {
+            return new Fetched(null, reason);
+        }
+    }
+
+    /**
+     * 取字节并带回原因（渲染用这个：取不到的图要记进缺图清单）。
+     *
+     * @param ossId 原图 / 预览图的 oss_id
+     */
+    public Fetched fetch(Long ossId) {
         if (ossId == null) {
-            return null;
+            return Fetched.missing("图片记录缺少文件");
         }
         SysOss oss = sysOssMapper.selectById(ossId);
         if (oss == null) {
             log.warn("渲染取图：sys_oss 里没有 ossId={}", ossId);
-            return null;
+            return Fetched.missing("文件记录不存在");
         }
-        return read(oss);
+        return fetch(oss);
     }
 
     /**
      * 已知元数据时直接用（省一次查库）。
      */
-    public byte[] read(SysOss oss) {
-        if (oss == null || StringUtils.isBlank(oss.getService()) || StringUtils.isBlank(oss.getFileName())) {
-            return null;
+    public Fetched fetch(SysOss oss) {
+        if (oss == null) {
+            return Fetched.missing("文件记录不存在");
         }
+        if (StringUtils.isBlank(oss.getService()) || StringUtils.isBlank(oss.getFileName())) {
+            log.warn("渲染取图：ossId={} 的文件记录不完整（service={} file={}）",
+                oss.getOssId(), oss.getService(), oss.getFileName());
+            return Fetched.missing("文件记录不完整");
+        }
+        final OssClient client;
         try {
-            OssClient client = OssFactory.instance(oss.getService());
-            try (InputStream in = client.getObjectContent(oss.getFileName())) {
-                return in == null ? null : in.readAllBytes();
-            }
-        } catch (Exception e) {
-            log.warn("渲染取图失败，跳过这张图 ossId={} service={} file={}：{}",
-                oss.getOssId(), oss.getService(), oss.getFileName(), e.toString());
-            return null;
+            client = OssFactory.instance(oss.getService());
+        } catch (OssException e) {
+            log.warn("渲染取图失败 ossId={} service={}：存储配置不存在（{}）", oss.getOssId(), oss.getService(), e.getMessage());
+            return Fetched.missing("存储配置「" + oss.getService() + "」不存在");
         }
+        try (InputStream in = client.getObjectContent(oss.getFileName())) {
+            byte[] bytes = in == null ? null : in.readAllBytes();
+            if (bytes == null || bytes.length == 0) {
+                log.warn("渲染取图失败 ossId={} file={}：对象为空", oss.getOssId(), oss.getFileName());
+                return Fetched.missing("文件是空的");
+            }
+            return Fetched.of(bytes);
+        } catch (Exception e) {
+            log.warn("渲染取图失败 ossId={} service={} file={}：{}",
+                oss.getOssId(), oss.getService(), oss.getFileName(), e.toString());
+            return Fetched.missing("存储里读不到这个文件");
+        }
+    }
+
+    /**
+     * 兼容旧调用：取不到返回 {@code null}（原因只进日志）。渲染链路请用 {@link #fetch}。
+     */
+    public byte[] read(Long ossId) {
+        Fetched fetched = fetch(ossId);
+        return fetched.ok() ? fetched.bytes() : null;
     }
 
     /**

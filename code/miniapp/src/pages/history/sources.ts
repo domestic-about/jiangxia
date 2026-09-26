@@ -42,6 +42,7 @@ import {
 } from '@/api/sample'
 import type { EntryKey } from '@/pages/index/entries'
 import type { ResolvedIdentity } from '@/types/identity'
+import type { PageResult } from '@/utils/paging'
 
 /** 一行背后的原始对象（每个域一个 VO：样本行 / 石蜡包埋行 / 冻存批次行） */
 export type HistoryRaw = SampleRow | EmbedDetail | CryoBatchRow
@@ -71,8 +72,12 @@ export interface HistoryRow {
 export interface HistorySource {
   /** 这一档的空状态文案 */
   emptyText: string
-  /** 取一页（`onlyMine` = 顶部开关的值；内部那条路传的是「只看我提交的」） */
-  fetch(identity: ResolvedIdentity, onlyMine: boolean): Promise<HistoryRaw[]>
+  /**
+   * 取第 `pageNum` 页（从 1 起；`onlyMine` = 顶部开关的值；内部那条路传的是「只看我提交的」）。
+   * ★ V27：以前写死 `pageSize=100` 只取第一页，第 101 条以后永远看不到；现在页面触底再取下一页，
+   *   `total` 原样带回（页面底部的「共 N 条」只认它）。
+   */
+  fetch(identity: ResolvedIdentity, onlyMine: boolean, pageNum: number, pageSize: number): Promise<PageResult<HistoryRaw>>
   /** 一行 → 页面行 */
   toRow(row: HistoryRaw): HistoryRow
   /** 点这一行去哪（返回页面路径） */
@@ -148,24 +153,24 @@ function toHistoryRow(row: SampleRow): HistoryRow {
 const sampleSource: HistorySource = {
   emptyText: '你填过的记录会出现在这里',
 
-  async fetch(identity, onlyMine) {
+  fetch(identity, onlyMine, pageNum, pageSize) {
     if (identity === 'internal') {
       // ★ 默认是中心全员（`sort=recent` 不带 mine）；开关打开才**另外**带 mine=true。
       // `sort=recent` 同时是范围口：没人经手过的（外部送来待核验 / 无效、外部自己改过的）不进这张清单。
-      const page = await fetchIntSampleList({
+      return fetchIntSampleList({
         sampleKind: 'tissue',
         sort: 'recent',
         mine: onlyMine,
-        pageSize: 100,
+        pageNum,
+        pageSize,
       })
-      return page.rows ?? []
     }
-    const page = await fetchExtSampleList({
+    return fetchExtSampleList({
       sampleKind: 'tissue',
       onlyMine,
-      pageSize: 100,
+      pageNum,
+      pageSize,
     })
-    return page.rows ?? []
   },
 
   toRow: toHistoryRow,
@@ -195,22 +200,22 @@ const sampleSource: HistorySource = {
 const organoidSource: HistorySource = {
   emptyText: '你填过的类器官收样记录会出现在这里',
 
-  async fetch(identity, onlyMine) {
+  fetch(identity, onlyMine, pageNum, pageSize) {
     if (identity === 'internal') {
-      const page = await fetchIntSampleList({
+      return fetchIntSampleList({
         sampleKind: 'organoid',
         sort: 'recent',
         mine: onlyMine,
-        pageSize: 100,
+        pageNum,
+        pageSize,
       })
-      return page.rows ?? []
     }
-    const page = await fetchExtSampleList({
+    return fetchExtSampleList({
       sampleKind: 'organoid',
       onlyMine,
-      pageSize: 100,
+      pageNum,
+      pageSize,
     })
-    return page.rows ?? []
   },
 
   toRow: toHistoryRow,
@@ -258,18 +263,17 @@ function toEmbedHistoryRow(row: EmbedDetail): HistoryRow {
 const embedSource: HistorySource = {
   emptyText: '你填过的石蜡包埋送样记录会出现在这里',
 
-  async fetch(identity, onlyMine) {
+  fetch(identity, onlyMine, pageNum, pageSize) {
     if (identity === 'internal') {
       // ★ 默认中心全员（`sort=recent` **不带** mine）；开关打开才另外带 mine=true。
-      const page = await fetchIntEmbedList({
+      return fetchIntEmbedList({
         sort: 'recent',
         mine: onlyMine,
-        pageSize: 100,
+        pageNum,
+        pageSize,
       })
-      return page.rows ?? []
     }
-    const page = await fetchExtEmbedList({ onlyMine, pageSize: 100 })
-    return page.rows ?? []
+    return fetchExtEmbedList({ onlyMine, pageNum, pageSize })
   },
 
   toRow: toEmbedHistoryRow,
@@ -314,10 +318,9 @@ function toCryoHistoryRow(row: CryoBatchRow): HistoryRow {
 const cryoSource: HistorySource = {
   emptyText: '你填过的冻存记录会出现在这里',
 
-  async fetch(_identity, onlyMine) {
+  fetch(_identity, onlyMine, pageNum, pageSize) {
     // ★ 默认中心全员（`sort=recent` **不带** mine）；开关打开才另外带 mine=true。
-    const page = await fetchIntCryoList({ sort: 'recent', mine: onlyMine, pageSize: 100 })
-    return page.rows ?? []
+    return fetchIntCryoList({ sort: 'recent', mine: onlyMine, pageNum, pageSize })
   },
 
   toRow: toCryoHistoryRow,
@@ -340,5 +343,5 @@ export function sourceOf(key: EntryKey): HistorySource | null {
   return HISTORY_SOURCES[key] ?? null
 }
 
-/** 还没注册数据源的页签的空态文案（SAMPLE-MP-002 / EMBED-MP-001 / CRYO-MP-001 接） */
-export const UNREGISTERED_TEXT = '这一档的记录在后续版本开放'
+/** 查不到数据源的页签的空态文案（四档都已注册；只在页签键不认识时兜底） */
+export const UNREGISTERED_TEXT = '这一档暂时没有可看的记录'

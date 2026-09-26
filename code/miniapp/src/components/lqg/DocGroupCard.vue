@@ -52,7 +52,8 @@ function openDownload(docKind: string) {
 <template>
   <view class="lqg-card gcd">
     <view class="gcd__head">
-      <text class="gcd__title">{{ group.title }}</text>
+      <!-- 组标题是编号（内部编号 / 送检单号）：等宽字体（独立验收 G17） -->
+      <text class="gcd__title lqg-mono">{{ group.title }}</text>
       <text v-if="group.subtitle" class="gcd__sub">{{ group.subtitle }}</text>
     </view>
 

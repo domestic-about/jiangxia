@@ -31,6 +31,8 @@ blueprint_refs:
   - FIELD:t_lqg_sample.donor_name
   - FIELD:t_lqg_sample.hospital_no
   - FIELD:t_lqg_sample.tissue_type
+  - FIELD:t_lqg_sample.source_unit_id
+  - FIELD:t_lqg_sample.passage
 accept:
   - name: "样本表与 SSOT 逐列相符（含公共字段、内部编号与送检单号两个部分唯一索引）、出自本票 Flyway、送检单号序列已建"
     form: DDL
@@ -63,7 +65,7 @@ accept:
       精确查询没先加密查询值 → 按「测试供体甲」查不到 1001 红。
       为了「好用」给加密列做了 LIKE（在内存里解密后过滤）→ 按「测试供体」能查出一堆，倒数第 3 段红——口径是只支持精确匹配，做了模糊等于全表解密。
       列表没过滤软删（手写 SQL 绕过了 @TableLogic）→ 1010 出现红；行数 10 = seed 的 9 条有效 + 刚建的 1 条。
-  - name: "内部编号全库唯一但软删后可重用、重复时拒绝且不落库；内部新增必填项缺失被拒；联想词来自字典"
+  - name: "内部编号全库唯一但软删后可重用、重复时拒绝且不落库；内部新增必填项缺失被拒；类器官的代数选填、小写 p 转大写、格式不对被拒且不落库，组织样本传了代数也不落库（CR-20260924-10）；联想词来自字典"
     form: STATE
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
@@ -73,12 +75,17 @@ accept:
       python3 doc/verify/db.py --sql "SELECT del_flag FROM t_lqg_sample WHERE internal_no='T-del99'" --col-set 0,1 &&
       bash doc/verify/api.sh --as staff --bizcode POST /lqg/sample '{"sampleKind":"organoid","sourceUnitName":"本中心","receiveDate":"2026-09-17","internalNo":"T-oco77"}' | grep -qE '^(400|500)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE internal_no='T-oco77'" --eq 0 &&
+      bash doc/verify/api.sh --as staff POST /lqg/sample '{"sampleKind":"organoid","sourceUnitName":"本中心","organoidType":"肝类器官","passage":" p5 ","receiveDate":"2026-09-17","internalNo":"T-oco78"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff POST /lqg/sample '{"sampleKind":"organoid","sourceUnitName":"本中心","organoidType":"肝类器官","passage":"3","receiveDate":"2026-09-17","internalNo":"T-oco79"}' | jq -e '.code==400 and (.msg|contains("代数请填 P 加数字，如 P3"))' &&
+      bash doc/verify/api.sh --as staff POST /lqg/sample '{"sampleKind":"tissue","sourceUnitName":"本中心","tissueType":"肝组织","passage":"P3","receiveDate":"2026-09-17","internalNo":"T-hli80"}' | jq -e '.code==200' &&
+      python3 doc/verify/db.py --sql "SELECT internal_no || ':' || COALESCE(passage,'-') FROM t_lqg_sample WHERE internal_no IN ('T-oco78','T-oco79','T-hli80')" --col-set "T-oco78:P5,T-hli80:-" &&
       bash doc/verify/api.sh --as extA GET '/mp/dict/hints?type=tissue' | jq -e '.code==200 and (.data|index("肝组织")!=null) and (.data|index("测试供体甲")==null)' &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-
       唯一性只靠应用层先查后插、查询时没带 del_flag='0' → 重用软删编号 T-del99 被误拒，第 4 段红。
       重复编号时抛了异常但事务没回滚（取了号、插了半条）→ 第 3 段计数 2 红。每个「被拒」后面都跟库内断言：只看业务码的话，先落盘再报错也是绿的。
-      类器官类缺「类器官类型」也放行 → 倒数第 3、4 段红。
+      类器官类缺「类器官类型」也放行 → 「T-oco77」那两段红。
+      代数（CR-20260924-10）：不去首尾空白、不把小写 p 转大写 → 「 p5 」存成原样或被拒，col-set 那段不是 T-oco78:P5 红；格式不校验 → 「3」拿到 200、T-oco79 落库红；组织样本把代数照存 → T-hli80 不是「-」红（代数只对类器官收样记录有意义，组织样本一律写空）。
       联想词偷懒用 SELECT DISTINCT tissue_type FROM t_lqg_sample → 外部能看到别的单位填过的东西；这里断的是来源于字典（「肝组织」在字典 seed 里）且不混入任何样本数据。
 ---
 
@@ -113,10 +120,13 @@ accept:
 - `python3 doc/tools/gen_ddl_pg.py --migration V202609221000__SAMPLE-MODEL-001-sample.sql` 的输出（含序列 `seq_lqg_submit_no`）。
 ### 2.2 后端（包 `org.dromara.lqg.sample`，权限串 `lqg:sample:{list,query,add,edit,remove}`）
 - 实体字段逐列照 SSOT；`donorName`、`hospitalNo` 加 `@EncryptField(algorithm = AlgorithmType.AES)`。
+  （实际落地为 `SampleFieldCipher` 手工 AES 加解密、裸 Base64，与 seed 密文同一口径，效果与 `@EncryptField` 等价——框架拦截器会给密文加 `ENC_` 前缀、与 seed 不兼容；以 `FIELD:t_lqg_sample.donor_name` 为准。）
 - `submit_no` = `'SJ' || lpad(nextval('seq_lqg_submit_no')::text, 8, '0')`，在 service 层取号（一条原生 SQL 取 nextval），**不用** `SELECT max()+1`。
 - `POST /lqg/sample`：内部新增 → `submit_source='internal'`、`verify_status='valid'`、`submitter_id=当前用户`、`verify_by=当前用户`。
-  `sample_kind=tissue`：`tissue_type`、`internal_no`、`receive_date` 必填；`organoid`：`organoid_type`、`internal_no`、`receive_date` 必填。`source_unit_id` 有值时 `source_unit_name` 取单位表的名称快照，否则用请求里的名称。
-- `PUT /lqg/sample`：内部改任意字段（`submit_source`、`submitter_id`、`submit_no` 不可改）。`DELETE`：软删。
+  `sample_kind=tissue`：`tissue_type`、`internal_no`、`receive_date` 必填；`organoid`：`organoid_type`、`internal_no`、`receive_date` 必填。
+  代数 `passage`（CR-20260924-10，迁移 `V202609281000__CR-20260924-10-sample-passage.sql`，`FIELD:t_lqg_sample.passage`）：类器官选填，`SubmitSegmentRules.normalizePassage` 去首尾空白、开头小写 p 转大写，再按冻存批次代数同一规则（`CryoBalanceChecker.requirePassage`，`^P\d{1,3}$`）校验，不对 → 400「提交的内容不符合要求：代数请填 P 加数字，如 P3」；组织样本传了不报错、写路径一律写空（`SampleSubmitSegmentWriter`）。`source_unit_id` 有值时 `source_unit_name` 取单位表的名称快照，否则用请求里的名称。
+  两类都还要来源单位（`sourceUnitId` 或 `sourceUnitName`；id 不存在或已删 → 400）。**供体姓名内部录入选填**——外部提交的组织样本才必填（`FIELD:t_lqg_sample.donor_name`，CR-20260923-09）。违规 400、一次列全，全部在写库之前判。
+- `PUT /lqg/sample`：**整份替换**（工作台抽屉整份提交：没带的键按清空写，不是补丁；小程序 `PUT /mp/int/sample` 的补丁在 `MpSampleService` 里先合并成整份再走这里）。必填（来源单位、组织或类器官类型、内部编号、收样日期）缺了 → 400 并写明缺哪几项，库里不变（CR-20260923-09：以前「合并视角校验、整份写入」，只传一个备注就把组织类型、内部编号、收样日期写成 NULL）。`submit_source`、`submitter_id`、`submit_no` 不可改。`DELETE`：软删。
   详情 VO 带 `updateByName`（`update_by` 对应的用户姓名）与 `updateTime`：两端的修改页都显示「最后修改：某某 · 时间」（REQ-SAMPLE-016，CR-20260917-04）。
 - `GET /lqg/sample/{id}`、`GET /lqg/sample/list`：本张先支持 `sampleKind / verifyStatus / internalNo / donorName（精确）/ hospitalNo（精确）` 五个条件，其余筛选在 SAMPLE-WEB-001 补；`del_flag='1'` 的永不返回（`@TableLogic` 自带）。
 - `GET /mp/dict/hints?type=tissue|organoid|sample`：返回对应 `lqg_hint_*` 字典的 label 数组；内外部都能调。
@@ -136,3 +146,6 @@ accept:
 3. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 4. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 5. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-23 按 CR-20260923-09 更新：blueprint_refs 补 FIELD:t_lqg_sample.source_unit_id（历史漏写）；§2.2 按新口径写明供体姓名内部录入选填、外部组织样本必填，来源单位两类必填，PUT /lqg/sample 整份替换且必填缺了 400，加密实际走 SampleFieldCipher；accept 不动。
+- 2026-09-24 按 CR-20260924-10 更新：`t_lqg_sample` 加 `passage`（代数）——blueprint_refs 补 FIELD:t_lqg_sample.passage（SSOT 已加列，accept 1 的 ddl_vs_ssot 随之逐列比这一列）；accept 3 补四段（类器官「 p5 」落成 P5、「3」400 且不落库、组织样本带代数照常保存但代数为空）；§2.2 写明代数的校验与写入口径。

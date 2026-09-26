@@ -7,8 +7,20 @@ server:
     context-path: /
   # undertow 配置
   undertow:
-    # HTTP post内容的最大大小。当值为-1时，默认值为大小是无限的
-    max-http-post-size: -1
+    # HTTP 请求实体的最大大小（交给 Undertow 的 MAX_ENTITY_SIZE）。
+    # ★ V05（独立验收 2026-09-23）：**不能写 -1**。Spring Boot 只在值为正数时才把它交给 Undertow，
+    #   -1 等于「不设」；而 Undertow 2.3.x（本项目 2.3.22.Final）的缺省已经从「不限」改成 2MB ——
+    #   Content-Length 超过 2MB 的请求在解析请求头时就被回一个空响应的 400 并断开连接，
+    #   应用里一行日志都没有（附件、质控图片 3MB 起全部上传失败就是它）。
+    # ★ 取 100MB：比下面 multipart 的 max-request-size（60MB）高一截 —— 60MB 以上的上传要先进到
+    #   Spring，才能由全局异常处理回「文件太大」的中文提示；100MB 以上才在容器层直接拒绝。
+    #   测试 / 生产的 nginx 在更前面按 60m 拦（client_max_body_size，超限回同口径的 JSON 提示）。
+    max-http-post-size: 100MB
+    options:
+      server:
+        # Undertow 的 multipart 解析器会**另外**把单个请求的实体上限压到 MULTIPART_MAX_ENTITY_SIZE，
+        # 它的缺省同样是 2MB。-1 = 不另外压，由 spring.servlet.multipart.max-request-size 说了算。
+        MULTIPART_MAX_ENTITY_SIZE: -1
     # 以下的配置会影响buffer,这些buffer会用于服务器连接的IO操作,有点类似netty的池化内存管理
     # 每块buffer的空间大小,越小的空间被利用越充分
     buffer-size: 512
@@ -66,8 +78,11 @@ spring:
   messages:
     # 国际化资源文件路径
     basename: i18n/messages
-  profiles:
-    active: @profiles.active@
+  # ★ V16（独立验收 2026-09-23）：jar 里**不再写死缺省 profile**。原先这里的 active 值由 Maven 资源过滤
+  #   填入 profiles.active 属性（本地打包恒为 dev）—— 不传 profile 直接 java -jar 就带着 mock 登录、测试密钥起来，
+  #   连的还是 LQG_DB_* 指向的库。现在必须显式声明：本机开发 --spring.profiles.active=dev（qa-up.sh 已带），
+  #   测试 / 生产由 compose 给（SPRING_PROFILES_ACTIVE + command 两道）。没声明 → StartupSafetyGuard
+  #   （ruoyi-common-web）在连库之前拒绝启动。
   # Flyway 迁移（ADR-0009；上游不带，本项目自己接）
   # 空库从第一支迁移直接跑起：基线 = 上游 script/sql/postgres/postgres_ry_vue_5.X.sql（原样落成 V202609210800）。
   # out-of-order=false 是铁律：迁移号按任务/域预分配，后做的任务版本号一定更大（见 doc/lint-profile.yaml）。
@@ -79,13 +94,14 @@ spring:
     out-of-order: false
     # 迁移失败就停，不要留下半套表
     validate-on-migrate: true
-  # 文件上传
+  # 文件上传（V05：契约与前端写的附件上限是 50MB；质控图片 20MB 由前端另行限制）
+  # 超限 → MaxUploadSizeExceededException → GlobalExceptionHandler 回中文提示（不再是容器层的空 400）
   servlet:
     multipart:
       # 单个文件大小
-      max-file-size: 10MB
-      # 设置总上传的文件大小
-      max-request-size: 20MB
+      max-file-size: 50MB
+      # 一次请求的总大小（多文件 + 表单字段；nginx 的 client_max_body_size 与它对齐为 60m）
+      max-request-size: 60MB
   mvc:
     # 设置静态资源路径 防止所有请求都去查静态资源
     static-path-pattern: /static/**
@@ -239,6 +255,14 @@ lock4j:
   expire: 30000
 
 --- # Actuator 监控端点的配置项
+# ★ /actuator 的访问口令（ruoyi-common-security 的 SecurityConfig 用 Basic 认证核对这两个值）。
+#   本项目不接 Spring Boot Admin，从来没配过它们 —— 于是期望值是字面量「null:null」，
+#   任何人用 Basic null:null 就能拿到 /actuator/env、/actuator/heapdump（F4 活体实测，dev 与 test 都是全量暴露）。
+#   这里改成：不从环境变量显式给，就每次启动取一个随机值（等于谁都进不去）。生产另外只暴露 health / info（V18）。
+spring.boot.admin.client:
+  username: ${LQG_ACTUATOR_USER:${random.uuid}}
+  password: ${LQG_ACTUATOR_PASSWORD:${random.uuid}}
+
 management:
   endpoints:
     web:

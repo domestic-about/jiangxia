@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { SelectorGroup, SelectorUnit } from '@/api/unit-group'
+// ★ 显式 .vue 路径导入（SAMPLE-MP-001 坑 6：只靠 easycom 会让该模块的 .js 产物消失）
+import WdInput from 'wot-design-uni/components/wd-input/wd-input.vue'
 
 // UnitGroupPicker（UI:mp.me.profile，AUTH-GROUP-001）
 //
@@ -10,6 +12,7 @@ import type { SelectorGroup, SelectorUnit } from '@/api/unit-group'
 //   选了列表项 → 传 unitId + groupId（自填名清空）
 //   手动填写   → 传 unitNameInput + groupNameInput（两个 id 清空）
 // 组件对外的 modelValue 是**一个合并对象**，由页面决定怎么提交。
+// 单位面板顶部有搜索框（G23）：按名称包含匹配，只在前端过滤已拉回来的启用单位，不另发请求。
 const props = withDefaults(defineProps<{
   /** 可选的启用单位（含各自启用的组别） */
   units: SelectorUnit[]
@@ -40,6 +43,21 @@ const MANUAL = '__manual__'
 
 const unitSheet = ref(false)
 const groupSheet = ref(false)
+/** 单位面板里的搜索词 */
+const unitKeyword = ref('')
+
+/** 面板里要列的单位：有搜索词时按名称包含匹配（不区分大小写、忽略首尾空白） */
+const filteredUnits = computed<SelectorUnit[]>(() => {
+  const kw = unitKeyword.value.trim().toLowerCase()
+  if (!kw) {
+    return props.units
+  }
+  return props.units.filter(u => String(u.unitName || '').toLowerCase().includes(kw))
+})
+
+function onUnitKeyword(value: string) {
+  unitKeyword.value = value
+}
 
 /** 自填模式：选了哨兵项之后保持住；外部传入的 unitId 为空也算（历史自填档案） */
 const unitManual = ref(false)
@@ -88,6 +106,7 @@ watch([() => props.unitId, () => props.unitNameInput, () => props.groupNameInput
 }, { immediate: true })
 
 function openUnitSheet() {
+  unitKeyword.value = ''
   unitSheet.value = true
 }
 
@@ -171,11 +190,11 @@ function onGroupInput(event: { detail: { value: string } }) {
     <!-- 手动填写：单位 / 组别名 -->
     <view v-if="unitManual" class="picker__field picker__field--line picker__field--input">
       <text class="picker__label">单位名</text>
-      <input class="picker__input" :value="unitNameInput || ''" placeholder="列表里没有，请填写单位全称" maxlength="100" @input="onUnitInput" />
+      <input class="picker__input" :value="unitNameInput || ''" placeholder="列表里没有，请填写单位全称" :maxlength="100" @input="onUnitInput" />
     </view>
     <view v-if="unitManual" class="picker__field picker__field--line picker__field--input">
       <text class="picker__label">组别名</text>
-      <input class="picker__input" :value="groupNameInput || ''" placeholder="请填写组别名" maxlength="100" @input="onGroupInput" />
+      <input class="picker__input" :value="groupNameInput || ''" placeholder="请填写组别名" :maxlength="100" @input="onGroupInput" />
     </view>
 
     <!-- 单位选择面板 -->
@@ -186,9 +205,18 @@ function onGroupInput(event: { detail: { value: string } }) {
     <wd-popup v-model="unitSheet" position="bottom" :z-index="1000" safe-area-inset-bottom custom-style="border-radius: 16px 16px 0 0;">
       <view class="sheet">
         <view class="sheet__title">选择单位</view>
+        <view v-if="units.length > 0" class="lqg-filter__chip sheet__search">
+          <wd-input
+            :model-value="unitKeyword"
+            placeholder="搜单位名称"
+            no-border
+            clearable
+            @update:model-value="onUnitKeyword"
+          />
+        </view>
         <scroll-view class="sheet__list" scroll-y>
           <view
-            v-for="u in units"
+            v-for="u in filteredUnits"
             :key="u.unitId"
             class="sheet__item"
             :class="{ 'sheet__item--on': !unitManual && String(unitId) === String(u.unitId) }"
@@ -201,6 +229,9 @@ function onGroupInput(event: { detail: { value: string } }) {
           </view>
           <view v-if="units.length === 0" class="sheet__empty">
             <text>还没有可选单位，请手动填写</text>
+          </view>
+          <view v-else-if="filteredUnits.length === 0" class="sheet__empty">
+            <text>没有名称里含「{{ unitKeyword.trim() }}」的单位，可以手动填写</text>
           </view>
         </scroll-view>
       </view>
@@ -313,6 +344,10 @@ function onGroupInput(event: { detail: { value: string } }) {
   font-size: var(--lqg-fs-sm);
   color: var(--lqg-ink-3);
   text-align: center;
+  margin-bottom: var(--lqg-sp-4);
+}
+
+.sheet__search {
   margin-bottom: var(--lqg-sp-4);
 }
 

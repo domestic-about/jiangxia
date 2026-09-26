@@ -7,14 +7,14 @@
     "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"],
-      "@doc/*": ["../../doc/*"]
+      "@doc/*": ["../../doc/*"],
+      "wot-design-uni/components/*": ["./src/types/wot-shim.d.ts"]
     },
     "resolveJsonModule": true,
     "types": [
       "@dcloudio/types",
       "@uni-helper/uni-types",
       "miniprogram-api-typings",
-      "wot-design-uni/global.d.ts",
       "vite/client"
     ],
     "allowJs": true,

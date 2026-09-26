@@ -2,8 +2,12 @@ package org.dromara.lqg.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.lqg.auth.domain.ExtProfile;
 import org.dromara.lqg.auth.domain.vo.ExtProfileVo;
+import org.dromara.lqg.auth.group.domain.SourceUnit;
+import org.dromara.lqg.auth.group.guard.ExtBindStateMachine;
+import org.dromara.lqg.auth.group.service.UnitQueryService;
 import org.dromara.lqg.auth.mapper.ExtProfileMapper;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -36,6 +40,7 @@ public class ExtProfileQueryService {
 
     private final ExtProfileMapper extProfileMapper;
     private final JdbcTemplate jdbcTemplate;
+    private final UnitQueryService unitQueryService;
 
     /**
      * 按 user_id 读外部档案（含单位 / 组别名称）。
@@ -60,6 +65,40 @@ public class ExtProfileQueryService {
         vo.setUnitName(lookupName("t_lqg_source_unit", "unit_name", SQL_SOURCE_UNIT_EXISTS, profile.getUnitId()));
         vo.setGroupName(lookupName("t_lqg_unit_group", "group_name", SQL_UNIT_GROUP_EXISTS, profile.getGroupId()));
         return vo;
+    }
+
+    /**
+     * 外部用户提交样本时「可用的来源单位」（FIX V01 / issue #112）。
+     *
+     * <p>★ 口径 = 现有的外部单位绑定规则（FLOW:F-AUTH-03、{@link ExtBindStateMachine}）：
+     * <ul>
+     *   <li>档案里<b>选了列表里的单位</b>（{@code unit_id} 非空）且档案是 {@code pending}（已选、等实验室核验）
+     *       或 {@code verified}（已核验）→ 这个单位就是他的；</li>
+     *   <li>{@code unbound}（没填）、{@code rejected}（被实验室驳回）、只自填了单位名（{@code unit_id} 为空）
+     *       → 没有可用单位（样本只存名称快照，由实验室核验时归口）；</li>
+     *   <li>单位行已删除 → 没有；单位只是停用 → 照样算（「停用的单位不再出现在选择器里，但已绑定的人不受影响」）。</li>
+     * </ul>
+     * 外部<b>不能</b>凭一个 id 把样本挂到这个单位以外的地方（{@code SubmitSegmentRules.attributeExternalUnit}）。
+     *
+     * @param userId 外部用户
+     * @return 可用单位；没有 → null
+     */
+    public SourceUnit boundUnitOf(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        ExtProfile profile = DataPermissionHelper.ignore(() -> extProfileMapper.selectOne(
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ExtProfile>()
+                .eq(ExtProfile::getUserId, userId)
+                .last("limit 1")));
+        if (profile == null || profile.getUnitId() == null) {
+            return null;
+        }
+        String status = profile.getBindStatus();
+        if (!ExtBindStateMachine.PENDING.equals(status) && !ExtBindStateMachine.VERIFIED.equals(status)) {
+            return null;
+        }
+        return unitQueryService.findUnit(profile.getUnitId());
     }
 
     /**

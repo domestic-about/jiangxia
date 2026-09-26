@@ -9,8 +9,8 @@
 //   → 全屏看图器喂的是 `imageOpenUrl()` 算出来的地址（原图优先，调用点在下面 `open()`）。
 // ★ 原图是 TIFF / DICOM / 全片扫描格式时微信的看图器打不开：退回 `previewUrl`
 //   并提示一句（`imageOpenUrl` 的 `fallback`）。**不是**默认就给预览图。
-// ★ 外部身份这一条**拿不到 images**（`ExtDocPagesVo` 只给页面图，#254）——父组件传空数组时
-//   本组件整段不渲染（不是「加载失败」）。
+// ★ 内外部身份都拿得到 images（外部那条在独立验收 V24 补齐，后端咽喉逐个核过对象）；
+//   父组件传空数组时本组件整段不渲染（不是「加载失败」）。
 // ★ 视觉按方向 A：横向 `scroll-view` + `.lqg-card--flush`，零色值字面量。
 import type { DocImageRow } from '@/api/doc'
 import { imageOpenUrl, thumbUrlOf } from '@/pages/doc/download'
@@ -23,9 +23,8 @@ const props = defineProps<{
 /**
  * ★ 后端给不出签名链接的图片位**跳过**（`url` 与 `previewUrl` 都是 null）。
  *
- * 这是 issue #217 的裁定①：取不到字节的图跳过 + WARN，不让页面挂一排空 `<image>`
- * （seed 的图片位就是假地址 `https://seed.invalid/...`，`DocArtifactStore#signedUrl`
- * 对这种行返回 null）。真图（自备上传的）照常显示。
+ * 取不到对象的图（没有可签发的链接）不在页面上挂一排空 `<image>`；真图照常显示。
+ * （文档本身缺图的口径另见 #217：外部版缺图整份不对外，内部版照出并记缺图。）
  */
 const usable = computed(() => props.images.filter(image => !!thumbUrlOf(image)))
 

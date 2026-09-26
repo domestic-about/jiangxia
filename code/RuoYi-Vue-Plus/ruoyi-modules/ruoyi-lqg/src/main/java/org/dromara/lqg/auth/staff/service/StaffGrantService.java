@@ -176,10 +176,19 @@ public class StaffGrantService {
     public void changeRole(Long userId, String roleKey) {
         List<Long> roleIds = grantedRoleIds(roleKey);
         DataPermissionHelper.ignore(() -> {
-            requireStaff(userId);
+            SysUser user = requireStaff(userId);
             guardRoleChange(userId, roleKey);
             replaceRoles(userId, roleIds);
-            log.info("改角色：userId={} → {}", userId, roleKey);
+            // ★ FIX V33（台账 #23 同类）：改完角色必须踢下线。Sa-Token 的角色 / 菜单权限读的是登录时
+            //   缓存在 token 会话里的 LoginUser（SaPermissionImpl），不踢的话「管理员降成内部人员」之后
+            //   旧 token 仍带着 lqg_admin，工作台的管理员操作照样能做，直到 token 过期。
+            //   手段与 revoke 相同：主手段 StpUtil.logout(loginId) —— 不依赖上游 cleanOnlineUser 的
+            //   Redis 扫描快照（Caffeine 5 秒缓存，刚签发的 token 会漏踢）；cleanOnlineUser 只留作兜底。
+            //   注：按手机号授权（外部账号原地升级）不踢 —— 升级只会让旧 token 权限更小，而 AUTH-STAFF-001
+            //   accept 1 要求升级后旧 token 调 /mp/me 立刻看到 internal（FLOW:F-AUTH-02.step2「下次请求即生效」）。
+            StpUtil.logout(user.getUserType() + ":" + userId);
+            roleService.cleanOnlineUser(List.of(userId));
+            log.info("改角色：userId={} → {}（已踢下线，重新登录后按新角色生效）", userId, roleKey);
             return null;
         });
     }

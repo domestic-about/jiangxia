@@ -29,6 +29,7 @@ blueprint_refs:
   - FIELD:t_lqg_qc_sample.patient_no
   - FIELD:t_lqg_qc_score.total_score
   - FIELD:t_lqg_doc_image.slot
+  - FIELD:t_lqg_doc_image.oss_id
   - FIELD:t_lqg_doc_image.preview_oss_id
   - FIELD:t_lqg_doc_attachment.oss_id
 accept:
@@ -81,6 +82,24 @@ accept:
       待核验样本也能开质控文档 → 第 4 段红。
       图片位不校验归属 → organoid_observe 挂到了样本质控表上，集合里多出一行红；不限张数 → orig:4 红。
       患者编号忘了加密注解 → 库里是明文 P-PROBE，与 openssl 独立算出的密文不等红。
+  - name: "私有桶下编辑页拿到的图片地址打得开：GET /lqg/qc/{sampleId} 里图片的 url 是带签名的短时链接、直接 GET 为 200，而同一对象去掉签名的原样地址是 403（证明环境确实是私有桶）；公有桶原样给、签不出来照旧给原值由单测钉住（CR-20260924-11）"
+    form: API
+    run: |-
+      bash doc/verify/reseed.sh --yes >/dev/null &&
+      bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg GET /lqg/qc/9000001005 | jq -e '.code==200' &&
+      OID="$(bash doc/verify/api.sh --as staff --form 'file=@doc/verify/fixtures/ocr-sample.png' POST /resource/oss/upload | jq -r '.data.ossId')" && test -n "${OID}" && test "${OID}" != null &&
+      bash doc/verify/api.sh --as staff POST /lqg/qc/9000001005/sample-qc/image "{\"slot\":\"orig\",\"ossId\":${OID}}" | jq -e '.code==200' &&
+      U="$(bash doc/verify/api.sh --as staff GET /lqg/qc/9000001005 | jq -r --arg o "${OID}" '[.data.sampleQc.images.orig[] | select((.ossId|tostring)==$o) | .url][0] // empty')" && test -n "${U}" &&
+      case "${U}" in *X-Amz-Signature=*) true ;; *) false ;; esac &&
+      test "$(curl -s -o /dev/null -w '%{http_code}' "${U}")" = 200 &&
+      test "$(curl -s -o /dev/null -w '%{http_code}' "${U%%\?*}")" = 403 &&
+      (cd code/RuoYi-Vue-Plus && mvn -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest='QcOssUrlsTest' -Dsurefire.failIfNoSpecifiedTests=true) &&
+      bash doc/verify/reseed.sh --yes >/dev/null
+    counterfeit: |-
+      编辑页照旧原样给 `sys_oss.url`（CR-20260924-11 之前的形态）→ 地址里没有 X-Amz-Signature、直接 GET 是 403，两段都红：Kevin 本机验收「网页工作台」第 3 行，缩略图、放大图、附件全部「图片加载失败」，而下载的 Word 里图是好的（渲染走后端读字节，不受影响）。
+      不看桶策略、一律签名 → 本条仍绿，但公有桶的行为变了：由 `QcOssUrlsTest`（公有桶原样给、私有桶签名、签不出来给原值不抛、同一个 service 只取一次客户端）钉住。
+      环境其实是公有桶（原样地址也能打开）→ 最后那段 403 红：这条要证明的是「私有桶下能看」，公有桶上测不出这个缺陷，先把存储改回私有桶再跑。
+      签名时效拉到几个小时、几天（「省得过期」）→ 这里测不到，由 api-contract 与 ADR-0005 的「只发 10 分钟短时签名链接」约束；过期由前端在取回满 5 分钟后重取一次。
 ---
 
 # QC-MODEL-001 · 三份质控文档的数据模型：每个样本各一份、图片位与附件、评分由后端按字典回填、内部读写接口
@@ -116,6 +135,7 @@ accept:
   `receive_desc`=「样本按质控要求，保持2-8℃低温环境运输至实验室。」`observe_desc`=「样本外观呈黄白色。」
   `pretreat_desc`=「样本经剪切等预处理，显微镜下观察组织漏出细胞量适中，细胞活性中等；培养3d照片如左图所示。」
   返回体：`sample`（从主档带出的只读字段）+ `sampleQc` / `organoidQc` / `score` + 各自的 `images`（按 slot 分组）与 `attachments`。
+  图片的 `url / previewUrl`、附件的 `url` 按这一行 `sys_oss.service` 对应的存储配置给（CR-20260924-11，`qc/service/QcOssUrls`，口径同若依 `SysOssServiceImpl#matchingUrl`）：私有桶给 10 分钟签名链接（有效期与渲染产物同一个 `DocArtifactStore.SIGNED_URL_TTL`），公有桶原样给 `sys_oss.url`，签不出来（seed 的 `service='seed'` 没有配置）照旧给原值、记 WARN、不抛。
 - `PUT …/sample-qc`、`…/organoid-qc`：保存字段。`PUT …/score`：只收四个 `*Level`；按字典 remark 回填四个 `*_score`；四项齐 → `total_score` = 和，否则 NULL。
 - 图片：`POST …/{docType}/image {slot, ossId}`、`DELETE …/image/{id}`、`PUT …/image/sort`。规则：slot 必须属于该文档类型（`orig / observe / pretreat` ↔ 样本质控表；`organoid_observe` ↔ 类器官质控表；评分表没有图片位）；每个 slot ≤ 3 张。
   预览图：非 jpg / png（TIFF、BMP…）或长边 > 2000px → 生成长边 ≤ 2000px 的 JPEG 另存 OSS，填 `preview_oss_id`；否则 `preview_oss_id = oss_id`。
@@ -136,3 +156,5 @@ accept:
 2. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 3. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 4. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-24 按 CR-20260924-11 更新：新增 accept 4——私有桶下 `GET /lqg/qc/{sampleId}` 给出的图片地址是签名链接、直接 GET 为 200，同一对象去掉签名为 403，单测 `QcOssUrlsTest` 钉公有桶原样、签不出来不抛；§2 补地址口径，blueprint_refs 补 FIELD:t_lqg_doc_image.oss_id。

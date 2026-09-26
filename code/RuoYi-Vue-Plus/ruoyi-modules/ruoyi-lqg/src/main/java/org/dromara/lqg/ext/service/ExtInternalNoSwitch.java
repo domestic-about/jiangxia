@@ -21,6 +21,10 @@ import org.springframework.stereotype.Service;
  * <p>★ <b>关着连键都不出</b>：本类返回 false 时 {@code ExtSampleDetailVo.internalNo} 保持 null，
  * 由 {@code @JsonInclude(NON_NULL)} 把整个键省掉（accept 第 2 条的 keys 差集断言就是钉这个）。
  *
+ * <p>★ 甲方 2026-09-24 意见第 23 行起，同一个开关也管<b>外部版质控文档</b>里的「内部编号」一格：
+ * doc 域的 {@code DocRenderModelFactory#showsInternalNo} 读的就是本类（读口只有这一个，
+ * 「读不到就当关」的姿态两边一致）。
+ *
  * @author AUTH-EXT-001
  */
 @Service

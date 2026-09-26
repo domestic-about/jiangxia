@@ -23,6 +23,10 @@ import java.io.Serializable;
  * </pre>
  * 复用内部 {@code EmbedSubmitBo} 会让上面那一串全部落库（counterfeit 点名的头号形态）。
  *
+ * <p>★ FIX V03 / V17：{@code sampleId} POST 必填；样本类型 ≤ 50 字、类器官来源类型 ≤ 100 字，
+ * 违规 {@code code=400}。所挂样本不可见 / 不存在一律同一个 404「样本不存在」，
+ * 可见但不是本人的 / 已判无效的 → 400（{@code ExtScopeService.assertUsableForEmbed}）。
+ *
  * @author AUTH-EXT-002
  */
 @Data
@@ -32,13 +36,13 @@ public class ExtEmbedSubmitBo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "所挂样本 id（必须是本人送检过、没被判无效的样本）")
+    @Schema(description = "所挂样本 id（POST 必填；必须是本人送检过、没被判无效的样本）", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long sampleId;
 
-    @Schema(description = "样本类型")
+    @Schema(description = "样本类型（≤ 50 字）", maxLength = 50)
     private String sampleType;
 
-    @Schema(description = "类器官来源类型")
+    @Schema(description = "类器官来源类型（≤ 100 字）", maxLength = 100)
     private String organoidSourceType;
 
 }

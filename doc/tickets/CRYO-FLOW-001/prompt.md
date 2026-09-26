@@ -112,7 +112,7 @@ accept:
   2. **校验看每一步，不只看最后**：改删之后从初始支数出发、按 `flow_time` 正序（同一时刻按 id）逐笔累加，任何一步 < 0 都拒绝——只看最终剩余会放过「当时只剩 2 支却取走了 3 支」。与 CRYO-MODEL-001 改初始支数共用 `CryoBalanceChecker`。
   3. `from_location` 由批次当时所在位置**自动带出**，不让人选：已登记转液氮（或直接进液氮）→ `ln2`，否则 `minus80`。
   4. 取走数 > 剩余 → 拒绝。两个人同时取最后两支：只能成功一个——写、改、删流水前都对批次行 `SELECT … FOR UPDATE` 再重算。
-  5. **这些写接口只在 `/lqg/cryo/**`（工作台）**：2026-09-17 晚 Kevin 定小程序只查看（CR-20260917-05），`/mp/int/cryo/**` 只读 `…/flows`，不转发任何写操作。
+  5. **这些写接口只有 `/lqg/cryo/**` 一份**：`/mp/int/cryo/**` 只读 `…/flows`，不转发任何写操作。2026-09-17 晚曾定小程序只查看（CR-20260917-05）；**2026-09-24 起小程序内部人员也在批次详情弹层里取走、补入、转液氮、改删取走 / 补入登记**（CR-20260924-10，甲方「要求小程序和工作台界面都能操作」），直接调这同一组 `/lqg/cryo/**` 写口（`lqg_internal` 本来就有 `lqg:cryo:flow / edit` 权限串，外部 403），规则一字不差；盘点调整只在工作台给入口（后端不区分调用端）。
 
 ## 1 背景与口径
 
@@ -125,6 +125,7 @@ accept:
   事务内：锁批次行 → 用加上这一笔之后的流水集合跑 `CryoBalanceChecker` → 通过才插入。`operatorName` 缺省取当前用户姓名，`flowTime` 缺省取当前时间。
 - `PUT /lqg/cryo/batch/{id}/flow/{flowId}`（权限 `lqg:cryo:flow`）：`{qty, purpose, operatorName, flowTime}`；入参带了 `flowType` 且与原来不同 → 400；`qty` 按原类型解释；
   `flowId` 不属于这个批次或已删 → 404。事务内：锁批次行 → 用改后的流水集合跑 `CryoBalanceChecker` → 通过才更新。
+  改 / 删一笔被拒时的提示指出是哪一笔、变成多少（CR-20260924-10）：「这样改会让 MM-dd HH:mm 那一笔（-3 支）之后的剩余变成 -1 支，没有保存」/「删掉这一笔会让 …」（`CryoFlowService#overdraftMessage`，判定仍是 `CryoBalanceChecker.requireNonNegative` 那一个）；改初始支数被拒仍是「已取走 N 支，冻存数量不能少于 N」。
 - `DELETE /lqg/cryo/batch/{id}/flow/{flowId}`：软删（`del_flag='1'`）；同样先锁、先校验（删掉一笔补入可能让后面的取走不够）。
 - `PUT /lqg/cryo/batch/{id}/to-ln2`（权限 `lqg:cryo:edit`）：`toLn2Time`（不早于 `freeze_time`）+ `ln2Location` 必填；已转过的可以改位置，不可以清空。
 - `GET /lqg/cryo/batch/{id}/flows`：未删流水，时间倒序，每行带 `balanceAfter`（按时间正序累计算出来，不落库）、`edited`、`updateByName`、`updateTime`。
@@ -132,7 +133,7 @@ accept:
 
 ## 3 边界（明确不做）
 
-- 不做页面（工作台 CRYO-WEB-001；小程序只读展示取用登记在 CRYO-MP-001）
+- 不做页面（工作台 CRYO-WEB-001；小程序批次详情弹层里的取用登记与登记表单在 CRYO-MP-001，CR-20260924-10）
 - 不做审批、不做「取走申请」
 - 不按用途做统计
 - 不建登记的修改历史表（只记最后修改人与时间）
@@ -143,3 +144,5 @@ accept:
 2. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 3. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 4. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-24 按 CR-20260924-10 更新：§0 口径 5 改为「写口仍只有 /lqg/cryo 一份，小程序内部身份也直接调它」，§2 补改删被拒的新提示句式，§3 同步；accept 逐条核过不用改（被拒只断业务码，不断提示原文）。

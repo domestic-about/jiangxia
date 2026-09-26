@@ -14,6 +14,10 @@ const root = process.cwd()
 
 export default defineConfig({
   plugins: [vue()],
+  // 与 vite.config.ts 同名的构建期常量：单测里一律按「生产」口径（测试身份入口关着）
+  define: {
+    __LQG_MOCK_LOGIN__: 'false',
+  },
   test: {
     environment: 'node',
     globals: true,

@@ -41,7 +41,7 @@ import java.util.Map;
  * {@link DocAvailabilityService#available}（header {@code done} + 产物完整 + 单份要
  * {@code doc_status='published'}），外部清单用的是同一份 ——
  * ★ <b>不要</b>在这里再写一遍，尤其不要写成「header 的 {@code content_hash} 与此刻算出来的
- * 指纹比」（那条实测无效，理由见 {@code DocAvailabilityService#artifactComplete}）。
+ * 指纹比」（产物完整性的唯一判据是 {@code DocArtifactRows#completeSet}）。
  * 本类只做三件事：<b>取候选行 → 过滤/排序 → 切页</b>。
  *
  * <p>★ <b>候选行从产物表驱动</b>（{@code t_lqg_doc_file} 里 {@code audience='internal'} 的

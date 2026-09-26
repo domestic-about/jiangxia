@@ -35,8 +35,8 @@ export default {
 
   editor: {
     title: 'QC document',
-    readonlyHint: 'The seven fields below come from the sample master record and are read-only; edit them in the sample list',
-    back: '‹ Back to samples',
+    readonlyHint: 'The seven fields below come from the sample master record and are read-only; edit them in {name}',
+    back: '‹ Back to {name}',
     sourceUnit: 'Source unit',
     donorName: 'Patient name',
     gender: 'Gender',

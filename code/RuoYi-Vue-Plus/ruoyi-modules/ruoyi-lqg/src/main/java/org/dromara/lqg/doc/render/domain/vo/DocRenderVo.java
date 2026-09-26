@@ -8,11 +8,9 @@ import java.util.Date;
 /**
  * 渲染结果（{@code POST /lqg/doc/{sampleId}/{docKind}/render} 的 {@code data}）。
  *
- * <p>★ {@code status} 就是 {@code t_lqg_doc_file.render_status}（pending / done / failed）：
- * 渲染失败**不抛 500**，而是 {@code failed} + {@code errorMsg} —— 送检方要能看见失败、
- * 也要能重试（DOC-PDF-001 的 accept 2 就是断这一条）。
- *
- * @author DOC-RENDER-001
+ * <p>{@code status} 就是这份文档的渲染状态（pending / done / failed）：渲染失败不抛 500，
+ * 而是 {@code failed} + {@code errorMsg}，工作台据此显示原因并「重新生成」。
+ * 内部版有图片取不到时照样 {@code done}，但 {@code missingImageCount / missingImages} 会说明缺了哪几张。
  */
 @Data
 @Schema(description = "文档渲染结果")
@@ -47,4 +45,10 @@ public class DocRenderVo {
 
     @Schema(description = "true = 这次命中缓存、没有重新渲染")
     private boolean cached;
+
+    @Schema(description = "这一版取不到的图片张数（内部版照出并记缺图；外部版有缺图即 failed）")
+    private int missingImageCount;
+
+    @Schema(description = "缺了哪几张（给人看的一句话）")
+    private String missingImages;
 }

@@ -31,7 +31,7 @@ import java.util.List;
  * {@code t_lqg_doc_file} 都不行。于是「外部能拿到哪些文档」这条口径的**取数**放在被调方
  * （本类），ext 包只做可见范围断言 + 拼装成 {@code Ext*Vo}。
  *
- * <p>★★ <b>对外可见 = 三个条件同时成立</b>（ticket §0 口径 1、FLOW:F-DOC-02.step1 的 produces）：
+ * <p>★★ <b>对外可见 = 四个条件同时成立</b>（ticket §0 口径 1、FLOW:F-DOC-02.step1 的 produces）：
  *
  * <ol>
  *   <li>{@code doc_status='published'}（三张质控表各自的列）——
@@ -39,15 +39,24 @@ import java.util.List;
  *   <li>对应 {@code audience='external'} 的 header 行（{@code file_format='docx'} / {@code page_no=0}）
  *       {@code render_status='done'} 且有产物 —— 「完成并同步」的渲染是异步排队的，
  *       只看状态会在渲染完成前的一小段时间里把看不见的文档列出来（DOC-PUBLISH-001 的 WARN-5）；</li>
- *   <li>对 {@code merged} 还要加一条：<b>这一版产物必须完整</b> —— 合并件没有自己的
- *       {@code doc_status}，成员集合变了（某一份被撤回 / 新完成一份）时，header 行的
- *       {@code content_hash} 会被 {@code invalidateMerged} <b>改写成新的期望值</b>，
- *       而桶里的 docx 还是旧成员拼的。只比「header 指纹 vs 此刻指纹」当场就成立
- *       （<b>实测无效</b>，见 {@link #artifactComplete}），必须锚在**产物**上：
- *       当前指纹下有页图 + PDF 与 header 同版。少了这一条就会把「含已撤回文档的旧合并件」
- *       发给送检方，而且预览页是空的（ticket accept 1 的 counterfeit 点名的正是
- *       「点进去一片空白」）。</li>
+ *   <li>对 {@code merged} 还要加一条：<b>这一版产物必须完整</b>（{@code DocArtifactRows#completeSet}：
+ *       header / PDF / 页面图三者同指纹且都 done）—— 合并件没有自己的 {@code doc_status}，
+ *       成员集合一变（撤回 / 新完成 / 改内容回草稿），{@code DocRenderService#markMergedStale}
+ *       在同一个请求里把它置回 pending，这一条当场为假，直到按新成员重出完成。
+ *       少了这一条就会把「含已撤回文档的旧合并件」发给送检方。</li>
+ *   <li><b>「内部编号」一格与开关不冲突</b>（甲方 2026-09-24 意见第 23 行）：外部版印了内部编号、
+ *       系统参数 {@code lqg.ext.show-internal-no} 此刻是关的 → 不给（{@code DocRenderService#delivery}）。</li>
  * </ol>
+ *
+ * <p>★ <b>外部版取图失败 = 渲染失败</b>（#217，独立验收 V23）：外部版只要有一张图取不到就是
+ * {@code failed}，于是第 2 条天然把它挡在清单、页面图、下载之外；图补上后重新生成才恢复。
+ *
+ * <p>★ <b>内部编号开关</b>（第 4 条）：外部版「内部编号」一格随系统参数印或留空；开关关着时，
+ * 印了内部编号的那一版在清单、页面图、下载三处都按「不存在」处理，后台按新设置重出后恢复。
+ *
+ * <p>★ <b>预览给原图与附件</b>（独立验收 V24）：{@link #pages} 带出的图片位与附件同样只签发
+ * 本样本、已完成成员的对象，指向渲染产物目录的对象只许是本样本的外部版（咽喉校验在
+ * {@code DocPagesService} 里逐个核）。
  *
  * <p>★ <b>单份文档为什么不查「此刻指纹」</b>：模板版本号（{@code lqg/doc-templates/template-version.txt}）
  * 进指纹，一次模板升级会让**所有**历史产物的指纹都对不上。单份文档的「内容改了」由
@@ -163,11 +172,11 @@ public class DocExternalQueryService {
      * 这一份文档现在能不能给外部看 —— <b>清单、预览、下载三处必须是同一个判据</b>，
      * 否则会出现「列表里有、点进去 404」或「列表里没有、却能直接预览」。
      *
-     * <p>四个条件（header 存在 / {@code done} 且有产物 / 产物完整 / 单份还要 published）
+     * <p>五个条件（header 存在 / {@code done} 且有产物 / 产物完整 / 单份还要 published / 内部编号开关）
      * 逐条在 {@link DocAvailabilityService#available}（按 audience 参数化的共享判据）里，
      * 本方法只是把 audience 写死成 {@code external}。★
-     * 「合并件成员被撤回后不再露出去」靠的是那里的 {@code artifactComplete}
-     * （**不是**比 header 的 {@code content_hash} 与此刻指纹 —— 那条实测无效）。
+     * 「合并件成员被撤回后不再露出去」靠的是产物完整性判据（{@code DocArtifactRows#completeSet}）
+     * 与撤回时同步的失效（{@code DocRenderService#markMergedStale}）。
      */
     public boolean available(Long sampleId, String docKind) {
         return availability.available(sampleId, DocKinds.require(docKind), DocAudiences.EXTERNAL);
@@ -178,8 +187,8 @@ public class DocExternalQueryService {
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * 页面图（10 分钟签名链接）。不可用按「不存在」回 404 ——
-     * 草稿 / 外部版没渲染成功 / 渲染在途，一律与「没这份文档」同一个响应。
+     * 页面图 + 原图 + 附件（10 分钟签名链接）。不可用按「不存在」回 404 ——
+     * 草稿 / 外部版没渲染成功（含缺图）/ 渲染在途，一律与「没这份文档」同一个响应。
      */
     public DocPagesVo pages(Long sampleId, String docKind) {
         String kind = DocKinds.require(docKind);
@@ -208,9 +217,8 @@ public class DocExternalQueryService {
      * 内部已经写了这份文档。
      */
     private void requireAvailable(Long sampleId, String docKind) {
-        if (!available(sampleId, docKind)) {
-            throw DocAvailabilityService.notFound();
-        }
+        // 点开的这一份：需要按新设置重出的立刻在后台重出（清单逐行判的走单线程队列）
+        availability.requireAvailable(sampleId, DocKinds.require(docKind), DocAudiences.EXTERNAL);
     }
 
     /**

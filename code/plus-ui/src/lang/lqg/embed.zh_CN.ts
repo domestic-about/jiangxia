@@ -11,7 +11,8 @@
 export default {
   // ── 页面与筛选区 ──────────────────────────────────────────────────────────
   title: '石蜡包埋送样记录',
-  subtitle: '内外部送样都在这一张表里：待核验的外部送样置顶、浅黄底，点开即可核验；按筛选导出与甲方模板逐列一致。',
+  // 页头一句话（2026-09-24 本机验收，四张表统一口径）：这张表是什么、和样本的关系、外部送来的在哪核验
+  subtitle: '一行是一个石蜡块，挂在某个样本下（一个样本可以有多块），点「样本编号」回到样本。合作单位送来的在这里核验：待核验的置顶、浅黄底，点「合作单位送来待核验」一键筛出。',
   search: '搜索',
   reset: '重置',
   loading: '加载中…',
@@ -27,15 +28,26 @@ export default {
     sectionTimeBegin: '切片时间起',
     sectionTimeEnd: '切片时间止',
     verifyStatus: '核验状态',
-    submitSource: '内 / 外部',
+    submitSource: '来源',
     submitSourceAll: '全部',
-    sampleFilter: '只看样本 {id} 的包埋记录'
+    sourceExternal: '合作单位（外部）',
+    sourceInternal: '中心内部'
+  },
+
+  // ── 带 sampleId 进来时顶部的提示条（2026-09-24 本机验收） ─────────────────────
+  scope: {
+    only: '只看{sample}的石蜡包埋记录',
+    total: '共 {n} 条',
+    showAll: '看全部',
+    openSample: '打开样本',
+    sampleFallback: '样本 {id}'
   },
 
   // ── 工具栏 ────────────────────────────────────────────────────────────────
   toolbar: {
     add: '新增石蜡包埋记录',
     refresh: '刷新',
+    partnerPending: '合作单位送来待核验',
     export: '导出石蜡包埋送样记录',
     exporting: '正在导出…',
     exportDone: '导出完成',
@@ -44,7 +56,7 @@ export default {
 
   // ── 表格列（模板 16 列 + 前面两个徽标列 + 操作） ────────────────────────────
   col: {
-    submitSource: '内 / 外部',
+    submitSource: '来源',
     verifyStatus: '核验状态',
     paraffinBlockNo: '石蜡块编号',
     internalNo: '样本编号',
@@ -91,7 +103,9 @@ export default {
     stainOtherFull: '其他（{name}）',
     noStain: '—',
     markerColon: '：',
-    markerSeparator: '；'
+    markerSeparator: '；',
+    openSample: '回到这条样本',
+    openSampleBySubmitNo: '这条样本还没核验、没有内部编号，这里显示送检单号；点击回到这条样本'
   },
 
   // ── 抽屉 ──────────────────────────────────────────────────────────────────

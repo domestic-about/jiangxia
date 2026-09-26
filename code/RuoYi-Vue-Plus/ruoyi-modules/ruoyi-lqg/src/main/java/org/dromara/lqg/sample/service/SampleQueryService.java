@@ -17,6 +17,8 @@ import org.dromara.lqg.sample.hint.vo.SampleHintVo;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.query.SampleSubmitterProfileQuery;
 import org.dromara.lqg.sample.query.SampleSubmitterProfileVo;
+import org.dromara.lqg.sample.relation.SampleRelationService;
+import org.dromara.lqg.sample.relation.vo.SampleRelationVo;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -68,13 +70,22 @@ public class SampleQueryService {
      * 走的是<b>同一个</b> {@link #list(SampleQueryBo)}，挂在这里两侧同时生效、口径只有一份。
      */
     private final SampleHintService sampleHintService;
+    /**
+     * 「石蜡包埋 / 冻存」关联数（工作台样本两页的关联列，Kevin 2026-09-24 本机验收）：
+     * 与提示同一个做法 —— 读时计算、整页一次查询。
+     */
+    private final SampleRelationService sampleRelationService;
 
     /**
      * 样本列表。
      *
      * <p>筛选：{@code sampleKind / verifyStatus / internalNo / donorName（精确）/ hospitalNo（精确）
      * / sourceUnitId / groupId / submitSource / receiveDateBegin / receiveDateEnd / tissueType（模糊）
-     * / operatorName（模糊）}，多条件一律 <b>AND</b>（不是 OR）。
+     * / organoidType（模糊）/ operatorName（模糊）}，多条件一律 <b>AND</b>（不是 OR）。
+     *
+     * <p>★ <b>不带 {@code sampleKind} = 两类都查</b>（小程序历史编辑记录要的就是这样）。工作台拆成
+     * 「样本记录信息表」「类器官收样记录」两页之后（CR-20260924-10），两页<b>都显式带</b>
+     * {@code sampleKind}（页面把它钉死、重置筛选也不清），不靠这个默认。
      *
      * <p>★ <b>两个「看起来像同一类」的筛选，口径是分开的</b>（issue #96）：
      * <ul>
@@ -95,7 +106,8 @@ public class SampleQueryService {
      *       （{@code create_by} 与 {@code update_by} 都不是内部账号的行不进这张清单），
      *       再按 {@code COALESCE(update_time, create_time)} 倒序；</li>
      *   <li>{@code mine=true} —— 默认 <b>不是</b>本人，是<b>中心全部内部人员</b>；
-     *       带了这个参数才在上面那个范围里再收窄到 {@code create_by = 我 OR update_by = 我}。</li>
+     *       带了这个参数才收窄到 {@code create_by = 我 OR update_by = 我}（FIX #191：与 {@code sort} 无关，
+     *       带不带 {@code sort=recent} 都生效）。</li>
      * </ul>
      * 两个参数都不带 = 「内部管理」表格页的全表。
      *
@@ -121,6 +133,7 @@ public class SampleQueryService {
             // 每行带出提交人姓名 / 组别名（读时 join 外部档案；内部人员与自填单位的行是 null）
             submitterProfileQuery.fill(rows);
             fillHints(rows);
+            fillRelations(rows);
             return TableDataInfo.build(new Page<SampleVo>(result.getCurrent(), result.getSize(), result.getTotal())
                 .setRecords(rows));
         });
@@ -153,6 +166,23 @@ public class SampleQueryService {
             rows.stream().map(SampleVo::getId).toList());
         for (SampleVo vo : rows) {
             vo.setHint(hints.getOrDefault(vo.getId(), SampleHintVo.empty()));
+        }
+    }
+
+    /**
+     * 给一页行挂「石蜡包埋 / 冻存」关联数（待核验送样数、冻存批次数；蜡块数在 {@code hint} 上）。
+     *
+     * <p>不变量与 {@link #fillHints} 相同：整页一次查询、每一行都有（零值不是 null）；
+     * 详情与导出不挂。
+     */
+    private void fillRelations(List<SampleVo> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        Map<Long, SampleRelationVo> counts = sampleRelationService.countsOf(
+            rows.stream().map(SampleVo::getId).toList());
+        for (SampleVo vo : rows) {
+            vo.setRelation(counts.getOrDefault(vo.getId(), SampleRelationVo.empty()));
         }
     }
 
@@ -248,6 +278,8 @@ public class SampleQueryService {
             .le(q.getReceiveDateEnd() != null, Sample::getReceiveDate, q.getReceiveDateEnd())
             // 自由文本两项走模糊（不是加密列，没有精确匹配的约束）
             .like(StringUtils.isNotBlank(q.getTissueType()), Sample::getTissueType, trim(q.getTissueType()))
+            // 类器官类型：工作台「类器官收样记录」页的那一格（CR-20260924-10 拆页后，组织类型那一格在这页没有意义）
+            .like(StringUtils.isNotBlank(q.getOrganoidType()), Sample::getOrganoidType, trim(q.getOrganoidType()))
             .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()))
             // ★ 表格页搜索框（SAMPLE-MP-002 / 契约第 49 行）：内部编号等值 OR 来源单位模糊。
             //   单独一个括号（`w -&gt;` 那层会加括号），不把别的筛选卷进 OR 里。
@@ -256,7 +288,8 @@ public class SampleQueryService {
                 .or()
                 .like(Sample::getSourceUnitName, trim(q.getKeyword())));
 
-        if (SampleQueryBo.isRecentSort(q.getSort())) {
+        boolean recent = SampleQueryBo.isRecentSort(q.getSort());
+        if (recent) {
             // 「经手过」= create_by 或 update_by 是内部账号（sys_user.user_type='sys_user'）。
             // 外部登录建的账号一律是 app_user（AUTH-LOGIN-001），所以外部送来没人动过的
             // （待核验 / 无效）与外部自己改过的都不进「历史编辑记录」。
@@ -267,11 +300,15 @@ public class SampleQueryService {
             wrapper.and(w -> w.inSql(Sample::getCreateBy, INTERNAL_USERS_SQL)
                 .or()
                 .inSql(Sample::getUpdateBy, INTERNAL_USERS_SQL));
-            if (Boolean.TRUE.equals(q.getMine()) && me != null) {
-                // 「只看我提交的」开关打开：在上面那个范围里再按经手人收窄（create_by OR update_by）。
-                // 同样是一组 OR，同样包一层；包完再与「经手人 ∈ 内部」那一组**相与**（不是并列）。
-                wrapper.and(w -> w.eq(Sample::getCreateBy, me).or().eq(Sample::getUpdateBy, me));
-            }
+        }
+        // ★ 「只看我提交的」（mine=true）：按经手人收窄（create_by OR update_by = 我）。
+        //   FIX #191：以前只在 sort=recent 那一支里生效，不带 sort 时 mine=true 被静默忽略、返回全表；
+        //   契约第 49 行只说「开关打开时才带」，没有「只在 sort=recent 下生效」—— 现在与 sort 无关，
+        //   与冻存（CryoQueryService）同一口径。同样是一组 OR，同样包一层、与其它筛选**相与**。
+        if (Boolean.TRUE.equals(q.getMine()) && me != null) {
+            wrapper.and(w -> w.eq(Sample::getCreateBy, me).or().eq(Sample::getUpdateBy, me));
+        }
+        if (recent) {
             // ★ 表达式排序只能走 last()：MyBatis-Plus 3.5.16 的 Func 接口只留了 SFunction 重载
             //（orderByDesc(R, R...)），没有接受列名字符串的重载 —— COALESCE(...) 不是列引用，
             // 编译期就报 no suitable method found。分页插件的 LIMIT 接在这段 ORDER BY 之后。
@@ -378,6 +415,7 @@ public class SampleQueryService {
         vo.setHospitalNo(fieldCipher.decrypt(sample.getHospitalNo()));
         vo.setTissueType(sample.getTissueType());
         vo.setOrganoidType(sample.getOrganoidType());
+        vo.setPassage(sample.getPassage());
         vo.setHasPathology(sample.getHasPathology());
         vo.setReceiveDate(sample.getReceiveDate());
         vo.setInternalNo(sample.getInternalNo());

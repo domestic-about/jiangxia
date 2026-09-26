@@ -25,6 +25,7 @@ import org.dromara.lqg.sample.service.SampleNameResolver;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -56,6 +57,8 @@ import java.util.Set;
  *
  * <p>★ <b>超期相关的四个键全在本类补齐</b>（CRYO-REMIND-001 ticket §2）：每行
  * {@code overdue / overdueDays}、筛选 {@code overdueOnly}、响应 {@code tabCounts}。
+ * 2026-09-24 同样在本类补「已取空」三件套：每行 {@code emptied}、筛选 {@code emptiedOnly}、
+ * {@code tabCounts.emptied}（判据同一份剩余算式，见 {@code CryoOverdueSqlProvider.EMPTIED_WHERE}）。
  * 判定一律走 {@link CryoOverdueService#isOverdue}（唯一判定函数）与
  * {@link CryoOverdueSqlProvider#WHERE}（唯一一份 SQL where 片段），
  * 本类<b>不另写一份 where、不写任何天数常量</b>。
@@ -320,6 +323,11 @@ public class CryoQueryService {
         if (Boolean.TRUE.equals(q.getOverdueOnly())) {
             wrapper.apply(CryoOverdueSqlProvider.whereFor("{0}"), days);
         }
+        // ★ 「已取空」页签（2026-09-24 甲方「支数取空的要提示」）：剩余 ≤ 0。拼的是与超期第 ③ 条
+        //   同一份剩余算式（CryoOverdueSqlProvider.EMPTIED_WHERE），与行上的 emptied、tabCounts.emptied 同源。
+        if (Boolean.TRUE.equals(q.getEmptiedOnly())) {
+            wrapper.apply(CryoOverdueSqlProvider.EMPTIED_WHERE);
+        }
     }
 
     /**
@@ -342,7 +350,7 @@ public class CryoQueryService {
     }
 
     /**
-     * 页签计数 {@code {all, overdue, ln2}}（ticket §2 / 契约）。
+     * 页签计数 {@code {all, overdue, ln2, emptied}}（ticket §2 / 契约；{@code emptied} 是 2026-09-24 加的）。
      *
      * <p>★ {@code overdue} 那一格 = {@link CryoOverdueService#countOverdue()} —— 与超期清单、
      * 工作台首页待办卡片、菜单角标<b>同一个函数、同一段 where</b>。清单长度与它恒等
@@ -352,17 +360,24 @@ public class CryoQueryService {
      * <b>或</b>已登记转液氮（{@code to_ln2_time} 非空）—— 只看 {@code in_minus80} 会把
      * 「先 -80 后转液氮」的 3003 漏掉。
      *
-     * <p>★ 三个数都是<b>整表口径</b>（未删行），不随列表筛选收窄；列表的 {@code total} 才是
+     * <p>★ {@code emptied}（已取空，2026-09-24 甲方「支数取空的要提示」）= 剩余 ≤ 0 的批次数，
+     * 拼 {@code CryoOverdueSqlProvider.EMPTIED_WHERE}（与 {@code emptiedOnly} 筛选、行上 {@code emptied} 同源）。
+     * 它与 {@code ln2} 可以重叠（液氮里取空的批次两边都算）：页签是「这张表的几个视图」，不是互斥分类。
+     *
+     * <p>★ 四个数都是<b>整表口径</b>（未删行），不随列表筛选收窄；列表的 {@code total} 才是
      * 当前筛选下的行数。
      */
     Map<String, Long> tabCounts() {
         long all = cryoBatchMapper.selectCount(new LambdaQueryWrapper<CryoBatch>());
         long ln2 = cryoBatchMapper.selectCount(new LambdaQueryWrapper<CryoBatch>()
             .and(w -> w.eq(CryoBatch::getInMinus80, "N").or().isNotNull(CryoBatch::getToLn2Time)));
+        long emptied = cryoBatchMapper.selectCount(new LambdaQueryWrapper<CryoBatch>()
+            .apply(CryoOverdueSqlProvider.EMPTIED_WHERE));
         Map<String, Long> counts = new LinkedHashMap<>();
         counts.put("all", all);
         counts.put("overdue", cryoOverdueService.countOverdue());
         counts.put("ln2", ln2);
+        counts.put("emptied", emptied);
         return counts;
     }
 
@@ -459,12 +474,17 @@ public class CryoQueryService {
         // ★ 超期判定只有一处（CryoOverdueService.isOverdue）——与超期清单、页签计数同源
         vo.setOverdue(CryoOverdueService.isOverdue(batch, remaining, today, days));
         vo.setOverdueDays(CryoOverdueService.overdueDaysOf(batch, remaining, today, days));
+        // ★ 已取空：与 emptiedOnly 筛选 / tabCounts.emptied 同一判据（剩余 ≤ 0）；取空的永不超期（上一行第 ③ 条）
+        vo.setEmptied(CryoBalanceChecker.isEmptied(remaining));
+        // 冻存到今天几天（小程序批次详情「-80℃ 暂存 · 冻存 N 天」）：与 overdueDays 同一个 today
+        vo.setFrozenDays(frozenDaysOf(batch.getFreezeTime(), today));
         if (sample != null) {
             // ★ 读时从样本主档带出（本表只有 sample_id）
             vo.setInternalNo(sample.getInternalNo());
             vo.setSubmitNo(sample.getSubmitNo());
             vo.setSourceUnitName(sample.getSourceUnitName());
             vo.setSampleVerifyStatus(sample.getVerifyStatus());
+            vo.setSampleKind(sample.getSampleKind());
         }
         vo.setCreateBy(batch.getCreateBy());
         vo.setUpdateBy(batch.getUpdateBy());
@@ -477,6 +497,16 @@ public class CryoQueryService {
         vo.setUpdateByName(handlerName);
         vo.setMine(isHandledBy(batch, me));
         return vo;
+    }
+
+    /**
+     * 冻存到今天的自然天数（{@code today − freezeTime}）；冻存时间为空 → {@code null}。
+     */
+    static Integer frozenDaysOf(LocalDate freezeTime, LocalDate today) {
+        if (freezeTime == null || today == null) {
+            return null;
+        }
+        return (int) ChronoUnit.DAYS.between(freezeTime, today);
     }
 
     /**

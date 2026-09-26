@@ -15,7 +15,7 @@ import { AxiosPromise } from 'axios';
 // ★ 四个「语义最容易做反」的点，前端这一层必须跟着后端一起记：
 //   1) remainingQty 是**读时算**的（init_qty + 未删流水 delta 之和），
 //      批次表上根本没有这一列 —— 前端不许自己累加 rows 里的流水。
-//   2) tabCounts 是**整表口径**，不随筛选收窄；页签数字直接用它，
+//   2) tabCounts 是**整表口径**（all / overdue / ln2 / emptied），不随筛选收窄；页签数字直接用它，
 //      别对当前页 rows 自己数（一翻页就错，accept 2 counterfeit 第一条）。
 //   3) overdueDays 未超期时是 **null**（不是 0）：「已超 0 天」只有阈值当天才出现。
 //   4) 「暂存 -80」是两个按钮（是 / 否），用 SegButtons，不是 el-switch。
@@ -57,10 +57,16 @@ export interface CryoBatchVO {
   submitNo?: string | null;
   sourceUnitName?: string | null;
   sampleVerifyStatus?: string | null;
+  /** 所挂样本的类别 tissue / organoid（读时带出）——「内部编号」点回样本时决定回哪一页 */
+  sampleKind?: string | null;
   /** ★ 是否超期（读时算：暂存 -80 且未转液氮且剩余 > 0 且冻存满阈值天数） */
   overdue?: boolean | null;
   /** ★ 已超天数；未超期是 null（不是 0） */
   overdueDays?: number | null;
+  /** ★ 已取空（读时算：剩余 ≤ 0；2026-09-24 甲方「支数取空的要提示」）。取空的永不超期 */
+  emptied?: boolean | null;
+  /** 冻存到今天的天数（读时算） */
+  frozenDays?: number | null;
   createTime?: string | null;
   /** ★ null = 从未修改 */
   updateTime?: string | null;
@@ -77,8 +83,8 @@ export interface CryoBatchPage {
   msg: string;
   rows: CryoBatchVO[];
   total: number;
-  /** ★ 三个数都是整表口径，不随筛选收窄（页签数字取它，不要自己数 rows） */
-  tabCounts: { all: number; overdue: number; ln2: number };
+  /** ★ 四个数都是整表口径，不随筛选收窄（页签数字取它，不要自己数 rows）；emptied 是 2026-09-24 加的 */
+  tabCounts: { all: number; overdue: number; ln2: number; emptied: number };
 }
 
 /** 列表筛选（字段名与 CryoQueryBo / doc/api-contract.md 逐字一致） */
@@ -95,6 +101,8 @@ export interface CryoQuery {
   location?: string | null;
   /** true = 只看超期（与行上的 overdue、页签数字同一个判据） */
   overdueOnly?: boolean | null;
+  /** true = 只看已取空（与行上的 emptied、页签数字 tabCounts.emptied 同一个判据） */
+  emptiedOnly?: boolean | null;
   freezeTimeBegin?: string | null;
   freezeTimeEnd?: string | null;
 }

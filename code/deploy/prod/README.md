@@ -11,6 +11,7 @@
 | `docker-compose.yml` | 全套服务：postgres 16 / redis 7 / gotenberg / backend / nginx。**只有 nginx 映射宿主 80/443**，其余一律不映射（要连库走 SSH 隧道，见 `doc/ops/部署手册.md` §7） |
 | `.env.example` | 生产环境变量模板（域名 / 主机 / 口令 / OSS AK / webhook）。**真文件 `.env` 不进仓库**（600，服务器上也留一份） |
 | `deploy.sh` | 一键部署 + `preflight` / `artifacts` / `upload` / `up` / `cert` / `oss-init` / `cron` / `verify` / `rollback` / `status` / `down` |
+| `gen-secrets.sh` | 生产口令与密钥一次生成、写回 `.env`（幂等，已有真值不动）：DB / Redis 口令、JWT 签名密钥、字段加密口令、接口加解密两对 RSA-2048（后端两把 + 工作台构建用两把） |
 | `remote/00-host.sh` | 买完机器第一次跑：时区 / swap / 数据盘核对 / docker 日志轮转 / 防火墙 |
 | `remote/01-up.sh` | 远端阶段：目录权限 → nginx 域名渲染 → 建镜像 → 起容器 → 等健康 → 端口纪律复核 |
 | `remote/03-cert.sh` | acme.sh（webroot）+ **续期后 reload nginx** 的 `--reloadcmd` |
@@ -19,7 +20,7 @@
 | `remote/06-cert-install.sh` | 由 acme.sh 的 `--reloadcmd` 调用：把证书从 `cert-origin/` 搬到 `certs/` 并 `nginx -s reload` |
 | `healthcheck.sh` | 容器不健康 / 磁盘 > 80% / 证书剩余 < 15 天 / 线上证书与磁盘不一致 → 飞书告警 |
 | `oss-init.sql` | **手工执行一次**的生产 OSS 配置（`sys_oss_config` 一行，私有桶 + 前缀 `lqg/`，**不进 Flyway**） |
-| `nginx/workspace.conf` | 生产站点：80 跳转 + ACME webroot + 443 TLS + 工作台 dist + `/prod-api` 反代 + 60MB 上传上限 |
+| `nginx/workspace.conf` | 生产站点：80 跳转 + ACME webroot + 443 TLS + 工作台 dist + `/prod-api` 反代 + 60MB 上传上限（超限回 JSON）+ `/actuator` 一律 404 |
 | `nginx/proxy-headers.inc` | 反代共用头（SSE 长连接、`X-Forwarded-*`） |
 | `nginx/security-headers.inc` | 安全响应头（HSTS / nosniff / X-Frame-Options / Referrer-Policy / Permissions-Policy） |
 
@@ -36,8 +37,9 @@
 
 ```bash
 cd code/deploy/prod
-cp .env.example .env && chmod 600 .env      # 填域名 / 主机 / AK；口令可让 deploy.sh 生成
-bash deploy.sh preflight                    # 不联网也能跑的六道自检
+cp .env.example .env && chmod 600 .env      # 填域名 / 主机 / AK
+bash gen-secrets.sh                         # 口令与密钥现生成、写回 .env（字段加密口令生成后另存一份给 Kevin）
+bash deploy.sh preflight                    # 不联网也能跑的自检（含两对 RSA 是否成对）
 ssh <生产机> 'cd /opt/lqg && bash remote/00-host.sh'   # 系统层准备（要 sudo）
 bash deploy.sh all                          # 产物 → 上传 → 起容器 → 证书 → OSS → cron → 自检
 ```

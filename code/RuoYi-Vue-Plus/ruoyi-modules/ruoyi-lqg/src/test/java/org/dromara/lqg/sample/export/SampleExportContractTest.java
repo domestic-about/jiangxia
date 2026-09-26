@@ -24,7 +24,9 @@ import java.util.TreeMap;
  *
  * <p>钉住四条「靠人盯会回退」的口径：
  * <ol>
- *   <li><b>tissue 14 列 / organoid 7 列，表头逐字、按序</b>照甲方模板原件；
+ *   <li><b>tissue 14 列 / organoid 8 列，表头逐字、按序</b>照甲方模板原件（organoid = 模板 7 列 +
+ *       在「类器官类型」后插入的「代数」，CR-20260924-10 —— 甲方自己要加、模板原件里没有的列，
+ *       只能以「插入列」的身份出现，模板列那 7 列仍然逐字对原件）；
  *       本类<b>同时读一遍</b> {@code _input/templates/样本记录信息表模板.xlsx} 与
  *       {@code 类器官收样记录模板.xlsx} 的第 1 行做两侧对账
  *       （读不到模板时打印原因并跳过那一条 —— 不让「文件不在」伪装成「口径对」）；</li>
@@ -43,19 +45,63 @@ class SampleExportContractTest {
         "来源单位", "供体姓名", "性别", "年龄", "住院号", "组织类型", "收样日期", "内部编号",
         "有无固定", "处理时间", "质控表", "细胞活率报告", "操作人", "备注");
 
-    private static final List<String> ORGANOID_HEADER = List.of(
+    /** 类器官收样记录模板原件第 1 行（7 列，唯一来源是甲方原件，本类同时读原件对账） */
+    private static final List<String> ORGANOID_TEMPLATE = List.of(
         "来源单位", "类器官类型", "收样日期", "内部编号", "处理时间", "细胞活率报告", "操作人");
 
+    /** 导出表头 = 模板列 + 插入列（「代数」紧跟「类器官类型」）—— 按规则拼，不手抄 */
+    private static final List<String> ORGANOID_HEADER =
+        withInserted(ORGANOID_TEMPLATE, SampleExportService.ORGANOID_INSERTED_AFTER);
+
     @Test
-    @DisplayName("① 两个导出视图的列数 / 列名 / 列序，且与甲方模板原件第 1 行一致")
+    @DisplayName("① 两个导出视图的列数 / 列名 / 列序：模板列逐字对甲方原件第 1 行，organoid 另在「类器官类型」后插入「代数」")
     void exportViewsMatchTemplates() {
         assertEquals(14, annotatedHeader(SampleTissueExportVo.class).size(), "tissue 模板是 14 列");
-        assertEquals(7, annotatedHeader(SampleOrganoidExportVo.class).size(), "organoid 模板是 7 列");
+        assertEquals(8, annotatedHeader(SampleOrganoidExportVo.class).size(), "organoid = 模板 7 列 + 插入的「代数」");
         assertEquals(TISSUE_HEADER, annotatedHeader(SampleTissueExportVo.class));
         assertEquals(ORGANOID_HEADER, annotatedHeader(SampleOrganoidExportVo.class));
+        assertEquals(List.of("来源单位", "类器官类型", "代数", "收样日期", "内部编号", "处理时间", "细胞活率报告", "操作人"),
+            ORGANOID_HEADER, "插入规则拼出来的表头（防呆：规则本身写反了也要红）");
 
         assertEquals(TISSUE_HEADER, firstRowOfTemplate("样本记录信息表模板.xlsx"));
-        assertEquals(ORGANOID_HEADER, firstRowOfTemplate("类器官收样记录模板.xlsx"));
+        assertEquals(ORGANOID_TEMPLATE, firstRowOfTemplate("类器官收样记录模板.xlsx"),
+            "模板原件没改：「代数」不是模板列，别往模板列里塞");
+    }
+
+    @Test
+    @DisplayName("⑥ 插入列：只插在模板里存在的列后面，且插入的列名不与模板列重名（CR-20260924-10）")
+    void insertedColumnsAreWellFormed() {
+        SampleExportService.ORGANOID_INSERTED_AFTER.forEach((column, after) -> {
+            assertTrue(ORGANOID_TEMPLATE.contains(after), "插入锚点「" + after + "」必须是模板里的列");
+            assertTrue(!ORGANOID_TEMPLATE.contains(column), "插入列「" + column + "」不许与模板列重名");
+        });
+        // 组织样本不插代数
+        assertTrue(!TISSUE_HEADER.contains("代数"));
+    }
+
+    @Test
+    @DisplayName("⑦ 类器官导出行带代数：「代数」那一格就是样本行上的 passage（没填留空）")
+    void organoidRowsCarryThePassage() {
+        org.dromara.lqg.sample.domain.vo.SampleVo filled = new org.dromara.lqg.sample.domain.vo.SampleVo();
+        filled.setSourceUnitName("B 大学");
+        filled.setOrganoidType("结直肠类器官");
+        filled.setPassage("P4");
+        filled.setInternalNo("T-oco01");
+        org.dromara.lqg.sample.domain.vo.SampleVo blank = new org.dromara.lqg.sample.domain.vo.SampleVo();
+        blank.setOrganoidType("肝类器官");
+        org.dromara.lqg.sample.service.SampleQueryService rows =
+            new org.dromara.lqg.sample.service.SampleQueryService(null, null, null, null, null, null) {
+                @Override
+                public List<org.dromara.lqg.sample.domain.vo.SampleVo> exportRows(
+                    org.dromara.lqg.sample.domain.bo.SampleQueryBo query) {
+                    assertEquals("organoid", query.getSampleKind(), "类别由端点钉死");
+                    return List.of(filled, blank);
+                }
+            };
+        List<SampleOrganoidExportVo> out = new SampleExportService(rows).organoidRowsOf(null);
+        assertEquals("P4", out.get(0).getPassage());
+        assertEquals("结直肠类器官", out.get(0).getOrganoidType());
+        assertNull(out.get(1).getPassage(), "没填代数 = 空格子");
     }
 
     @Test
@@ -116,6 +162,16 @@ class SampleExportContractTest {
 
     // ── 工具 ─────────────────────────────────────────────────────────────────
 
+    /**
+     * 模板列 + 插入列：每个插入列放到它的锚点列后面（与 {@code doc/verify/xlsx_header.py --insert}、
+     * 小程序 {@code columns.ts} 同一条规则）。
+     */
+    private static List<String> withInserted(List<String> template, Map<String, String> insertedAfter) {
+        List<String> out = new ArrayList<>(template);
+        insertedAfter.forEach((column, after) -> out.add(out.indexOf(after) + 1, column));
+        return List.copyOf(out);
+    }
+
     private static void assertIndexConsistent(Map<String, Integer> index, List<String> header) {
         assertEquals(header.size(), index.size());
         int i = 0;
@@ -163,6 +219,17 @@ class SampleExportContractTest {
      * 在模块目录跑还是在工作区根跑都能找到）。
      */
     private static Path templatePath(String fileName) {
+        // V31（F4）：先读本模块测试资源里的副本（classpath 的 export-templates/，与 _input/templates/ 逐字节一致，
+        // FixtureCopiesSyncTest 比对），只检出后端目录也能对账；找不到再按老办法往上找 _input/templates/
+        java.net.URL copy = SampleExportContractTest.class.getClassLoader()
+            .getResource("export-templates/" + fileName);
+        if (copy != null) {
+            try {
+                return Path.of(copy.toURI());
+            } catch (java.net.URISyntaxException ignored) {
+                // 落到下面的老办法
+            }
+        }
         Path dir = Path.of("").toAbsolutePath();
         for (int i = 0; i < 6 && dir != null; i++) {
             Path candidate = dir.resolve("_input").resolve("templates").resolve(fileName);

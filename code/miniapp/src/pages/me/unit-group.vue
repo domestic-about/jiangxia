@@ -153,7 +153,7 @@ onLoad(() => {
       <view class="profile__card">
         <view class="profile__field">
           <text class="profile__label">姓名</text>
-          <input v-model="realName" class="profile__input" placeholder="请填写真实姓名" maxlength="100" />
+          <input v-model="realName" class="profile__input" placeholder="请填写真实姓名" :maxlength="100" />
         </view>
       </view>
 

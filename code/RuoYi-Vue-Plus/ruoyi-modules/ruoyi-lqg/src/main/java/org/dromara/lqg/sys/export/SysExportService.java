@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * <pre>
  * GET /mp/int/export/tissue      → SampleExportService#exportTissue   （14 列）
- * GET /mp/int/export/organoid    → SampleExportService#exportOrganoid （7 列）
+ * GET /mp/int/export/organoid    → SampleExportService#exportOrganoid （模板 7 列 + 插入列）
  * GET /mp/int/export/embed       → EmbedExportService#export          （16 列）
  * GET /mp/int/export/cryo        → CryoExportService#export           （9 + 2 列）
  * </pre>
