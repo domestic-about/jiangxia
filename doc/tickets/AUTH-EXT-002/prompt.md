@@ -100,17 +100,20 @@ accept:
     form: API
     run: |-
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/sample/detail-ext.js &&
-      grep -q "EmbedCard" src/pages/sample/detail-ext.vue && grep -q "@/components/lqg/EmbedCard.vue" src/pages/sample/detail-ext.vue &&
-      grep -q 'verifyStatus' src/components/lqg/EmbedCard.vue &&
-      grep -q 'embedBy' src/components/lqg/EmbedCard.vue && grep -q 'operatorName' src/components/lqg/EmbedCard.vue &&
-      ! grep -nE 'internalNo|verifyBy|frozenBy|cryo' src/components/lqg/EmbedCard.vue &&
-      grep -qE 'v-if="[^"]*(internalNo|showInternalNo)' src/pages/sample/detail-ext.vue &&
-      ! grep -nE 'verifyBy|frozenBy|cryo' src/pages/sample/detail-ext.vue &&
-      grep -q 'd.passage' src/pages/sample/detail-ext.vue && grep -q "label: '代数'" src/pages/sample/detail-ext.vue
+      cd ../.. && node doc/waves/regression/V-round/auth-ext-002-detail-dom.mjs
     counterfeit: |-
-      EmbedCard 走桶口导入（小程序里渲染成空白且不报错）→ 第 3 段要求的是 .vue 直接路径，红。
-      卡片不区分待核验 → verifyStatus 那段红：没编号的送样会显示成一块空白石蜡。
-      照旧口径把包埋人 / 操作人藏了 → embedBy、operatorName 两段红（CR-20260918-07 起这两个要给）。
+      ★ 2026-09-27 改写（弱断言清单第 2 条）：原来的 8 段里，**7 段是源码 grep**（`grep -q 'embedBy' EmbedCard.vue`、
+      `! grep -nE 'verifyBy|cryo' detail-ext.vue`…）。源码里出现/不出现一个字段名，**既不能证明它渲染出来了，
+      也不能证明它没渲染出来**：模板里写了 `v-if` 但条件恒假照样 grep 得到；把字段藏进一个永不渲染的分支，
+      grep 也照样绿。现在改成**真跑**：`doc/waves/regression/V-round/auth-ext-002-detail-dom.mjs`
+      （外部身份登录 H5 → 真打开详情页 → 读真 DOM；另加接口层的键集断言）。
+      【我实际做过的变异 —— 不红就不算达标】
+        · 渲染层：在 `src/pages/sample/detail-ext.vue` 模板首行插入 `<view>冻存情况（变异测试）</view>` →
+          dev server HMR 后**「冻存」那条立刻变红**（实测 FAIL 1 条）；`git checkout` 还原后复绿。
+        · 接口层：让后端在 `/mp/ext/sample/{id}` 里带上 `verifyBy` → `①` 那几条会变红（键集断言）。
+      EmbedCard 走桶口导入（小程序里渲染成空白且不报错）→ 产物体检那条要求页面 chunk 存在，红。
+      卡片不区分待核验 → 探针里「包埋卡片在场」那段会因文案缺失而红。
+      照旧口径把包埋人 / 操作人藏了 → 探针里「操作人/包埋人对可见」那条红（CR-20260918-07 起这两个要给）。
       卡片上顺手带出冻存或核验人 → 那条 `! grep` 红：甲方原话是「看不到冻存信息」。
       详情页把内部编号写死渲染（关着时显示空行 / `undefined`）→ v-if 那段红：关着的时候后端连键都不给，页面上这一行整行不该出现。
       类器官样本的详情没显示「代数」（外部自己填的一项，CR-20260924-10）→ 最后一段红：外部改了代数之后在详情里看不到自己填的值。

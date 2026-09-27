@@ -3787,6 +3787,16 @@
       "detail": "8 处：① D5 任务名写成「分期导入/暂存」→ 实为「拍照识别与可试用版」；② D5 qa_rounds=2 的解释不实（见证据完整性事件②）；③ D7 被写成「1 轮」（见事件①）；④ 报告称 D7/D8 有 `-L23.json` 合并分片 → **实际不存在**（那是手册里的计划）；⑤ §3.2 把 D2-r4 的 issue 数写 0 → 实为 6；⑥ #291 的扫描范围与次数写错（写成「61 个 /lqg/** + 全部 /mp/ext/** 共 164 次」，证据原文是「61 个唯一 (verb,path) 与 /mp/int/** 全部，用 extA 与 extC 各打一遍」，**164 是我算出来的、证据里不存在**）；⑦ #198 的「代码无变更」只在写下那一刻成立，后被 187 个文件的变化推翻；⑧ 未把「测试环境部署停在 D5」作为独立风险写出（即台账 #309）。根因分四类：合并覆盖分片并只看 verdict、把计划当事实、把时间点快照当持久论据、凭印象写数（含编造数字）。四条防复发：门禁不得覆盖证据 + 门须查台账（已落地并受控验证）；数字必须附复核命令；计划与快照必须标注；台账就地留痕。更正写在 doc/handover/交接与验收报告.md §14。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 338,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "弱断言改写第 1 条完成：AUTH-EXT-002 acc3 从 7 处源码 grep 改为真 DOM 探针，并已通过变异验证",
+      "detail": "改写：原 run 里 7 段是源码 grep（`grep -q embedBy EmbedCard.vue`、`! grep -nE verifyBy|cryo detail-ext.vue`…），只证明「字段名在/不在源码里」，既不能证明渲染出来、也不能证明没渲染。现在 acc3 = 「小程序产物存在」+ 调 `doc/waves/regression/V-round/auth-ext-002-detail-dom.mjs`（13 项）。探针内容：① 接口层：extA 取 /mp/ext/sample/9000001001，响应里不得出现 verifyBy/verifyTime/internalNo/cryo/cryoBatches；embeds 必须给 embedBy 与 operatorName（CR-20260918-07）；② 渲染层：外部身份登录 H5 → 真打开 /#/pages/sample/detail-ext?id=9000001001 → 页面真的打开、包埋卡片在场（石蜡包埋情况 T-E01-1 已切片）、操作人/包埋人对可见、**「冻存」「核验人」全页不出现**。★ 变异验证（我实际做的）：在 detail-ext.vue 模板首行插入 `<view>冻存情况（变异测试）</view>` → HMR 后该断言**立刻变红**（实测 FAIL 1 条）；git checkout 还原后复绿。端到端：`accept-run.py --ticket AUTH-EXT-002` → **3/3 通过**（acc3 13.6s）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
