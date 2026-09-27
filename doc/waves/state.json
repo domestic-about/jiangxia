@@ -3597,6 +3597,16 @@
       "detail": "复现（2026-09-26，后端 8091 dev）：bash doc/verify/api.sh --as extA PUT /mp/ext/profile {\"realName\":\"验收\",\"unitName\":\"A 医院\",\"groupName\":\"类器官课题组\"} → {\"code\":500,\"msg\":\"请在列表里选择单位与组别，或手动填写单位名与组别名\"}。消息本身清楚、无泄漏（V03 的目标已达成），但把「用户填错」判成 500 会让前端与监控把校验失败当服务端故障。方案 a（推荐）：该分支改抛业务异常（400 语义）；b）全仓扫一遍「校验用异常 + 默认 500」的写法，统一到 400。同类：V03 修复时外部三个 BO 已改成 400，此处是漏网。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 319,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "V 轮活体验收第 2 批：V02 核验抽屉送检段、V04 撤回后合并件 —— 全通过（5 条 S1 至此全部验完）",
+      "detail": "① V02（#147）：新写 UI 活体脚本 doc/waves/regression/V-round/v02-verify-drawer.mjs（真浏览器登录工作台 → 石蜡包埋列表 → 打开核验抽屉 → 填石蜡块编号 + 改脱水时间 → 点保存 → 拦真实请求体）。结果 5/5：写请求 PUT /lqg/embed/{id}/verify 真的发出；body 带 fill 段（15 键齐）；fill.dehydrateTime = 抽屉里改的值 2026-09-26；库里 dehydrateTime 也是 2026-09-26；记录转 valid。→ 送检/补填段不再被静默丢弃。② V04：API 链路（发布三份 → 渲染合并件 → 撤回 sample-qc）——撤回后合并 docx 由 15742 字节降到 13600 且正文里「样本质控表」出现次数 = 0（真的重渲了，此前下发旧产物）；合并 PDF code=200（此前 400）；merged pages status=done 且 2 页（此前 done 但 0 页）；DB 里 merged 的 docx/pdf/png 三行 render_status 全 done 且有 content_hash。★ 5 条 S1（V01/V02/V03/V04/V05）全部活体验收通过。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
