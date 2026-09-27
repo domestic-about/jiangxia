@@ -570,7 +570,7 @@ watch(
     color: var(--lqg-ink-3);
   }
   .lqg-embed__filter {
-    margin-bottom: 4px;
+    margin-bottom: 16px; // 2026-09-28 飞书问题行：筛选与下方（工具栏/表格）多留 12px
   }
   .lqg-embed__control {
     width: 100%;

@@ -94,7 +94,7 @@ function onPick() {
   <wd-cell
     v-if="readonly || control === 'seg'"
     :title="label"
-    :required="required"
+    :required="required" marker-side="after"
     value-align="right"
   >
     <view class="fr__val">
@@ -108,7 +108,7 @@ function onPick() {
   <wd-cell
     v-else-if="isPicker"
     :title="label"
-    :required="required"
+    :required="required" marker-side="after"
     clickable
     value-align="right"
     @click="onPick"
@@ -126,7 +126,7 @@ function onPick() {
   </wd-cell>
 
   <!-- 多行备注 -->
-  <wd-cell v-else-if="control === 'textarea'" :title="label" :required="required" vertical>
+  <wd-cell v-else-if="control === 'textarea'" :title="label" :required="required" marker-side="after" vertical>
     <wd-textarea
       :model-value="modelValue"
       :placeholder="placeholderText"
@@ -142,7 +142,7 @@ function onPick() {
     :label="label"
     :type="control === 'digit' ? 'digit' : 'text'"
     align-right
-    :required="required"
+    :required="required" marker-side="after"
     :placeholder="placeholderText"
     :maxlength="maxlength > 0 ? maxlength : -1"
     :custom-input-class="mono ? 'lqg-mono' : ''"

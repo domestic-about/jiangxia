@@ -93,8 +93,10 @@
           <el-col v-if="isTissue" :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item prop="donorName">
               <template #label>
+                <!-- 独立验收（2026-09-28 飞书「小程序/工作台」问题行）：标签不再挂「精确匹配」后缀 —— 76px 的
+                     label-width 放不下，会被迫折成两行。精确匹配的口径保留在输入框占位符里
+                     （`donorPlaceholder` = 「供体姓名（精确匹配）」），信息不丢。 -->
                 <span>{{ t('lqg.sample.filter.donorName') }}</span>
-                <span class="lqg-sample__exact">{{ t('lqg.sample.filter.exactMatch') }}</span>
               </template>
               <el-input v-model="queryParams.donorName" :placeholder="t('lqg.sample.filter.donorPlaceholder')" clearable class="lqg-sample__control" />
             </el-form-item>
@@ -103,7 +105,6 @@
             <el-form-item prop="hospitalNo">
               <template #label>
                 <span>{{ t('lqg.sample.filter.hospitalNo') }}</span>
-                <span class="lqg-sample__exact">{{ t('lqg.sample.filter.exactMatch') }}</span>
               </template>
               <el-input v-model="queryParams.hospitalNo" :placeholder="t('lqg.sample.filter.hospitalPlaceholder')" clearable class="lqg-sample__control" />
             </el-form-item>
@@ -539,7 +540,7 @@ watch(
     color: var(--lqg-ink-3);
   }
   .lqg-sample__filter {
-    margin-bottom: 4px;
+    margin-bottom: 16px; // 2026-09-28 飞书问题行：筛选与下方（工具栏/表格）多留 12px
   }
   .lqg-sample__control {
     width: 100%;

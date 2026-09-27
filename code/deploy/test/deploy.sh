@@ -163,6 +163,15 @@ phase_upload() {
     "${HERE}/nginx/workspace.conf" "${HERE}/nginx/proxy-headers.inc" \
     "root@${LQG_TEST_HOST}:${d}/nginx/"
 
+  # ★ 2026-09-28 修（本次部署实测）：compose 里 gotenberg 用 `build.context: ../common/gotenberg`
+  #   （相对 compose 文件 → /opt/common/gotenberg）。原来这里**没上传**它，于是服务器上报
+  #   「unable to prepare context: path /opt/common/gotenberg not found」→ up 阶段整体失败（远端退出码 17）。
+  #   现在把仓库里的 code/deploy/common/gotenberg（Dockerfile + 三套开源字体）一起传上去。
+  COMMON_DIR="$(dirname "${d}")/common"
+  "${SSH[@]}" "install -d '${COMMON_DIR}'"
+  rsync -az --delete -e "ssh -o BatchMode=yes" \
+    "${ROOT}/code/deploy/common/gotenberg" "root@${LQG_TEST_HOST}:${COMMON_DIR}/"
+
   # 远端阶段脚本 + wait-for
   rsync -az -e "ssh -o BatchMode=yes" "${HERE}/remote/" "root@${LQG_TEST_HOST}:${d}/remote/"
   rsync -az -e "ssh -o BatchMode=yes" "${ROOT}/code/deploy/common/wait-for" "root@${LQG_TEST_HOST}:${d}/bin/wait-for"

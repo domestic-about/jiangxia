@@ -372,7 +372,7 @@ async function submit() {
 
         <FieldRow
           label="液氮储存位置"
-          :required="needLn2Location"
+          :required="needLn2Location" marker-side="after"
           :maxlength="100"
           :readonly="!editable"
           :model-value="form.ln2Location"

@@ -423,7 +423,7 @@ async function submit() {
               :label="spec.label"
               :control="spec.control"
               :readonly="!spec.editable"
-              :required="spec.key === 'sampleId' || (isInternal && spec.key === 'paraffinBlockNo')"
+              :required="spec.key === 'sampleId' || (isInternal && spec.key === 'paraffinBlockNo')" marker-side="after"
               :mono="spec.key === 'sampleId' || spec.key === 'paraffinBlockNo'"
               :maxlength="fieldMaxlength(spec.key)"
               :model-value="spec.control === 'select' ? form.sampleLabel : fieldValue(spec.key)"

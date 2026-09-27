@@ -144,7 +144,10 @@ onMounted(() => {
   max-width: 100%;
 
   :deep(.el-badge__content) {
-    top: 10px;
+    /* 独立验收（2026-09-28 飞书问题行「左侧菜单角标上部有一点点截断」）：
+       实测角标被 .el-menu-item（为做省略号而 overflow:hidden）裁掉上边 2px。
+       原来是 top:10px + el-badge 自带的 translateY(-50%)；抬到 12px 后上边完整落在菜单项内。 */
+    top: 12px;
     right: 2px;
   }
 }
