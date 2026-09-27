@@ -3907,6 +3907,16 @@
       "detail": "现象：`code/plus-ui/src/views/login.vue` 里 `const captchaEnabled = ref(true)`（初值 true），`v-if=\"captchaEnabled\"` 先渲染验证码那一项；等到 `/auth/code` 返回（test profile 的 `captcha.enable=false` → `captchaEnabled:false`）才把它移除。实测：线上 `GET /prod-api/auth/code` 返回 `{\"captchaEnabled\":false,\"uuid\":null,\"img\":null}`（后端确实关着）；但探测脚本在响应到达前就填表提交 → 被表单校验「验证码必填」挡下 → 停在 /login（我第一版线上探针因此 13 条断言全 ✗，且因为探针缺「登录成功」前置断言而看不出根因）。定级 S3：真实用户只有在「页面刚打开、/auth/code 还没回来」的窗口内手速极快地提交才会遇到，且字段随后自动消失、重试即可；不影响功能与数据。处置：① 探针已修（先 `waitForResponse('/auth/code')` 再填表 + 加「能登录进工作台」这一条**反空断言**前置；见 `03-deployed-workbench-ui.mjs`）；② 产品侧未改（属 S3 长尾，与「界面细节」一批处理更合适）。证据：`doc/waves/regression/staging-hardening/05-deployed-ui-live.txt`。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 350,
+      "ticket": "",
+      "severity": "S2",
+      "type": "tooling-trap",
+      "title": "本地后端跑着「旧 inode 的 jar」而 jar 被重新打包覆盖 → 惰性读 jar 内资源得到 ZLIB 损坏 → D6 6 条 + D7 12 条假红；并恢复被 NF1 剥掉的反 stale 守卫",
+      "detail": "现象：全量重放时 D6 变成 9/15（6 条 DOC-PDF/DOC-RENDER 红，每条 0.8~0.9s）、D7 变成 4/16（12 条红），而基线里这两阶段分别是 15/15、16/16。定位过程（走过一段弯路，留档）：① 先怀疑并发 reseed —— 因为我在后台全量重放还在跑（D7 从 07:14 跑到 07:31，17 分钟）时手动重跑过 D6、还手动跑过 reseed，那一次确实拿到了 `pk_lqg_wx_bind` 主键冲突（两个 reseed 并发，一个 TRUNCATE 后另一个再插同一 id）→ **这条是我违反了「同一时刻只跑一个验收」，属我操作失误**；② 但把 D6 单独隔离跑（无任何并发）仍然稳定复现 6 条红，说明另有原因；③ 读 harness 生成的脚本 + 逐段复现才看清：日志里的 `true/false` 是 `jq -e` 打印的布尔值（不是段结果），真正失败的是**渲染接口**；直接打接口拿到原文：`{\"code\":500,\"msg\":\"读模板资源失败：lqg/doc-templates/template-version.txt（Unexpected end of ZLIB input stream）\"}`。根因：本地后端进程启动于 **Sep 27 20:21:05**（`java -jar …/ruoyi-admin.jar`），而该 jar 在 **Sep 28 06:34:43** 被我重新打包**就地覆盖** —— 运行时惰性读 jar 内资源（模板/版本号）就读到新旧混合的破损 zip 流。仓库里的模板文件本身完好（`template-version.txt`=`5`）。处置：按 PID 杀掉后端 → `qa-up.sh --no-web --no-mp`（重建 jar 保证新于源码 + 重起 + reseed）→ 渲染接口恢复 `status=done`，D6 立刻回到 14/15（余下 1 条是前端 dev server 没起，补起后见下）。**结构性修复（本次一并做掉）**：`api.sh --fresh-module M` 的守卫本来就断这条 —— 它的报错原文是「stale：后端进程启动早于 jar——**打了包没重启**」，一句话就能说清。但 `accept-run.py` 的归一化 **NF1 无条件剥掉了 `--fresh-module`**，理由是「沙箱里 /bin/ps 是 Operation not permitted」；而现在 policy=danger-full-access 下 `ps` 实测可用（`ps -p <pid> -o lstart=` 正常返回），这个前提已不成立。已改：accept-run.py 启动时自检 `PS_WORKS`，`ps` 可用 → **保留** `--fresh-module`（重放更接近逐字，且拿回这条守卫）；不可用才剥并照旧记 NF1。自检与 normalize 都实测过（PS_WORKS=True 时不再出现 NF1，token 保留）。为什么值得：这条守卫把「18 条难定位的假红」变成「一句 stale 报错」，直接消除一整类环境假红。它不替代 gate.sh L0.0 的前置检查（那是门禁层，这里是每条 API accept 自带的自证）。证据：`/tmp/clean-logs/DOC-RENDER-001/*.log`、渲染接口原文、D6 修复前后 9/15 → 14/15。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

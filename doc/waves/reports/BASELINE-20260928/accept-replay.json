@@ -1,0 +1,959 @@
+{
+ "at": "2026-09-28 07:52:15 ",
+ "phases": {
+  "D1": {
+   "green": 17,
+   "total": 17,
+   "seconds": 36,
+   "nf": [
+    "NF2"
+   ],
+   "accepts": [
+    {
+     "ticket": "AUTH-GROUP-001",
+     "index": 1,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 0.3,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-GROUP-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-GROUP-001",
+     "index": 3,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 0.2,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-LOGIN-001",
+     "index": 1,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 0.3,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-LOGIN-001",
+     "index": 2,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.7,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-LOGIN-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 3.2,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "AUTH-STAFF-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 2.4,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-STAFF-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 1.2,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-STAFF-001",
+     "index": 3,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 0.2,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-BASE-001",
+     "index": 1,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 0.4,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-BASE-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 1.0,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-BASE-001",
+     "index": 3,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 0.7,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-MP-001",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 4.4,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-MP-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.3,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-MP-001",
+     "index": 3,
+     "form": "API",
+     "exit": 0,
+     "seconds": 0.0,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-WEB-001",
+     "index": 1,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 1.3,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-WEB-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 15.2,
+     "nf": []
+    }
+   ]
+  },
+  "D2": {
+   "green": 18,
+   "total": 18,
+   "seconds": 46,
+   "nf": [
+    "NF2"
+   ],
+   "accepts": [
+    {
+     "ticket": "AUTH-EXT-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 3.4,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "AUTH-EXT-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 1.7,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-EXT-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 2.4,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MODEL-001",
+     "index": 1,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 0.2,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MODEL-001",
+     "index": 2,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.6,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MODEL-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MP-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.4,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MP-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 6.5,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MP-002",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 2.1,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MP-002",
+     "index": 2,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 6.8,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MP-002",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 0.6,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-MP-002",
+     "index": 4,
+     "form": "API",
+     "exit": 0,
+     "seconds": 6.6,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-VERIFY-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.7,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-VERIFY-001",
+     "index": 2,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-VERIFY-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 2.1,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-WEB-001",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 1.3,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-WEB-001",
+     "index": 2,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 2.0,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-WEB-001",
+     "index": 3,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 2.4,
+     "nf": []
+    }
+   ]
+  },
+  "D3": {
+   "green": 18,
+   "total": 18,
+   "seconds": 48,
+   "nf": [
+    "NF2"
+   ],
+   "accepts": [
+    {
+     "ticket": "AUTH-EXT-002",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 4.7,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "AUTH-EXT-002",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 2.2,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-EXT-002",
+     "index": 3,
+     "form": "API",
+     "exit": 0,
+     "seconds": 13.2,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MODEL-001",
+     "index": 1,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 0.3,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MODEL-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.9,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MODEL-001",
+     "index": 3,
+     "form": "API",
+     "exit": 0,
+     "seconds": 0.9,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MODEL-001",
+     "index": 4,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.9,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MODEL-001",
+     "index": 5,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.9,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MODEL-001",
+     "index": 6,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.9,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MP-001",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 5.6,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MP-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-MP-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 0.7,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-WEB-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 2.4,
+     "nf": []
+    },
+    {
+     "ticket": "EMBED-WEB-001",
+     "index": 2,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 2.9,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-EXPORT-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-EXPORT-001",
+     "index": 2,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 0.2,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-HINT-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 0.9,
+     "nf": []
+    },
+    {
+     "ticket": "SAMPLE-HINT-001",
+     "index": 2,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 2.9,
+     "nf": [
+      "NF2"
+     ]
+    }
+   ]
+  },
+  "D4": {
+   "green": 17,
+   "total": 17,
+   "seconds": 46,
+   "nf": [
+    "NF2"
+   ],
+   "accepts": [
+    {
+     "ticket": "CRYO-FLOW-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.9,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-FLOW-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 2.1,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-FLOW-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.6,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MODEL-001",
+     "index": 1,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 0.3,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MODEL-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.9,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MODEL-001",
+     "index": 3,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 0.9,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MP-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.9,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MP-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 2.1,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MP-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.7,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MP-001",
+     "index": 4,
+     "form": "API",
+     "exit": 0,
+     "seconds": 19.9,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-MP-001",
+     "index": 5,
+     "form": "API",
+     "exit": 0,
+     "seconds": 0.7,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-REMIND-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 3.7,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "CRYO-REMIND-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-REMIND-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.1,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-WEB-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.5,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-WEB-001",
+     "index": 2,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 0.1,
+     "nf": []
+    },
+    {
+     "ticket": "CRYO-WEB-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 3.1,
+     "nf": []
+    }
+   ]
+  },
+  "D5": {
+   "green": 6,
+   "total": 6,
+   "seconds": 77,
+   "nf": [
+    "NF2"
+   ],
+   "accepts": [
+    {
+     "ticket": "OCR-IMPL-001",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 1.2,
+     "nf": []
+    },
+    {
+     "ticket": "OCR-IMPL-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 2.9,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "OCR-MP-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 0.6,
+     "nf": []
+    },
+    {
+     "ticket": "OCR-MP-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 16.7,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-STAGING-001",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 5.6,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-STAGING-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 50.0,
+     "nf": []
+    }
+   ]
+  },
+  "D6": {
+   "green": 15,
+   "total": 15,
+   "seconds": 82,
+   "nf": [
+    "NF2"
+   ],
+   "accepts": [
+    {
+     "ticket": "DOC-PDF-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-PDF-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 10.7,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-PDF-001",
+     "index": 3,
+     "form": "API",
+     "exit": 0,
+     "seconds": 3.6,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "DOC-RENDER-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 2.5,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-RENDER-001",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 6.0,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "DOC-RENDER-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 8.6,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "DOC-RENDER-001",
+     "index": 4,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 5.5,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "QC-MODEL-001",
+     "index": 1,
+     "form": "DDL",
+     "exit": 0,
+     "seconds": 0.4,
+     "nf": []
+    },
+    {
+     "ticket": "QC-MODEL-001",
+     "index": 2,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 1.7,
+     "nf": []
+    },
+    {
+     "ticket": "QC-MODEL-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.8,
+     "nf": []
+    },
+    {
+     "ticket": "QC-MODEL-001",
+     "index": 4,
+     "form": "API",
+     "exit": 0,
+     "seconds": 4.2,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "QC-WEB-001",
+     "index": 1,
+     "form": "MENU",
+     "exit": 0,
+     "seconds": 0.1,
+     "nf": []
+    },
+    {
+     "ticket": "QC-WEB-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 11.0,
+     "nf": []
+    },
+    {
+     "ticket": "QC-WEB-002",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 1.4,
+     "nf": []
+    },
+    {
+     "ticket": "QC-WEB-002",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 23.1,
+     "nf": []
+    }
+   ]
+  },
+  "D7": {
+   "green": 16,
+   "total": 16,
+   "seconds": 516,
+   "nf": [
+    "NF2"
+   ],
+   "accepts": [
+    {
+     "ticket": "AUTH-EXT-003",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 23.0,
+     "nf": []
+    },
+    {
+     "ticket": "AUTH-EXT-003",
+     "index": 2,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 3.4,
+     "nf": [
+      "NF2"
+     ]
+    },
+    {
+     "ticket": "AUTH-EXT-003",
+     "index": 3,
+     "form": "API",
+     "exit": 0,
+     "seconds": 32.0,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-MP-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 0.7,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-MP-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 10.4,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-MP-002",
+     "index": 1,
+     "form": "API",
+     "exit": 0,
+     "seconds": 18.0,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-MP-002",
+     "index": 2,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 6.2,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-PUBLISH-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 22.2,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-PUBLISH-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 21.7,
+     "nf": []
+    },
+    {
+     "ticket": "DOC-PUBLISH-001",
+     "index": 3,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 3.8,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-ACCEPT-001",
+     "index": 1,
+     "form": "STATE",
+     "exit": 0,
+     "seconds": 234.8,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-ACCEPT-001",
+     "index": 2,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 64.3,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-EXPORT-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 2.4,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-EXPORT-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 49.2,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-HOME-001",
+     "index": 1,
+     "form": "DATA",
+     "exit": 0,
+     "seconds": 7.6,
+     "nf": []
+    },
+    {
+     "ticket": "SYS-HOME-001",
+     "index": 2,
+     "form": "API",
+     "exit": 0,
+     "seconds": 16.4,
+     "nf": []
+    }
+   ]
+  }
+ },
+ "total": [
+  107,
+  107
+ ]
+}

@@ -9,12 +9,17 @@
     runner。直接从票面重放 = 确定性、零上下文、可逐轮 diff，比 agent 每次重推更钉得住。
 
 归一化（只有两条，且逐条印出来，**不做静默弱化**）：
-  NF1  去掉 `--fresh-module <模块>`。本沙箱 `/bin/ps` 是 "Operation not permitted"，
-       守卫落到 `date -d`（macOS 没有）→ api.sh exit 2，把工具故障伪装成断言红
-       （issue #1/#13/#82，第 12 次命中）。新鲜度改由 gate.sh 的 L0.0 前置检查承担
-       （源码不得新于 jar + 进程必须持有该 jar）。
-       实测：43 张票 101 条 accept 里 51 条含该 token；除它之外 **0 条**需要在
-       `--bizcode` 或判码写法上做手脚（逐语句核过 `api.sh … grep -qE '^<码>'` 的组合）。
+  NF1  去掉 `--fresh-module <模块>`，**但只在 `ps` 不可用时才剥**（2026-09-28 改）。
+        原来的理由：本沙箱 `/bin/ps` 是 "Operation not permitted"，守卫落到 `date -d`
+        （macOS 没有）→ api.sh exit 2，把工具故障伪装成断言红（issue #1/#13/#82，第 12 次命中）。
+        **现在这个前提不成立了**：policy=danger-full-access 下 `ps` 实测可用，脚本启动时会自检
+        （PS_WORKS）；可用就**保留** `--fresh-module`，把 api.sh 的守卫拿回来 —— 它断的是
+        「后端进程是否早于 jar」，报错原文「打了包没重启」。本轮正是踩了这个（本地后端跑着旧
+        inode 的 jar，惰性读 jar 内资源 → "Unexpected end of ZLIB input stream" → DOC 渲染
+        全线失败 → D6 6 条 + D7 12 条假红，见台账 #350）；守卫一句话就能说清的事，被 NF1 剥掉后
+        变成了 18 条难定位的假红。`ps` 不可用时行为与原来完全一致（剥掉并记 NF1）。
+        新鲜度另有 gate.sh 的 L0.0 前置检查兜底（源码不得新于 jar + 进程必须持有该 jar）——
+        与这里**不是**重复：L0.0 是门禁前置，这里是每条 API accept 自带的自证。
   NF2  给票面的 `mvn` 补上本机必需的三个参数 `-s .mvn-settings.xml
        -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome`（issue #6）。
        缺它们时 maven 会去写 `~/.m2` 并被沙箱拒 → exit 1，**把工具故障伪装成断言红**
@@ -128,11 +133,35 @@ def escalated_tickets():
         return set()
 
 
+def _ps_works():
+    """本机 `ps` 能不能用——NF1 到底该不该剥 `--fresh-module`，取决于它。
+
+    ★ 2026-09-28 改：NF1 原来**无条件**剥掉 `--fresh-module`，理由是「沙箱里 /bin/ps 是
+      Operation not permitted」。现在这个前提不成立了（`ps` 实测可用，policy=danger-full-access），
+      而无条件剥掉它的代价是**真实存在**的：api.sh 的守卫会断「后端进程启动是否早于 jar」，
+      报错原文是「stale：后端进程启动早于 jar——打了包没重启」。本轮就踩了这个坑 ——
+      本地后端跑着旧 inode 的 jar、而 jar 被重新打包覆盖，运行时惰性读 jar 内资源得到
+      「Unexpected end of ZLIB input stream」，DOC 渲染全线失败 → D6 6 条 + D7 12 条假红，
+      花了不少时间才定位（见台账 #350）。**守卫本来一句话就能说清。**
+      所以改成：`ps` 可用 → 保留 `--fresh-module`（更接近逐字重放，且拿回这条守卫）；
+      `ps` 不可用（真沙箱）→ 才剥，并照旧记 NF1。
+    """
+    try:
+        r = subprocess.run(["ps", "-p", str(os.getpid()), "-o", "pid="],
+                           capture_output=True, timeout=5)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+PS_WORKS = _ps_works()
+
+
 def normalize(run):
-    """返回 (归一化后的 run, 施加的规则列表)。只有 NF1 / NF2，且逐条记下来。"""
+    """返回 (归一化后的 run, 施加的规则列表)。NF1 = 剥 --fresh-module（仅当本机 ps 不可用）、NF2 = 注入 maven settings。"""
     applied = []
     new = run
-    if re.search(r"--fresh-module\s+\S+", new):
+    if re.search(r"--fresh-module\s+\S+", new) and not PS_WORKS:
         new = re.sub(r"\s*--fresh-module\s+\S+", "", new)
         applied.append("NF1")
     new, mc = _inject_mvn(ROOT, new)

@@ -1,7 +1,7 @@
 {
  "hotspot": "H1a",
  "green": true,
- "ran_at": "2026-09-27T14:23:19.372Z",
+ "ran_at": "2026-09-27T23:51:26.178Z",
  "results": [
   {
    "name": "H1a:内部人员 mock 登录 H5(9204)",
@@ -31,7 +31,7 @@
   {
    "name": "H1a:★ 响应体是真 xlsx（ZIP 魔数 PK + 有字节数）",
    "ok": true,
-   "detail": "{\"magic\":\"PK\",\"bytes\":4117}"
+   "detail": "{\"magic\":\"PK\",\"bytes\":4118}"
   },
   {
    "name": "H1a:地址带上筛选项 verifyStatus=pending（筛了什么导出什么）",
@@ -52,7 +52,7 @@
   },
   "export_response": {
    "status": 200,
-   "bytes": 4117,
+   "bytes": 4118,
    "magic": "PK"
   }
  }

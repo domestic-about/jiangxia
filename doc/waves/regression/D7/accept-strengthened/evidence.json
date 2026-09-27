@@ -1,6 +1,6 @@
 {
  "ticket": "SYS-ACCEPT-001",
- "generated_at": "2026-09-27T14:22:44.238016+00:00",
+ "generated_at": "2026-09-27T23:50:51.724369+00:00",
  "mode": "verify-only",
  "scope": [
   "H1a",
@@ -22,7 +22,7 @@
    "mutation": "去掉 src/pages/ledger/index.vue 里 downloadToTemp 的 `header: authHeader(), requireAuth: true`",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-27T14:22:06.168Z",
+   "checked_at": "2026-09-27T23:50:13.694Z",
    "observed": {
     "export_url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
     "export_request_headers": {
@@ -86,12 +86,12 @@
    "mutation": "给 src/components/lqg/DownloadBar.vue 的 downloadToTemp 传回 authHeader()",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-27T14:22:23.273Z",
+   "checked_at": "2026-09-27T23:50:30.809Z",
    "observed": {
-    "backend_signed_url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/d0a3044ebfb9.docx?X-Amz-…",
+    "backend_signed_url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8b2120c06bb3.docx?X-Amz-…",
     "oss_request_headers": [
      {
-      "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/d0a3044ebfb9.docx",
+      "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8b2120c06bb3.docx",
       "header_keys": [
        "sec-ch-ua-platform",
        "referer",
@@ -105,7 +105,7 @@
     ],
     "oss_response": [
      {
-      "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/d0a3044ebfb9.docx",
+      "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8b2120c06bb3.docx",
       "status": 200,
       "ct": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
      }
@@ -131,12 +131,12 @@
     {
      "name": "H1b:后端签发 OSS 预签名直链（code=200 + url 指向 127.0.0.1:9000）",
      "ok": true,
-     "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/d0a3044ebfb9.docx?X-Amz-Algorithm=AWS4-HMAC-SH\"}"
+     "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8b2120c06bb3.docx?X-Amz-Algorithm=AWS4-HMAC-SH\"}"
     },
     {
      "name": "H1b:★ OSS 直链请求真的发出（真点一次单份下载）",
      "ok": true,
-     "detail": "[\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/d0a3044ebfb9.docx\"]"
+     "detail": "[\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8b2120c06bb3.docx\"]"
     },
     {
      "name": "H1b:★ OSS 直链请求头**没有 Authorization**（API 鉴权头不能塞到预签名直链上）",
@@ -146,7 +146,7 @@
     {
      "name": "H1b:★ OSS 响应码 = 200（MinIO 没判「multiple authentication types」）",
      "ok": true,
-     "detail": "[{\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/d0a3044ebfb9.docx\",\"status\":200,\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
+     "detail": "[{\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8b2120c06bb3.docx\",\"status\":200,\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
     },
     {
      "name": "H1b:页面没有进失败态（.db__hint 里没有「暂时下不了」）",
@@ -163,7 +163,7 @@
    "mutation": "把卡片 :value=\"todo.pendingSamples\" → 写死 7、:value=\"todo.pendingEmbeds\" → 写死 9（真值 2 / 1）",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-27T14:22:27.967Z",
+   "checked_at": "2026-09-27T23:50:35.499Z",
    "observed": {
     "api_get_lqg_home_todo": {
      "url": "http://127.0.0.1:8093/dev-api/lqg/home/todo",
@@ -300,7 +300,7 @@
    "behavioral": false,
    "behavioral_note": "showMenu 是**平台参数**，H5（本轮验收面，owner 已把真机换成 H5+mock）上 uni.openDocument 不存在、如实退化成 window.open，没有可在 H5 施加的行为变异。按 ticket §2 的显式例外用「剥注释后的真代码位置」判，并证明它与注释无关（本变异即该证明）。",
    "result": "green",
-   "checked_at": "2026-09-27T14:22:28.017511+00:00",
+   "checked_at": "2026-09-27T23:50:35.551583+00:00",
    "observed": {
     "source_file": "code/miniapp/src/utils/fileHandoff.ts",
     "occurrences_in_raw_file": 1,
@@ -343,25 +343,25 @@
    "mutation": "把 ThumbStrip.vue#open 的 urls 从「原图 url」换成 usable 的 previewUrl",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-27T14:22:36.998Z",
+   "checked_at": "2026-09-27T23:50:44.540Z",
    "observed": {
     "pages_api_images": [
      {
-      "url": "http://127.0.0.1:9002/lqg/2026/09/27/69a18cfecfcc4ac3ad3fa00d3c552035.png",
-      "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/88c33e264e6e4f13a1f538b4ebfe0f0d.jpg"
+      "url": "http://127.0.0.1:9002/lqg/2026/09/28/f669bc083ee94bf6836e0e42479b7fcb.png",
+      "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/28/b1363864d4e6400787074e25ec8e5637.jpg"
      },
      {
-      "url": "http://127.0.0.1:9002/lqg/2026/09/27/6963aa9314fb4917a784bc8bbe4fc979.png",
-      "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/fe732bfc23e04e07afd950581fbe8dd3.jpg"
+      "url": "http://127.0.0.1:9002/lqg/2026/09/28/8265fee6727049f5afbc125ce99fce4c.png",
+      "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/28/abcdb688dfad454f89ea5e3d6ab19d42.jpg"
      }
     ],
     "thumb_click_expected": {
-     "original_url": "http://127.0.0.1:9002/lqg/2026/09/27/69a18cfecfcc4ac3ad3fa00d3c552035.png",
-     "preview_url": "http://127.0.0.1:9002/lqg/2026/09/27/88c33e264e6e4f13a1f538b4ebfe0f0d.jpg"
+     "original_url": "http://127.0.0.1:9002/lqg/2026/09/28/f669bc083ee94bf6836e0e42479b7fcb.png",
+     "preview_url": "http://127.0.0.1:9002/lqg/2026/09/28/b1363864d4e6400787074e25ec8e5637.jpg"
     },
     "thumb_click_opened_src": [
-     "http://127.0.0.1:9002/lqg/2026/09/27/69a18cfecfcc4ac3ad3fa00d3c552035.png",
-     "http://127.0.0.1:9002/lqg/2026/09/27/6963aa9314fb4917a784bc8bbe4fc979.png"
+     "http://127.0.0.1:9002/lqg/2026/09/28/f669bc083ee94bf6836e0e42479b7fcb.png",
+     "http://127.0.0.1:9002/lqg/2026/09/28/8265fee6727049f5afbc125ce99fce4c.png"
     ]
    },
    "assertions": [
@@ -383,17 +383,17 @@
     {
      "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
      "ok": true,
-     "detail": "[\"http://127.0.0.1:9002/lqg/2026/09/27/69a18cfecfcc4ac3ad3fa00d3c552035.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/6963aa9314fb4917a784bc8bbe4fc979.png\"]"
+     "detail": "[\"http://127.0.0.1:9002/lqg/2026/09/28/f669bc083ee94bf6836e0e42479b7fcb.png\",\"http://127.0.0.1:9002/lqg/2026/09/28/8265fee6727049f5afbc125ce99fce4c.png\"]"
     },
     {
      "name": "H3b:★ 打开层拿到的 src == 原图 url",
      "ok": true,
-     "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/69a18cfecfcc4ac3ad3fa00d3c552035.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/6963aa9314fb4917a784bc8bbe4fc979.png\"],\"want\":\"http://127.0.0.1:9002/lqg/2026/09/27/69a18cfecfcc4ac3ad3fa00d3c552035.png\"}"
+     "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/28/f669bc083ee94bf6836e0e42479b7fcb.png\",\"http://127.0.0.1:9002/lqg/2026/09/28/8265fee6727049f5afbc125ce99fce4c.png\"],\"want\":\"http://127.0.0.1:9002/lqg/2026/09/28/f669bc083ee94bf6836e0e42479b7fcb.png\"}"
     },
     {
      "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
      "ok": true,
-     "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/69a18cfecfcc4ac3ad3fa00d3c552035.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/6963aa9314fb4917a784bc8bbe4fc979.png\"],\"preview\":\"http://127.0.0.1:9002/lqg/2026/09/27/88c33e264e6e4f13a1f538b4ebfe0f0d.jpg\"}"
+     "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/28/f669bc083ee94bf6836e0e42479b7fcb.png\",\"http://127.0.0.1:9002/lqg/2026/09/28/8265fee6727049f5afbc125ce99fce4c.png\"],\"preview\":\"http://127.0.0.1:9002/lqg/2026/09/28/b1363864d4e6400787074e25ec8e5637.jpg\"}"
     }
    ]
   },
@@ -405,7 +405,7 @@
    "mutation": "删掉 PreviewPane.vue 里「下载合并 PDF」整个 el-button",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-27T14:22:44.192Z",
+   "checked_at": "2026-09-27T23:50:51.668Z",
    "observed": {
     "dom_download_buttons": [
      "下载 Word",
@@ -495,7 +495,7 @@
  "tree_after": "",
  "env": {},
  "previous_mutation_run": {
-  "generated_at": "2026-09-27T14:21:39.452591+00:00",
+  "generated_at": "2026-09-27T23:49:47.455023+00:00",
   "tree_after": "git diff -- code/ = [] sha=e3b0c44298fc（起点 e3b0c44298fc）; git stash list=空",
   "mutations": {
    "H1a": {
@@ -561,10 +561,10 @@
     "criterion_green_after_restore": true,
     "green_probe_exit": 0,
     "observed_when_mutated": {
-     "backend_signed_url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8e49c2ca26e3.docx?X-Amz-…",
+     "backend_signed_url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/e0ffbbb5b3fa.docx?X-Amz-…",
      "oss_request_headers": [
       {
-       "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8e49c2ca26e3.docx",
+       "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/e0ffbbb5b3fa.docx",
        "header_keys": [
         "sec-ch-ua-platform",
         "authorization",
@@ -580,7 +580,7 @@
      ],
      "oss_response": [
       {
-       "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8e49c2ca26e3.docx",
+       "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/e0ffbbb5b3fa.docx",
        "status": 400,
        "ct": "application/xml"
       }
@@ -748,21 +748,21 @@
     "observed_when_mutated": {
      "pages_api_images": [
       {
-       "url": "http://127.0.0.1:9002/lqg/2026/09/27/31e2a8b9aa5b46d1aad7ffc56e53ab1e.png",
-       "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/0c312583d2114d8c80e2304a5fac1b72.jpg"
+       "url": "http://127.0.0.1:9002/lqg/2026/09/28/2c2fa185e39b4d75b5d6f4f7aa544341.png",
+       "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/28/40b89b75889042cb8a8e8c62fd402d78.jpg"
       },
       {
-       "url": "http://127.0.0.1:9002/lqg/2026/09/27/bc6c7063bd2d43a18cc369c5b6198f45.png",
-       "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/03b66066d04d4f03b048c4dd1343cd70.jpg"
+       "url": "http://127.0.0.1:9002/lqg/2026/09/28/8e0f569eb7fe4bcb858a0f87b52c2908.png",
+       "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/28/b15722bb8b524c34a7dc286fd5737c1d.jpg"
       }
      ],
      "thumb_click_expected": {
-      "original_url": "http://127.0.0.1:9002/lqg/2026/09/27/31e2a8b9aa5b46d1aad7ffc56e53ab1e.png",
-      "preview_url": "http://127.0.0.1:9002/lqg/2026/09/27/0c312583d2114d8c80e2304a5fac1b72.jpg"
+      "original_url": "http://127.0.0.1:9002/lqg/2026/09/28/2c2fa185e39b4d75b5d6f4f7aa544341.png",
+      "preview_url": "http://127.0.0.1:9002/lqg/2026/09/28/40b89b75889042cb8a8e8c62fd402d78.jpg"
      },
      "thumb_click_opened_src": [
-      "http://127.0.0.1:9002/lqg/2026/09/27/0c312583d2114d8c80e2304a5fac1b72.jpg",
-      "http://127.0.0.1:9002/lqg/2026/09/27/03b66066d04d4f03b048c4dd1343cd70.jpg"
+      "http://127.0.0.1:9002/lqg/2026/09/28/40b89b75889042cb8a8e8c62fd402d78.jpg",
+      "http://127.0.0.1:9002/lqg/2026/09/28/b15722bb8b524c34a7dc286fd5737c1d.jpg"
      ]
     }
    },
