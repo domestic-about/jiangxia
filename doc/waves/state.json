@@ -3807,6 +3807,16 @@
       "detail": "复核：① SYS-MP-001 acc3 做的是**规格一致性**（tokens.scss 变量名集合与 doc/design-options/direction-a/tokens.scss 比集合相等）+ **源码级风格约束**（源码里不得出现色值字面量）——按处置原则 1，结构性断言保留；② AUTH-EXT-001 acc1 **真跑** `mvn -Dtest=ExtChokepointContractTest`，该测试有 4 个不变量（i1 入口只在 /mp/ext、i2 只返回 Ext* VO、i3 Ext VO 不带内部字段、i4 只有 ExtScopeServiceImpl 碰 Mapper），每个都带**反空转守卫**（assertFalse(ext.isEmpty(), \"…或这条测试在空集合上空转\")）。分类器缺陷：我用「grep≥2 且运行时动作≤1」判定，会误判「规格一致性」与「跑了测试但 grep 也多」两类。改成按「**声称的是行为还是结构**」判断后，真弱 = CRYO-MP-001 acc4、OCR-MP-001 acc2、QC-WEB-002 acc2、SYS-MP-001 acc1、SYS-WEB-001 acc2 共 **5 条**（其中第 2 条 AUTH-EXT-002 acc3 已完成改写并变异验证，见 #338）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 340,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "弱断言再收敛：SYS-MP-001 acc1 也不是弱断言（产物级 + 已变异验证）；真弱只剩 4 条「行为半句」",
+      "detail": "① SYS-MP-001 acc1 复核：页签名与顺序是用 `jq` 直接读 `dist/build/mp-weixin/app.json`（产物级）；mock 标记是扫产物。**变异验证**：往 src/pages/sample/form.vue 模板注入 `mock:extA 13800000011 api.aliyuncs.com` → `pnpm build:mp-weixin` 重建 → `grep -rqE \"mock:|1380000[0-9]{4}\" dist/build/mp-weixin` **命中（exit 0）→ 该断言必红**；`git checkout` 还原后重建 → 干净（exit 1）。② OCR-MP-001 acc2 的第三方域名/密钥扫描同样经此变异验证（注入的 `api.aliyuncs.com` 出现在产物 `pages/sample/form.wxml` 里 → 扫描必红）。③ 结论：真弱只剩 4 条，且都只是「行为那半句」——OCR acc2「识别条只在新增时出现」、CRYO acc4「批次详情弹层带修改入口」、QC-WEB-002 acc2「两个页签可切换」、SYS-WEB-001 acc2「token/i18n 真的生效（需 computed-style）」。④ 分类器三次假阳性（1/6/7）说明：「grep 多不多」不是判据，「**声称的是行为还是结构**」才是。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
