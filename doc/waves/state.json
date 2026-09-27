@@ -3727,6 +3727,26 @@
       "detail": "起因：弱断言清单第 8 条（SYS-WEB-001 acc2）用 grep 源码证明「设计 token 与按域 i18n 生效」。我改成扫构建产物并写进票面，随后做变异验证 —— **两条都没抓住**：① `grep -rqi 0e7c7b dist/assets/*.css`：摘掉 src/assets/styles/index.scss 的 @use lqg-tokens 后重建，色值仍在产物 CSS 里（settings.ts 等别处也带）→ 照样绿；② `grep -rq 类器官 dist/assets/*.js`：把 src/lang/lqg 整个移走后重建，产物里仍有 5 个 JS 命中该词（标题/文案/设置里到处都有）→ 照样绿。结论：**「字符串在产物里」既不能证明「主题应用了该 token」，也不能证明「按域 i18n 生效」**。真正的强化只有两条路：a) computed-style DOM 探针（读 document.documentElement 的 --el-color-primary 是否已不是上游蓝；渲染一条 lqg 域专有文案）；b) 断言产物里出现**只在 lqg 域出现**的字符串（例如某条 lqg 专属文案或带域前缀的 key），而不是到处都有的通用词。已把票面还原（不留假强度，commit 135ac7b）。教训：**加断言之前先做变异**，否则会把「看起来更强」当成「真的更强」。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 332,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "V24 活体验收通过：外部预览给原图与附件（附件的过滤行为已判定为合理）",
+      "detail": "背景：seed 的图片/附件全指向 https://seed.invalid（取不到字节），按 V23 的新语义外部版会判 failed → 外部预览拿不到东西，此前无法演示 V24。本批造了真夹具（截图与 PDF 用 /resource/oss/upload 真上传，拿到真 oss_id，再把 1001/sample_qc 的图片行与附件行指过去），逐条实测：① 真图后 internal 与 external 渲染都是 **done / missing=0**（反证此前的 failed 是假图导致，与 V23 一致）；② extB 取 /mp/ext/doc/9000001001/sample_qc/pages → **images 3 个**，每个都带 **url 与 previewUrl 两个字段**（此前 VO 里根本没有 images）；③ 附件：种子里那个指向 seed.invalid 的附件被**过滤掉**（外部 0 个 / 内部 1 个），换成真对象后 **外部 1 个**（内部 2 个）→ 结论：外部预览**确实给附件**，把「取不到字节的对象」滤掉是合理行为，不是缺陷；④ 响应里内部字段（internalNo/verifyBy/publishBy）命中 **0**。⑤ 「原图 ≠ 预览图」这条不在此处重复验：它由 D7 已挂**变异验证**的 SYS-ACCEPT-001 H3b 探针覆盖（真 DOM 点缩略图 → 打开层 src == 原图 url 且 ≠ previewUrl）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 333,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "第 8 批活体验收：V24 / V28 / V29 / V30 / V33 通过（累计 26 项）；顺带抓掉我自己一个「空对照假绿」",
+      "detail": "① V24：见 #332。② V28/V33：测试级证据（全绿）——MpSamplePatchContractTest 7 用例、EmbedPatchSemanticsTest 3、CryoBatchPatchSemanticsTest 3、StaffGrantRulesContractTest 6；V33 的标注落在 MpEmbedContractTest / EmbedPatchSemanticsTest / CryoBatchPatchSemanticsTest / MpCryoContractTest / CryoFlowConcurrencyTest 等（随 454 用例全绿）。③ V29/V30：新写工作台真 DOM 探针 doc/waves/regression/V-round/v29-v30-workbench.mjs —— V29 首页点「渲染失败」卡片 → **抽屉出现且 URL 不变**、内容是「渲染失败与缺图清单 … 现在没有渲染失败或缺图的文档」（此前直达开发调试页）；V30 在正确路由 /qc-console/doc-console 上：**样本 id 输入框为空**、页面既不出现 9000001001 也不出现 T-hli01/SJ90000001。★ 过程中我先犯了一个「空对照假绿」：一开始访问 /doc-console 得到的是 404 页，而「页面里没有样本 id/票号」在 404 页上**天然成立** → 两条否定断言假绿。已改成**先判 404 再断言**（脚本里 step 1：页面必须能打开），并试出真实路由是父菜单下的 /qc-console/doc-console。教训与 #322 同源：否定型断言必须先证明「被测对象真的在」。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
