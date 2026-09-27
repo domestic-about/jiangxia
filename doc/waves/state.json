@@ -3717,6 +3717,16 @@
       "detail": "① 新增「证据不得原地覆盖」：gate-audit.py 写正式审计前先看目标是否存在，存在则**拒绝写入**并改写 draft（auditor=draft-not-for-merge，qa merge 不收），提示用 --round N+1 重跑。受控验证：同参数连跑两次，第 1 次写 doc/waves/qa/TESTX-r99-L01.json（auditor=independent），第 2 次打印 [refuse]「目标正式审计已存在…按证据不得原地覆盖拒绝写入」并只落 draft，正式文件 mtime 未变；测试文件已清。② 新增「门须查台账」：写正式审计前读 state.json，若本任务的票里还有 severity∈(S0,S1) 且 status=open 且 type≠escalated 的条目 → 拒绝写正式审计（escalated 是 owner 已批准的挂起，不算未决缺陷）。受控验证：临时插入一条 AUTH-LOGIN-001 的 S1 后跑 D1 gate-audit → [refuse]「本任务台账里还有未决 S0/S1（evaluated=1）：#330 …」，随后从备份还原台账（git diff 为空）。历史教训对号：D2 曾在 #96/#105 open 时标 qa_passed、D7 曾在 #279/#291 open 时合并。③ 经查已是修好的三条：环境类失败记成 pass（gate-audit 现在 fail > blocked > pass，且 blocked 不写正式审计，见文件头 2026-09-23 注）；known-red 改按段（格式 TICKET|accN@段号|#issue|理由，旧格式 exit 2，只豁免登记段、后续段照样要绿；D5 的 3 行已全部迁到新格式）；「豁免按整条 accept 生效」的洞随之关闭。④ 仍待做：隔离副本验收工具化。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 331,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "★ 实证：弱断言的「改成扫构建产物」是伪强化 —— 必须用 computed-style 的 DOM 探针（我自己先踩了一次）",
+      "detail": "起因：弱断言清单第 8 条（SYS-WEB-001 acc2）用 grep 源码证明「设计 token 与按域 i18n 生效」。我改成扫构建产物并写进票面，随后做变异验证 —— **两条都没抓住**：① `grep -rqi 0e7c7b dist/assets/*.css`：摘掉 src/assets/styles/index.scss 的 @use lqg-tokens 后重建，色值仍在产物 CSS 里（settings.ts 等别处也带）→ 照样绿；② `grep -rq 类器官 dist/assets/*.js`：把 src/lang/lqg 整个移走后重建，产物里仍有 5 个 JS 命中该词（标题/文案/设置里到处都有）→ 照样绿。结论：**「字符串在产物里」既不能证明「主题应用了该 token」，也不能证明「按域 i18n 生效」**。真正的强化只有两条路：a) computed-style DOM 探针（读 document.documentElement 的 --el-color-primary 是否已不是上游蓝；渲染一条 lqg 域专有文案）；b) 断言产物里出现**只在 lqg 域出现**的字符串（例如某条 lqg 专属文案或带域前缀的 key），而不是到处都有的通用词。已把票面还原（不留假强度，commit 135ac7b）。教训：**加断言之前先做变异**，否则会把「看起来更强」当成「真的更强」。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
