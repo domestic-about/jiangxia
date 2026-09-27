@@ -3687,6 +3687,26 @@
       "detail": "结果：D1 15/17、D2 18/18、D3 18/18、D4 17/17、D5 4/6、D6 15/15、D7 13/16 = 100/107。逐条定性：① AUTH-LOGIN-001 acc3 与 AUTH-STAFF-001 acc2 → 硬编码读 doc/verify/verify.env（LQG_API_BASE=127.0.0.1:8081 且无人监听），不认 $LQG_VERIFY_ENV_FILE → 已改（见 #326）；② SYS-STAGING-001 acc1/acc2 → 公网测试环境 502（我为 V08 安全止血停掉了 lqg-test 栈）→ **环境受限，非产品缺陷**，重新部署后自解，本目标不含部署；③ SYS-ACCEPT-001 acc1/acc2 与 SYS-EXPORT-001 acc2 → doc/waves/regression/D7/accept-strengthened/common.mjs 把 OSS 基址缺省写死 127.0.0.1:9000（dongjiaoshan 的桶），而本项目是 9002；探针 H1b 判「签名 URL 不指向 9000」失败并连带 3 条子探针失败（产品签发的其实是正确的 9002 链接）→ 已改成从应用自己的配置取（env > 库里 sys_oss_config.endpoint > 9002）。★ 另：D1–D6 重放里没有任何产品缺陷级红。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 328,
+      "ticket": "",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ 基线级缺陷：accept 不幂等（首跑绿、再跑必红）—— 根因是 reseed 不清 api.sh 的 token 缓存 + 不清雪花 id 的验收用户",
+      "detail": "现象：AUTH-LOGIN-001 acc2「首次登录自动建外部账号」在全量重放里首跑绿，单独重跑必红（/mp/me 回 200 但 .data.ext=null）。逐层定位：① 库里的 sys_user 有雪花 id 行（2104192149225459714 / user_name=wx_13800000099），而 reseed 只清种子段 9000000000-9000009999 → 用户存活而 t_lqg_ext_profile 被 TRUNCATE → 下次登录走「已存在」分支不再补建 profile；② 更直接的一层：api.sh 把 token 缓存在 ${TMPDIR}/lqg-verify-token-*（20 分钟内复用），reseed 删掉旧用户后缓存仍在 → reseed 之后的第一次 --as 调用带的是**已失效身份的 token**（issue #286 的老坑，此前靠个别 accept 自己 rm 兜底）。修法：a）reseed 清「wx_ 开头且不在种子段」的用户（种子用户含 wx_13800000012 落在种子段内，不受影响）；b）reseed 顺手 rm -f ${TMPDIR}/lqg-verify-token-*。验证：连跑两次 AUTH-LOGIN-001 均 **3/3**。价值：CI 上「第二次跑就红」会让门失去意义——这是新基线必须解决的问题。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 329,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "★ 新验收基线建立：D1–D7 共 107 条 accept，105 绿 / 2 条环境受限 / 0 条产品缺陷红（revision dc133c1）",
+      "detail": "逐字重放（不加 known-red 豁免）：D1 17/17、D2 18/18、D3 18/18、D4 17/17、D5 4/6、D6 15/15、D7 16/16。D5 的 2 条红全是 SYS-STAGING-001（公网测试环境 502，我为 V08 安全止血停掉了 lqg-test 栈）→ 环境受限，重新部署后自解。D8 的 7 条需真生产，按 d8-blockers.json 挂起。报告：doc/handover/新基线报告-20260927.md。另附 d8 之外的三件剩余工作：8 条弱断言改写（见 V轮弱断言清单）、门禁四条修复（环境类判红已修；剩下证据不许原地覆盖 / 门须查未决 S0/S1 / known-red 按段豁免）、隔离副本验收工具化。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
