@@ -3647,6 +3647,26 @@
       "detail": "① V13+V15（一条命令同时验）：java -jar ruoyi-admin.jar --spring.profiles.active=prod --server.port=8099 → 进程**自行退出**，日志「启动护栏：拒绝启动（profile=[prod]）」，逐条点名「sa-token.jwt-secret-key 没有配置：生产从环境变量 LQG_JWT_SECRET 注入（无缺省值）」「mybatis-encryptor.password（字段加密口令）没有配置：…LQG_ENCRYPT_PASSWORD」，栈顶 StartupSafetyGuard.postProcessEnvironment:98。② V16：不带 profile 启动 → 同样拒绝，理由「没有声明 spring.profiles.active。jar 里不再带缺省 profile（V16）…不许把「没配」当成开发环境」→ 不再默认 dev、mock 登录也不会起来。③ V07：见第 4 批（正反例判别 + exit=3）。累计活体验收通过：V01/V02/V03/V04/V05/V07/V13/V15/V16/V20/V21（11 条）+ H05 私有桶 + H01 仓库卫生。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 324,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "第 6 批活体验收：V17 存在性预言机、V19 日志脱敏、V11 模板批注、V14 RSA 护栏 —— 全通过（累计 17 项）",
+      "detail": "① V17（#299）：extC 打他人工单 9000002001 → {\"code\":404,\"msg\":\"石蜡包埋记录不存在\"}；打不存在 id → **完全相同**的 404 与同一文案；extC 拿他人样本 1001 → {\"code\":404,\"msg\":\"样本不存在\"}，与不存在样本一致；而本人/同组路径另给业务提示（400「只能修改重提本人提交的送样」）→ 不是无差别 404 掩盖，判别成立。② V19：以 extA 提交 donorName=日志脱敏验收张三 / hospitalNo=H-LOG-TEST-999，后端日志里请求体为 参数:[{\"sourceUnitName\":\"A 医院\",\"donorName\":\"******\",...,\"hospitalNo\":\"******\",...}] —— **其他字段可读、两个敏感字段被打码**，说明请求体确实入日志而脱敏生效。③ V11：三份在库模板 organoid_score/organoid_qc/sample_qc.docx 解压后 `w:highlight` 命中均为 **0**（绿色批注已清）。④ V14：只给 LQG_JWT_SECRET 与 LQG_ENCRYPT_PASSWORD、不给 RSA → prod 启动被拒，点名「api-decrypt.publicKey / privateKey 没有配置：生产从环境变量注入」；顺带命中「mybatis-encryptor.password 长度 30 不合法：必须是 16/24/32」（V15 的长度校验也活了）。StartupSafetyGuard 里有 RSA_MIN_BITS=2048。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 325,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "第 7 批：V10 解析器、V12 微信产物、V23 缺图语义、V31 -DskipTests 全通过；全模块 454 用例绿（新基线用例数）",
+      "detail": "① V10：OcrFieldParserLabelComboTest **18 用例全过**（含 #203 那条：姓名:张三 床号:12 → donorName=张三、床号不产字段）+ OcrFieldParserFixtureTest 7 用例全过。② V12：产物 code/miniapp/dist/build/mp-weixin（309 文件）里 `/Users/` 绝对路径命中 **0**、wd-toast/wd-message-box 命中 **0**。③ V23（CR-20260923-09 口径的落地）：1001 样本质控表 —— external:docx **failed / missing_image_count=3**（extB 取 pages → 404「文档不存在」，取图失败不再外发）；internal:docx **done / missing=3**（内部 pages → done、2 页、images 3、missing 3）；首页 /lqg/home/todo 的 renderFailed=4（失败计入）。④ V31：mvn -pl ruoyi-modules/ruoyi-lqg test -DskipTests → maven 打印「Tests are skipped.」+ BUILD SUCCESS。★ 新基线用例数：mvn -pl ruoyi-modules/ruoyi-lqg -am test → **Tests run: 454, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS**（D7 时 274，修复轮加约 180）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
