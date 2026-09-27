@@ -3637,6 +3637,16 @@
       "detail": "实例：① V07 我只在 code/miniapp/scripts/ 找校验脚本，实际守卫在 scripts/upload-mp.mjs 里（同一个文件）；② V27 我只 grep pages/me/*.vue，实际 ledger 页在 pages/ledger/index.vue、公共逻辑在 utils/paging.ts；③ V18 我只读基座 application.yml 的 include: *，漏了 application-prod.yml 的显式覆盖。共性：**把「我没找到」当成「不存在」**，且样本范围由我手挑（有确认偏误）。危害：分诊表是后续修复与验收的工作清单，假阴性会让人重做已完成的事、也会让「已修」的结论失去可信度。纠正规则（从本批起执行）：a) 判断某项是否已修，必须以「生效配置 / 运行时行为」为准，而不是基座文件或单个目录；b) 先跑 `FIX V0x` 标注枚举（代码里带标注）再下结论；c) 静态结论一律标「待活体验证」，不写成「真缺」；d) 每次报「已修/未修」都要附一条**能证伪它的命令**。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 323,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "第 5 批活体验收：V13/V15/V16 启动护栏、V07 发布守卫 —— 全通过（累计已活体验收 11 条）",
+      "detail": "① V13+V15（一条命令同时验）：java -jar ruoyi-admin.jar --spring.profiles.active=prod --server.port=8099 → 进程**自行退出**，日志「启动护栏：拒绝启动（profile=[prod]）」，逐条点名「sa-token.jwt-secret-key 没有配置：生产从环境变量 LQG_JWT_SECRET 注入（无缺省值）」「mybatis-encryptor.password（字段加密口令）没有配置：…LQG_ENCRYPT_PASSWORD」，栈顶 StartupSafetyGuard.postProcessEnvironment:98。② V16：不带 profile 启动 → 同样拒绝，理由「没有声明 spring.profiles.active。jar 里不再带缺省 profile（V16）…不许把「没配」当成开发环境」→ 不再默认 dev、mock 登录也不会起来。③ V07：见第 4 批（正反例判别 + exit=3）。累计活体验收通过：V01/V02/V03/V04/V05/V07/V13/V15/V16/V20/V21（11 条）+ H05 私有桶 + H01 仓库卫生。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
