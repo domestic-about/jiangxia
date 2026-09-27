@@ -3847,6 +3847,16 @@
       "detail": "D1 17/17、D2 18/18、D3 18/18、D4 17/17、D5 4/6、D6 15/15、D7 16/16 = 105/107，与首版基线逐项一致。D5 那 2 条仍是 SYS-STAGING-001（公网测试环境 502，V08 安全止血所致，环境受限）。结论：5 条弱断言的改写只提升了判据强度，没有改变通过/不通过的门槛。报告见 doc/handover/新基线报告-20260927.md §6。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 344,
+      "ticket": "",
+      "severity": "S3",
+      "type": "doc-drift",
+      "title": "口径单第 5 条结案：外部预览的 UI 锚与实现已一致（无需改权威、无需补 CR）",
+      "detail": "核实方法：`python3 doc/authority/authority_lint.py show UI:mp.doc.preview` 取锚原文，逐条对实现与证据：① 顶部切换条三份+合并 → 实现 TABS + SYS-ACCEPT-001 的 H3a 变异验证；② 逐页页面图片 → pages 接口 pages[]（V24 实测 2 页）；③ **中部缩略图条点开看原图** → images[]{url,previewUrl}，H3b 观测文件里原图 .png 与预览图 .jpg **不同**、打开层 src == 原图 url 且 ≠ previewUrl；④ 下部附件列表 → attachments[]（V24：真对象时外部拿到 1 个，假对象被合理过滤）；⑤ 底部操作栏 打开/发送到微信 → fileHandoff 的 showMenu/shareFileMessage；⑥ 失败文案不暴露内部错误 → D7 L3 同类检查。结论：独立验收报告说的「违背 UI 锚」是 **CR-20260923-09 之前**的状态；CR-09 已把原图与附件补回，锚与实现现已一致 → **不改权威、不补 CR**。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
