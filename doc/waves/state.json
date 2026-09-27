@@ -3797,6 +3797,16 @@
       "detail": "改写：原 run 里 7 段是源码 grep（`grep -q embedBy EmbedCard.vue`、`! grep -nE verifyBy|cryo detail-ext.vue`…），只证明「字段名在/不在源码里」，既不能证明渲染出来、也不能证明没渲染。现在 acc3 = 「小程序产物存在」+ 调 `doc/waves/regression/V-round/auth-ext-002-detail-dom.mjs`（13 项）。探针内容：① 接口层：extA 取 /mp/ext/sample/9000001001，响应里不得出现 verifyBy/verifyTime/internalNo/cryo/cryoBatches；embeds 必须给 embedBy 与 operatorName（CR-20260918-07）；② 渲染层：外部身份登录 H5 → 真打开 /#/pages/sample/detail-ext?id=9000001001 → 页面真的打开、包埋卡片在场（石蜡包埋情况 T-E01-1 已切片）、操作人/包埋人对可见、**「冻存」「核验人」全页不出现**。★ 变异验证（我实际做的）：在 detail-ext.vue 模板首行插入 `<view>冻存情况（变异测试）</view>` → HMR 后该断言**立刻变红**（实测 FAIL 1 条）；git checkout 还原后复绿。端到端：`accept-run.py --ticket AUTH-EXT-002` → **3/3 通过**（acc3 13.6s）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 339,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "弱断言清单分类更正：第 1、7 条不是弱断言（我的分类器假阳性），真弱从 8 条收敛到 5 条",
+      "detail": "复核：① SYS-MP-001 acc3 做的是**规格一致性**（tokens.scss 变量名集合与 doc/design-options/direction-a/tokens.scss 比集合相等）+ **源码级风格约束**（源码里不得出现色值字面量）——按处置原则 1，结构性断言保留；② AUTH-EXT-001 acc1 **真跑** `mvn -Dtest=ExtChokepointContractTest`，该测试有 4 个不变量（i1 入口只在 /mp/ext、i2 只返回 Ext* VO、i3 Ext VO 不带内部字段、i4 只有 ExtScopeServiceImpl 碰 Mapper），每个都带**反空转守卫**（assertFalse(ext.isEmpty(), \"…或这条测试在空集合上空转\")）。分类器缺陷：我用「grep≥2 且运行时动作≤1」判定，会误判「规格一致性」与「跑了测试但 grep 也多」两类。改成按「**声称的是行为还是结构**」判断后，真弱 = CRYO-MP-001 acc4、OCR-MP-001 acc2、QC-WEB-002 acc2、SYS-MP-001 acc1、SYS-WEB-001 acc2 共 **5 条**（其中第 2 条 AUTH-EXT-002 acc3 已完成改写并变异验证，见 #338）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
