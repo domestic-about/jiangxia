@@ -23,8 +23,26 @@ if (!fs.existsSync(path.join(ROOT, 'code/miniapp/src/pages.json'))) {
 export const OBS = path.join(OUT, 'observations')
 export const WEB = `http://127.0.0.1:${process.env.LQG_ACCEPT_WEB_PORT || 8093}`
 export const MP = `http://127.0.0.1:${process.env.LQG_ACCEPT_MP_PORT || 9204}`
-// OSS 直链前缀：sys_oss_config 指向哪台 MinIO 就是哪台（2026-09-23 起 dev 库改指 jiangxia 自己的 MinIO）
-export const OSS = (process.env.LQG_ACCEPT_OSS_BASE || 'http://127.0.0.1:9000').replace(/\/?$/, '/')
+// OSS 直链前缀：**从应用自己的配置取**，不再硬编码端口。
+//   ★ 2026-09-27 修（基线维护）：这里原缺省是 127.0.0.1:9000 —— 那是 dongjiaoshan 的 dev MinIO；
+//     本项目 2026-09-23 起 dev 库的 sys_oss_config 已改指自己的 MinIO（宿主机 9002），注释改了、
+//     缺省值没改，于是 H1b/H4 一族探针判「签名 URL 不指向 9000」→ SYS-ACCEPT-001 acc1/acc2 与
+//     SYS-EXPORT-001 acc2 必红（产品侧其实签发的是正确的 9002 链接）。
+//   取法优先级：环境变量 LQG_ACCEPT_OSS_BASE > 库里生效行 sys_oss_config.endpoint > 本项目 dev 缺省。
+import { execFileSync } from 'node:child_process'
+function ossBaseFromApp() {
+  if (process.env.LQG_ACCEPT_OSS_BASE) return process.env.LQG_ACCEPT_OSS_BASE
+  try {
+    const out = execFileSync('python3', ['doc/verify/db.py', '--sql',
+      "SELECT 'http://'||endpoint FROM sys_oss_config WHERE status='0' ORDER BY oss_config_id LIMIT 1"],
+    { cwd: ROOT, encoding: 'utf8', env: process.env, stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    const last = out.split('\n').pop().trim()
+    if (/^https?:\/\//.test(last)) return last
+  }
+  catch { /* 库不可达时落回缺省，探针自身会报出来 */ }
+  return 'http://127.0.0.1:9002'
+}
+export const OSS = ossBaseFromApp().replace(/\/?$/, '/')
 
 export function playwright() {
   const require = createRequire(`${ROOT}/code/miniapp/package.json`)

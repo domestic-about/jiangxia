@@ -3667,6 +3667,16 @@
       "detail": "① V10：OcrFieldParserLabelComboTest **18 用例全过**（含 #203 那条：姓名:张三 床号:12 → donorName=张三、床号不产字段）+ OcrFieldParserFixtureTest 7 用例全过。② V12：产物 code/miniapp/dist/build/mp-weixin（309 文件）里 `/Users/` 绝对路径命中 **0**、wd-toast/wd-message-box 命中 **0**。③ V23（CR-20260923-09 口径的落地）：1001 样本质控表 —— external:docx **failed / missing_image_count=3**（extB 取 pages → 404「文档不存在」，取图失败不再外发）；internal:docx **done / missing=3**（内部 pages → done、2 页、images 3、missing 3）；首页 /lqg/home/todo 的 renderFailed=4（失败计入）。④ V31：mvn -pl ruoyi-modules/ruoyi-lqg test -DskipTests → maven 打印「Tests are skipped.」+ BUILD SUCCESS。★ 新基线用例数：mvn -pl ruoyi-modules/ruoyi-lqg -am test → **Tests run: 454, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS**（D7 时 274，修复轮加约 180）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 326,
+      "ticket": "",
+      "severity": "S2",
+      "type": "harness",
+      "title": "★ 两条 D1 accept 必红的根因：AUTH-LOGIN-001 acc3 / AUTH-STAFF-001 acc2 硬编码读 doc/verify/verify.env（指向已停的 8081），不认 LQG_VERIFY_ENV_FILE",
+      "detail": "全量重放第 1 批结果：D1 15/17（2 红）、D2 18/18。两条红的根因同一个、且与产品无关：doc/verify/verify.env 里 LQG_API_BASE=http://127.0.0.1:8081（8081 无人监听；本项目验收环境在 8091），而这两条 accept 用 sed 直接读该文件取 LQG_API_BASE / LQG_CLIENT_PC，**不认 $LQG_VERIFY_ENV_FILE**——于是 curl 打空端口 → jq 拿到空输入 → 断言不成立。证据：AUTH-LOGIN-001 acc3 日志只有 MockLoginGuard 的 WARN（mvn 那步过了、cmp 夹具逐字节相同也过了），失败在 mock 登录拒绝那一段；AUTH-STAFF-001 acc2 日志 4 行、极早退出（exit 4）。对照：全仓另有 9 处 accept 正确使用 ${LQG_VERIFY_ENV_FILE}。方案 a（推荐）：这两处改成 ${LQG_VERIFY_ENV_FILE:-doc/verify/verify.env} 取 LQG_API_BASE / LQG_CLIENT_PC（与 api.sh、db.py 同口径）；b）让 qa-up 把 doc/verify/verify.env 指向当前后端端口（会污染共享文件，不做）。★ 这正是独立验收报告点出的「老断言前提过期」类，属基线维护，改票面须留痕。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

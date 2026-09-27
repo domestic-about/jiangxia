@@ -62,7 +62,7 @@ accept:
       (cd code/RuoYi-Vue-Plus && mvn -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest=MockLoginGuardContractTest -Dsurefire.failIfNoSpecifiedTests=true) &&
       ! grep -rn 'mock-login' code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/application-prod.yml &&
       grep -rn 'MockLoginGuard.check' code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java | grep -v '/guard/MockLoginGuard.java' | grep -q . &&
-      test "$(curl -s -X POST "$(sed -n 's/^LQG_API_BASE=//p' doc/verify/verify.env)/auth/login" -H 'Content-Type: application/json' -d '{"grantType":"xcx","tenantId":"000000","xcxCode":"mock:extA","phoneCode":"mock:13800000011"}' | jq -r '.data.access_token // "rejected"')" = "rejected" &&
+      test "$(curl -s -X POST "$(sed -n 's/^LQG_API_BASE=//p' "${LQG_VERIFY_ENV_FILE:-doc/verify/verify.env}")/auth/login" -H 'Content-Type: application/json' -d '{"grantType":"xcx","tenantId":"000000","xcxCode":"mock:extA","phoneCode":"mock:13800000011"}' | jq -r '.data.access_token // "rejected"')" = "rejected" &&
       ! env -u SPRING_PROFILES_ACTIVE LQG_DB_PORT=1 LQG_REDIS_PORT=1 java -jar code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar --server.port=0 >/tmp/lqg-noprofile.log 2>&1 &&
       grep -q '没有声明 spring.profiles.active' /tmp/lqg-noprofile.log
     counterfeit: |-

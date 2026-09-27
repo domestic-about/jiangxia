@@ -62,7 +62,7 @@ accept:
     form: API
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
-      PC="$(sed -n 's/^LQG_CLIENT_PC=//p' doc/verify/verify.env)" && BASE="$(sed -n 's/^LQG_API_BASE=//p' doc/verify/verify.env)" &&
+      ENVF="${LQG_VERIFY_ENV_FILE:-doc/verify/verify.env}" && PC="$(sed -n 's/^LQG_CLIENT_PC=//p' "$ENVF")" && BASE="$(sed -n 's/^LQG_API_BASE=//p' "$ENVF")" &&
       login() { curl -s -X POST "${BASE}/auth/login" -H 'Content-Type: application/json' -H "clientid: ${PC}" -d "$(jq -nc --arg c "${PC}" --arg u "$1" '{clientId:$c,grantType:"password",tenantId:"000000",username:$u,password:"admin123"}')"; } &&
       login lqg_13800000001 | jq -e '.code==200 and (.data.access_token|length>10)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM sys_user WHERE user_name='wx_13800000012' AND length(password) = 60" --eq 1 &&

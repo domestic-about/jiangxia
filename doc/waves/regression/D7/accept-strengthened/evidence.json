@@ -1,6 +1,6 @@
 {
  "ticket": "SYS-ACCEPT-001",
- "generated_at": "2026-09-23T00:12:19.513362+00:00",
+ "generated_at": "2026-09-27T12:59:34.210957+00:00",
  "mode": "verify-only",
  "scope": [
   "H1a",
@@ -12,7 +12,7 @@
  ],
  "all_six_present": true,
  "missing": [],
- "tree_green": true,
+ "tree_green": false,
  "hotspots": {
   "H1a": {
    "ticket": "SYS-EXPORT-001",
@@ -22,7 +22,7 @@
    "mutation": "去掉 src/pages/ledger/index.vue 里 downloadToTemp 的 `header: authHeader(), requireAuth: true`",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-23T00:11:40.690Z",
+   "checked_at": "2026-09-27T12:58:56.520Z",
    "observed": {
     "export_url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
     "export_request_headers": {
@@ -36,7 +36,7 @@
     },
     "export_response": {
      "status": 200,
-     "bytes": 4116,
+     "bytes": 4118,
      "magic": "PK"
     }
    },
@@ -69,7 +69,7 @@
     {
      "name": "H1a:★ 响应体是真 xlsx（ZIP 魔数 PK + 有字节数）",
      "ok": true,
-     "detail": "{\"magic\":\"PK\",\"bytes\":4116}"
+     "detail": "{\"magic\":\"PK\",\"bytes\":4118}"
     },
     {
      "name": "H1a:地址带上筛选项 verifyStatus=pending（筛了什么导出什么）",
@@ -85,31 +85,12 @@
    "old_criterion": "同上一条 grep（调用点与目标 URL 零覆盖；这正是 D7 r1 S1 的盲区）",
    "mutation": "给 src/components/lqg/DownloadBar.vue 的 downloadToTemp 传回 authHeader()",
    "behavioral": true,
-   "result": "green",
-   "checked_at": "2026-09-23T00:11:57.772Z",
+   "result": "red",
+   "checked_at": "2026-09-27T12:59:13.554Z",
    "observed": {
-    "backend_signed_url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/3c47e68cc5fc.docx?X-Amz-…",
-    "oss_request_headers": [
-     {
-      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/3c47e68cc5fc.docx",
-      "header_keys": [
-       "sec-ch-ua-platform",
-       "referer",
-       "user-agent",
-       "sec-ch-ua",
-       "sec-ch-ua-mobile"
-      ],
-      "authorization": "(无)",
-      "clientid": "(无)"
-     }
-    ],
-    "oss_response": [
-     {
-      "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/3c47e68cc5fc.docx",
-      "status": 200,
-      "ct": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-     }
-    ],
+    "backend_signed_url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/dd8e87d0e034.docx?X-Amz-…",
+    "oss_request_headers": [],
+    "oss_response": [],
     "clientid_on_oss_request_count": 0
    },
    "assertions": [
@@ -130,23 +111,23 @@
     },
     {
      "name": "H1b:后端签发 OSS 预签名直链（code=200 + url 指向 127.0.0.1:9000）",
-     "ok": true,
-     "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/3c47e68cc5fc.docx?X-Amz-Algorithm=AWS4-HMAC-\"}"
+     "ok": false,
+     "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/dd8e87d0e034.docx?X-Amz-Algorithm=AWS4-HMAC-SH\"}"
     },
     {
      "name": "H1b:★ OSS 直链请求真的发出（真点一次单份下载）",
-     "ok": true,
-     "detail": "[\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/3c47e68cc5fc.docx\"]"
+     "ok": false,
+     "detail": "[]"
     },
     {
      "name": "H1b:★ OSS 直链请求头**没有 Authorization**（API 鉴权头不能塞到预签名直链上）",
-     "ok": true,
-     "detail": "{\"n\":1,\"authHeaders\":[]}"
+     "ok": false,
+     "detail": "{\"n\":0,\"authHeaders\":[]}"
     },
     {
      "name": "H1b:★ OSS 响应码 = 200（MinIO 没判「multiple authentication types」）",
-     "ok": true,
-     "detail": "[{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/3c47e68cc5fc.docx\",\"status\":200,\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
+     "ok": false,
+     "detail": "[]"
     },
     {
      "name": "H1b:页面没有进失败态（.db__hint 里没有「暂时下不了」）",
@@ -163,13 +144,15 @@
    "mutation": "把卡片 :value=\"todo.pendingSamples\" → 写死 7、:value=\"todo.pendingEmbeds\" → 写死 9（真值 2 / 1）",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-23T00:12:02.752Z",
+   "checked_at": "2026-09-27T12:59:18.158Z",
    "observed": {
     "api_get_lqg_home_todo": {
      "url": "http://127.0.0.1:8093/dev-api/lqg/home/todo",
      "status": 200,
      "data": {
       "pendingSamples": 2,
+      "pendingTissue": 2,
+      "pendingOrganoid": 0,
       "pendingEmbeds": 1,
       "cryoOverdue": 2,
       "pendingExtUsers": 2,
@@ -178,8 +161,12 @@
     },
     "dom_cards": [
      {
-      "title": "待核验样本",
+      "title": "待核验样本记录",
       "value": "2"
+     },
+     {
+      "title": "待核验类器官收样",
+      "value": "0"
      },
      {
       "title": "待核验石蜡包埋送样",
@@ -194,16 +181,22 @@
       "value": "2"
      },
      {
-      "title": "文档渲染失败",
+      "title": "文档渲染失败 / 缺图",
       "value": "0"
      }
     ],
     "dom_vs_api": [
      {
-      "card": "样本",
-      "field": "pendingSamples",
+      "card": "样本记录",
+      "field": "pendingTissue",
       "api_value": "2",
       "dom_value": "2"
+     },
+     {
+      "card": "类器官收样",
+      "field": "pendingOrganoid",
+      "api_value": "0",
+      "dom_value": "0"
      },
      {
       "card": "石蜡",
@@ -238,19 +231,24 @@
      "detail": "http://127.0.0.1:8093/index"
     },
     {
-     "name": "H2:真 DOM 渲染出五张待办卡片",
+     "name": "H2:真 DOM 渲染出六张待办卡片",
      "ok": true,
-     "detail": "[\"待核验样本\",\"待核验石蜡包埋送样\",\"-80 超期批次\",\"待核验外部用户\",\"文档渲染失败\"]"
+     "detail": "[\"待核验样本记录\",\"待核验类器官收样\",\"待核验石蜡包埋送样\",\"-80 超期批次\",\"待核验外部用户\",\"文档渲染失败 / 缺图\"]"
     },
     {
      "name": "H2:抓到同一次 /lqg/home/todo 的响应（判据的另一侧是真接口返回值）",
      "ok": true,
-     "detail": "{\"n\":1,\"data\":{\"pendingSamples\":2,\"pendingEmbeds\":1,\"cryoOverdue\":2,\"pendingExtUsers\":2,\"renderFailed\":0}}"
+     "detail": "{\"n\":1,\"data\":{\"pendingSamples\":2,\"pendingTissue\":2,\"pendingOrganoid\":0,\"pendingEmbeds\":1,\"cryoOverdue\":2,\"pendingExtUsers\":2,\"renderFailed\":0}}"
     },
     {
-     "name": "H2:★ 卡片「样本」的 DOM 数字 == /lqg/home/todo.pendingSamples",
+     "name": "H2:★ 卡片「样本记录」的 DOM 数字 == /lqg/home/todo.pendingTissue",
      "ok": true,
      "detail": "{\"dom\":\"2\",\"api\":\"2\"}"
+    },
+    {
+     "name": "H2:★ 卡片「类器官收样」的 DOM 数字 == /lqg/home/todo.pendingOrganoid",
+     "ok": true,
+     "detail": "{\"dom\":\"0\",\"api\":\"0\"}"
     },
     {
      "name": "H2:★ 卡片「石蜡」的 DOM 数字 == /lqg/home/todo.pendingEmbeds",
@@ -283,7 +281,7 @@
    "behavioral": false,
    "behavioral_note": "showMenu 是**平台参数**，H5（本轮验收面，owner 已把真机换成 H5+mock）上 uni.openDocument 不存在、如实退化成 window.open，没有可在 H5 施加的行为变异。按 ticket §2 的显式例外用「剥注释后的真代码位置」判，并证明它与注释无关（本变异即该证明）。",
    "result": "green",
-   "checked_at": "2026-09-23T00:12:02.820806+00:00",
+   "checked_at": "2026-09-27T12:59:18.209829+00:00",
    "observed": {
     "source_file": "code/miniapp/src/utils/fileHandoff.ts",
     "occurrences_in_raw_file": 1,
@@ -326,25 +324,25 @@
    "mutation": "把 ThumbStrip.vue#open 的 urls 从「原图 url」换成 usable 的 previewUrl",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-23T00:12:11.749Z",
+   "checked_at": "2026-09-27T12:59:27.114Z",
    "observed": {
     "pages_api_images": [
      {
-      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/42b3c29eb85342949343e38de332a50b.png",
-      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/0d5a5ddd3c464b82b52c9157fbd44a45.jpg"
+      "url": "http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png",
+      "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/4de98dbf6a854fdab1d12f1e78db9cd2.jpg"
      },
      {
-      "url": "http://127.0.0.1:9000/ruoyi/2026/09/23/b526a8db889a487f8f0b55d698d0f1b7.png",
-      "previewUrl": "http://127.0.0.1:9000/ruoyi/2026/09/23/b8247babe0b544f682521f00cd68e66b.jpg"
+      "url": "http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png",
+      "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/45f378acdc9644b1be2941c8aa3f16f4.jpg"
      }
     ],
     "thumb_click_expected": {
-     "original_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/42b3c29eb85342949343e38de332a50b.png",
-     "preview_url": "http://127.0.0.1:9000/ruoyi/2026/09/23/0d5a5ddd3c464b82b52c9157fbd44a45.jpg"
+     "original_url": "http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png",
+     "preview_url": "http://127.0.0.1:9002/lqg/2026/09/27/4de98dbf6a854fdab1d12f1e78db9cd2.jpg"
     },
     "thumb_click_opened_src": [
-     "http://127.0.0.1:9000/ruoyi/2026/09/23/42b3c29eb85342949343e38de332a50b.png",
-     "http://127.0.0.1:9000/ruoyi/2026/09/23/b526a8db889a487f8f0b55d698d0f1b7.png"
+     "http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png",
+     "http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png"
     ]
    },
    "assertions": [
@@ -366,17 +364,17 @@
     {
      "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
      "ok": true,
-     "detail": "[\"http://127.0.0.1:9000/ruoyi/2026/09/23/42b3c29eb85342949343e38de332a50b.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/b526a8db889a487f8f0b55d698d0f1b7.png\"]"
+     "detail": "[\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png\"]"
     },
     {
      "name": "H3b:★ 打开层拿到的 src == 原图 url",
      "ok": true,
-     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/42b3c29eb85342949343e38de332a50b.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/b526a8db889a487f8f0b55d698d0f1b7.png\"],\"want\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/42b3c29eb85342949343e38de332a50b.png\"}"
+     "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png\"],\"want\":\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\"}"
     },
     {
      "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
      "ok": true,
-     "detail": "{\"opened\":[\"http://127.0.0.1:9000/ruoyi/2026/09/23/42b3c29eb85342949343e38de332a50b.png\",\"http://127.0.0.1:9000/ruoyi/2026/09/23/b526a8db889a487f8f0b55d698d0f1b7.png\"],\"preview\":\"http://127.0.0.1:9000/ruoyi/2026/09/23/0d5a5ddd3c464b82b52c9157fbd44a45.jpg\"}"
+     "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png\"],\"preview\":\"http://127.0.0.1:9002/lqg/2026/09/27/4de98dbf6a854fdab1d12f1e78db9cd2.jpg\"}"
     }
    ]
   },
@@ -388,7 +386,7 @@
    "mutation": "删掉 PreviewPane.vue 里「下载合并 PDF」整个 el-button",
    "behavioral": true,
    "result": "green",
-   "checked_at": "2026-09-23T00:12:19.443Z",
+   "checked_at": "2026-09-27T12:59:34.153Z",
    "observed": {
     "dom_download_buttons": [
      "下载 Word",

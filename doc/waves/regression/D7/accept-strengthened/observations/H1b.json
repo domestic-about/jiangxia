@@ -1,7 +1,7 @@
 {
  "hotspot": "H1b",
  "green": false,
- "ran_at": "2026-09-23T00:47:15.633Z",
+ "ran_at": "2026-09-27T13:00:25.582Z",
  "results": [
   {
    "name": "H1b:内部人员 mock 登录 H5(9204)",
@@ -15,9 +15,39 @@
   },
   {
    "name": "H1b:第一组卡片上有「下载」入口（渲染产物已就绪）",
+   "ok": true,
+   "detail": "3"
+  },
+  {
+   "name": "H1b:后端签发 OSS 预签名直链（code=200 + url 指向 127.0.0.1:9000）",
    "ok": false,
-   "detail": "0"
+   "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/508ecc6994e3.docx?X-Amz-Algorithm=AWS4-HMAC-SH\"}"
+  },
+  {
+   "name": "H1b:★ OSS 直链请求真的发出（真点一次单份下载）",
+   "ok": false,
+   "detail": "[]"
+  },
+  {
+   "name": "H1b:★ OSS 直链请求头**没有 Authorization**（API 鉴权头不能塞到预签名直链上）",
+   "ok": false,
+   "detail": "{\"n\":0,\"authHeaders\":[]}"
+  },
+  {
+   "name": "H1b:★ OSS 响应码 = 200（MinIO 没判「multiple authentication types」）",
+   "ok": false,
+   "detail": "[]"
+  },
+  {
+   "name": "H1b:页面没有进失败态（.db__hint 里没有「暂时下不了」）",
+   "ok": true,
+   "detail": "[]"
   }
  ],
- "observed": {}
+ "observed": {
+  "backend_signed_url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/508ecc6994e3.docx?X-Amz-…",
+  "oss_request_headers": [],
+  "oss_response": [],
+  "clientid_on_oss_request_count": 0
+ }
 }
