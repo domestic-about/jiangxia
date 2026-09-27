@@ -30,3 +30,6 @@ logs/
 
 # Playwright MCP 的调试产物：console 日志与页面快照（H01，不入库）
 .playwright-mcp/
+
+# plus-ui dev server 生成的 eslint 自动导入全局（#307：每次跑验收都重写，不入库）
+code/plus-ui/.eslintrc-auto-import.json
