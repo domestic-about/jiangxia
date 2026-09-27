@@ -1,7 +1,7 @@
 {
  "hotspot": "H3b",
  "green": true,
- "ran_at": "2026-09-27T12:59:27.114Z",
+ "ran_at": "2026-09-27T13:09:44.229Z",
  "results": [
   {
    "name": "H3b:内部人员 mock 登录 H5(9204)",
@@ -21,37 +21,37 @@
   {
    "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
    "ok": true,
-   "detail": "[\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png\"]"
+   "detail": "[\"http://127.0.0.1:9002/lqg/2026/09/27/00230f6986d64bd686e7e565bc8ee5a7.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/c6a10fb4637b4d9cb4ddf6def7628d5d.png\"]"
   },
   {
    "name": "H3b:★ 打开层拿到的 src == 原图 url",
    "ok": true,
-   "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png\"],\"want\":\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\"}"
+   "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/00230f6986d64bd686e7e565bc8ee5a7.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/c6a10fb4637b4d9cb4ddf6def7628d5d.png\"],\"want\":\"http://127.0.0.1:9002/lqg/2026/09/27/00230f6986d64bd686e7e565bc8ee5a7.png\"}"
   },
   {
    "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
    "ok": true,
-   "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png\"],\"preview\":\"http://127.0.0.1:9002/lqg/2026/09/27/4de98dbf6a854fdab1d12f1e78db9cd2.jpg\"}"
+   "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/27/00230f6986d64bd686e7e565bc8ee5a7.png\",\"http://127.0.0.1:9002/lqg/2026/09/27/c6a10fb4637b4d9cb4ddf6def7628d5d.png\"],\"preview\":\"http://127.0.0.1:9002/lqg/2026/09/27/8754caa867cd4d9aa8c70b924b32e881.jpg\"}"
   }
  ],
  "observed": {
   "pages_api_images": [
    {
-    "url": "http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png",
-    "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/4de98dbf6a854fdab1d12f1e78db9cd2.jpg"
+    "url": "http://127.0.0.1:9002/lqg/2026/09/27/00230f6986d64bd686e7e565bc8ee5a7.png",
+    "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/8754caa867cd4d9aa8c70b924b32e881.jpg"
    },
    {
-    "url": "http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png",
-    "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/45f378acdc9644b1be2941c8aa3f16f4.jpg"
+    "url": "http://127.0.0.1:9002/lqg/2026/09/27/c6a10fb4637b4d9cb4ddf6def7628d5d.png",
+    "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/27/263e1c16c8cf4d5990c255499adf93eb.jpg"
    }
   ],
   "thumb_click_expected": {
-   "original_url": "http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png",
-   "preview_url": "http://127.0.0.1:9002/lqg/2026/09/27/4de98dbf6a854fdab1d12f1e78db9cd2.jpg"
+   "original_url": "http://127.0.0.1:9002/lqg/2026/09/27/00230f6986d64bd686e7e565bc8ee5a7.png",
+   "preview_url": "http://127.0.0.1:9002/lqg/2026/09/27/8754caa867cd4d9aa8c70b924b32e881.jpg"
   },
   "thumb_click_opened_src": [
-   "http://127.0.0.1:9002/lqg/2026/09/27/aae99057fa4d47dfaebd086c99974cc6.png",
-   "http://127.0.0.1:9002/lqg/2026/09/27/bd7706d4f2d9464f8b412cf440fe3e66.png"
+   "http://127.0.0.1:9002/lqg/2026/09/27/00230f6986d64bd686e7e565bc8ee5a7.png",
+   "http://127.0.0.1:9002/lqg/2026/09/27/c6a10fb4637b4d9cb4ddf6def7628d5d.png"
   ]
  }
 }
