@@ -42,7 +42,8 @@ accept:
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null &&
       grep -q "@/components/lqg/OcrBar.vue" src/pages/sample/form.vue && grep -q 'showOcr' src/pages/sample/form.vue &&
       grep -q 'chooseMedia' src/components/lqg/OcrBar.vue && grep -q '/mp/ocr/recognize' src/api/ocr.ts &&
-      ! grep -rnEi 'aliyuncs\.com|dashscope|api\.weixin\.qq\.com/cv|baidubce|tencentcloudapi|secret[_-]?key|api[_-]?key' src dist/build/mp-weixin
+      ! grep -rnEi 'aliyuncs\.com|dashscope|api\.weixin\.qq\.com/cv|baidubce|tencentcloudapi|secret[_-]?key|api[_-]?key' src dist/build/mp-weixin &&
+      cd ../.. && node doc/waves/regression/V-round/miniapp-behavior-dom.mjs --only=ocr
     counterfeit: |-
       为了快，小程序直接调了云厂商的识别接口 → 最后一段在源码或产物里搜到域名 / key 红。
       识别条无条件渲染 → 要求它受 formLayout 的 showOcr 控制（SAMPLE-MP-001 的 fixture 已经规定了编辑态 showOcr=false）。

@@ -135,7 +135,8 @@ accept:
       grep -rq "@/components/lqg/CryoBatchSheet.vue" src/pages/ledger &&
       grep -qE 'pages/cryo/form.*mode=edit|mode=edit.*pages/cryo/form' src/components/lqg/CryoBatchSheet.vue &&
       ! grep -nE '冻存密度|液氮储存位置' src/pages/ledger/index.vue &&
-      ! grep -rnE 'adjust|盘点调整' src/pages/cryo src/pages/ledger src/components/lqg/CryoBatchSheet.vue
+      ! grep -rnE 'adjust|盘点调整' src/pages/cryo src/pages/ledger src/components/lqg/CryoBatchSheet.vue &&
+      cd ../.. && node doc/waves/regression/V-round/miniapp-behavior-dom.mjs --only=cryo
     counterfeit: |-
       冻存还做成单独的卡片列表页、没注册进表格页或历史页签 → sheets.ts / sources.ts 里找不到 cryo 红。
       CryoBatchSheet 走桶口导入 → 小程序里弹层是空白的且不报错，.vue 路径那段红。

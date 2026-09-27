@@ -3817,6 +3817,16 @@
       "detail": "① SYS-MP-001 acc1 复核：页签名与顺序是用 `jq` 直接读 `dist/build/mp-weixin/app.json`（产物级）；mock 标记是扫产物。**变异验证**：往 src/pages/sample/form.vue 模板注入 `mock:extA 13800000011 api.aliyuncs.com` → `pnpm build:mp-weixin` 重建 → `grep -rqE \"mock:|1380000[0-9]{4}\" dist/build/mp-weixin` **命中（exit 0）→ 该断言必红**；`git checkout` 还原后重建 → 干净（exit 1）。② OCR-MP-001 acc2 的第三方域名/密钥扫描同样经此变异验证（注入的 `api.aliyuncs.com` 出现在产物 `pages/sample/form.wxml` 里 → 扫描必红）。③ 结论：真弱只剩 4 条，且都只是「行为那半句」——OCR acc2「识别条只在新增时出现」、CRYO acc4「批次详情弹层带修改入口」、QC-WEB-002 acc2「两个页签可切换」、SYS-WEB-001 acc2「token/i18n 真的生效（需 computed-style）」。④ 分类器三次假阳性（1/6/7）说明：「grep 多不多」不是判据，「**声称的是行为还是结构**」才是。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 341,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "弱断言改写第 2、3 条完成：OCR-MP-001 acc2「识别条只在新增时出现」、CRYO-MP-001 acc4「冻存弹层修改入口」改为真 DOM 探针 + 变异验证",
+      "detail": "新探针 doc/waves/regression/V-round/miniapp-behavior-dom.mjs（支持 --only=ocr|cryo，两张票各跑自己那半）。① OCR：新增模式 `/pages/sample/form?mode=new` → 真 DOM 见到「拍照识别」；编辑模式 `?id=9000001001&mode=edit` → **识别条不出现**，且先断言「详情已回填」（来源单位 A 医院 / 收样日期 2026-08-28 / 内部编号）以防空对照。② CRYO：内部管理 → 「-80 冻存」工作表 → 点行打开批次弹层 → 弹层里有「修改」入口 → **点它真的导航到 `/pages/cryo/form?id=9000003005&mode=edit`**。★ 变异验证：a) 把 form.vue 的 `<OcrBar v-if=\"layout.showOcr\">` 改成 `v-if=\"true\"`（合法变异）→ 编辑模式下出现识别条 → **①★ 变红**；b) 把 CryoBatchSheet.vue 的「修改」文案改名 → 弹层里找不到入口、也不再导航 → **② 与 ②★ 都变红**。两次变异后还原均复绿。端到端：`accept-run.py --ticket OCR-MP-001` → 2/2；`--ticket CRYO-MP-001` → 5/5。★ 探针踩到三个坑（都属探针而非产品，已写进注释）：① uni H5 同路径只改 query **不重跑 onLoad**（页面栈复用）→ 必须同 context 新开页面；② Playwright 不允许对隐式 context 调 newPage() → 要显式 newContext；③ 守卫不能用 innerText 找输入框里的值（我第一次拿「ZY0000001」当编辑态证据 → 假红）；④ 变异表达式写成 `v-if=\"true\" /*注释*/` 非法 → 编译失败、页面显示连接超时（我的守卫正确让整体 FAIL，没造成假绿）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
