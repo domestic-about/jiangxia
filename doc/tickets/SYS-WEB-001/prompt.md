@@ -43,10 +43,21 @@ accept:
       ! grep -rlE '多租户管理系统|RuoYi-Vue-Plus多租户' dist | grep -q . &&
       test -f src/lang/lqg/sys.zh_CN.ts && test -f src/lang/lqg/sys.en_US.ts &&
       grep -q "import.meta.glob" src/lang/index.ts &&
-      grep -q -- '--el-color-primary' src/assets/styles/lqg-tokens.scss && grep -qi '0E7C7B' src/assets/styles/lqg-tokens.scss &&
+      grep -rq '类器官' dist/assets/*.js &&
+      grep -rqi '0e7c7b' dist/assets/*.css &&
       ! grep -rlE 'gitee\.com/dromara|plus-doc\.dromara' dist | grep -q . &&
       grep -q '"packageManager": "pnpm@10.33.0"' package.json
     counterfeit: |-
+      ★ 2026-09-27 收紧（弱断言清单第 8 条）：原第 6 段是
+      `grep -q -- '--el-color-primary' src/assets/styles/lqg-tokens.scss && grep -qi '0E7C7B' 同文件`
+      —— 那只是「源码文件里写了这两个字符串」，**证明不了它们真的进了构建产物**：改坏 SCSS 的引入、
+      或把 token 从入口样式里摘掉，这两条照样绿。现在改成扫产物：
+        · `grep -rq '类器官' dist/assets/*.js` —— lqg 域的 i18n 文案真的被打进 bundle（i18n 按域拆分**生效**，
+          而不只是「源文件存在 + 入口里有 import.meta.glob」）；
+        · `grep -rqi '0e7c7b' dist/assets/*.css` —— 主色 token 真的进了产物 CSS（注意：实测产物里**没有**
+          `--el-color-primary` 这个字面量，它被编译掉了，所以不能拿它当判据——这正是源码 grep 会骗人的地方）。
+      【怎么证伪】把 `src/assets/styles/lqg-tokens.scss` 从入口样式里摘掉再 build → 第 2 条应立刻红；
+      把 `src/lang/lqg/` 目录改名（glob 不再匹配）→ 第 1 条应立刻红。两条都不红，说明改回源码 grep 了。
       只改了 .env 里的标题、登录页上还印着上游的「多租户管理系统」→ 第 3 段红。
       i18n 还是往 zh_CN.ts 大文件里加 → 第 4、5 段红；后面每张 WEB ticket 都会在这个文件上冲突。
       真门是 build 不是类型检查：vue-tsc 过了但 vite 构建挂了 → 第 1 段红。先 rm dist，旧产物骗不过去。

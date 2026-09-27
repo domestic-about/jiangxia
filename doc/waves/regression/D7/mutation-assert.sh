@@ -35,7 +35,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 cd "${ROOT}"
 # ★ 这个脚本在 doc/waves/regression/D7/ 下 → 仓库根要再往上**四级**；
 #   深度写错会让 `git diff -- code/` 静默变空（起点守卫形同虚设，实测踩过）→ 这里硬校验一次。
-[ "$(git rev-parse --show-toplevel 2>/dev/null)" = "${ROOT}" ] \
+# ★ 2026-09-27：比较前先归一化。两个坑：① macOS 上 /var 是指向 /private/var 的**符号链接**，
+#   `git rev-parse --show-toplevel` 返回规范化路径而 $ROOT 来自 BASH_SOURCE（未规范化）→ 字符串不等；
+#   ② git worktree 的 .git 是**文件**不是目录（允许）。用 `pwd -P` 解析软链后再比。
+#   真正要比的是「路径指同一个地方」，别被 `T//x` 与 `T/x` 这种拼写差异骗成「不是仓库根」。
+_norm() { ( cd "$1" 2>/dev/null && pwd -P ) || printf '%s' "${1%/}"; }
+[ "$(_norm "$(git rev-parse --show-toplevel 2>/dev/null)")" = "$(_norm "${ROOT}")" ] \
   || { echo "[error] ROOT 推导错了：${ROOT} 不是 git 仓库根" >&2; exit 2; }
 [ -f "${ROOT}/code/miniapp/src/pages.json" ] \
   || { echo "[error] ${ROOT} 下找不到 code/miniapp/src/pages.json —— 不是本仓库根" >&2; exit 2; }
