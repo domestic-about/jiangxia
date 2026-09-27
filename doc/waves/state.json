@@ -3607,6 +3607,36 @@
       "detail": "① V02（#147）：新写 UI 活体脚本 doc/waves/regression/V-round/v02-verify-drawer.mjs（真浏览器登录工作台 → 石蜡包埋列表 → 打开核验抽屉 → 填石蜡块编号 + 改脱水时间 → 点保存 → 拦真实请求体）。结果 5/5：写请求 PUT /lqg/embed/{id}/verify 真的发出；body 带 fill 段（15 键齐）；fill.dehydrateTime = 抽屉里改的值 2026-09-26；库里 dehydrateTime 也是 2026-09-26；记录转 valid。→ 送检/补填段不再被静默丢弃。② V04：API 链路（发布三份 → 渲染合并件 → 撤回 sample-qc）——撤回后合并 docx 由 15742 字节降到 13600 且正文里「样本质控表」出现次数 = 0（真的重渲了，此前下发旧产物）；合并 PDF code=200（此前 400）；merged pages status=done 且 2 页（此前 done 但 0 页）；DB 里 merged 的 docx/pdf/png 三行 render_status 全 done 且有 content_hash。★ 5 条 S1（V01/V02/V03/V04/V05）全部活体验收通过。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 320,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "第 4 批复核（含更正我自己的误判）：V07/V27 实为已修；V10#203/V25/V31 亦已修 —— 12 条「待确认」全部收敛为已修",
+      "detail": "★ 更正：第 3 批我把 V07、V27 判为「真缺」，是**窄 grep 造成的假阴性**（我只看了 code/miniapp/scripts/ 与 pages/me/*.vue，而修复分别在 scripts/upload-mp.mjs 与 src/utils/paging.ts——真正的 ledger 页是 pages/ledger/index.vue）。逐条实测：① V07：upload-mp.mjs 的 production 发布守卫，反例（地址空/回环/测试域名/占位 appid/example.com）**逐条拒绝且 exit=3**（能拦 CI），正例（https://lqg.jiangxia.cn + wx+16hex）打印「✓ 发布守卫（配置）通过」后才在产物检查处停下 —— 判别正确；② V27：src/utils/paging.ts + pages/ledger/index.vue:296 的 onReachBottom + SamplePicker 的 scrolltolower，注释明写「以前写死 pageSize=100 只取第一页，第 101 条以后永远看不到」；③ V25：embed/form.vue 与 sample/form.vue 有 :readonly/:disabled 机制、面板开关走组件内 popupShow；④ V10 的 #203：OcrFieldParser 注释逐字复现旧 bug 并给出三层边界 + STOP_LABELS；⑤ V31：lqg 的 pom 注释明写删掉了写死的 skipTests=false，命令行 -DskipTests 恢复生效。⇒ V01–V33 在**静态层面全部有对应实现**，剩余工作是把还没活体验的项补齐机器证据 + 全量 accept 重放。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 321,
+      "ticket": "",
+      "severity": "S3",
+      "type": "debt",
+      "title": "V18 残留：prod nginx 已把 actuator 挡成 404，但 application.yml 仍是 management.endpoints.web.exposure.include=*",
+      "detail": "复核：code/deploy/prod/nginx/workspace.conf:85 起用 ^~ 规则把 /actuator 与 /prod-api/actuator 一律 404（V18 的网关侧已落）；但 ruoyi-admin/src/main/resources/application.yml:270 仍是 include: *（健康详情全开）。影响：只要有一天有人把 actuator 往上暴露（或换网关），应用层就是全开。方案 a（推荐，S3 加固）：prod 只开 health,info；b）维持现状并在部署手册里写明「actuator 一律不对外」是唯一防线。",
+      "status": "decided",
+      "decision": "premise wrong（我自己的误判）：application-prod.yml:171-182 已有显式覆盖 —— `management.endpoints.web.exposure.include: health,info` + `endpoint.health.show-details: never` + `show-components: never`，并有「# Actuator（V18）」段注释说明 nginx 另外挡住。我只看了基座 application.yml:270 的 include: * 就下结论，属窄范围误判。V18 应用层与网关层都已修，本条作废。"
+    },
+    {
+      "id": 322,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "★ 我自己的分诊方法缺陷：三轮里出现三次假阴性（V07 / V27 / V18），根因是「只看基座配置与窄目录」",
+      "detail": "实例：① V07 我只在 code/miniapp/scripts/ 找校验脚本，实际守卫在 scripts/upload-mp.mjs 里（同一个文件）；② V27 我只 grep pages/me/*.vue，实际 ledger 页在 pages/ledger/index.vue、公共逻辑在 utils/paging.ts；③ V18 我只读基座 application.yml 的 include: *，漏了 application-prod.yml 的显式覆盖。共性：**把「我没找到」当成「不存在」**，且样本范围由我手挑（有确认偏误）。危害：分诊表是后续修复与验收的工作清单，假阴性会让人重做已完成的事、也会让「已修」的结论失去可信度。纠正规则（从本批起执行）：a) 判断某项是否已修，必须以「生效配置 / 运行时行为」为准，而不是基座文件或单个目录；b) 先跑 `FIX V0x` 标注枚举（代码里带标注）再下结论；c) 静态结论一律标「待活体验证」，不写成「真缺」；d) 每次报「已修/未修」都要附一条**能证伪它的命令**。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
