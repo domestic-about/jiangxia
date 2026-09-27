@@ -3827,6 +3827,16 @@
       "detail": "新探针 doc/waves/regression/V-round/miniapp-behavior-dom.mjs（支持 --only=ocr|cryo，两张票各跑自己那半）。① OCR：新增模式 `/pages/sample/form?mode=new` → 真 DOM 见到「拍照识别」；编辑模式 `?id=9000001001&mode=edit` → **识别条不出现**，且先断言「详情已回填」（来源单位 A 医院 / 收样日期 2026-08-28 / 内部编号）以防空对照。② CRYO：内部管理 → 「-80 冻存」工作表 → 点行打开批次弹层 → 弹层里有「修改」入口 → **点它真的导航到 `/pages/cryo/form?id=9000003005&mode=edit`**。★ 变异验证：a) 把 form.vue 的 `<OcrBar v-if=\"layout.showOcr\">` 改成 `v-if=\"true\"`（合法变异）→ 编辑模式下出现识别条 → **①★ 变红**；b) 把 CryoBatchSheet.vue 的「修改」文案改名 → 弹层里找不到入口、也不再导航 → **② 与 ②★ 都变红**。两次变异后还原均复绿。端到端：`accept-run.py --ticket OCR-MP-001` → 2/2；`--ticket CRYO-MP-001` → 5/5。★ 探针踩到三个坑（都属探针而非产品，已写进注释）：① uni H5 同路径只改 query **不重跑 onLoad**（页面栈复用）→ 必须同 context 新开页面；② Playwright 不允许对隐式 context 调 newPage() → 要显式 newContext；③ 守卫不能用 innerText 找输入框里的值（我第一次拿「ZY0000001」当编辑态证据 → 假红）；④ 变异表达式写成 `v-if=\"true\" /*注释*/` 非法 → 编译失败、页面显示连接超时（我的守卫正确让整体 FAIL，没造成假绿）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 342,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "★ 弱断言清零：最后 2 条（QC-WEB-002 acc2 页签可切、SYS-WEB-001 acc2 主色生效）改为 DOM/computed-style 探针 + 变异验证",
+      "detail": "新探针 doc/waves/regression/V-round/workbench-behavior-dom.mjs（--only=tabs|token）。① QC-WEB-002 acc2：真浏览器进 `/qc-console/qc-editor?sampleId=9000001001` → 页签数 = **3**、逐个点击 `aria-selected=true`、并用**页签标签之外的标记词**断言各面板内容真的渲染（细胞活率/收样 → 类器官生长/形成类器官 → 分值）；★收紧过一次：第 3 个页签的标记词「评分」本是页签标签子串，会在任何页签下命中标签 → 属空对照假绿，已剔除。② SYS-WEB-001 acc2：读 **computed style** 的 `--el-color-primary` = **rgb(14,124,123)**（#0E7C7B）且 ≠ 上游若依蓝 rgb(64,158,255)，`--lqg-primary` 同值。★ 变异验证：a) 把 `settings.ts` 的 theme 改成 `#409EFF` → 两条主色断言**都变红**（这正是「扫产物字符串」抓不住、而 computed-style 抓得住的那类）；b) 删掉 `TABS` 里的 score 一项 → 页签数断言**变红**；还原后均复绿。端到端：`--ticket QC-WEB-002` → 2/2；`--ticket SYS-WEB-001` → 2/2。★ 至此弱断言清单 **5 条真弱全部改写 + 变异验证完毕**（另 3 条经复核本就不是弱断言）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

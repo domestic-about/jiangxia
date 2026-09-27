@@ -45,7 +45,8 @@ accept:
       grep -q 'OrganoidQcTab' src/views/lqg/qc/editor/index.vue && grep -q 'ScoreTab' src/views/lqg/qc/editor/index.vue &&
       grep -q 'organoid_observe' src/views/lqg/qc/editor/OrganoidQcTab.vue &&
       grep -q 'useDict' src/views/lqg/qc/editor/ScoreTab.vue &&
-      ! grep -nE '质量偏差|质量中等|质量良好' src/views/lqg/qc/editor/ScoreTab.vue
+      ! grep -nE '质量偏差|质量中等|质量良好' src/views/lqg/qc/editor/ScoreTab.vue &&
+      cd ../.. && node doc/waves/regression/V-round/workbench-behavior-dom.mjs --only=tabs
     counterfeit: |-
       评分选项在页面里硬编码（没走字典）→ useDict 那段红；将来改分值要改前端。
       顺手根据合计显示了「质量良好」→ 最后一段红：那是 v1 被砍掉的自动结论。

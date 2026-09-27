@@ -45,7 +45,8 @@ accept:
       grep -q "import.meta.glob" src/lang/index.ts &&
       grep -q -- '--el-color-primary' src/assets/styles/lqg-tokens.scss && grep -qi '0E7C7B' src/assets/styles/lqg-tokens.scss &&
       ! grep -rlE 'gitee\.com/dromara|plus-doc\.dromara' dist | grep -q . &&
-      grep -q '"packageManager": "pnpm@10.33.0"' package.json
+      grep -q '"packageManager": "pnpm@10.33.0"' package.json &&
+      cd ../.. && node doc/waves/regression/V-round/workbench-behavior-dom.mjs --only=token
     counterfeit: |-
       只改了 .env 里的标题、登录页上还印着上游的「多租户管理系统」→ 第 3 段红。
       i18n 还是往 zh_CN.ts 大文件里加 → 第 4、5 段红；后面每张 WEB ticket 都会在这个文件上冲突。
