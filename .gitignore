@@ -27,3 +27,6 @@ code/**/unpackage/
 code/**/.hbuilderx/
 # 后端运行日志目录（logback 在项目根写 sys-*.log；每个跑过后端的人/分片都要手动删一次，见 2026-09-22 模式 B）
 logs/
+
+# Playwright MCP 的调试产物：console 日志与页面快照（H01，不入库）
+.playwright-mcp/
