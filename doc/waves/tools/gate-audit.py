@@ -196,12 +196,46 @@ def main():
     # ── 正式审计只在「门退出码 0 且两级都 pass」时写 ─────────────────────────
     formal_ok = (a.exit == 0 and l0_status == "pass" and l1_status == "pass")
     refused = ""
-    default_formal = os.path.join(QA_DIR, f"{a.phase}-r{rnd}-L01.json")
+    gating = []   # ★ 2026-09-27 新增：除退出码以外的拦门理由（台账未决 S0/S1、目标已存在）
+
+    # ★ 门禁加固①（独立验收报告 §5「过门不查台账」）：本任务台账里只要还有**未决 S0/S1**，就不许写正式审计。
+    #   历史教训：D2 在 #96/#105 还 open 时标了 qa_passed；D7 在 #279/#291 还 open 时合并。
+    #   例外：type=escalated 的 S0/S1 是 owner 已批准的挂起（如等甲方照片 / 等甲方签认），不算未决缺陷。
+    try:
+        st = json.load(open(os.path.join(ROOT, 'doc/waves/state.json'), encoding='utf-8'))
+        phase_tickets = {k for k, v in (st.get('tickets') or {}).items() if v.get('phase') == a.phase}
+        open_s01 = [i for i in (st.get('open_issues') or [])
+                    if i.get('severity') in ('S0', 'S1') and i.get('status') == 'open'
+                    and i.get('type') != 'escalated'
+                    and (i.get('ticket') in phase_tickets or i.get('ticket') == a.phase)]
+        if open_s01:
+            formal_ok = False
+            gating.append("本任务台账里还有未决 S0/S1（evaluated=" + str(len(open_s01)) + "）：" +
+                          "; ".join(f"#{i['id']} [{i.get('ticket')}] {str(i.get('title'))[:60]}"
+                                    for i in open_s01[:6]))
+    except Exception as e:
+        formal_ok = False
+        gating.append(f"读台账失败（{type(e).__name__}: {e}）→ 无法确认没有未决 S0/S1，按不许写正式审计处理")
+
+    # ★ 门禁加固②（证据不得原地覆盖）：目标正式审计已存在时拒绝覆盖。
+    #   历史教训：D7 首轮 L2 判 FAIL 被原地覆盖、D5 分片自判 FAIL 在合并时被改判 PASS —— 原始证据一旦可被覆盖，
+    #   整条证据链就只能靠叙述。要重跑就换轮次（--round N+1），旧文件不许动。
+    _default_formal = os.path.join(QA_DIR, f"{a.phase}-r{rnd}-L01.json")
+    _target = a.audit or _default_formal
+    if os.path.exists(_target):
+        formal_ok = False
+        gating.append(f"目标正式审计已存在 {os.path.relpath(_target, ROOT)} —— 按「证据不得原地覆盖」拒绝写入；"
+                      f"请用 --round {rnd + 1} 重跑，或先把旧文件改名归档")
+
+    default_formal = _default_formal
     audit_path = a.audit or default_formal
     in_qa_dir = os.path.abspath(audit_path).startswith(os.path.abspath(QA_DIR) + os.sep)
     if not formal_ok and in_qa_dir:
-        refused = (f"门退出码 {a.exit}、L0={l0_status}、L1={l1_status} —— 不是全绿，禁止写正式审计文件 "
-                   f"{os.path.relpath(audit_path, ROOT)}")
+        if gating:
+            refused = "；".join(gating) + f" → 禁止写正式审计文件 {os.path.relpath(audit_path, ROOT)}"
+        else:
+            refused = (f"门退出码 {a.exit}、L0={l0_status}、L1={l1_status} —— 不是全绿，禁止写正式审计文件 "
+                       f"{os.path.relpath(audit_path, ROOT)}")
         draft_dir = a.logdir or os.path.dirname(os.path.abspath(a.gate))
         audit_path = os.path.join(draft_dir, f"{a.phase}-r{rnd}-L01.draft.json")
     os.makedirs(os.path.dirname(audit_path), exist_ok=True)

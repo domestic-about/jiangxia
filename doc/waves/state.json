@@ -3707,6 +3707,16 @@
       "detail": "逐字重放（不加 known-red 豁免）：D1 17/17、D2 18/18、D3 18/18、D4 17/17、D5 4/6、D6 15/15、D7 16/16。D5 的 2 条红全是 SYS-STAGING-001（公网测试环境 502，我为 V08 安全止血停掉了 lqg-test 栈）→ 环境受限，重新部署后自解。D8 的 7 条需真生产，按 d8-blockers.json 挂起。报告：doc/handover/新基线报告-20260927.md。另附 d8 之外的三件剩余工作：8 条弱断言改写（见 V轮弱断言清单）、门禁四条修复（环境类判红已修；剩下证据不许原地覆盖 / 门须查未决 S0/S1 / known-red 按段豁免）、隔离副本验收工具化。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 330,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "门禁加固：证据不得原地覆盖 + 门须查台账未决 S0/S1（两条都做了受控验证）；另三条（环境类判红 / known-red 按段 / 旧格式拒绝）经查已是修好的",
+      "detail": "① 新增「证据不得原地覆盖」：gate-audit.py 写正式审计前先看目标是否存在，存在则**拒绝写入**并改写 draft（auditor=draft-not-for-merge，qa merge 不收），提示用 --round N+1 重跑。受控验证：同参数连跑两次，第 1 次写 doc/waves/qa/TESTX-r99-L01.json（auditor=independent），第 2 次打印 [refuse]「目标正式审计已存在…按证据不得原地覆盖拒绝写入」并只落 draft，正式文件 mtime 未变；测试文件已清。② 新增「门须查台账」：写正式审计前读 state.json，若本任务的票里还有 severity∈(S0,S1) 且 status=open 且 type≠escalated 的条目 → 拒绝写正式审计（escalated 是 owner 已批准的挂起，不算未决缺陷）。受控验证：临时插入一条 AUTH-LOGIN-001 的 S1 后跑 D1 gate-audit → [refuse]「本任务台账里还有未决 S0/S1（evaluated=1）：#330 …」，随后从备份还原台账（git diff 为空）。历史教训对号：D2 曾在 #96/#105 open 时标 qa_passed、D7 曾在 #279/#291 open 时合并。③ 经查已是修好的三条：环境类失败记成 pass（gate-audit 现在 fail > blocked > pass，且 blocked 不写正式审计，见文件头 2026-09-23 注）；known-red 改按段（格式 TICKET|accN@段号|#issue|理由，旧格式 exit 2，只豁免登记段、后续段照样要绿；D5 的 3 行已全部迁到新格式）；「豁免按整条 accept 生效」的洞随之关闭。④ 仍待做：隔离副本验收工具化。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
