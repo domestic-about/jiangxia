@@ -2325,8 +2325,8 @@
       "type": "doc-drift",
       "title": "accept1 第 4 段 URL 漏 &sort=recent：mine 只在 sort=recent 支收窄是实现的既定口径（契约第 49 行）",
       "detail": "复现：票面 accept1 用 /mp/int/sample/list?pageSize=100&mine=true 期望 [9000001008,9000001009]，实测返回全表 9 行；补 &sort=recent → 恰好 [9000001008,9000001009] ✅。实现与 doc/api-contract.md 第 49 行、SampleQueryService#buildWrapper:259/270 一致：mine 的收窄只在 sort=recent（历史编辑记录）那一支生效——这与 D2 那轮 #105 修完后的形态一致。影响：票面字面重放会红；若 Kevin 认为 mine 应在任意筛选下都收窄，则是实现要改 + 契约要改（不是改票面）。属规格层待裁。方案 a) 回写票面 accept 加 &sort=recent（推荐，与契约一致）；b) 若语义应为「mine 独立生效」，改契约第 49 行 + SampleQueryService 两处 + 复验 D2 的 #105 相关断言。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed：独立验收报告 §4 第 6 条建议「按契约来，不依赖 sort 参数」已落地并由我活体验收。契约（doc/api-contract.md 第 53 行）已改为「mine=true … 与 sort 无关，带不带 sort=recent 都生效，#191 / CR-20260923-09」；实现 SampleQueryService#buildWrapper 第 304-311 行把 mine 的收窄移出 sort=recent 分支（代码里标 FIX #191）。活体复核（reseed 后）：`GET /mp/int/sample/list?pageSize=100&mine=true` → ids=[9000001008,9000001009]（此前返回全表 9 行）；带 `&sort=recent` → 同样两条；不带 mine → 9 行。"
     },
     {
       "id": 192,
@@ -3525,8 +3525,8 @@
       "type": "harness",
       "title": "★ SYS-PROD-001 acc1 段2/段3 即便生产资源到位也跑不通：api.sh 是裸 curl，而生产 api-decrypt.enabled 与 captcha.enable 都吃缺省 true",
       "detail": "复现：application.yml:187 api-decrypt.enabled 缺省 true、application.yml:25 captcha.enable 缺省 true；application-prod.yml 刻意都不覆盖（test 才把两者关掉，正是 test/prod 的分界契约）。doc/verify/api.sh 不带 encrypt-key 头、不做 RSA/AES、不带验证码 code/uuid → 生产登录必然失败。影响：acc1 段2（ping 的 profile/buildCommit/加密开关）与段3（生产 mock 登录必须被拒）用的是 api.sh --as admin，属票面断言与环境设计的冲突。方案 a（推荐）：给 api.sh 加一条仅内网/白名单生效的旁路（另开票，验收期用）；b）收窄 acc1：改成在生产机上带 token 打 ping（需要一条取 token 的路径）；c）接受该段在生产不可执行并改写票面。实现方已把三段手工替代命令写进 doc/verify/verify.prod.env.example 的说明段，未动票面。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed（改法已落地，执行留到 D8 真生产）：SYS-PROD-001 acc1 原来用 `doc/verify/api.sh --as admin` 取 ping —— api.sh 是裸 curl，而生产 api-decrypt 与 captcha 都开着 → 必然登录失败。已改成用生产侧签发的管理员 token 直接打 ping：`TOK=\"$(sed -n \"s/^LQG_ADMIN_TOKEN=//p\" doc/verify/verify.prod.env)\"` + `curl \"$BASE/lqg/sys/ping\" -H \"Authorization: Bearer $TOK\"`，并在 verify.prod.env.example 增加 LQG_ADMIN_TOKEN 键（说明取法：服务器上超管登录工作台后从 localStorage 的 Admin-Token 复制，过期重取）。票面 bash -n 通过；真执行需 D8 生产资源。"
     },
     {
       "id": 312,
@@ -3545,8 +3545,8 @@
       "type": "harness",
       "title": "SYS-PROD-001 acc2 的 .env 子断言与既有前端 vite 模板 code/miniapp/env/.env 冲突 → 必然红，非产品缺陷",
       "detail": "复现：git ls-files 过滤 .env 结尾者，全仓只命中 code/miniapp/env/.env。该文件 32 行全是 VITE_* 前端公共变量（VITE_APP_TITLE / VITE_UNI_APPID / VITE_WX_APPID 占位 / VITE_APP_CLIENT_ID 等），用 LTAI|AKID|secret|_key|token|password 扫它，唯一命中一行注释文字（md5 mp client_secret）。它是 unibest/vite 的 envDir 约定文件，改名会破坏构建。方案 a（推荐）：把断言收窄为只查 verify.prod.env 与 deploy 目录下的 .env——保住真实意图（生产密钥文件不被跟踪），放过前端模板；b）显式白名单该路径；c）改名（不建议，破坏 vite 约定）。★ 属验收口径调整，需调度方与 owner 决策；实现方按规矩未动票面。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "fixed（收窄已落地并验证成立）：SYS-PROD-001 acc2 的 .env 子断言已改成 `! git ls-files | grep -E \"(^|/)\\.env$|verify\\.prod\\.env$\" | grep -vx \"code/miniapp/env/\\.env\" | grep -q .` —— 保住真实意图（生产密钥 env 不得入库），放过前端 vite 的公共变量模板。实测该断言现在**成立**（此前被 code/miniapp/env/.env 必然压红）。"
     },
     {
       "id": 314,
@@ -3835,6 +3835,16 @@
       "type": "harness",
       "title": "★ 弱断言清零：最后 2 条（QC-WEB-002 acc2 页签可切、SYS-WEB-001 acc2 主色生效）改为 DOM/computed-style 探针 + 变异验证",
       "detail": "新探针 doc/waves/regression/V-round/workbench-behavior-dom.mjs（--only=tabs|token）。① QC-WEB-002 acc2：真浏览器进 `/qc-console/qc-editor?sampleId=9000001001` → 页签数 = **3**、逐个点击 `aria-selected=true`、并用**页签标签之外的标记词**断言各面板内容真的渲染（细胞活率/收样 → 类器官生长/形成类器官 → 分值）；★收紧过一次：第 3 个页签的标记词「评分」本是页签标签子串，会在任何页签下命中标签 → 属空对照假绿，已剔除。② SYS-WEB-001 acc2：读 **computed style** 的 `--el-color-primary` = **rgb(14,124,123)**（#0E7C7B）且 ≠ 上游若依蓝 rgb(64,158,255)，`--lqg-primary` 同值。★ 变异验证：a) 把 `settings.ts` 的 theme 改成 `#409EFF` → 两条主色断言**都变红**（这正是「扫产物字符串」抓不住、而 computed-style 抓得住的那类）；b) 删掉 `TABS` 里的 score 一项 → 页签数断言**变红**；还原后均复绿。端到端：`--ticket QC-WEB-002` → 2/2；`--ticket SYS-WEB-001` → 2/2。★ 至此弱断言清单 **5 条真弱全部改写 + 变异验证完毕**（另 3 条经复核本就不是弱断言）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 343,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "全量基线复现确认：强化 5 条弱断言后重放 D1–D7 仍为 105/107（逐项一致）",
+      "detail": "D1 17/17、D2 18/18、D3 18/18、D4 17/17、D5 4/6、D6 15/15、D7 16/16 = 105/107，与首版基线逐项一致。D5 那 2 条仍是 SYS-STAGING-001（公网测试环境 502，V08 安全止血所致，环境受限）。结论：5 条弱断言的改写只提升了判据强度，没有改变通过/不通过的门槛。报告见 doc/handover/新基线报告-20260927.md §6。",
       "status": "open",
       "decision": ""
     }

@@ -32,7 +32,8 @@ accept:
     form: API
     run: |-
       export LQG_VERIFY_ENV_FILE=doc/verify/verify.prod.env && BASE="$(sed -n 's/^LQG_API_BASE=//p' doc/verify/verify.prod.env)" && case "${BASE}" in https://*) true ;; *) false ;; esac &&
-      bash doc/verify/api.sh --as admin GET /lqg/sys/ping | jq -e --arg c "$(git -C code rev-parse --short=7 HEAD 2>/dev/null || git rev-parse --short=7 HEAD)" '.code==200 and .data.profile=="prod" and .data.db=="PostgreSQL" and .data.encryptEnabled==true and .data.mockLogin==false and .data.tenantEnabled==false and (.data.buildCommit|startswith($c))' &&
+      TOK="$(sed -n 's/^LQG_ADMIN_TOKEN=//p' doc/verify/verify.prod.env)" && test -n "${TOK}" &&
+      curl -s "${BASE}/lqg/sys/ping" -H "Authorization: Bearer ${TOK}" -H "clientid: $(sed -n 's/^LQG_CLIENT_PC=//p' doc/verify/verify.prod.env)" | jq -e --arg c "$(git -C code rev-parse --short=7 HEAD 2>/dev/null || git rev-parse --short=7 HEAD)" '.code==200 and .data.profile=="prod" and .data.db=="PostgreSQL" and .data.encryptEnabled==true and .data.mockLogin==false and .data.tenantEnabled==false and (.data.buildCommit|startswith($c))' &&
       test "$(curl -s -X POST "${BASE}/auth/login" -H 'Content-Type: application/json' -H "clientid: $(sed -n 's/^LQG_CLIENT_MP=//p' doc/verify/verify.prod.env)" -d "$(jq -nc --arg c "$(sed -n 's/^LQG_CLIENT_MP=//p' doc/verify/verify.prod.env)" '{clientId:$c,grantType:"xcx",tenantId:"000000",xcxCode:"mock:extA",phoneCode:"mock:13800000011"}')" | jq -r '.data.access_token // "rejected"')" = "rejected" &&
       HOST="$(printf '%s' "${BASE}" | sed -E 's#https://([^/:]+).*#\1#')" &&
       END="$(echo | openssl s_client -servername "${HOST}" -connect "${HOST}:443" 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2)" &&
@@ -40,6 +41,12 @@ accept:
       curl -sI "http://${HOST}/" | grep -qiE '^location: https://'
     counterfeit: |-
       生产误用了 test 配置（mock 登录是开的）→ ping 的 profile / mockLogin 红；第 3 段 mock 登录真的换到了 token 红——那等于任何人知道一个手机号就能登录。
+      ★ 2026-09-27 修 #311（我的独立验收发现）：原来这一段用 `doc/verify/api.sh --as admin` 取 ping —— 而
+      api.sh 是**裸 curl**（不带 `encrypt-key` 头、不做 RSA/AES、不带验证码 code/uuid），偏偏生产
+      `api-decrypt.enabled` 与 `captcha.enable` 都吃缺省 `true` → **生产登录必然失败**，等于这段断言
+      即便资源到位也跑不通。现在改成用**生产侧签发的管理员 token**（`verify.prod.env` 的 `LQG_ADMIN_TOKEN`，
+      在服务器上用超管登录工作台后从 localStorage 的 `Admin-Token` 取一次）直接打 ping。取 token 这一步
+      写进部署手册 §11；token 过期就重取。
       部署的是旧镜像 → buildCommit 对不上红。
       证书是手工装的、快过期了 → 剩余天数 ≤ 20 红。http 没跳 https → 最后一段红（小程序要求 https，工作台也不该明文传口令）。
       生产上没有 seed 账号：这里的 admin 是 verify.prod.env 里配的真实管理员，口令不进仓库。
