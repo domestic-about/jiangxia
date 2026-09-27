@@ -3355,8 +3355,8 @@
       "type": "arch",
       "title": "本机 dev 的 OSS 桶匿名可读+可列举（994 个 lqg/ 对象）：D6/D7 的「私有桶+签名」断言在 dev 只能证明 URL 带 Expires",
       "detail": "复现（D7 r1 L3 片额外发现）：`curl \"http://127.0.0.1:9000/ruoyi?list-type=2&prefix=lqg/\"` → **200**，一次列出 994 个对象（含所有 /internal/ 页图）；把工作台拿到的**内部版**签名链接去掉 query 再 curl → **200 12571 字节**，拿到含 `T-hli01` 的内部 Word。根因**不在应用代码**（我们永远 presign），而在环境/配置：**Flyway 基线的 sys_oss_config 第 1 行**是 9000/ruoyi/access_policy=1(public)/status=0（默认行），指向 **与别的项目共用的 dev-minio**；而本项目 compose 自备的 lqg-dev-minio(9002) 里连桶都没建（DOC-PDF-001 的 WARN-3 只记了「指错 MinIO」，没记这条更重的后果）。影响：本机 dev 上，「10 分钟签名 + 私有桶」这条安全语义**无法被证明**——断言只能证明 URL 带 Expires，证不了「别人拿不到」；同理 #262/#250 那类隔离结论在 dev 都只有一半证据。★**若测试环境（songjian.tianda.studio）沿用了同一条配置行 → 应立刻升 S1**（那会让「测试环境里的内部版文档」公网可读）；建议在「上线一轮」里真跑 SYS-PROD-001 的 `LQG_OSS_PROBE_URL` 匿名 403 探针，并核对测试库 sys_oss_config 到底指向哪个 endpoint/桶/access_policy。方案 a) 给 dev 建一个独立的 lqg-dev 桶（private）并把该行改指它；b) 至少把这条写进 doc/verify/README.md 的已知坑表，避免下游再把「签名 URL 带 Expires」当成隔离证明。",
-      "status": "open",
-      "decision": ""
+      "status": "decided",
+      "decision": "premise closed：2026-09-26 在本项目自己的桶上活体复验通过——dev 库 sys_oss_config 已指向 127.0.0.1:9002（桶 lqg、access_policy=0 私有），上传返回预签名 URL，带签名 200 / 裸地址 403 AccessDenied。原判据（「dev 桶匿名可读+可列举 994 个对象」）来自生效行指向 127.0.0.1:9000 = dongjiaoshan 的 dev MinIO，与本项目无关；H05 已修，本条不再成立。"
     },
     {
       "id": 295,
@@ -3575,6 +3575,26 @@
       "type": "debt",
       "title": "仓库卫生：add9444 把 .playwright-mcp 浏览器调试杂物提交进 git（console 日志 7488 行、空 page yml）",
       "detail": "影响：仓库体积与可读性；未来 bisect 与 diff 噪音。处置：从工作树删除并加 .gitignore；不重写历史（Kevin 口径：不 rewrite history）。同批还带进 _input/feedback/2026-09-24-shots（12 张甲方意见截图，属正常留档，保留）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 317,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "V 轮活体验收第 1 批（V01/V03/V05/V20/V21 + 私有桶）——全部通过，证据已留",
+      "detail": "环境：本机隔离模式 B（后端 8091 dev + api-decrypt=false、工作台 8093、H5 9202、reseed 7 段）。① V01：以 extA 不传 sourceUnitId、只传单位名提交组织样本 → code=200，且「近 5 分钟新建的外部样本里 source_unit_id 为空」计数 = 0（此前该路径必为空）；② V03：以 extA 提交缺必填字段 → code=400 + 友好列举缺项，响应体里 insert into/select/from t_lqg/org.dromara/psql/jdbc 命中数 = 0（此前回 500 + 整行数据）；③ V05：1MB 与 4MB 上传均 200（此前 3MB 起被拒），64MB → code=413 明确提示「单个文件不能超过 50MB，一次上传合计不能超过 60MB」（此前空响应 400）；④ V20：/lqg/sys/ping 对 extA 回 403、admin/staff 200；⑤ V21：ExtProfileController 类级 @SaCheckRole(\"lqg_external\")（方法映射待活体复验）；⑥ ★ 附带证实了报告说「从未在本项目桶上验过」的那条：上传返回的是本项目 MinIO（127.0.0.1:9002）的预签名 URL，带签名 200 / 裸地址 403 AccessDenied —— H05（dev 曾指向 dongjiaoshan 的 9000 桶）也已修，台账 #294 的前提就此关闭。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 318,
+      "ticket": "",
+      "severity": "S3",
+      "type": "ux",
+      "title": "PUT /mp/ext/profile 的业务校验失败回 500（应为 400）——V03 只治了「泄露」没治「状态码」",
+      "detail": "复现（2026-09-26，后端 8091 dev）：bash doc/verify/api.sh --as extA PUT /mp/ext/profile {\"realName\":\"验收\",\"unitName\":\"A 医院\",\"groupName\":\"类器官课题组\"} → {\"code\":500,\"msg\":\"请在列表里选择单位与组别，或手动填写单位名与组别名\"}。消息本身清楚、无泄漏（V03 的目标已达成），但把「用户填错」判成 500 会让前端与监控把校验失败当服务端故障。方案 a（推荐）：该分支改抛业务异常（400 语义）；b）全仓扫一遍「校验用异常 + 默认 500」的写法，统一到 400。同类：V03 修复时外部三个 BO 已改成 400，此处是漏网。",
       "status": "open",
       "decision": ""
     }
