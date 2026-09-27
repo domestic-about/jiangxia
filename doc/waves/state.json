@@ -3747,6 +3747,16 @@
       "detail": "① V24：见 #332。② V28/V33：测试级证据（全绿）——MpSamplePatchContractTest 7 用例、EmbedPatchSemanticsTest 3、CryoBatchPatchSemanticsTest 3、StaffGrantRulesContractTest 6；V33 的标注落在 MpEmbedContractTest / EmbedPatchSemanticsTest / CryoBatchPatchSemanticsTest / MpCryoContractTest / CryoFlowConcurrencyTest 等（随 454 用例全绿）。③ V29/V30：新写工作台真 DOM 探针 doc/waves/regression/V-round/v29-v30-workbench.mjs —— V29 首页点「渲染失败」卡片 → **抽屉出现且 URL 不变**、内容是「渲染失败与缺图清单 … 现在没有渲染失败或缺图的文档」（此前直达开发调试页）；V30 在正确路由 /qc-console/doc-console 上：**样本 id 输入框为空**、页面既不出现 9000001001 也不出现 T-hli01/SJ90000001。★ 过程中我先犯了一个「空对照假绿」：一开始访问 /doc-console 得到的是 404 页，而「页面里没有样本 id/票号」在 404 页上**天然成立** → 两条否定断言假绿。已改成**先判 404 再断言**（脚本里 step 1：页面必须能打开），并试出真实路由是父菜单下的 /qc-console/doc-console。教训与 #322 同源：否定型断言必须先证明「被测对象真的在」。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 334,
+      "ticket": "",
+      "severity": "S3",
+      "type": "harness",
+      "title": "V25 / V27 活体验收通过 —— V01–V33 至此只剩 V06（待甲方联系方式）与 V12（需微信开发者工具）",
+      "detail": "新探针 doc/waves/regression/V-round/v25-v27-miniapp.mjs（H5 真 DOM + 真网络，7 项全过）：① V27：列表请求是 **pageSize=20**（不再是写死的 100），切到「待核验」页签后滚动到底 → **真的发出 pageNum=2 请求**（分页接了；此前默认页签是「有效」只有几行，滚不出第二页，且我先犯了一次「页签没点中」的空对照）；② V25a：包埋页 7 个日期位全部渲染成「时间 请选择」**触发器**，**可自由打字的日期输入框 = 0 个**（此前可打字）；③ V25b：「选择样本」格是 **NON-INPUT**，点击打开选择弹框（4 个 popup 节点）→ 不会再打字覆写 sampleId。★ 探针踩到的两个时序约束已写进脚本注释：a) 触底必须放在**登录后第一段**做（先走两个表单页再回列表时 uni H5 的 onReachBottom 不触发）；b) 必须用移动视口（1280×720 下布局不同、滚到底也不触发）。两条都是探针约束、不是产品问题。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
