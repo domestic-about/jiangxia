@@ -32,6 +32,12 @@ DELETE FROM sys_oss       WHERE oss_id  BETWEEN 9000000000 AND 9000009999;
 DELETE FROM sys_user_role WHERE user_id IN (SELECT user_id FROM sys_user WHERE user_name LIKE 'wx\_%' AND user_id NOT BETWEEN 9000000000 AND 9000009999);
 DELETE FROM sys_user      WHERE user_name LIKE 'wx\_%' AND user_id NOT BETWEEN 9000000000 AND 9000009999;
 SQL
+# ★ 基线维护（2026-09-27）顺手清 api.sh 的 token 缓存（${TMPDIR:-/tmp}/lqg-verify-token-*）。
+#   不清的后果：reseed 删掉了旧用户 / 重置了库，而缓存里的 token 还在（api.sh 20 分钟内直接复用），
+#   于是「reseed 之后的第一次 --as 调用」带着**已失效身份**的 token 打接口 → 断言假红（issue #286）。
+#   实测表现：AUTH-LOGIN-001 acc2 首跑绿、再跑必红（/mp/me 回 200 但 .data.ext=null，因为 token 指向
+#   已被 reseed 删掉的雪花 id 用户）。以前靠个别 accept 自己 rm 兜底，这里做成通用清理。
+rm -f "${TMPDIR:-/tmp}"/lqg-verify-token-* 2>/dev/null || true
 for f in "${HERE}"/seed/*.sql; do
   need="$(sed -n 's/^-- requires: *//p' "${f}" | head -1)"
   missing=""
