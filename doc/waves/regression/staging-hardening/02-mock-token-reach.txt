@@ -1,0 +1,22 @@
+# 测试环境加固取证 ②：mock token 的接口可达矩阵（2026-09-28）
+# 时间：2026-09-28 06:43:25 +0800
+# 环境：https://songjian.tianda.studio（公网） profile=test buildCommit=256fc2a6de11
+# 身份：mock 登录（手机号 13800000001 = seed 内部人员「李工」），token 的 client = mp
+# 读法：403 = 被权限拦下；200 = 放行；404 = 无此端点。
+
+接口                             业务码/消息
+----                               ---------
+/mp/me                             200	操作成功
+/mp/int/sample/list                200	查询成功
+/lqg/sample/list                   200	查询成功
+/lqg/sample/9000001001             200	操作成功
+/system/user/list                  403	没有访问权限，请联系管理员授权
+/system/user/1                     403	没有访问权限，请联系管理员授权
+/monitor/online/list               403	没有访问权限，请联系管理员授权
+DELETE /lqg/sample/9999999999      200	操作成功
+POST /lqg/sample {}                500	样本类别不能为空
+
+# 结论：mock 登录不仅进小程序面，还能**读写工作台业务数据**（/lqg/sample/list 200、DELETE 200、POST 过权限到参数校验）；
+#       系统管理面被拦（/system/* 403、/monitor/* 403）。
+#       测试机数据全是 seed 合成数据（seed_users=8、sample_rows=10），故按 S2 记账；
+#       一旦这台机器上放真实数据、或用于上线，本项立即升为 S0/S1（见台账 #346）。

@@ -125,6 +125,13 @@ services:
       # 真实微信小程序凭据（甲方主体 appid 未提供 → 留空，体验版登录走 mock 调试入口）
       LQG_WX_APPID: ${LQG_WX_APPID:-}
       LQG_WX_SECRET: ${LQG_WX_SECRET:-}
+      # ── mock 登录开关（台账 #346）────────────────────────────────────────────
+      # application-test.yml 缺省 mock-login: true（ADR-0008 允许 test），甲方在拿到 appid
+      # 之前就靠它登进 seed 账号。但本环境**公网可达**，且实测 mock token 还能读写工作台业务数据
+      # （/lqg/sample/list 200、DELETE 200），所以这里留一个**一行开关**：
+      #   拿到 appid+secret 后 → `.env` 里 LQG_MOCK_LOGIN=false，再 deploy.sh up + reseed。
+      # 变量名走 Spring 宽松绑定：lqg.auth.mock-login ← LQG_AUTH_MOCK_LOGIN。
+      LQG_AUTH_MOCK_LOGIN: ${LQG_MOCK_LOGIN:-true}
       # DOC-PDF-001：docx → PDF 的转换容器，走 compose 网络的服务名（**不发布宿主端口**）
       LQG_GOTENBERG_URL: http://gotenberg:3000
     ports:

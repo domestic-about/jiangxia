@@ -1,7 +1,7 @@
 # accept[2] 等价取证 ③ 安全组入方向清单（只读；Kevin 说「只报告，不动」）
 # 实例：i-bp14wbcfphboybx9idug → 安全组：sg-bp17g616h67b936e6b1b（从实例现查，不写死）
 # 命令：aliyun ecs DescribeSecurityGroupAttribute --profile tianda-admin --RegionId cn-hangzhou --SecurityGroupId sg-bp17g616h67b936e6b1b
-# 生成时间：2026-09-22 16:24:20 +0800
+# 生成时间：2026-09-28 06:51:03 +0800
 
 ICMP	-1/-1	0.0.0.0/0	ingress	System created rule.
 TCP	22/22	0.0.0.0/0	ingress	System created rule.

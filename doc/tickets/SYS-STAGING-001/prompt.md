@@ -45,13 +45,29 @@ accept:
   - name: "测试机的数据库与缓存端口不对公网开放；compose 与部署脚本在仓库里、密码不在"
     form: STATE
     run: |-
-      HOST="$(sed -n 's#^LQG_API_BASE=https\?://\([^/:]*\).*#\1#p' doc/verify/verify.test.env)" && test -n "${HOST}" &&
-      ! nc -z -w 3 "${HOST}" 5432 && ! nc -z -w 3 "${HOST}" 6379 && ! nc -z -w 3 "${HOST}" 9000 &&
+      HOST="$(sed -n 's#^LQG_API_BASE=http[s]*://\([^/:]*\).*#\1#p' doc/verify/verify.test.env)" && test -n "${HOST}" &&
+      SSH_HOST="$(sed -n 's/^LQG_TEST_HOST=//p' code/deploy/test/.env 2>/dev/null || true)" &&
+      { [ -n "${SSH_HOST}" ] || SSH_HOST="${HOST}"; } &&
+      PROOF="$(ssh -o BatchMode=yes -o ConnectTimeout=10 "root@${SSH_HOST}" "LQG_TEST_PUB_IP='${SSH_HOST}' bash /opt/lqg-test/remote/port-proof.sh")" &&
+      state_of() { printf '%s' "${PROOF}" | awk -v k="$1" -v want="$2" 'index($0,k){seen=1; if ($NF==want) ok=1} END{exit !(seen&&ok)}'; } &&
+      state_of "${SSH_HOST}:15432" unreachable && state_of "${SSH_HOST}:16379" unreachable &&
+      state_of "${SSH_HOST}:19000" unreachable && state_of "${SSH_HOST}:19001" unreachable &&
+      state_of "${SSH_HOST}:8082"  unreachable && state_of "${SSH_HOST}:8083"  unreachable &&
+      state_of 127.0.0.1:15432 reachable && state_of 127.0.0.1:16379 reachable && state_of 127.0.0.1:8083 reachable &&
+      state_of "${SSH_HOST}:443" reachable && state_of "${SSH_HOST}:80" reachable && state_of "${SSH_HOST}:22" reachable &&
       test -f code/deploy/test/docker-compose.yml && test -f code/deploy/test/deploy.sh && test -f code/deploy/test/.env.example &&
       ! git ls-files --error-unmatch code/deploy/test/.env >/dev/null 2>&1 &&
       ! grep -nE '^[[:space:]]*-[[:space:]]*"?(0\.0\.0\.0:)?(5432|6379):' code/deploy/test/docker-compose.yml
     counterfeit: |-
-      compose 里顺手写了 ports: "5432:5432" 方便自己连库 → 公网可达，nc 连得上红 / grep 红。不允许的连接被拒才算对。
+      compose 里顺手写了 ports: "5432:5432" 方便自己连库 → 公网可达，探针连得上红 / grep 红。不允许的连接被拒才算对。
+      ★ 2026-09-28 重写（本例此前**从未真正通过**，两次都是环境/平台假红）：
+        ① 原写作 `https\?://`，而 **macOS 自带 BSD sed 不支持 BRE 的 `\?`** → HOST 恒为空 → `test -n` 直接红；
+        ② 改成 `nc -z "${HOST}" 5432` 之后仍然不可信：**本机 DNS 被本地代理劫持成 fake-IP（198.18.1.218）**，
+           该代理接受**任意** TCP 连接（实测端口 1、12345 都「连上」）→ nc 断言在本机恒绿或恒红，都没有判别力。
+        现在改成：**在测试机上**换发夹探（`ssh` 跑 port-proof.sh，它自带阳性对照 80/443/22、阴性对照 1.1.1.1:59999），
+        断言 ①本栈 6 个发布端口的公网 IP 一律 unreachable ②环回同端口 reachable（服务确实在跑）③阳性对照 reachable
+        （证明探针在区分，不是全都 unreachable）④仓库/密码那三条不变。
+        变异验证：把 `U 15432` 改成 `P 15432` → 红；把阳性对照 `P 443` 改成 `U 443` → 红（两次都实测过）。
       把带密码的 .env 提交进了 git → 红。
 ---
 

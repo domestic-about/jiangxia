@@ -96,4 +96,62 @@ psql -U "${LQG_DB_USER}" -d "${LQG_DB_NAME}" -At -c "select 'seed_users='||count
 psql -U "${LQG_DB_USER}" -d "${LQG_DB_NAME}" -At \
   -c "select 'donor_name_密文='||(donor_name <> '测试供体甲')||' len='||length(donor_name) from t_lqg_sample where id=9000001001" | sed 's/^/  /'
 
+log "===== 7) 管理员口令加固（每次 reseed 后都强制成强口令；幂等的是**最终状态**）====="
+# 为什么要有这一步：doc/verify/seed/01-accounts.sql 里 lqgadmin 的口令是 seed 默认值，
+# 而**测试环境是公网可达的**（https://songjian.tianda.studio）。只改一次口令没用——
+# 下一次 `deploy.sh reseed` 就把它退回默认值。这里每次灌完都强制成 .env 里的强口令。
+# ★ 注意措辞：reseed 每次都先把账号段重灌 → 口令**每次都**回到默认值，所以本步**每次都会真的改**，
+#   「无需改动」那条分支只是防御性兜底（例如账号段没重灌时）。不变的是**最终状态**：
+#   跑 0 次、1 次、N 次 reseed，结束时的口令都是 LQG_ADMIN_PASSWORD。
+#   · LQG_ADMIN_PASSWORD      目标强口令（不设则跳过，并明确告诉运维「仍是默认口令」）
+#   · LQG_SEED_ADMIN_PASSWORD seed 里的默认口令（默认 admin123，仅用于「从默认改到强」这一步）
+#   · LQG_CLIENT_PC           工作台账号登录的 client（漏配 → 本步无法登录，会明确告警并跳过）
+ADMIN_USER="${LQG_ADMIN_USER:-lqgadmin}"
+NEW_PW="${LQG_ADMIN_PASSWORD:-}"
+SEED_PW="${LQG_SEED_ADMIN_PASSWORD:-admin123}"
+API="http://127.0.0.1:${LQG_API_PORT:-8082}"
+CLIENT="${LQG_CLIENT_PC:-}"
+
+# 去掉 JSON 里会破坏载荷的字符：口令只允许可打印且不含 " 和 \ 的字符
+json_ok() { case "$1" in *'"'*|*'\'*) return 1 ;; *) return 0 ;; esac; }
+
+try_login() {  # $1=口令 → 成功则打印 token，失败打印空
+  local pw="$1"
+  curl -sS --max-time 15 -X POST "${API}/auth/login" \
+    -H 'Content-Type: application/json' -H "clientid: ${CLIENT}" \
+    -d "$(printf '{"clientId":"%s","grantType":"password","tenantId":"000000","username":"%s","password":"%s"}' \
+            "${CLIENT}" "${ADMIN_USER}" "${pw}")" 2>/dev/null \
+    | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p' | head -1
+}
+
+if [ -z "${NEW_PW}" ]; then
+  log "  ⚠ LQG_ADMIN_PASSWORD 未设置 → 跳过；**管理员口令仍是 seed 默认值**，"
+  log "    公网可达期间请勿放真实数据（SYS-STAGING-001 风险条）"
+elif [ -z "${CLIENT}" ]; then
+  log "  ⚠ LQG_CLIENT_PC 未设置 → 无法登录改口令，跳过（口令仍是 seed 默认值）"
+elif ! json_ok "${NEW_PW}"; then
+  log "  ✗ LQG_ADMIN_PASSWORD 含 \" 或 \\，无法安全拼进 JSON → 跳过（请换一个口令）"
+elif [ -n "$(try_login "${NEW_PW}")" ]; then
+  log "  ✓ 已是强口令（新口令可直接登录）→ 无需改动"
+else
+  TOKEN="$(try_login "${SEED_PW}")"
+  if [ -z "${TOKEN}" ]; then
+    log "  ✗ 新口令与 seed 默认口令都登不上 → 口令状态未知，请人工处理："
+    log "      ssh root@<host> \"curl -sS -X POST ${API}/auth/login -H 'Content-Type: application/json' -H 'clientid: ${CLIENT}' -d '{...}'\""
+    exit 1
+  fi
+  RESP="$(curl -sS --max-time 15 -X PUT "${API}/system/user/profile/updatePwd" \
+    -H 'Content-Type: application/json' -H "Authorization: Bearer ${TOKEN}" -H "clientid: ${CLIENT}" \
+    -d "$(printf '{"oldPassword":"%s","newPassword":"%s"}' "${SEED_PW}" "${NEW_PW}")")"
+  case "${RESP}" in
+    *'"code":200'*)
+      if [ -n "$(try_login "${NEW_PW}")" ]; then
+        log "  ✓ 已把 ${ADMIN_USER} 的口令从 seed 默认值改成 .env 里的强口令，并复验可登录"
+      else
+        log "  ✗ 接口报成功但新口令登不上 → 请人工复核"; exit 1
+      fi ;;
+    *) log "  ✗ 改口令失败：${RESP}"; exit 1 ;;
+  esac
+fi
+
 log "3) reseed 完成"

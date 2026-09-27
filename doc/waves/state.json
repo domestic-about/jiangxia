@@ -3867,6 +3867,46 @@
       "detail": "背景（#315）：D7 时我删掉该票唯一判别断言并援引不存在的裁定（#217 当时 open/decision 空）→ 该门结论作废。现状：修复轮（CR-20260923-09）把票面重写为 3 条可执行断言，且在最新全量基线里全部通过 —— acc1「外部文档清单钉在 seed 上」的判别式换成**假地址图 → 外部版 failed → 不上清单/预览 404，换真图后重新出现**（不再依赖我删掉的那条）；acc2 四条结构性不变量 + VO 形状；acc3「外部预览给原图与附件」。结论：无需另出重验报告，新基线重放即其重验（D7 16/16）。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 346,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "env-risk",
+      "title": "公网测试环境的 mock 登录不只进小程序面，还能「读+写」工作台业务数据（设计前提之外的真实边界）",
+      "detail": "背景：测试环境 https://songjian.tianda.studio 是**公网可达**的，profile=test 且 lqg.auth.mock-login=true（ADR-0008 允许 dev/test）。票面 §风险 记录的前提是「测试机不放任何真实数据」，但没写清 mock 到底能碰到多少。本轮实测把边界量了出来：① mock 身份是**调用方自造**的（`mock-openid-<key>` + 任意手机号，见 WxIdentityResolver#mockIdentity）；② `WxAccountBindService#bindOrCreateLocked` 按**手机号**查已有 sys_user，查到就复用 —— 所以用 seed 里的内部人员手机号 13800000001 走 mock，拿到的就是「李工」且 identity=internal（证据 01-mock-login-exposure.txt，从本机走公网复现）；③ 该 token 的 client 是 mp，但工作台的鉴权是**角色制**不是 client 制，于是同一个 token 能打工作台业务接口：`/lqg/sample/list` 200、`/lqg/sample/{id}` 200、`DELETE /lqg/sample/9999999999` 200（真删）、`POST /lqg/sample {}` 过权限到参数校验；系统管理面被拦（`/system/*` 403、`/monitor/*` 403）。证据 02-mock-token-reach.txt。定级理由：数据全是 seed 合成数据（sample_rows=10 / seed_users=8），最坏后果是**演示数据被陌生人读写/破坏**，不是真实数据泄露 → 记 S2（台账级，不挡本地试用）。**升级条件（写死）**：这台机器一旦放入真实数据、或用于上线 → 本项立即升 S0/S1。本轮已做：管理员口令从 seed 默认值改成强口令（见 #347），DB/Redis/MinIO 仍只绑环回（SYS-STAGING-001 acc2 复验）。待做（触发条件明确）：Kevin 给到 appid+secret 后，把 LQG_AUTH_MOCK_LOGIN 关掉（compose 已留一行开关），再复验小程序走真实微信登录；届时 SYS-STAGING-001 acc1 里那 5 条 `--as staff/extA/extC` 需要改用真实登录或按「环境受限」标注重放。 【2026-09-28 已实测开关有效】把测试机 `.env` 的 `LQG_MOCK_LOGIN` 置 false 并只重建 backend 容器后：容器内 `printenv LQG_AUTH_MOCK_LOGIN` = `false`；mock 登录被拒且**不静默降级** —— 返回 `{\"code\":500,\"msg\":\"微信登录失败：错误代码：41002…缺少 appid 参数\"}`（说明 mock 串被当作普通 code 送去微信 code2session，正是 WxIdentityResolver 注释里承诺的行为）；同时工作台账号密码登录照旧成功（200 + access_token）。改回 true 后再验，`/mp/me` 回到 `identity=internal`。→ 「拿到 appid 后一行关掉 mock」这条路是通的，不是纸面开关。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 347,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "env-risk",
+      "title": "reseed 会把管理员口令退回 seed 默认值 admin123 —— 已改成「每次灌完 seed 幂等强制强口令」",
+      "detail": "发现过程：本轮给测试环境加固、把 lqgadmin 的口令从 seed 默认值改掉后意识到——`docker compose down` 不会，但 `deploy.sh reseed` 会：它原样调用 doc/verify/reseed.sh 重灌 doc/verify/seed/01-accounts.sql，而那份里 lqgadmin 的口令是固定的 bcrypt 哈希（默认口令）。也就是说「改一次口令」在下次重灌后**静默失效**，而重灌恰恰是我每次换 appid / 清演示数据都要做的事。修复：`code/deploy/test/remote/03-reseed.sh` 新增第 7 步「管理员口令加固（幂等）」——放在 reseed **之后**，逻辑是：新口令能登录 → 跳过；不能 → 用 LQG_SEED_ADMIN_PASSWORD（默认 admin123）登录并 PUT /system/user/profile/updatePwd 改成 LQG_ADMIN_PASSWORD，再复验新口令可登录；两条都登不上则 exit 1 并打印人工处理命令；LQG_ADMIN_PASSWORD 未设则明确告警「口令仍是 seed 默认值」（不静默）。口令经 JSON 安全性检查（含 \" 或 \\ 则拒绝，避免拼出坏 JSON）。配置：真口令写在 `code/deploy/test/.env`（gitignore 覆盖）的 LQG_ADMIN_PASSWORD，并与本地 `doc/verify/verify.test.env` 的 LQG_ADMIN_PASSWORD 保持一致（测试环境那几条 accept 用后者登录）；`.env.example` 只留空值说明。复验：重跑 `deploy.sh reseed`（它会先重灌 seed → 口令退回默认 → 第 7 步再强制成强口令），两次实测日志均为「✓ 已把 lqgadmin 的口令从 seed 默认值改成 .env 里的强口令，并复验可登录」（06:47:46、06:48:13）。★ 更正我第一版写错的预期：我曾写「再跑一次应出现『已是强口令 → 无需改动』以证幂等」——**这是错的**，因为 reseed 每次都先重灌账号段、口令必然先回到默认值，所以第 7 步**每次都会真的改**；「无需改动」那条分支只是账号段没重灌时的防御性兜底。真正成立的不变式是**最终状态**：跑 0/1/N 次 reseed，结束时的口令都是 LQG_ADMIN_PASSWORD。脚本注释已按此措辞改正。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 348,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "tooling-trap",
+      "title": "本机 DNS 被本地代理劫持成 fake-IP，`nc`/裸 TCP 类断言在这台机器上**没有判别力**（已修正 acc2 并做变异验证）",
+      "detail": "发现过程：重写 SYS-STAGING-001 acc2 时，先修掉一个平台 bug —— 原断言用 `sed 's#…https\\?://…#\\1#p'` 提取主机名，而 **macOS 自带 BSD sed 不支持 BRE 的 `\\?`** → 提取恒为空 → `test -n \"${HOST}\"` 直接红（该票此前一直红，被「公网测试环境 502」盖住了根因）。改用 `http[s]*://` 后拿到主机名，接着发现更要命的：`songjian.tianda.studio` 在**本机**解析成 **198.18.1.218**（保留给网络基准测试的地址段，典型的本地代理 fake-IP 模式；公共 DNS 223.5.5.5/119.29.29.29/8.8.8.8 全部超时，DNS 被劫持）。该代理**接受任意 TCP 连接**：实测端口 1、12345、54321 全都「连上」，而直接连真实 IP 118.178.109.11 时连 22/443/80 与 5432/6379/9000/12345/1 也一律「连上」。→ 结论：**`nc`/`/dev/tcp` 这类裸 TCP 探针在本机既不会真红也不会真绿，一律不可信**；HTTP(S) 经代理正常（curl 能取到真实页面），所以 curl 类断言不受影响。我据此曾一度误判「5432/6379/9000 公网可达」（那是代理假象，**不是**服务器真开放）。处置：acc2 改为 **ssh 到测试机**执行 `remote/port-proof.sh`（它自带阳性对照 80/443/22 与阴性对照 1.1.1.1:59999，是设计得对的做法），断言 ①本栈 6 个发布端口经公网 IP 一律 unreachable ②环回同端口 reachable（服务确实在跑）③阳性对照 reachable ④仓库/密码三条不变。**我自己摆的乌龙（留档）**：第一版重写用 `index($0,\"reachable\")` 判断状态，而字符串 \"unreachable\" **包含**子串 \"reachable\" → 变异①（公网口期望改成 reachable）与变异②（阳性对照期望改成 unreachable）**都是绿的** = 空断言。改成按 awk `$NF` 整字段精确比后，四改四红、原样绿。教训：**断言写完必须变异，只看它绿不算数**。证据：`doc/waves/regression/staging-hardening/04-acc2-rewrite-and-mutation.txt`、`doc/waves/reports/SYS-STAGING-001/acc2-port-proof.txt`、`acc2-security-group.txt`。附带事实（只报告不改，Kevin 原话）：安全组**确实**对 0.0.0.0/0 开着 5432、3306、8080、8881 等端口，但本栈根本不在 5432 上监听（用的是 15432 且绑 127.0.0.1）→ 连不上；同机别人的容器里 gz-mysql-staging 是 0.0.0.0:3306、gz-ruoyi-admin-staging 是 0.0.0.0:8080，**对公网开放的是它们**，不属于本项目、我未触碰。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 349,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "ui-drift",
+      "title": "工作台登录页的验证码输入框有竞态：前端 ref 初值 true，拿到 /auth/code 之后才移除 → 手快的人在慢网络下会先撞上「验证码必填」",
+      "detail": "现象：`code/plus-ui/src/views/login.vue` 里 `const captchaEnabled = ref(true)`（初值 true），`v-if=\"captchaEnabled\"` 先渲染验证码那一项；等到 `/auth/code` 返回（test profile 的 `captcha.enable=false` → `captchaEnabled:false`）才把它移除。实测：线上 `GET /prod-api/auth/code` 返回 `{\"captchaEnabled\":false,\"uuid\":null,\"img\":null}`（后端确实关着）；但探测脚本在响应到达前就填表提交 → 被表单校验「验证码必填」挡下 → 停在 /login（我第一版线上探针因此 13 条断言全 ✗，且因为探针缺「登录成功」前置断言而看不出根因）。定级 S3：真实用户只有在「页面刚打开、/auth/code 还没回来」的窗口内手速极快地提交才会遇到，且字段随后自动消失、重试即可；不影响功能与数据。处置：① 探针已修（先 `waitForResponse('/auth/code')` 再填表 + 加「能登录进工作台」这一条**反空断言**前置；见 `03-deployed-workbench-ui.mjs`）；② 产品侧未改（属 S3 长尾，与「界面细节」一批处理更合适）。证据：`doc/waves/regression/staging-hardening/05-deployed-ui-live.txt`。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

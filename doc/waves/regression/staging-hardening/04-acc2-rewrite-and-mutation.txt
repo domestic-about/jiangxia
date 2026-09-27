@@ -1,10 +1,26 @@
-# accept[2] 等价取证 ① ② ③ —— 在测试机 `118.178.109.11` 上执行
-# 命令：ssh root@118.178.109.11 'LQG_TEST_PUB_IP=118.178.109.11 bash /opt/lqg-test/remote/port-proof.sh'
-# 生成时间：2026-09-28 06:50:11 +0800
+# SYS-STAGING-001 acc2 重写 + 变异验证（2026-09-28）
+# 时间：2026-09-28 07:00:34 +0800
 
-** WARNING: connection is not using a post-quantum key exchange algorithm.
-** This session may be vulnerable to "store now, decrypt later" attacks.
-** The server may need to be upgraded. See https://openssh.com/pq.html
+## 为什么重写
+原断言的两次假红：
+  ① macOS 自带 BSD sed 不支持 BRE 的 \? → HOST 恒空 → test -n 红（平台 bug）
+  ② 改用 nc 后仍不可信：本机 DNS 被本地代理劫持成 fake-IP 198.18.1.218，该代理接受任意 TCP
+     （实测端口 1、12345 都「连上」）→ nc 在本机没有判别力
+
+现在：ssh 到测试机跑 /opt/lqg-test/remote/port-proof.sh（自带阳性/阴性对照），按整字段精确比状态。
+
+## 变异验证（改坏必须变红；实测四改四红、原样绿）
+  原样                                       exit=0 绿
+  \u2460 公网 15432 期望改 reachable            exit=1 红 ✓
+  \u2461 阳性对照 443 期望改 unreachable         exit=1 红 ✓
+  \u2462 环回 127.0.0.1:15432 期望改 unreachable exit=1 红 ✓
+  \u2463 端口改成不存在的 19999（该行不出现）     exit=1 红 ✓
+
+★ 第一次重写是**空断言**：state_of 用 index($0,"reachable") 判断，而 "unreachable" 里含子串
+  "reachable" → 变异① ② 都是绿的（假过）。已改成按 awk 的 $NF 整字段比，才拿到上面四个红。
+  这条自摆乌龙的记录留在这里，提醒：**断言写完必须变异，不能只看它绿**。
+
+## 产物（测试机现取，2026-09-28 06:50）
 === ① 发夹探针：从 box 打**自己的公网 IP** 118.178.109.11（2026-09-28 06:50:13）===
 --- 本项目：公网**不该**可达（只绑 127.0.0.1）---
   118.178.109.11:15432  → unreachable
@@ -42,15 +58,3 @@
   LISTEN 0      4096                 [::]:8080          [::]:*    users:(("docker-proxy",pid=549491,fd=4))                                                                                                   
 
 === ④ docker 端口映射（compose 的 HostIp 字段）===
-lqg-test-backend	127.0.0.1:8082->8080/tcp
-lqg-test-gotenberg	3000/tcp
-lqg-test-nginx	127.0.0.1:8083->80/tcp
-lqg-test-minio	127.0.0.1:19000->9000/tcp, 127.0.0.1:19001->9001/tcp
-lqg-test-postgres	127.0.0.1:15432->5432/tcp
-lqg-test-redis	127.0.0.1:16379->6379/tcp
---- 别人的容器（只读，未碰）---
-gz-ruoyi-admin-staging	0.0.0.0:8080->8080/tcp, :::8080->8080/tcp
-tianda-redis	127.0.0.1:6380->6379/tcp
-tianda-mysql	33060/tcp, 127.0.0.1:3307->3306/tcp
-gz-redis-staging	6379/tcp
-gz-mysql-staging	0.0.0.0:3306->3306/tcp, :::3306->3306/tcp, 33060/tcp
