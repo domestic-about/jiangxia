@@ -33455,3 +33455,4 @@
 2026-09-28 14:03:56 [redisson-3-4] INFO  o.d.c.sse.listener.SseTopicListener - SSE主题订阅收到消息session keys=[9000000101] message=下午好，欢迎登录 RuoYi-Vue-Plus 后台管理系统
 2026-09-28 14:03:59 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/int/sample/list],参数类型[json],参数:[]
 2026-09-28 14:03:59 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/int/sample/list],耗时:[149]毫秒
+2026-09-28 14:45:38 [redisson-3-1] INFO  o.d.c.sse.listener.SseTopicListener - SSE主题订阅收到消息session keys=[9000000101] message=下午好，欢迎登录 RuoYi-Vue-Plus 后台管理系统

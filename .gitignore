@@ -38,3 +38,9 @@ code/plus-ui/.eslintrc-auto-import.json
 private.*.key
 *.key
 !**/*.key.example
+
+# 2026-09-28：误提交过的东西，一律挡住
+doc/.tmp/
+code/RuoYi-Vue-Plus/logs/
+code/RuoYi-Vue-Plus/ruoyi-admin/logs/
+*.flattened-pom.xml
