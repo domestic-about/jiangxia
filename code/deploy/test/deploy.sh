@@ -9,6 +9,7 @@
 #   bash deploy.sh nginx        # 只在服务器上：宿主宝塔 nginx 站点 + Let's Encrypt 证书 + 反代
 #   bash deploy.sh prove-ports  # accept[2] 等价取证：发夹探针+安全组+ss -lntp（本机 nc 不可用）
 #   bash deploy.sh reseed       # 只在服务器上：把 doc/verify/seed 灌进 lqg_test
+#   bash deploy.sh miniapp      # 小程序体验版：本机构建 → 同步 → 在服务器上传（固定 IP）
 #   bash deploy.sh verify       # 从本机打 https://<域名>/lqg/sys/ping 与工作台首页
 #   bash deploy.sh status       # 测试机现状（只读）
 #   bash deploy.sh down         # docker compose down（保留数据卷；不会碰别人的容器）
@@ -276,6 +277,51 @@ phase_status() {
   "${SSH[@]}" "bash '${LQG_DEPLOY_DIR}/remote/status.sh'" || "${SSH[@]}" "bash -s" < "${HERE}/remote/status.sh"
 }
 
+# ── 小程序体验版上传（2026-09-28 加）─────────────────────────────────────────
+# 为什么要有这一阶段、以及为什么上传在服务器上做：
+#   · 微信要求上传来源 IP 在「开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」里；
+#     开发机常年跑在代理后面（TUN 模式，`curl --noproxy '*'` 与直连拿到的是同一个代理出口 IP），
+#     那个 IP 不稳定、也不该长期占据白名单 → 上传挪到固定公网 IP 的测试机上。
+#   · 但**构建必须留在本机**（gotchas §6.5：不同 OS 产物不同，体验版真机上会渲染空）。
+#   · 所以流程是：本机 `--build-only`（构建 + 配置守卫 + 产物守卫，两道都过）→ 同步物料 →
+#     服务器上 `--skip-build`（守卫再跑一遍）→ miniprogram-ci 上传 + 生成体验版二维码。
+# 前置：.env 里配 LQG_WX_APPID 与 LQG_MINIPROGRAM_KEY（本机绝对路径；密钥绝不进仓库）。
+phase_miniapp() {
+  local mode="test" mpd="${LQG_DEPLOY_DIR}/miniapp"
+  [ -n "${LQG_WX_APPID:-}" ] || die "缺 LQG_WX_APPID（写进 code/deploy/test/.env）"
+  [ -n "${LQG_MINIPROGRAM_KEY:-}" ] || die "缺 LQG_MINIPROGRAM_KEY=<private.<appid>.key 的绝对路径>（写进 .env）"
+  [ -f "${LQG_MINIPROGRAM_KEY}" ] || die "上传密钥文件不存在：${LQG_MINIPROGRAM_KEY}"
+
+  say "⑧ 小程序体验版：本机构建（mode=${mode}）"
+  ( cd "${ROOT}/code/miniapp" && LQG_WX_APPID="${LQG_WX_APPID}" pnpm upload:mp --mode="${mode}" --build-only ) \
+    || die "本机构建或发布守卫没过（原因见上）"
+
+  say "⑧ 同步物料 → ${LQG_TEST_HOST}:${mpd}"
+  "${SSH[@]}" "install -d '${mpd}/dist/build'"
+  # openrsync（macOS 自带）在「文件 + 带尾斜杠目录」混在一条命令里会摊平，所以逐条来
+  rsync -az -e "ssh -o BatchMode=yes" "${ROOT}/code/miniapp/scripts" "root@${LQG_TEST_HOST}:${mpd}/"
+  rsync -az -e "ssh -o BatchMode=yes" "${ROOT}/code/miniapp/package.json" "root@${LQG_TEST_HOST}:${mpd}/"
+  rsync -az --delete -e "ssh -o BatchMode=yes" "${ROOT}/code/miniapp/env" "root@${LQG_TEST_HOST}:${mpd}/"
+  rsync -az --delete -e "ssh -o BatchMode=yes" \
+    "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" "root@${LQG_TEST_HOST}:${mpd}/dist/build/"
+  # 上传密钥：只往服务器放，600；仓库里永远没有它
+  rsync -az -e "ssh -o BatchMode=yes" "${LQG_MINIPROGRAM_KEY}" "root@${LQG_TEST_HOST}:${mpd}/private.key"
+  "${SSH[@]}" "chmod 600 '${mpd}/private.key'"
+  # 本阶段可能被单独调用（没有先跑 upload），远端脚本自己送一份
+  rsync -az -e "ssh -o BatchMode=yes" "${HERE}/remote/04-miniapp-upload.sh" "root@${LQG_TEST_HOST}:${LQG_DEPLOY_DIR}/remote/"
+
+  run_remote_phase "04-miniapp-upload" "04-miniapp-upload.sh" 900
+
+  # 把体验版二维码取回来（在服务器上生成的，落到本机 dist/，该目录已被 gitignore）
+  if "${SSH[@]}" "ls '${mpd}'/dist/体验版二维码-*.png >/dev/null 2>&1"; then
+    rsync -az -e "ssh -o BatchMode=yes" "root@${LQG_TEST_HOST}:${mpd}/dist/体验版二维码-*.png" \
+      "${ROOT}/code/miniapp/dist/" 2>/dev/null \
+      && say "  ✓ 体验版二维码已取回：code/miniapp/dist/（**不要提交进仓库**）" \
+      || warn "  二维码回传失败（不影响上传结果，可在服务器 ${mpd}/dist/ 取）"
+  fi
+  say "  ⚠ 上传成功后还要在「微信公众平台 → 版本管理」把该版本**设为体验版**并添加体验成员"
+}
+
 phase_down() {
   warn "只 down 本项目（lqg-test）；别人的容器一个都不动"
   "${SSH[@]}" "cd '${LQG_DEPLOY_DIR}' && docker compose -f docker-compose.yml --env-file .env down"
@@ -295,6 +341,7 @@ main() {
       phase_nginx
       phase_reseed
       phase_verify
+      phase_miniapp
       phase_prove_ports
       ;;
     artifacts) phase_artifacts ;;
@@ -303,10 +350,11 @@ main() {
     nginx)     phase_nginx ;;
     reseed)    phase_reseed ;;
     verify)    phase_verify ;;
+    miniapp)   phase_miniapp ;;
     prove-ports) phase_prove_ports ;;
     status)    phase_status ;;
     down)      phase_down ;;
-    *) die "用法：bash deploy.sh {all|artifacts|upload|up|nginx|reseed|verify|prove-ports|status|down}" ;;
+    *) die "用法：bash deploy.sh {all|artifacts|upload|up|nginx|reseed|verify|miniapp|prove-ports|status|down}" ;;
   esac
   say "完成：${cmd}"
 }

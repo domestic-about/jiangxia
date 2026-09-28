@@ -3,7 +3,7 @@
  * 小程序上传（SYS-STAGING-001 起；V07 补发布守卫与参数）
  *
  *   LQG_WX_APPID=wx.... LQG_WX_PRIVATE_KEY=/abs/path/private.wx....key \
- *   pnpm upload:mp --mode=test|staging|production [--robot=N] [--version=x.y.z] [--desc=说明] [--skip-build]
+ *   pnpm upload:mp --mode=test|staging|production [--robot=N] [--version=x.y.z] [--desc=说明] [--skip-build] [--build-only]
  *
  * 参数：
  *   --mode=        vite mode，决定加载 env/.env + env/.env.<mode>，缺省 test（与旧用法一致）
@@ -11,6 +11,10 @@
  *   --version=     上传版本号；缺省 production = package.json 的 version，其余 = <version>.<mode>.<提交号>
  *   --desc=        版本描述（微信后台「项目备注」列）；缺省按 mode 生成一句中文
  *   --skip-build   不重新构建，直接上传 dist/build/mp-weixin-<mode> 里现成的产物（守卫照样检查它）
+ *   --build-only   **只构建 + 过两道守卫，不上传**（2026-09-28 加）。用途：微信要求上传来源 IP 在
+ *                  「小程序代码上传」白名单里，而开发机常年在代理后面（出口 IP 不稳），所以
+ *                  构建留本机（项目纪律：不同 OS 产物不同）、**上传改到固定 IP 的服务器上**跑。
+ *                  deploy.sh 的 miniapp 阶段就是「本机 --build-only → 同步产物 → 服务器 --skip-build」。
  *
  * 流程（栈包 gotchas §6.5：**只走本地构建 + miniprogram-ci，不用 CI 机器构建**）：
  *   0. **发布守卫**（只在 production 模式拦截，其它模式只提示）：
@@ -36,13 +40,14 @@ const HERE = path.resolve(import.meta.dirname, '..')
 
 // ── 参数 ──────────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
-  const out = { mode: 'test', robot: null, version: null, desc: null, skipBuild: false }
+  const out = { mode: 'test', robot: null, version: null, desc: null, skipBuild: false, buildOnly: false }
   for (const arg of argv) {
     if (arg.startsWith('--mode=')) out.mode = arg.slice('--mode='.length)
     else if (arg.startsWith('--robot=')) out.robot = arg.slice('--robot='.length)
     else if (arg.startsWith('--version=')) out.version = arg.slice('--version='.length)
     else if (arg.startsWith('--desc=')) out.desc = arg.slice('--desc='.length)
     else if (arg === '--skip-build') out.skipBuild = true
+    else if (arg === '--build-only') out.buildOnly = true
     else {
       console.error(`[upload:mp] 不认识的参数：${arg}`)
       process.exit(2)
@@ -214,6 +219,12 @@ else {
 
 // 构建后：产物层面的守卫
 report('产物', artifactProblems(OUT_DIR, BASE_URL))
+
+// --build-only：构建与两道守卫都过了就收工（上传留给固定 IP 的服务器，见文件头说明）
+if (args.buildOnly) {
+  console.log(`[upload:mp] ✓ --build-only：产物已就位 ${path.relative(HERE, OUT_DIR)}（本次不上传）`)
+  process.exit(0)
+}
 
 // ── 2. 凭据检查（缺了就说清楚缺什么，不硬猜）────────────────────────────────
 if (appidProblems(APPID).length) {

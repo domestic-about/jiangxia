@@ -3927,6 +3927,26 @@
       "detail": "现象：最后一次部署后，线上工作台网页登录失败（停在 /login），而后端日志给出决定性证据 —— `[990674DD] 请求地址'/auth/login',发生未知异常. java.lang.RuntimeException: com.fasterxml.jackson.databind.exc.MismatchedInputException: Cannot construct instance of LoginBody … no String-argument constructor/factory method to deserialize from String value ('w4hqD9QPuyyXj+jmTEWrE83bf5FGTMISrRUZ/bMa/…')` —— 即**登录体是以 AES 密文到达后端的**，后端却按 JSON 解析。根因链：`.env.test` 与 `.env.production` 只差一处 `VITE_APP_ENCRYPT=false`；test profile 的后端不解密（api-decrypt 关着）。而 `code/plus-ui/dist/` 是**共享目录**：`QC-WEB-002 acc2`（以及 QC-WEB-001 acc2、SYS-WEB-001 acc2 等「前端构建是本次产物」类断言）在重放时会 `cd code/plus-ui && rm -rf dist && pnpm build:prod` 把它整份换成 **prod 模式**；之后任何一次 `deploy.sh upload` 都会把这份 prod 产物 rsync 上测试机 → 网页登录当场坏掉。难以发现的地方：现象出在**后端 500**，很容易误判成后端问题；而 API 登录（api.sh 走裸 curl、不带 encrypt-key）在同一时刻是**好的**，更把人往错误方向带。我在 07:05 验过一次线上登录是好的，正是因为那时 dist 还是 test 模式的旧产物。处置（结构性，不靠人记）：`deploy.sh phase_upload` 现在**自己重建**前端产物 —— 上传前固定跑 `cd code/plus-ui && rm -rf dist && pnpm build:test`，并断言 `dist/index.html` 存在，失败即 die。这样「部署产物」与「部署动作」绑定，重放/别的脚本怎么改 dist 都影响不到测试环境。复验：重建后重新部署 → 线上网页登录恢复（能进 /index）→ staging-hardening/03 探针 19/19 PASS（见 05-deployed-ui-live.txt）。教训（值得单列）：**「构建产物目录」被多个环节共享时，部署脚本不能信任它的现状**；以及「前端构建模式」是一类只有到运行时才暴露的错误配置，最好由部署方自己决定，而不是指望上游目录里留着对的那一份。",
       "status": "open",
       "decision": ""
+    },
+    {
+      "id": 352,
+      "ticket": "",
+      "severity": "S1",
+      "type": "secret-hygiene",
+      "title": "我把 Kevin 给的小程序上传私钥误提交进了 git 历史（f4cc5f5）—— 已摘除跟踪并评估影响面；建议重置密钥收尾",
+      "detail": "经过：Kevin 于 2026-09-28 07:10 把 `private.wxf7933ab70657e598.key`（RSA 上传私钥，1675 字节，权限当时是 644）放到项目根目录；我 07:5x 跑 `git add -A && git commit` 时把它一并提交了（提交 f4cc5f5），并且此后两三次提交它都还在跟踪里。发现方式：本轮收到密钥后先做「它是否被忽略/被跟踪」的复核，`git ls-files` 显示**它已被跟踪**，`git show f4cc5f5:<key>` 能取出完整私钥 → 确认已进历史对象。【影响面评估（已实测）】① 本仓库 `git remote -v` **为空** —— 从未配置远端、从未推送，所以没有外泄到任何服务器；② 含该文件的提交只存在于本地 `task/D8` 分支（`git branch --contains f4cc5f5` 只有它）；`main` 与 `integration` 两个分支里都没有这个文件（逐个 `git cat-file -e` 验过）。③ 因此暴露面 = 本机 git 对象库。【处置】① `git rm --cached private.wxf7933ab70657e598.key`（**文件留在磁盘、继续可用**）+ 提交；② `.gitignore` 增加 `private.*.key` / `*.key`（保留 `!**/*.key.example`），`git check-ignore` 复验 rc=0；③ 文件权限 644 → **600**。【未做、需 Kevin 定的】历史对象里仍可取回该私钥。按既有纪律（不许改写历史、不许推 main）我**没有**做 filter-branch/rebase 去把它从历史里抹掉。两个选项：**(A) 推荐 —— 在微信公众平台「开发管理 → 开发设置」重置一次上传密钥**，下载新的 private.<appid>.key 覆盖本地这份（旧密钥随即作废，历史里那份变成废纸）；**(B)** 接受现状（本机对象库、未推送、单机开发），但要知道它一直躺在 .git 里。【教训】把「提交前扫一遍工作区里有没有新出现的凭据类文件」当成硬动作；`git add -A` 在「别人刚往目录里放了密钥」的场景下是危险的。同样待办：本轮上传私钥通过**环境变量**传入，不写进任何 env 文件；`code/miniapp/env/.env` 里只放了 appid（公开信息）。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 353,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "external-blocker",
+      "title": "小程序体验版上传链路已打通（构建本机 + 上传服务器固定 IP），当前唯一阻塞：微信侧「小程序代码上传 IP 白名单」未放行 118.178.109.11",
+      "detail": "背景：Kevin 2026-09-28 给了真实 appid `wxf7933ab70657e598` 与上传私钥。【为什么上传不能在开发机做】微信要求上传来源 IP 在白名单里；开发机常年跑在代理后面，实测 `env` 里有 http_proxy/https_proxy=127.0.0.1:1081、且 `curl --noproxy '*'` 与直连拿到**同一个**出口 IP 160.16.223.125 → 说明是 TUN 层劫持，按进程绕不过去，而代理出口 IP 不稳定、也不该长期占白名单。【已建成的链路】`code/deploy/test/deploy.sh miniapp` 一条命令：① 本机 `pnpm upload:mp --mode=test --build-only`（**构建必须留本机** —— gotchas §6.5：不同 OS 产物不同，体验版真机会渲染空）并把上传脚本自带的**配置守卫 + 产物守卫**都跑一遍（appid 格式、https、非回环/内网、mock 痕迹、接口地址真的打进包）；② rsync 物料（scripts/、package.json、env/、dist/build/mp-weixin-test、私钥→600）到 `/opt/lqg-test/miniapp/`；③ 服务器上跑 `remote/04-miniapp-upload.sh`（`--skip-build`，守卫再跑一遍）→ miniprogram-ci 上传 + 出体验版二维码 → 回传二维码。为此给 `upload-mp.mjs` 加了 `--build-only`；`env/.env` 的 `VITE_WX_APPID` 从占位 `wx0000000000000000` 换成真实 appid（`src/manifest.json` 是 manifest.config.ts 的生成物，随之更新）。【踩到的坑】服务器上第一次 `npm install miniprogram-ci` 失败：那个目录里是小程序自己的 package.json（整棵 uni-app/vue 依赖树），npm 按 node 24 重新解析整棵树 → ERESOLVE。改为在独立目录 `/opt/lqg-test/mp-ci-deps` 装、再软链 `node_modules` 进上传目录（ESM 沿导入文件所在目录向上找 node_modules，软链照样命中）→ 秒过。【当前阻塞（外部，只能 Kevin 做）】微信返回 `{\"errCode\":-10008,\"errMsg\":\"invalid ip: 118.178.109.11\"}`。需要把 **118.178.109.11**（测试机固定公网 IP）加进「微信公众平台 → 开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」，然后重跑 `bash code/deploy/test/deploy.sh miniapp` 即可（脚本已就位、带失败自解释提示）。【另一项仍然缺】真实微信登录还需要 **AppSecret**（开发设置里的那个，不是上传密钥）→ 配进 `.env` 的 `LQG_WX_SECRET`。在拿到之前 mock 登录必须继续开着（否则小程序没法登录），台账 #346 的公网风险也就还在。【顺带待办】上传成功后要在「微信公众平台 → 版本管理」把该版本**设为体验版**并添加体验成员——这步只能人工做。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {
