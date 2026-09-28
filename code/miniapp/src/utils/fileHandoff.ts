@@ -113,14 +113,25 @@ export async function downloadToTemp(url: FileUrl, opts?: DownloadOptions): Prom
         url: target,
         header: header ?? {},
         success: (res: any) => {
+          // ★ 2026-09-28 修：`wx.downloadFile` 对 **401/404 也会走 success**（照样给一个 tempFilePath，
+          //   内容是错误 JSON）。原来不检查状态码 → 那段 JSON 被当成 xlsx 交给 openDocument →
+          //   真机上只报「文件已损坏」，把真正的失败原因（token 失效 / 域名没配）盖掉了。
+          const code = Number(res?.statusCode ?? 0)
           const path = String(res?.tempFilePath ?? '')
+          if (code && code !== 200) {
+            reject(new Error(`downloadFile 返回 HTTP ${code}`))
+            return
+          }
           if (path) {
             resolve(path)
             return
           }
           reject(new Error('downloadFile 没给临时路径'))
         },
-        fail: () => reject(new Error('downloadFile 失败')),
+        // ★ `errMsg` 必须带出来：真机最常见的失败是 `downloadFile:fail url not in domain list`
+        //   （微信后台没把域名加进 **downloadFile 合法域名** —— 它与 request 合法域名是两张分开的白名单）。
+        //   原来这里把 errMsg 吞了，导致线上线下都只看到一句「导出失败，请稍后再试」。
+        fail: (res: any) => reject(new Error(`downloadFile 失败：${String(res?.errMsg ?? '（无 errMsg）')}`)),
       })
     })
   }

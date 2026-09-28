@@ -197,8 +197,20 @@ function onRowTap(row: LedgerTableRow) {
 
 const exporting = ref(false)
 
-/** 把「导出 / 打开 / 发送到微信」这一串的失败统一成一句人话（不显示后端的 msg） */
-function exportFailed() {
+/**
+ * 把「导出 / 打开 / 发送到微信」这一串的失败统一成一句人话（不显示后端的 msg）。
+ *
+ * ★ 2026-09-28 改：真机上最常见的失败是**微信后台没把域名加进 downloadFile 合法域名**
+ *   （它和 request 合法域名是两张**分开**的白名单），错误文本是
+ *   `downloadFile:fail url not in domain list`。这种失败给「请稍后再试」等于把人堵死，
+ *   所以单独识别成一句能照着做的提示。
+ */
+function exportFailed(err?: unknown) {
+  const msg = String((err as any)?.message ?? err ?? '')
+  if (msg.includes('not in domain list')) {
+    uni.showToast({ title: '导出域名未在微信后台配置，请联系管理员', icon: 'none' })
+    return
+  }
   uni.showToast({ title: '导出失败，请稍后再试', icon: 'none' })
 }
 
@@ -229,10 +241,10 @@ async function exportExcel() {
     }
     await askHandoff(path, exportFileName(sheet.value.key))
   }
-  catch {
+  catch (err) {
     uni.hideLoading()
     exporting.value = false
-    exportFailed()
+    exportFailed(err)
   }
 }
 

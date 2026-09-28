@@ -44,3 +44,4 @@ doc/.tmp/
 code/RuoYi-Vue-Plus/logs/
 code/RuoYi-Vue-Plus/ruoyi-admin/logs/
 *.flattened-pom.xml
+logs/
