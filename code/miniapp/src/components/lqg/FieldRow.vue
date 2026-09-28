@@ -90,6 +90,11 @@ function onPick() {
 </script>
 
 <template>
+  <!-- ★ 2026-09-28（Kevin 要求）：每一项一条**很浅的下划线**。
+       为什么要包一层：下面四支各是 wot 组件自己的根元素（wd-cell / wd-input），
+       父级的 scoped 样式够不到组件内部，所以线画在这层 .fr 上；线色用设计 token 里那条
+       「cell 分隔线」--lqg-line(#e2e9ea)，与表格行线同一档，不抢视觉。 -->
+  <view class="fr">
   <!-- 只读 / 按钮组：一个普通 cell，值在右 -->
   <wd-cell
     v-if="readonly || control === 'seg'"
@@ -154,9 +159,19 @@ function onPick() {
       <text class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
     </template>
   </wd-input>
+  </view>
 </template>
 
 <style lang="scss" scoped>
+/* 每项一条浅下划线；最后一行不画（否则与卡片底边叠成双线） */
+.fr {
+  border-bottom: 1px solid var(--lqg-line);
+}
+
+.fr:last-child {
+  border-bottom: 0;
+}
+
 .fr__val {
   display: flex;
   align-items: center;
