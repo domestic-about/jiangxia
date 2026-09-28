@@ -123,7 +123,9 @@ jobs:
           # 仓库里的 .mvn-settings.xml 是单机加速用的（mirrorOf=* 只留阿里云一个源，没有兜底）。
           # CI 用 .github/maven-settings.xml：**阿里云与 Maven Central 都配上，谁通用谁**，
           # 并配合 deploy.sh 里的 wagon 重试（3 次）挡住偶发传输失败。
-          LQG_MVN_SETTINGS: .github/maven-settings.xml
+          # ★ 必须是**绝对**路径：deploy.sh 会 `cd code/RuoYi-Vue-Plus` 再跑 mvn，
+          #   相对路径在那里就不存在了（首次这么写，maven 40 秒即失败）。
+          LQG_MVN_SETTINGS: ${{ github.workspace }}/.github/maven-settings.xml
         run: bash code/deploy/test/deploy.sh all
 
       - name: 部署后冒烟：测试环境身份与隔离
