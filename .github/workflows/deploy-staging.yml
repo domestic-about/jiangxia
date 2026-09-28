@@ -1,0 +1,116 @@
+# 测试环境自动部署（staging 分支 = 测试站 songjian.tianda.studio）
+#
+# 口径（2026-09-28 与 Kevin 定）：
+#   · `staging` 分支 = 测试环境 → push 即自动部署到测试站
+#   · `main` 分支   = 生产环境 → **本次不配**（生产的域名/主机/私有桶等资源还没到位，见 doc/handover/d8-blockers.json）
+#
+# 三条必须知道的约束（都是踩出来的）：
+#
+# 1. **凭据一律走 GitHub Secrets，仓库里永远没有 `.env`。**
+#    `code/deploy/test/.env` 与 `doc/verify/verify.test.env` 都被 .gitignore 挡着，
+#    这里在 runner 上现写出来（600）。要改口令就改 Secret，不要改仓库里的文件。
+#    需要 4 个 Secret：
+#      LQG_TEST_ENV            ← 本机 `code/deploy/test/.env` 的**全文**
+#      LQG_VERIFY_TEST_ENV     ← 本机 `doc/verify/verify.test.env` 的**全文**（部署后自检要拿它登录）
+#      LQG_TEST_SSH_KEY        ← CI 专用 SSH 私钥（公钥已加到测试机 root 的 authorized_keys）
+#      LQG_TEST_HOST           ← 测试机 IP（118.178.109.11）
+#
+# 2. **小程序上传**（`deploy.sh miniapp`）**故意不放进 CI**：
+#    微信要求上传来源 IP 在「开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」里，
+#    而 GitHub 托管 runner 的出口 IP 每次都不同（官方只公布 IP 段、不给固定 IP）→ 白名单根本没法配。
+#    所以小程序仍由**固定 IP 的机器**发：本机或测试机，命令 `bash code/deploy/test/deploy.sh miniapp`。
+#    （构建必须留 macOS：不同 OS 产物不同，体验版真机上会渲染空 —— gotchas §6.5。）
+#
+# 3. **部署脚本自己带自检**：`deploy.sh` 会跑准备度/端口/构建产物检查，
+#    其中 `phase_miniapp` 之外的部分都在这里跑；`miniapp` 阶段被 `all` 排除（见第 2 条）。
+#
+# 另外：`deploy.sh` 的远端长操作（docker build / 首次 Flyway）是**分离执行 + 短命令轮询**，
+# 所以这个 job 不需要长连接保活；超时给 40 分钟（冷缓存 maven 首次下载约 3–8 分钟）。
+
+name: deploy-staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch: {} # 也可以手动点一下重跑
+
+# 同一个分支上的部署串行化：后一次排队等前一次跑完，不并发改同一台测试机
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: 部署到测试环境
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 写部署用 .env 与验收 env（来自 Secrets）
+        run: |
+          umask 077
+          printf '%s\n' "${{ secrets.LQG_TEST_ENV }}" > code/deploy/test/.env
+          printf '%s\n' "${{ secrets.LQG_VERIFY_TEST_ENV }}" > doc/verify/verify.test.env
+          chmod 600 code/deploy/test/.env doc/verify/verify.test.env
+          # 自检：关键键必须在。拿着空 .env 去部署会「看起来在跑、其实连不上库」，这里提前拦住。
+          for k in LQG_TEST_HOST LQG_TEST_DOMAIN LQG_DB_PASSWORD LQG_REDIS_PASSWORD LQG_MINIO_PASSWORD LQG_ADMIN_PASSWORD; do
+            grep -q "^${k}=" code/deploy/test/.env || { echo "::error::LQG_TEST_ENV 里缺 ${k}"; exit 1; }
+          done
+          grep -q '^LQG_ADMIN_PASSWORD=' doc/verify/verify.test.env || { echo "::error::LQG_VERIFY_TEST_ENV 里缺 LQG_ADMIN_PASSWORD"; exit 1; }
+          echo "✓ 两个 env 文件已就位（内容不打印）"
+
+      - name: 装 CI 专用 SSH 私钥
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.LQG_TEST_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.LQG_TEST_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "root@${{ secrets.LQG_TEST_HOST }}" 'echo "✓ SSH 通：$(hostname)"'
+
+      - name: 装 JDK 21（后端是 JDK 21 工程）
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 装 Node（带 pnpm store 缓存）
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: code/plus-ui/pnpm-lock.yaml
+
+      - name: 装工作台依赖
+        run: cd code/plus-ui && pnpm install --frozen-lockfile
+
+      - name: 部署（产物 → 上传 → 起容器 → 宿主 nginx → 灌 seed → 自检 → 端口取证）
+        run: bash code/deploy/test/deploy.sh all
+
+      - name: 部署后冒烟：测试环境身份与隔离
+        run: |
+          export LQG_VERIFY_ENV_FILE=doc/verify/verify.test.env
+          bash doc/waves/regression/staging-hardening/12-panel-accounts-usable.sh
+
+      - name: 小结
+        if: always()
+        run: |
+          {
+            echo "### 测试环境部署（staging）"
+            echo ""
+            echo "- 分支：\`${GITHUB_REF_NAME}\`　提交：\`${GITHUB_SHA:0:12}\`"
+            echo "- 站点：https://songjian.tianda.studio"
+            echo "- 提交号自查：\`GET /lqg/sys/ping\` 的 \`buildCommit\` 应等于上面的提交号"
+            echo "- ★ 小程序体验版**不在这一步**：白名单要求固定 IP，请在本机跑 \`bash code/deploy/test/deploy.sh miniapp\`"
+          } >> "$GITHUB_STEP_SUMMARY"
