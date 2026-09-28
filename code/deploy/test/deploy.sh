@@ -83,6 +83,15 @@ sync_build_commit() {
 gate_account() {
   # 账号硬闸：这台机器/这个 profile 必须是 tianda（AccountId 1826406494972500）。
   # 本机 active profile 恰好就是它，但另一个项目是 dongjiaoshan 的 djs-prod —— 别裸跑。
+  #
+  # ★ 2026-09-28 加显式跳过开关（CI 用）：GitHub runner 上没有 tianda-admin profile，
+  #   而这一步会取到空 AccountId 直接 STOP（首次跑 CI 就卡在这）。CI 的护栏不一样：
+  #   目标机器来自 repo secret、而且只走 SSH、不碰任何云资源 —— 所以按调用方**显式**声明跳过是合理的。
+  #   注意是显式：不设这个变量时行为与以前完全一致（没有 CLI 就告警放行，有 CLI 就必须对上账号）。
+  if [ "${LQG_SKIP_ACCOUNT_GATE:-}" = "1" ]; then
+    warn "按 LQG_SKIP_ACCOUNT_GATE=1 跳过账号硬闸（CI 环境：没有 tianda-admin profile，且本次只走 SSH、不动云资源）"
+    return 0
+  fi
   command -v aliyun >/dev/null 2>&1 || { warn "本机没有 aliyun CLI，跳过账号硬闸（本次部署不动云资源，只走 SSH）"; return 0; }
   local acct
   acct="$(no_proxy='*' NO_PROXY='*' aliyun sts GetCallerIdentity --profile tianda-admin 2>/dev/null | jq -r '.AccountId // empty')" || true

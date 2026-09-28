@@ -105,7 +105,14 @@ jobs:
       - name: 装工作台依赖
         run: cd code/plus-ui && pnpm install --frozen-lockfile
 
+      - name: 预建 maven 本地仓目录（deploy.sh 用工作区内的 .m2repo/.buildhome，冷跑时由 maven 填充）
+        run: mkdir -p .m2repo .buildhome
+
       - name: 部署（产物 → 上传 → 起容器 → 宿主 nginx → 灌 seed → 自检 → 端口取证）
+        env:
+          # CI 里没有 tianda-admin profile；这一步会取到空 AccountId 直接 STOP。
+          # 目标机器来自 repo secret、只走 SSH、不碰云资源 → 显式声明跳过（deploy.sh 里有对应分支）。
+          LQG_SKIP_ACCOUNT_GATE: '1'
         run: bash code/deploy/test/deploy.sh all
 
       - name: 部署后冒烟：测试环境身份与隔离
