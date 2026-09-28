@@ -265,7 +265,10 @@ phase_prove_ports() {
   } > "${outdir}/acc2-port-proof.txt" 2>&1 || warn "port-proof 远端执行有非零退出（看输出）"
   say "  ✓ ${outdir}/acc2-port-proof.txt"
 
-  if command -v aliyun >/dev/null 2>&1; then
+  # ★ 2026-09-28：CI 上这条会挂 —— runner 镜像里**有** aliyun 命令但没有 tianda-admin profile，
+  #   于是 `aliyun ... GetCallerIdentity` 非零退出，把整个 all 链带成 exit 3（部署本身其实已经成功）。
+  #   安全组清单只是「等价取证」的第三份材料，缺云凭据时降级跳过并说清楚即可。
+  if command -v aliyun >/dev/null 2>&1 && [ "${LQG_SKIP_ACCOUNT_GATE:-}" != "1" ]; then
     # 安全组 ID 从实例上现查（ops 文档里那份写成 sg-bp17g616h67b936e6b1b6，末尾多了一个 6；
     # 真值 = sg-bp17g616h67b936e6b1b，见报告 §遗留与 raise 的「ops 文档勘误」）
     local ecs_id="${LQG_ECS_ID:-i-bp14wbcfphboybx9idug}" sg
