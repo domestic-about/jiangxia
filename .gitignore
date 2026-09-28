@@ -33,3 +33,8 @@ logs/
 
 # plus-ui dev server 生成的 eslint 自动导入全局（#307：每次跑验收都重写，不入库）
 code/plus-ui/.eslintrc-auto-import.json
+
+# 小程序代码上传私钥（Kevin 2026-09-28 提供；**绝不进仓库**）
+private.*.key
+*.key
+!**/*.key.example
