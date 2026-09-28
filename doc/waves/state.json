@@ -4047,6 +4047,26 @@
       "detail": "按 Kevin 要求「参考 dongjiaoshan 的分支即环境」：staging = 测试站，main = 生产（本次不配，资源未到位）。实现：`.github/workflows/deploy-staging.yml`（push staging 触发；concurrency 串行化；timeout 40min）+ `.github/maven-settings.xml`（CI 专用：阿里云与 Maven Central **双源**，无 mirror，谁通用谁）+ Code deploy.sh 的三处 CI 适配。凭据：4 个 repo secret（LQG_TEST_ENV / LQG_VERIFY_TEST_ENV / LQG_TEST_SSH_KEY / LQG_TEST_HOST），其中 SSH 用**CI 专用密钥**（公钥已加到测试机 root，可与 Kevin 个人密钥分开撤销）；仓库里永远没有 .env。【踩过的 5 个坑（都写在提交信息里）】① Secret 插值进 run 正文 → .env 注释里的反引号被当命令替换执行，写出的文件被搅烂（改走 env: 传值）；② 账号硬闸在 CI 无 profile → 加显式开关 LQG_SKIP_ACCOUNT_GATE=1；③ 仓库里的 .mvn-settings.xml 是 mirrorOf=* 单源且实测缺件 → 双源 settings；④ 给 .m2repo 加 actions/cache 反而**投毒**（上次失败的半拉子本地仓 → _remote.repositories id 不一致 → 误报 absent）→ 去掉缓存每次冷拉；⑤ LQG_MVN_SETTINGS 用相对路径 → deploy.sh 会 cd 进模块目录，文件找不到（maven 40 秒即失败）→ 改绝对路径；另：安全组清单那步走 aliyun CLI，CI 无云凭据会把 all 链带成 exit 3 → 降级跳过。【明确不进 CI 的部分】小程序体验版上传：微信要求上传来源 IP 在白名单，托管 runner 出口 IP 每次不同 → 仍由固定 IP 的机器发（`bash code/deploy/test/deploy.sh miniapp`），这条已写进 workflow 注释与 job summary。【结果】push staging → run 36394022078 → 部署到测试环境 **12m20s 全绿**（01-up / 宿主 nginx / reseed / 公网自检 / 端口取证 / 部署后冒烟 panel 账号可用性 全过）。",
       "status": "closed",
       "decision": ""
+    },
+    {
+      "id": 364,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "my-defect",
+      "title": "真机小程序白屏：产物开了 lazyCodeLoading=requiredComponents，而本项目有全局组件 global-ku-root（@uni-ku/root）→ 根组件解析失败",
+      "detail": "Kevin 报「用 17 点的二维码打开，真机白屏」，开发者工具里报 `Component is not found in path \"wx://not-found\"`。【根因】manifest 里开着 `lazyCodeLoading: 'requiredComponents'`（微信的「按需注入」），而本产物有一个**全局组件** `global-ku-root`（由 @uni-ku/root 注入、在 app.json 的 usingComponents 里声明）。按需注入只加载页面/组件显式声明的组件，全局注册的那个解析不到 → 根组件缺失 → 整页白屏（真机必现）。微信官方文档与同类案例都指向这个组合。★ 旁证：Kevin 截图里还有一条 `Page \"pages/home/index\" has not been registered yet` —— 而我们项目里**从来没有** pages/home/index（git 全历史为空、pages.json 首页是 pages/index/index、编译产物 app.json 里也没有），说明那一行来自工具里残留的旧页面栈/别的包；真正让页面白掉的是上面那条组件解析失败。【修复】改**源头** `manifest.config.ts`（`src/manifest.json` 是生成物）去掉 lazyCodeLoading；重建后确认 app.json 里已无该键。【教训】① 「H5 全绿 + 产物自检 PASS」仍不等于「真机可用」——真机专属的运行时差异（按需注入、域名白名单、https）必须单独覆盖；② 小程序产物的关键开关要有**产物级**断言（这次是人工比对 app.json 才发现）。",
+      "status": "closed",
+      "decision": "从 manifest.config.ts 移除 lazyCodeLoading，重建并重传体验版"
+    },
+    {
+      "id": 365,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "milestone",
+      "title": "对象存储改用 Kevin 已有的阿里云 OSS（tianda-studio-member-prod @ oss-cn-hangzhou）—— 顺带解决了「图片地址是容器内网名取不到」",
+      "detail": "Kevin 给了桶名 tianda-studio-member-prod。用本机 `tianda-admin` profile 的 AK 对桶发 V1 签名请求（oss-cn-hangzhou）→ **HTTP 200**，确认桶在该 region 且这把 AK 有权限。【改了什么】`sys_oss_config` 启用 `aliyun` 那条（endpoint=oss-cn-hangzhou.aliyuncs.com、bucket=tianda-studio-member-prod、access_policy=**0 私有**、is_https=Y），并把 minio 行停用；`01-up.sh` 的第 5 步做成「配了 LQG_OSS_* 就用 OSS，否则退回 MinIO」（建桶那段只对 MinIO 生效）。凭据只落在 .env（gitignored）与 GitHub Secret，仓库里没有。【验证】公网带鉴权上传 → 200，返回 **https 的 OSS 签名 URL**（主机 tianda-studio-member-prod.oss-cn-hangzhou.aliyuncs.com）；取该签名 URL → **HTTP 200 / image/png / 2422B**（浏览器与小程序都能取到图，且小程序要的 https 满足）；匿名裸访问桶 → **403**（私有性质未被破坏，验收那条断言仍成立）。【建议】当前用的是 tianda-admin 这把**权限过大**的 AK（还能管 ECS/安全组）。建议 Kevin 建一个 RAM 子账号，只授该桶的 PutObject/GetObject/DeleteObject/ListObjects，把 .env 与 Secret 里的 AK 换掉。",
+      "status": "closed",
+      "decision": "用阿里云 OSS 作为测试环境的对象存储；建议后续换成只对该桶授权的 RAM 子账号 AK"
     }
   ],
   "phase_plan": {

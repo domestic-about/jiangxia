@@ -67,24 +67,39 @@ log "===== 5) OSS 配置对齐 compose 里的 MinIO（上传转圈 / 图片打�
 #     写 `http://minio:9000` 会变成 `http://http://minio:9000` → 建连卡死。
 #   · access_policy 必须是 **0（私有）**：验收里断言「OSS 裸地址匿名访问 403」，
 #     设成公开会破坏这条已验证的安全性质。
-OSSW="minio:9000|${LQG_MINIO_BUCKET}|0|N"
-CUR="$(docker exec lqg-test-postgres psql -U lqg -d lqg_test -At -c \
-  "SELECT coalesce(endpoint,'')||'|'||coalesce(bucket_name,'')||'|'||coalesce(access_policy,'')||'|'||coalesce(is_https,'') FROM sys_oss_config WHERE config_key='minio'" 2>/dev/null || true)"
-# 桶先建（私有；已存在则跳过）。mc 在 minio 服务端镜像里自带。
-if docker exec lqg-test-minio sh -c "mc alias set l http://127.0.0.1:9000 '${LQG_MINIO_USER}' '${LQG_MINIO_PASSWORD}' >/dev/null 2>&1 && mc mb --ignore-existing l/${LQG_MINIO_BUCKET}" >/dev/null 2>&1; then
-  log "  ✓ 桶 ${LQG_MINIO_BUCKET} 就位（私有）"
+# ★ 2026-09-28：优先用**阿里云 OSS**（Kevin 已有桶）—— 它的签名 URL 是 https 公网地址，
+#   浏览器与小程序都取得到；而 compose 里 MinIO 的签名 URL 主机是容器内网名 minio:9000，
+#   两边都解析不了。没配 OSS 时退回 MinIO（本地/自测仍可用）。
+if [ -n "${LQG_OSS_BUCKET:-}" ] && [ -n "${LQG_OSS_ACCESS_KEY:-}" ]; then
+  OSS_KEY="aliyun"
+  OSSW="${LQG_OSS_ENDPOINT}|${LQG_OSS_BUCKET}|0|Y"
+  log "  使用阿里云 OSS：${LQG_OSS_BUCKET} @ ${LQG_OSS_ENDPOINT}"
 else
-  log "  ⚠ 建桶失败（MinIO 没起来？）——上传会失败，继续按现状跑"
+  OSS_KEY="minio"
+  OSSW="minio:9000|${LQG_MINIO_BUCKET}|0|N"
+fi
+CUR="$(docker exec lqg-test-postgres psql -U lqg -d lqg_test -At -c \
+  "SELECT coalesce(endpoint,'')||'|'||coalesce(bucket_name,'')||'|'||coalesce(access_policy,'')||'|'||coalesce(is_https,'') FROM sys_oss_config WHERE config_key='${OSS_KEY}'" 2>/dev/null || true)"
+# 桶先建（私有；已存在则跳过）。mc 在 minio 服务端镜像里自带。
+if [ "${OSS_KEY}" = "minio" ]; then
+  # MinIO 的桶得我们建（RuoYi 不会替你建）；阿里云 OSS 的桶是 Kevin 建好的，不碰。
+  if docker exec lqg-test-minio sh -c "mc alias set l http://127.0.0.1:9000 '${LQG_MINIO_USER}' '${LQG_MINIO_PASSWORD}' >/dev/null 2>&1 && mc mb --ignore-existing l/${LQG_MINIO_BUCKET}" >/dev/null 2>&1; then
+    log "  ✓ 桶 ${LQG_MINIO_BUCKET} 就位（私有）"
+  else
+    log "  ⚠ 建桶失败（MinIO 没起来？）——上传会失败，继续按现状跑"
+  fi
 fi
 if [ "${CUR}" = "${OSSW}" ]; then
   log "  OSS 配置已是目标值（${OSSW}）→ 不动"
 else
   log "  当前 ${CUR:-（读不到）} ≠ 目标 ${OSSW} → 改写并重启 backend（init() 才会重写 Redis 缓存）"
   docker exec -i lqg-test-postgres psql -U lqg -d lqg_test -v ON_ERROR_STOP=1 <<SQL
-UPDATE sys_oss_config SET endpoint='minio:9000', bucket_name='${LQG_MINIO_BUCKET}',
-       access_key='${LQG_MINIO_USER}', secret_key='${LQG_MINIO_PASSWORD}',
-       access_policy='0', is_https='N', status='0' WHERE config_key='minio';
-UPDATE sys_oss_config SET status='1' WHERE config_key<>'minio';
+UPDATE sys_oss_config SET endpoint='${LQG_OSS_ENDPOINT:-minio:9000}',
+       bucket_name='${LQG_OSS_BUCKET:-${LQG_MINIO_BUCKET}}',
+       access_key='${LQG_OSS_ACCESS_KEY:-${LQG_MINIO_USER}}',
+       secret_key='${LQG_OSS_SECRET_KEY:-${LQG_MINIO_PASSWORD}}',
+       access_policy='0', is_https='Y', status='0' WHERE config_key='${OSS_KEY}';
+UPDATE sys_oss_config SET status='1' WHERE config_key<>'${OSS_KEY}';
 SQL
   "${COMPOSE[@]}" restart backend
   wait-for -t 420 -i 5 "http://127.0.0.1:${LQG_API_PORT}/lqg/sys/ping" && log "  ✓ backend 已重启并就绪"
