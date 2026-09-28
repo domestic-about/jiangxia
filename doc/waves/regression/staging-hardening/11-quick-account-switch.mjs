@@ -86,6 +86,22 @@ check('③ 点外部账号同样直接就进，且身份=external',
   second.identity === 'external' && !second.url.includes('login'),
   JSON.stringify(second))
 
+// ── ④ 首页板块点了要有反应（Kevin 报过「点四个板块没反应」）──────────────────
+await openLogin()
+const third = await tap(0)   // 内部身份
+check('④ 前置：内部身份已进入首页', third.identity === 'internal', JSON.stringify({ identity: third.identity }))
+const tiles = await p.locator('.lqg-tile').count()
+check('④ 首页渲染出填写板块（内部 4 格）', tiles === 4, `实际 ${tiles} 格`)
+if (tiles > 0) {
+  const before = p.url()
+  await p.locator('.lqg-tile').first().click()
+  await p.waitForTimeout(2500)
+  const after = p.url()
+  check('④ 点第一个板块会跳转到该表的填写页',
+    after !== before && /pages\/(sample|organoid|embed|cryo)\/form/.test(after),
+    `${before} → ${after}`)
+}
+
 await b.close()
 console.log(`\n结果：${fails.length === 0 ? 'PASS' : 'FAIL'}（失败 ${fails.length} 条）`)
 if (fails.length) { console.log('失败项：' + fails.join(' / ')); process.exit(1) }

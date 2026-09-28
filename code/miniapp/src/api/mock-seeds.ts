@@ -31,10 +31,16 @@ export const MOCK_PANEL: { title: string, desc: string } | null = __LQG_MOCK_LOG
     }
   : null
 
-/** seed 身份（顺序：管理员 → 内部 → 外部 A–F → 未绑定新号）—— 种子里的 8 个账号一个不少 */
+/** seed 身份（顺序：内部 → 外部 A–F → 未绑定新号）
+ *
+ * ★ 2026-09-28 修（Kevin 报「内部身份进小程序处处 403」）：**不要**把工作台的管理员账号（lqgadmin /
+ *   角色 lqg_admin）加进这个面板 —— 小程序内部接口要的是 lqg_internal 角色，管理员没有它，
+ *   而 /mp/me 仍会把管理员判成 identity=internal → 小程序以为自己是内部身份、去调 /mp/int/**，
+ *   结果处处 403（首页待办、文档清单、样本清单全挂），而界面上还显示「内部人员」徽标，极难自查。
+ *   判据见 doc/waves/regression/staging-hardening/12-panel-accounts-usable.sh：面板里每个账号
+ *   都必须能调通**与自己身份相符**的那一侧接口。 */
 export const MOCK_SEEDS: MockSeed[] = __LQG_MOCK_LOGIN__
   ? [
-      { key: 'admin', label: '管理员 · 测试管理员', phone: '13800000000', expectIdentity: 'internal' },
       { key: 'staff', label: '内部人员 · 李工', phone: '13800000001', expectIdentity: 'internal' },
       { key: 'extA', label: '外部人员 · 王医生（已核验）', phone: '13800000011', expectIdentity: 'external' },
       { key: 'extB', label: '外部人员 · 陈医生（与王医生同组）', phone: '13800000012', expectIdentity: 'external' },

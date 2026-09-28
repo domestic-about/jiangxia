@@ -319,7 +319,7 @@ lqg:
     # 借 WxAccountBindService 的按手机号复用账号拿到 internal 身份，而工作台鉴权是角色制、
     # 同一 token 还能读写业务数据。空清单 = 谁都不许（fail-closed）。
     # 与 code/miniapp/src/api/mock-seeds.ts 的面板身份 + doc/verify/seed/ 的绑定逐字对应。
-    mock-identities: admin:13800000000,staff:13800000001,extA:13800000011,extB:13800000012,extC:13800000013,extD:13800000014,extE:13800000015,extF:13800000016,newbie1:13800000099,newbie2:13800000099
+    mock-identities: staff:13800000001,extA:13800000011,extB:13800000012,extC:13800000013,extD:13800000014,extE:13800000015,extF:13800000016,newbie1:13800000099,newbie2:13800000099
   # 拍照识别（OCR-IMPL-001 / ADR-0007）：一个方案一个 OcrProvider 实现类，配置切换。
   #   provider=none（缺省）→ 直接提示「识别暂不可用，请手动填写」，小程序照常能手填；
   #   provider=stub        → **仅 dev / test** 的测试桩：按请求头 X-Ocr-Stub-Case 的前两位

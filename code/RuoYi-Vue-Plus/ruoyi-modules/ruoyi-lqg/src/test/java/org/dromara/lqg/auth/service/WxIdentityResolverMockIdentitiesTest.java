@@ -28,7 +28,7 @@ class WxIdentityResolverMockIdentitiesTest {
 
     /** 与 application-dev.yml / application-test.yml 里那份逐字一致 */
     private static final String LIST =
-        "admin:13800000000,staff:13800000001,extA:13800000011,extB:13800000012,extC:13800000013,"
+        "staff:13800000001,extA:13800000011,extB:13800000012,extC:13800000013,"
             + "extD:13800000014,extE:13800000015,extF:13800000016,newbie1:13800000099,newbie2:13800000099";
 
     @Test
