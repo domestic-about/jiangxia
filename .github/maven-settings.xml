@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CI 专用 maven settings（2026-09-28）。
+
+  为什么不用仓库里那份 `.mvn-settings.xml`：那份是给**单机加速**的，`mirrorOf=*` 把一切都
+  指向阿里云；实测在 CI 上出现过「拉不到 spring-boot-starter-data-redis:3.5.10」这类缺件/传输失败
+  （该件在阿里云与 Central 上都存在，属传输侧问题）。
+
+  这份的口径是「**两个源都配上，谁通用谁**」：
+    · 不设 mirror（设了 mirror 就只有一个源，没有兜底）；
+    · aliyun public 与 Maven Central 都作为 repository/pluginRepository；
+    · 配合 deploy.sh 里给 mvn 加的 HTTP 重试参数（maven.wagon.http.retryHandler.count=3），
+      把偶发传输失败挡住。
+  用法：workflow 里 `LQG_MVN_SETTINGS: .github/maven-settings.xml`（deploy.sh 会加 `-s`）。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <profiles>
+    <profile>
+      <id>lqg-ci-repos</id>
+      <repositories>
+        <repository>
+          <id>aliyun-public</id>
+          <url>https://maven.aliyun.com/repository/public</url>
+          <releases><enabled>true</enabled><updatePolicy>daily</updatePolicy></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>aliyun-public-plugins</id>
+          <url>https://maven.aliyun.com/repository/public</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+        <pluginRepository>
+          <id>central-plugins</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <activeProfile>lqg-ci-repos</activeProfile>
+  </activeProfiles>
+</settings>

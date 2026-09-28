@@ -148,6 +148,7 @@ phase_artifacts() {
   [ "${LQG_MVN_SETTINGS:-}" = "" ] && mvn_settings=(-s "${ROOT}/.mvn-settings.xml")
   ( cd "${ROOT}/code/RuoYi-Vue-Plus" && \
     mvn -q "${mvn_settings[@]}" -Dmaven.repo.local="${ROOT}/.m2repo" \
+        -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=60 \
         -Duser.home="${ROOT}/.buildhome" -DskipTests -pl ruoyi-admin -am package ) \
     || die "mvn package 失败"
   [ -f "${ROOT}/code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar" ] || die "没有产出 ruoyi-admin.jar"

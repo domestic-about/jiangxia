@@ -108,22 +108,22 @@ jobs:
       - name: 预建 maven 本地仓目录（deploy.sh 用工作区内的 .m2repo/.buildhome，冷跑时由 maven 填充）
         run: mkdir -p .m2repo .buildhome
 
-      - name: 缓存 maven 本地仓（冷跑 3–5 分钟，缓存后几十秒）
-        uses: actions/cache@v4
-        with:
-          path: .m2repo
-          key: m2repo-${{ hashFiles('code/RuoYi-Vue-Plus/**/pom.xml') }}
-          restore-keys: m2repo-
+      - name: 清空 maven 本地仓（**故意不缓存它**）
+        # 一开始给 .m2repo 加了 actions/cache，结果把上一次失败留下的「半拉子本地仓」带进下一次：
+        # maven 看到 `_remote.repositories` 里的仓库 id 与本次不一致（public vs central）就重新校验，
+        # 校验失败即报 `(absent)` —— 看起来像「仓库里没这个件」，其实是缓存投毒。
+        # 这里每次冷拉（3–5 分钟），换来的是**每次构建都可复现**。
+        run: rm -rf .m2repo && mkdir -p .m2repo .buildhome
 
       - name: 部署（产物 → 上传 → 起容器 → 宿主 nginx → 灌 seed → 自检 → 端口取证）
         env:
           # CI 里没有 tianda-admin profile；这一步会取到空 AccountId 直接 STOP。
           # 目标机器来自 repo secret、只走 SSH、不碰云资源 → 显式声明跳过（deploy.sh 里有对应分支）。
           LQG_SKIP_ACCOUNT_GATE: '1'
-          # 仓库里的 .mvn-settings.xml 把一切都镜像到阿里云（单机加速用），但实测它**缺件**：
-          # spring-boot-starter-data-redis:3.5.10 / spring-data-redis:3.5.8 拉不到 → 构建失败。
-          # runner 直连 Maven Central 又快又全，所以这里显式不用那个 settings。
-          LQG_MVN_SETTINGS: none
+          # 仓库里的 .mvn-settings.xml 是单机加速用的（mirrorOf=* 只留阿里云一个源，没有兜底）。
+          # CI 用 .github/maven-settings.xml：**阿里云与 Maven Central 都配上，谁通用谁**，
+          # 并配合 deploy.sh 里的 wagon 重试（3 次）挡住偶发传输失败。
+          LQG_MVN_SETTINGS: .github/maven-settings.xml
         run: bash code/deploy/test/deploy.sh all
 
       - name: 部署后冒烟：测试环境身份与隔离
