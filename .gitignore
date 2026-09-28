@@ -10,3 +10,9 @@ code/deploy/**/.env
 *.dump
 *.dump.gz
 __pycache__/
+.pnpm-store/*
+.m2repo/*
+.buildhome/*
+.tmp/*
+code/**/.tmp/*
+code/**/.vite/*

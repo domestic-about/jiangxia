@@ -1,0 +1,4 @@
+2026-09-21 22:14:46 [88144] DRYRUN 会 resume：心跳已停 706s，未完成任务=D1,D2,D3,D4,D5,D6,D7,D8；dsh=/Users/wkui/.npm/_npx/1e7f6d9597241db0/node_modules/.bin/dsh
+2026-09-21 22:14:46 [88161] SKIP PAUSE 哨兵存在：test —— 主会话停在等人，不自动接手
+2026-09-21 22:18:49 [4786] DRYRUN 会 resume：心跳已停 709s，未完成任务=D1,D2,D3,D4,D5,D6,D7,D8；dsh=/Users/wkui/.npm/_npx/1e7f6d9597241db0/node_modules/.bin/dsh
+2026-09-21 22:18:56 [5133] SKIP 没有 heartbeat 文件（本次会话没 arm 看门狗），不接手

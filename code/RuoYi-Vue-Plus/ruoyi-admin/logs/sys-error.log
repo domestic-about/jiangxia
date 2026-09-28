@@ -1,0 +1,2 @@
+2026-09-28 13:57:07 [XNIO-1 task-2] ERROR o.d.c.s.h.SaTokenExceptionHandler - 请求地址'/mp/me',认证失败'token 无效：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJhcHBfdXNlcjo5MDAwMDAwMTExIiwicm5TdHIiOiJLckRCZldtWjg3NXJISHdBVHVlNDVrTWt6RW83TG9ONSIsImNsaWVudGlkIjoiMjJiMmFlY2QwNzEwNjcxNjkxZWMxYzA3ZjI1NDJiOWQiLCJ1c2VySWQiOjkwMDAwMDAxMTEsInVzZXJOYW1lIjoid3hfMTM4MDAwMDAwMTEifQ.bXwylj4Wn1KuCPV6ggvhG9FCCDK9jjYu_ckpWHh5Kxw',无法访问系统资源
+2026-09-28 13:58:55 [XNIO-1 task-3] ERROR o.d.c.s.h.SaTokenExceptionHandler - 请求地址'/mp/me',认证失败'未能读取到有效 token',无法访问系统资源

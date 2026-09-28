@@ -1,0 +1,263 @@
+2026-09-27 20:02:06 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-09-27 20:02:06 [main] INFO  org.dromara.DromaraApplication - Starting DromaraApplication using Java 21.0.10 with PID 18563 (/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/RuoYi-Vue-Plus/ruoyi-admin/target/classes started by wkui in /Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/RuoYi-Vue-Plus/ruoyi-admin)
+2026-09-27 20:02:06 [main] INFO  org.dromara.DromaraApplication - The following 1 profile is active: "dev"
+2026-09-27 20:02:07 [main] WARN  o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'stringOrNumberMigrationVersionConverter' of type [org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration$StringOrNumberToMigrationVersionConverter] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected/applied to a currently created BeanPostProcessor [healthEndpointGroupsBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies/advisors. If this bean does not have to be post-processed, declare it with ROLE_INFRASTRUCTURE.
+2026-09-27 20:02:08 [main] INFO  io.undertow.servlet - Initializing Spring embedded WebApplicationContext
+2026-09-27 20:02:08 [main] INFO  c.b.d.d.DynamicRoutingDataSource - dynamic-datasource detect P6SPY plugin and enabled it
+2026-09-27 20:02:08 [main] INFO  com.zaxxer.hikari.HikariDataSource - master - Starting...
+2026-09-27 20:02:08 [main] INFO  com.zaxxer.hikari.pool.HikariPool - master - Added connection org.postgresql.jdbc.PgConnection@59eff566
+2026-09-27 20:02:08 [main] INFO  com.zaxxer.hikari.HikariDataSource - master - Start completed.
+2026-09-27 20:02:08 [main] INFO  c.b.d.d.DynamicRoutingDataSource - dynamic-datasource - add a datasource named [master] success
+2026-09-27 20:02:08 [main] INFO  c.b.d.d.DynamicRoutingDataSource - dynamic-datasource initial loaded [1] datasource,primary datasource named [master]
+2026-09-27 20:02:08 [main] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:postgresql://127.0.0.1:5433/lqg_dev?reWriteBatchedInserts=true&stringtype=unspecified (PostgreSQL 16.13)
+2026-09-27 20:02:08 [main] INFO  o.f.core.internal.command.DbValidate - Successfully validated 28 migrations (execution time 00:00.028s)
+2026-09-27 20:02:08 [main] INFO  o.f.core.internal.command.DbMigrate - Current version of schema "public": 202609284001
+2026-09-27 20:02:08 [main] INFO  o.f.core.internal.command.DbMigrate - Schema "public" is up to date. No migration necessary.
+2026-09-27 20:02:09 [main] INFO  o.d.common.redis.config.RedisConfig - 初始化 redis 配置
+2026-09-27 20:02:09 [main] INFO  org.redisson.Version - Redisson 3.52.0
+2026-09-27 20:02:09 [main] WARN  i.n.r.d.DnsServerAddressStreamProviders - Can not find io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider in the classpath, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'
+2026-09-27 20:02:09 [redisson-netty-1-6] INFO  o.r.connection.ConnectionsHolder - 1 connections initialized for 127.0.0.1/127.0.0.1:6380
+2026-09-27 20:02:09 [redisson-netty-1-3] INFO  o.r.connection.ConnectionsHolder - 8 connections initialized for 127.0.0.1/127.0.0.1:6380
+2026-09-27 20:02:09 [main] INFO  o.d.common.json.config.JacksonConfig - 初始化 jackson 配置
+2026-09-27 20:02:09 [main] INFO  o.d.lqg.ocr.provider.StubOcrProvider - 识别测试桩已就绪：5 组用例（ocr-cases.json）
+2026-09-27 20:02:10 [main] INFO  c.b.m.e.s.MybatisPlusApplicationContextAware - Register ApplicationContext instances org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@26f3d90c
+2026-09-27 20:02:13 [main] INFO  io.undertow - starting server: Undertow - 2.3.22.Final
+2026-09-27 20:02:13 [main] INFO  org.xnio - XNIO version 3.8.16.Final
+2026-09-27 20:02:13 [main] INFO  org.xnio.nio - XNIO NIO Implementation Version 3.8.16.Final
+2026-09-27 20:02:13 [main] INFO  org.jboss.threads - JBoss Threads version 3.7.0.Final
+2026-09-27 20:02:14 [main] INFO  org.dromara.DromaraApplication - Started DromaraApplication in 7.94 seconds (process running for 8.094)
+2026-09-27 20:02:14 [main] INFO  o.d.c.sse.listener.SseTopicListener - 初始化SSE主题订阅监听器成功
+2026-09-27 20:02:14 [main] WARN  o.d.lqg.auth.guard.MockLoginGuard - mock 登录已开启（profile=[dev]）：xcxCode 以 mock: 开头时跳过微信，手机号直接取请求里的值。仅限开发 / 测试环境（ADR-0008）。
+2026-09-27 20:02:14 [main] INFO  o.d.s.runner.SystemApplicationRunner - 初始化OSS配置成功
+2026-09-27 20:02:14 [main] INFO  o.d.l.o.g.OcrProviderGuardAutoConfiguration - 识别通道已就绪：provider=stub，paid-enabled=false
+2026-09-27 20:03:01 [XNIO-1 task-2] INFO  io.undertow.servlet - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-09-27 20:03:01 [XNIO-1 task-2] ERROR o.d.c.s.h.SaTokenExceptionHandler - 请求地址'/system/user/getInfo',认证失败'token 已被冻结：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiJJQ2ozUUNxbW1UZkZKNzNkV0NGcEhEanhzRk5sREoxSSIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.JIz23JJsyUgZlJs8PvsZGWbcLoAHrD8GbwooJaudV-w',无法访问系统资源
+2026-09-27 20:03:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /resource/sse/close],无参数
+2026-09-27 20:03:01 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[POST /auth/logout],无参数
+2026-09-27 20:03:01 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[POST /auth/logout],耗时:[3]毫秒
+2026-09-27 20:03:01 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /auth/code],无参数
+2026-09-27 20:03:02 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /auth/code],耗时:[18]毫秒
+2026-09-27 20:03:02 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /resource/sse/close],耗时:[128]毫秒
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[POST /auth/login],参数类型[json],参数:[{"tenantId":"000000","username":"lqgadmin","rememberMe":false,"clientId":"e5cd7e4891bf95d1d19206ce24a7b32e","grantType":"password"}]
+2026-09-27 20:03:17 [async-1] INFO  o.d.s.s.i.SysLogininforServiceImpl - [127.0.0.1]内网IP[lqgadmin][Success][登录成功]
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.web.listener.UserActionListener - user doLogin, userId:sys_user:9000000100, token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiIyQ1VQS3V0VTcxc00xVkFrVlVaenBGekVkWFdpM3JjbyIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.XodzTL4jSOKc7zaBIvFj56iPybCR9tsDCjTPhy0YYcU
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.web.listener.UserActionListener - user doLogout, userId:sys_user:9000000100, token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiJyRmtBdFFLaUUycGZKZG9DdGpDVzNPYjVaZ05MOXNxYSIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.9OkPn3ZwE2jWaF_MFuzn1vfBfTIHnxc_eXsR8au65dI
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[POST /auth/login],耗时:[254]毫秒
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/user/getInfo],无参数
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/user/getInfo],耗时:[37]毫秒
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/menu/getRouters],无参数
+2026-09-27 20:03:17 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/menu/getRouters],耗时:[17]毫秒
+2026-09-27 20:03:18 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /auth/tenant/list],无参数
+2026-09-27 20:03:18 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/todo],无参数
+2026-09-27 20:03:18 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/recent],无参数
+2026-09-27 20:03:18 [XNIO-1 task-4] INFO  o.d.c.r.aspectj.RateLimiterAspect - 限制令牌 => 20, 剩余令牌 => 19, 缓存key => 'global:rate_limit:/auth/tenant/list:127.0.0.1:'
+2026-09-27 20:03:18 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /resource/sse],参数类型[param],参数:[{"Authorization":["Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiIyQ1VQS3V0VTcxc00xVkFrVlVaenBGekVkWFdpM3JjbyIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.XodzTL4jSOKc7zaBIvFj56iPybCR9tsDCjTPhy0YYcU"],"clientid":["e5cd7e4891bf95d1d19206ce24a7b32e"]}]
+2026-09-27 20:03:18 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /auth/tenant/list],耗时:[11]毫秒
+2026-09-27 20:03:18 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/recent],耗时:[14]毫秒
+2026-09-27 20:03:18 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/todo],耗时:[39]毫秒
+2026-09-27 20:03:22 [schedule-pool-2] INFO  o.d.c.sse.core.SseEmitterManager - SSE发送主题订阅消息topic:global:sse session keys:[9000000100] message:晚上好，欢迎登录 RuoYi-Vue-Plus 后台管理系统
+2026-09-27 20:03:22 [redisson-3-2] INFO  o.d.c.sse.listener.SseTopicListener - SSE主题订阅收到消息session keys=[9000000100] message=晚上好，欢迎登录 RuoYi-Vue-Plus 后台管理系统
+2026-09-27 20:03:28 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_verify_status],无参数
+2026-09-27 20:03:28 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_submit_source],无参数
+2026-09-27 20:03:28 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_gender],无参数
+2026-09-27 20:03:28 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/unit],无参数
+2026-09-27 20:03:28 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_gender],耗时:[12]毫秒
+2026-09-27 20:03:28 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_verify_status],耗时:[13]毫秒
+2026-09-27 20:03:28 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_submit_source],耗时:[13]毫秒
+2026-09-27 20:03:28 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/unit],耗时:[17]毫秒
+2026-09-27 20:03:28 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_verify_status],无参数
+2026-09-27 20:03:28 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_verify_status],耗时:[0]毫秒
+2026-09-27 20:03:28 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/list],参数类型[param],参数:[{"pageSize":["10"],"sampleKind":["tissue"],"pageNum":["1"]}]
+2026-09-27 20:03:28 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/list],耗时:[113]毫秒
+2026-09-27 20:03:58 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/list],参数类型[param],参数:[{"receiveDateBegin":["2026-09-01"],"pageSize":["10"],"receiveDateEnd":["2026-09-02"],"sampleKind":["tissue"],"pageNum":["1"]}]
+2026-09-27 20:03:58 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/list],耗时:[14]毫秒
+2026-09-27 20:06:40 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/list],参数类型[param],参数:[{"pageSize":["10"],"sampleKind":["tissue"],"pageNum":["1"]}]
+2026-09-27 20:06:40 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/list],耗时:[42]毫秒
+2026-09-27 20:06:44 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/qc/2103006300488052738],无参数
+2026-09-27 20:06:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],参数类型[param],参数:[{"audience":["internal"]}]
+2026-09-27 20:06:44 [XNIO-1 task-2] INFO  o.d.common.oss.factory.OssFactory - 创建OSS实例 key => minio
+2026-09-27 20:06:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],耗时:[308]毫秒
+2026-09-27 20:06:44 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/qc/2103006300488052738],耗时:[308]毫秒
+2026-09-27 20:06:44 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_pre_culture],无参数
+2026-09-27 20:06:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_culture_days],无参数
+2026-09-27 20:06:44 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_diameter],无参数
+2026-09-27 20:06:44 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_count],无参数
+2026-09-27 20:06:44 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_pre_culture],耗时:[1]毫秒
+2026-09-27 20:06:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_culture_days],耗时:[1]毫秒
+2026-09-27 20:06:44 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_count],耗时:[1]毫秒
+2026-09-27 20:06:44 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_diameter],耗时:[1]毫秒
+2026-09-27 20:06:49 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/2103006300488052738],无参数
+2026-09-27 20:06:49 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/2103006300488052738],耗时:[26]毫秒
+2026-09-27 20:07:45 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/qc/9000001006],无参数
+2026-09-27 20:07:45 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/doc/9000001006/sample_qc/pages],参数类型[param],参数:[{"audience":["internal"]}]
+2026-09-27 20:07:45 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/doc/9000001006/sample_qc/pages],耗时:[7]毫秒
+2026-09-27 20:07:45 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/qc/9000001006],耗时:[31]毫秒
+2026-09-27 20:07:51 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/qc/2103006300488052738],无参数
+2026-09-27 20:07:51 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],参数类型[param],参数:[{"audience":["internal"]}]
+2026-09-27 20:07:51 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/qc/2103006300488052738],耗时:[27]毫秒
+2026-09-27 20:07:51 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],耗时:[43]毫秒
+2026-09-27 20:08:47 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/unit],无参数
+2026-09-27 20:08:47 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/unit],耗时:[9]毫秒
+2026-09-27 20:08:47 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/list],参数类型[param],参数:[{"pageSize":["10"],"sampleKind":["organoid"],"pageNum":["1"]}]
+2026-09-27 20:08:47 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/list],耗时:[16]毫秒
+2026-09-27 20:09:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_marker_expr],无参数
+2026-09-27 20:09:01 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_stain_type],无参数
+2026-09-27 20:09:01 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/embed/list],参数类型[param],参数:[{"pageSize":["10"],"pageNum":["1"]}]
+2026-09-27 20:09:01 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_stain_type],耗时:[1]毫秒
+2026-09-27 20:09:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_marker_expr],耗时:[1]毫秒
+2026-09-27 20:09:01 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_stain_type],无参数
+2026-09-27 20:09:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_marker_expr],无参数
+2026-09-27 20:09:01 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_stain_type],耗时:[0]毫秒
+2026-09-27 20:09:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_marker_expr],耗时:[0]毫秒
+2026-09-27 20:09:01 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/embed/list],耗时:[33]毫秒
+2026-09-27 20:09:06 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/2103006300488052738],无参数
+2026-09-27 20:09:06 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/2103006300488052738],耗时:[11]毫秒
+2026-09-27 20:09:06 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/2103006300488052738],无参数
+2026-09-27 20:09:06 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/2103006300488052738],耗时:[9]毫秒
+2026-09-27 20:09:21 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/embed/2103015062804344833],无参数
+2026-09-27 20:09:21 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/embed/2103015062804344833],耗时:[12]毫秒
+2026-09-27 20:10:55 [XNIO-1 task-5] ERROR o.d.c.s.h.SaTokenExceptionHandler - 请求地址'/mp/me',认证失败'未能读取到有效 token',无法访问系统资源
+2026-09-27 20:11:07 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[POST /auth/login],参数类型[json],参数:[{"clientId":"22b2aecd0710671691ec1c07f2542b9d","grantType":"xcx","tenantId":"000000","xcxCode":"******","phoneCode":"******"}]
+2026-09-27 20:11:07 [XNIO-1 task-5] INFO  o.d.l.a.service.WxIdentityResolver - mock 登录：key=extA phone=13800000011（仅 dev / test，ADR-0008）
+2026-09-27 20:11:07 [async-2] INFO  o.d.s.s.i.SysLogininforServiceImpl - [127.0.0.1]内网IP[wx_13800000011][Success][Login successful]
+2026-09-27 20:11:07 [XNIO-1 task-5] INFO  o.d.web.listener.UserActionListener - user doLogin, userId:app_user:9000000111, token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJhcHBfdXNlcjo5MDAwMDAwMTExIiwicm5TdHIiOiJLckRCZldtWjg3NXJISHdBVHVlNDVrTWt6RW83TG9ONSIsImNsaWVudGlkIjoiMjJiMmFlY2QwNzEwNjcxNjkxZWMxYzA3ZjI1NDJiOWQiLCJ1c2VySWQiOjkwMDAwMDAxMTEsInVzZXJOYW1lIjoid3hfMTM4MDAwMDAwMTEifQ.bXwylj4Wn1KuCPV6ggvhG9FCCDK9jjYu_ckpWHh5Kxw
+2026-09-27 20:11:07 [XNIO-1 task-5] INFO  o.d.web.listener.UserActionListener - user doLogout, userId:app_user:9000000111, token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJhcHBfdXNlcjo5MDAwMDAwMTExIiwicm5TdHIiOiJkQTE3UEFrUnJWaXRUZ3dDNnVxVFFDVFp6NjM4MFp3SCIsImNsaWVudGlkIjoiMjJiMmFlY2QwNzEwNjcxNjkxZWMxYzA3ZjI1NDJiOWQiLCJ1c2VySWQiOjkwMDAwMDAxMTEsInVzZXJOYW1lIjoid3hfMTM4MDAwMDAwMTEifQ.uXGSStZTZJazPNJ72r49wolJFcpcJc7Q6Mcw5o_u0SI
+2026-09-27 20:11:07 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[POST /auth/login],耗时:[112]毫秒
+2026-09-27 20:11:07 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/me],参数类型[json],参数:[]
+2026-09-27 20:11:07 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/me],耗时:[23]毫秒
+2026-09-27 20:11:12 [schedule-pool-8] INFO  o.d.c.sse.core.SseEmitterManager - SSE发送主题订阅消息topic:global:sse session keys:[9000000111] message:晚上好，欢迎登录 RuoYi-Vue-Plus 后台管理系统
+2026-09-27 20:11:12 [redisson-3-3] INFO  o.d.c.sse.listener.SseTopicListener - SSE主题订阅收到消息session keys=[9000000111] message=晚上好，欢迎登录 RuoYi-Vue-Plus 后台管理系统
+2026-09-27 20:11:19 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/units],参数类型[json],参数:[]
+2026-09-27 20:11:19 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/dict/hints],参数类型[json],参数:[]
+2026-09-27 20:11:19 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/dict/hints],耗时:[6]毫秒
+2026-09-27 20:11:19 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/units],耗时:[22]毫秒
+2026-09-27 20:11:37 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/units],参数类型[json],参数:[]
+2026-09-27 20:11:37 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/units],耗时:[16]毫秒
+2026-09-27 20:11:37 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/dict/hints],参数类型[json],参数:[]
+2026-09-27 20:11:37 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/dict/hints],耗时:[1]毫秒
+2026-09-27 20:11:45 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/dict/hints],参数类型[json],参数:[]
+2026-09-27 20:11:45 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/units],参数类型[json],参数:[]
+2026-09-27 20:11:45 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/dict/hints],耗时:[1]毫秒
+2026-09-27 20:11:45 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/units],耗时:[10]毫秒
+2026-09-27 20:12:49 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/dict/hints],参数类型[json],参数:[]
+2026-09-27 20:12:49 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/dict/hints],耗时:[2]毫秒
+2026-09-27 20:12:58 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/doc/list],参数类型[json],参数:[]
+2026-09-27 20:12:58 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/doc/list],耗时:[49]毫秒
+2026-09-27 20:13:10 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/me],参数类型[json],参数:[]
+2026-09-27 20:13:10 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/me],耗时:[17]毫秒
+2026-09-27 20:13:10 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/units],参数类型[json],参数:[]
+2026-09-27 20:13:10 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/units],耗时:[13]毫秒
+2026-09-27 20:13:18 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/dict/hints],参数类型[json],参数:[]
+2026-09-27 20:13:18 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/units],参数类型[json],参数:[]
+2026-09-27 20:13:18 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/dict/hints],耗时:[3]毫秒
+2026-09-27 20:13:18 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/units],耗时:[13]毫秒
+2026-09-27 20:13:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[POST /mp/ext/sample],参数类型[json],参数:[{"sourceUnitId":9000009001,"sourceUnitName":"A 医院","donorName":"******","gender":"male","age":"123","hospitalNo":"******","tissueType":"123","hasPathology":"Y","remark":"发生地方","sampleKind":"tissue"}]
+2026-09-27 20:13:35 [XNIO-1 task-2] INFO  o.d.l.s.s.ExtSampleSubmitService - 外部提交组织：id=2104182662372446209 submitNo=SJ00000025 submitter=9000000111 单位 id=9000009001 名称=A 医院
+2026-09-27 20:13:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[POST /mp/ext/sample],耗时:[32]毫秒
+2026-09-27 20:13:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/list],参数类型[json],参数:[]
+2026-09-27 20:13:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/list],耗时:[18]毫秒
+2026-09-27 20:13:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/9000001003],参数类型[json],参数:[]
+2026-09-27 20:13:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/9000001003],耗时:[47]毫秒
+2026-09-27 20:13:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/units],参数类型[json],参数:[]
+2026-09-27 20:13:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/units],耗时:[10]毫秒
+2026-09-27 20:13:52 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/2104182662372446209],参数类型[json],参数:[]
+2026-09-27 20:13:52 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/2104182662372446209],耗时:[44]毫秒
+2026-09-27 20:13:52 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/units],参数类型[json],参数:[]
+2026-09-27 20:13:52 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/units],耗时:[10]毫秒
+2026-09-27 20:13:57 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/list],参数类型[json],参数:[]
+2026-09-27 20:13:57 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/list],耗时:[15]毫秒
+2026-09-27 20:13:58 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/embed/list],参数类型[json],参数:[]
+2026-09-27 20:13:58 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/embed/list],耗时:[38]毫秒
+2026-09-27 20:14:05 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/list],参数类型[json],参数:[]
+2026-09-27 20:14:05 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/list],耗时:[21]毫秒
+2026-09-27 20:14:07 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/list],参数类型[json],参数:[]
+2026-09-27 20:14:07 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/list],耗时:[18]毫秒
+2026-09-27 20:14:08 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/list],参数类型[json],参数:[]
+2026-09-27 20:14:08 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/list],耗时:[26]毫秒
+2026-09-27 20:14:11 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/sample/list],参数类型[json],参数:[]
+2026-09-27 20:14:11 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/sample/list],耗时:[10]毫秒
+2026-09-27 20:14:13 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/ext/embed/list],参数类型[json],参数:[]
+2026-09-27 20:14:13 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/ext/embed/list],耗时:[30]毫秒
+2026-09-27 20:14:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/embed/2103015062804344833],无参数
+2026-09-27 20:14:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/embed/2103015062804344833],耗时:[13]毫秒
+2026-09-27 20:16:37 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/embed/list],参数类型[param],参数:[{"pageSize":["10"],"pageNum":["1"]}]
+2026-09-27 20:16:37 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/embed/list],耗时:[22]毫秒
+2026-09-27 20:16:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/todo],无参数
+2026-09-27 20:16:41 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/recent],无参数
+2026-09-27 20:16:41 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/recent],耗时:[8]毫秒
+2026-09-27 20:16:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/todo],耗时:[17]毫秒
+2026-09-27 20:16:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/todo],无参数
+2026-09-27 20:16:44 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/recent],无参数
+2026-09-27 20:16:44 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/recent],耗时:[5]毫秒
+2026-09-27 20:16:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/todo],耗时:[12]毫秒
+2026-09-27 20:17:36 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/2103006300488052738],无参数
+2026-09-27 20:17:36 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/2103006300488052738],耗时:[11]毫秒
+2026-09-27 20:17:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/user/getInfo],无参数
+2026-09-27 20:17:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/user/getInfo],耗时:[16]毫秒
+2026-09-27 20:17:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/menu/getRouters],无参数
+2026-09-27 20:17:41 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/menu/getRouters],耗时:[7]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-7] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /auth/tenant/list],无参数
+2026-09-27 20:17:42 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_verify_status],无参数
+2026-09-27 20:17:42 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_submit_source],无参数
+2026-09-27 20:17:42 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_gender],无参数
+2026-09-27 20:17:42 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/todo],无参数
+2026-09-27 20:17:42 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/unit],无参数
+2026-09-27 20:17:42 [XNIO-1 task-7] INFO  o.d.c.r.aspectj.RateLimiterAspect - 限制令牌 => 20, 剩余令牌 => 19, 缓存key => 'global:rate_limit:/auth/tenant/list:127.0.0.1:'
+2026-09-27 20:17:42 [XNIO-1 task-7] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /auth/tenant/list],耗时:[6]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-3] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_gender],耗时:[1]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_verify_status],耗时:[1]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_submit_source],耗时:[1]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/unit],耗时:[2]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_verify_status],无参数
+2026-09-27 20:17:42 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_verify_status],耗时:[0]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /resource/sse],参数类型[param],参数:[{"Authorization":["Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiIyQ1VQS3V0VTcxc00xVkFrVlVaenBGekVkWFdpM3JjbyIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.XodzTL4jSOKc7zaBIvFj56iPybCR9tsDCjTPhy0YYcU"],"clientid":["e5cd7e4891bf95d1d19206ce24a7b32e"]}]
+2026-09-27 20:17:42 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /resource/sse],参数类型[param],参数:[{"Authorization":["Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiIyQ1VQS3V0VTcxc00xVkFrVlVaenBGekVkWFdpM3JjbyIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.XodzTL4jSOKc7zaBIvFj56iPybCR9tsDCjTPhy0YYcU"],"clientid":["e5cd7e4891bf95d1d19206ce24a7b32e"]}]
+2026-09-27 20:17:42 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/todo],耗时:[19]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /resource/sse],耗时:[3]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/list],参数类型[param],参数:[{"pageSize":["10"],"sampleKind":["tissue"],"pageNum":["1"]}]
+2026-09-27 20:17:42 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /resource/sse],参数类型[param],参数:[{"Authorization":["Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiIyQ1VQS3V0VTcxc00xVkFrVlVaenBGekVkWFdpM3JjbyIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.XodzTL4jSOKc7zaBIvFj56iPybCR9tsDCjTPhy0YYcU"],"clientid":["e5cd7e4891bf95d1d19206ce24a7b32e"]}]
+2026-09-27 20:17:42 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /resource/sse],耗时:[0]毫秒
+2026-09-27 20:17:42 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/list],耗时:[17]毫秒
+2026-09-27 20:17:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/sample/9000001006],无参数
+2026-09-27 20:17:44 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/sample/9000001006],耗时:[10]毫秒
+2026-09-27 20:17:45 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /resource/sse],参数类型[param],参数:[{"Authorization":["Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAwIiwicm5TdHIiOiIyQ1VQS3V0VTcxc00xVkFrVlVaenBGekVkWFdpM3JjbyIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6OTAwMDAwMDEwMCwidXNlck5hbWUiOiJscWdhZG1pbiJ9.XodzTL4jSOKc7zaBIvFj56iPybCR9tsDCjTPhy0YYcU"],"clientid":["e5cd7e4891bf95d1d19206ce24a7b32e"]}]
+2026-09-27 20:18:29 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/qc/2103006300488052738],无参数
+2026-09-27 20:18:29 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],参数类型[param],参数:[{"audience":["internal"]}]
+2026-09-27 20:18:29 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/qc/2103006300488052738],耗时:[30]毫秒
+2026-09-27 20:18:29 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],耗时:[47]毫秒
+2026-09-27 20:18:29 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_count],无参数
+2026-09-27 20:18:29 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_diameter],无参数
+2026-09-27 20:18:29 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_culture_days],无参数
+2026-09-27 20:18:29 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /system/dict/data/type/lqg_score_pre_culture],无参数
+2026-09-27 20:18:29 [XNIO-1 task-5] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_diameter],耗时:[1]毫秒
+2026-09-27 20:18:29 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_pre_culture],耗时:[1]毫秒
+2026-09-27 20:18:29 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_culture_days],耗时:[1]毫秒
+2026-09-27 20:18:29 [XNIO-1 task-4] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /system/dict/data/type/lqg_score_count],耗时:[1]毫秒
+2026-09-27 20:18:58 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/doc/2103006300488052738/organoid_qc/pages],参数类型[param],参数:[{"audience":["internal"]}]
+2026-09-27 20:18:58 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/doc/2103006300488052738/organoid_qc/pages],耗时:[26]毫秒
+2026-09-27 20:19:18 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],参数类型[param],参数:[{"audience":["internal"]}]
+2026-09-27 20:19:18 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/doc/2103006300488052738/sample_qc/pages],耗时:[93]毫秒
+2026-09-27 20:19:35 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/recent],无参数
+2026-09-27 20:19:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/home/todo],无参数
+2026-09-27 20:19:35 [XNIO-1 task-6] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/recent],耗时:[8]毫秒
+2026-09-27 20:19:35 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/home/todo],耗时:[21]毫秒
+2026-09-27 20:19:40 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/staff],无参数
+2026-09-27 20:19:40 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/staff],耗时:[12]毫秒
+2026-09-27 20:19:45 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/unit],无参数
+2026-09-27 20:19:45 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/unit],耗时:[3]毫秒
+2026-09-27 20:19:45 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/group],参数类型[param],参数:[{"unitId":["9000009001"]}]
+2026-09-27 20:19:45 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/group],耗时:[8]毫秒
+2026-09-27 20:20:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/unit],无参数
+2026-09-27 20:20:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/unit],耗时:[4]毫秒
+2026-09-27 20:20:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /lqg/auth/ext-user/list],无参数
+2026-09-27 20:20:01 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /lqg/auth/ext-user/list],耗时:[12]毫秒
+2026-09-27 20:21:20 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]开始请求 => URL[GET /mp/me],参数类型[json],参数:[]
+2026-09-27 20:21:20 [XNIO-1 task-2] INFO  o.d.c.w.i.PlusWebInvokeTimeInterceptor - [PLUS]结束请求 => URL[GET /mp/me],耗时:[37]毫秒
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  io.undertow - stopping server: Undertow - 2.3.22.Final
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  o.d.c.core.config.ThreadPoolConfig - ====关闭后台任务任务线程池====
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  c.b.d.d.DynamicRoutingDataSource - dynamic-datasource start closing ....
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - master - Shutdown initiated...
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - master - Shutdown completed.
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  c.b.d.d.d.DefaultDataSourceDestroyer - dynamic-datasource close the datasource named [master] success,
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  c.b.d.d.DynamicRoutingDataSource - dynamic-datasource all closed success,bye
+2026-09-27 20:31:27 [SpringApplicationShutdownHook] INFO  io.undertow.servlet - Destroying Spring FrameworkServlet 'dispatcherServlet'
