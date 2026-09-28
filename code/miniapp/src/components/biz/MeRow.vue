@@ -24,10 +24,15 @@ withDefaults(defineProps<{
   showArrow: true,
   line: false,
 })
+
+// ★ 2026-09-28 修（Kevin 报「我的页红框区域在小程序里点不动，H5 能点」）：与 EntryTile 同一个病 ——
+//   父组件用 `<MeRow @click="…" />`，而自定义组件的 `@click` 在小程序里是**自定义事件**，
+//   子组件不 `triggerEvent('click')` 就永远不触发。这里显式声明 + 在根节点 emit。
+const emit = defineEmits<{ (e: 'click', ev: unknown): void }>()
 </script>
 
 <template>
-  <view class="merow" :class="{ 'merow--line': line }">
+  <view class="merow" :class="{ 'merow--line': line }" @click="emit('click', $event)">
     <view class="merow__well">
       <LineIcon :name="icon" :size="18" />
     </view>

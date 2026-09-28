@@ -102,6 +102,18 @@ if (tiles > 0) {
     `${before} → ${after}`)
 }
 
+// ── ⑤ 「我的」页的行点了要有反应（Kevin 截图第二个红框）────────────────────────
+await p.goto(`${MP}/#/pages/me/index`, { waitUntil: 'networkidle' })
+await p.waitForTimeout(2500)
+const rows = await p.locator('.merow').count()
+check('⑤ 「我的」页渲染出行（内部：历史编辑记录 + 内部管理 4 行 + 协议 2 行）', rows >= 6, `实际 ${rows} 行`)
+if (rows > 0) {
+  const before = p.url()
+  await p.locator('.merow').first().click()
+  await p.waitForTimeout(2500)
+  check('⑤ 点第一行（历史编辑记录）会跳转', p.url() !== before, `${before} → ${p.url()}`)
+}
+
 await b.close()
 console.log(`\n结果：${fails.length === 0 ? 'PASS' : 'FAIL'}（失败 ${fails.length} 条）`)
 if (fails.length) { console.log('失败项：' + fails.join(' / ')); process.exit(1) }

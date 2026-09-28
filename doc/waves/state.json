@@ -4017,6 +4017,16 @@
       "detail": "Kevin 报：「即使我使用内部人员权限进入，很多页面也显示没有权限，同时首页点击四个板块都没有反应」，附截图（文档页：没能加载文档清单 + toast「没有访问权限，请联系管理员授权」）。【根因】我在上一条改动里把种子里的**管理员**（lqgadmin / 13800000000 / 角色 `lqg_admin`）加进了小程序登录页的测试身份面板（还放在第一位）。但小程序内部接口（`/mp/int/**`）要的是 **`lqg_internal`** 角色，管理员没有它；而 `/mp/me` 仍把管理员判成 `identity=internal`。于是小程序以为自己是内部身份、去调 `/mp/int/**` → **处处 403**：首页待办、文档清单、样本清单全挂；界面上却还显示「内部人员」徽标，用户完全看不出是账号选错了。机器证据（同一时刻、同一环境）：`--as staff`（角色 lqg_internal）→ `/mp/int/doc/list` **200**；`--as phone:admin:13800000000`（角色 lqg_admin）→ `/mp/int/doc/list` **403**、`/mp/int/sample/list` **403**。【为什么这是 S1 而不是 S3】它是**我改出来的功能不可用**：一个入口点进去整个小程序不能用，而我自己上一轮还对外说「9 个账号都验过了」——我验的是 `/mp/me`（回 internal），**没有验那个身份能不能真的用内部接口**。断言选错了判别式。【处置】① 面板撤掉管理员（回到 7 个微信身份 + 1 个「新号未绑定」演示）；② 服务端 `mock-identities` 同步撤掉 `admin:13800000000`（面板与清单必须一致）；③ 单测清单同步；④ **新增防错判据** `staging-hardening/12-panel-accounts-usable.sh`：逐个面板账号登录后，断言 `/mp/me` 身份与面板声明一致、**自己那侧 4 条接口全 200**（样本清单 + 文档清单）、**另一侧 4 条全 403**。这条判据在测试环境上 8/8 PASS；以后再往面板里塞一个用不了的账号、或角色配错，都会当场红。⑤ 顺带把「首页板块点击」做成判据（`11-quick-account-switch.mjs` ④）：内部身份点第一格必须跳到 `/pages/<表>/form`。实测：内部身份（李工）点板块正常跳转 —— Kevin 报的「没反应」是管理员那个坏身份连带的（页面拿不到数据、进入错误态）。【教训】「加一个测试账号」不是纯前端加个按钮 —— **必须同时确认那个账号的角色能过目标环境的接口闸**；而且判据不能只看 `/mp/me`（它只反映身份归类），要看**该身份真正要调的接口**。【给 Kevin 的用法】小程序里内部视图请选「内部人员 · 李工」；管理员（测试管理员）是**网页工作台**账号，它进小程序只会处处 403 —— 小程序侧已不再列它。",
       "status": "closed",
       "decision": "撤掉小程序面板里的管理员入口 + 加「面板账号可用性」判据（自己那侧 4 接口全 200、另一侧全 403）"
+    },
+    {
+      "id": 361,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S1",
+      "type": "my-defect",
+      "title": "【我引入的缺陷】小程序里「首页四个板块」与「我的」页每一行都点不动（H5 正常）—— 自定义组件上绑 @click，子组件不 emit",
+      "detail": "Kevin 报：「在小程序上，红框内的区域都无法点击，但是 h5 上可以」（两张截图：首页「填写」四格；「我的」页的历史编辑记录/内部管理四行/协议与隐私两行）。【根因】源码里写的是 `<EntryTile @click=\"emit('pick', key)\" />` 与 `<MeRow @click=\"goPage(…)\" />` —— **`@click` 打在自定义组件上**：H5 上 Vue 3 用 attrs 兜底把 onClick 挂到组件根 DOM（所以 H5 能点）；而小程序编译成自定义组件标签的 `bindclick`，**只有子组件自己 `emit('click')` 才触发**。`EntryTile` / `MeRow` 两个组件既没有 `defineEmits` 也从不 emit → 小程序里点了毫无反应。★ 这类错**编译不报错、H5 也看不出来**（H5 恰好能跑），只有真机/开发者工具才暴露 —— 所以此前所有 H5 探针全绿也没抓到。【怎么定位的】没靠猜：直接把**编译产物**摊开看 —— `components/biz/EntryGrid.wxml` 里是 `<entry-tile … bindclick=\"{{key.b}}\">`，而子组件 `EntryTile.js` 里没有任何 emit；再把 `usingComponents` 与各组件 JS 做全量交叉比对，一次列全 6 处死键，与 Kevin 两张截图一一对应（entry-tile×1 + me-row×5）。【修复】两个组件各加 `const emit = defineEmits<{ (e: 'click', ev: unknown): void }>()` + 根节点 `@click=\"emit('click', $event)\"`。声明 emits 后 Vue 不再做原生兜底 → **H5 也只触发一次**（不会双跳）。【永久判据（本次的重点）】新增 `doc/waves/tools/check-mp-component-events.py`：读编译产物，按各 wxml 同目录 json 的 `usingComponents` 解析标签→组件，逐个断言「绑了 bindX 的组件自己调过 emit('X')」（事件名归一化处理 `click` / `update:modelValue` / `row-tap` 三种写法；第三方 wot-design-uni 不列为对象）。并**接进 `deploy.sh` 的 miniapp 阶段**：带死键的包发不出去。证据：修复前产物跑判据报 6 处死键、修复后 PASS（`staging-hardening/13-mp-custom-component-dead-keys.txt`）；H5 未被改坏（探针 ④⑤：首页板块跳 `/pages/sample/form`、我的页第一行跳 `/pages/history/index`）。【教训】「H5 全绿」不等于「小程序能用」—— 这一条以前只写在文档里，现在有机器判据了；凡在小程序里给**自定义组件**绑事件，就必须让那个组件真 emit（或用组件内部的根节点自己处理）。",
+      "status": "closed",
+      "decision": "两个组件声明并 emit click；新增编译产物级自检并接进部署流程"
     }
   ],
   "phase_plan": {

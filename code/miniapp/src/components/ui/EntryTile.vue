@@ -15,10 +15,17 @@ withDefaults(defineProps<{
   desc: '',
   full: false,
 })
+
+// ★ 2026-09-28 修（Kevin 报「小程序里首页四个板块点不动，H5 能点」）：
+//   父组件是 `<EntryTile @click="…" />` —— 在**自定义组件**上写 `@click`，
+//   H5 靠 Vue 的原生事件兜底能触发，而**小程序**会编译成自定义组件标签的 `bindclick`，
+//   只有当子组件 `triggerEvent('click')` 时才会触发。原先本组件既没声明 emits 也不 emit，
+//   所以小程序里点了毫无反应。现在显式声明并 emit（声明后 Vue 不再挂原生兜底 → H5 也只触发一次）。
+const emit = defineEmits<{ (e: 'click', ev: unknown): void }>()
 </script>
 
 <template>
-  <view class="lqg-tile" :class="{ 'lqg-tile--full': full }">
+  <view class="lqg-tile" :class="{ 'lqg-tile--full': full }" @click="emit('click', $event)">
     <view class="lqg-well">
       <LineIcon :name="icon" :size="22" />
     </view>

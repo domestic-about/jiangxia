@@ -297,6 +297,13 @@ phase_miniapp() {
   ( cd "${ROOT}/code/miniapp" && LQG_WX_APPID="${LQG_WX_APPID}" pnpm upload:mp --mode="${mode}" --build-only ) \
     || die "本机构建或发布守卫没过（原因见上）"
 
+  # ★ 2026-09-28 加：产物「自定义组件死键」自检（Kevin 报过小程序点不动、H5 正常，见台账 #361）。
+  #   判据查编译产物：父组件对自定义组件绑了 bindX，子组件必须真的 emit('X')。
+  #   放在这里 = **带死键的包发不出去**（比事后再查便宜得多）。
+  python3 "${ROOT}/doc/waves/tools/check-mp-component-events.py" \
+    "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" \
+    || die "小程序产物里有『自定义组件死键』—— 小程序里点了没反应（H5 反而正常）；修法见上面的清单"
+
   say "⑧ 同步物料 → ${LQG_TEST_HOST}:${mpd}"
   "${SSH[@]}" "install -d '${mpd}/dist/build'"
   # openrsync（macOS 自带）在「文件 + 带尾斜杠目录」混在一条命令里会摊平，所以逐条来
