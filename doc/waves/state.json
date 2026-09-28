@@ -3967,6 +3967,26 @@
       "detail": "背景：Kevin 给了 AppSecret，测试环境的 LQG_MOCK_LOGIN 置 false，堵住 #346 那条「公网可用 mock 冒充内部身份并读写业务数据」的洞。但原 acc1 里有 5 段是走 mock 登录的（`--as extA/extC/staff`），mock 一关必然跑不通。处置（改写 + 诚实收窄）：① **新增** `mockLogin==false` 断言 —— 把「测试环境的 mock 必须是关的」变成受保护的断言，以后谁再打开就当场红；② 用 **admin 账号**（账号密码登录，不依赖 mock）断两处**种子数据指纹**：`GET /lqg/sample/list?pageSize=200` 的 id 集合 == 9000001001..9000001009；`GET /lqg/home/todo` == {pendingSamples:2, pendingTissue:2, pendingOrganoid:0, pendingEmbeds:1, cryoOverdue:2, pendingExtUsers:2, renderFailed:0} （覆盖样本/包埋/冻存/外部用户四段种子；冻存超期用 `CURRENT_DATE - N` 相对日期，不会随时间漂）；③ **去掉**原来那 4 段 mock 身份的「外部隔离在远程环境同样成立」。为什么可以去掉而不算放水：「外部隔离」是**产品性质**，本地环境的 AUTH-EXT-002 acc1/acc2 有完整断言（可见集合逐身份钉死、同组可看/异组按不存在、石蜡块白名单、写保护全套）；远程这条断言原本的职责是「环境本身对不对（提交号/库/profile/种子/https）」。远程环境现在不再提供任何冒充身份的入口，我也没有第二种办法扮演外部账号 —— 与其为了保住一句话在公网留一个后门，不如把这句话交给真正能验它的地方。这段理由已经写进票面的 counterfeit 里，不是悄悄删的。【复核】改写后全量重放 D5 = 6/6；acc1 的 mockLogin 断言做了反向变异（把测试环境的 mock 重新打开 → 断言必须红）。",
       "status": "closed",
       "decision": ""
+    },
+    {
+      "id": 356,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "ops-trap",
+      "title": "宝塔面板重签证书会重写站点 vhost，把 / 的反代目标从 8083 改成 8082 → 网页工作台整站打不开（只探 /lqg/sys/ping 发现不了）",
+      "detail": "现象（Kevin 在宝塔里给 songjian.tianda.studio 重签证书之后，2026-09-28 09:2x）：`https://songjian.tianda.studio/` 返回 HTTP 200 但 `content-type=text/plain`、`size=77`，内容是**若依后端自己的欢迎语**「欢迎使用RuoYi-Vue-Plus后台管理框架，请通过前端地址访问。」→ 说明 `/` 被反代到了**后端 8082**，而不是工作台容器 **8083**；网页工作台整站打不开，staging-hardening/03 探针等 `.login-form` 45s 超时。★ 迷惑点：`/lqg/sys/ping` 那时**完全正常** —— 只靠探活（deploy.sh verify 的 ping 段）发现不了，必须看**首页的 content-type 与大小**（期望 text/html ≈113982 字节）。这条已在 staging-hardening/10-bt-cert-clobbers-vhost.txt 里留了复验姿势。处置：重跑 `bash code/deploy/test/deploy.sh nginx`。02-host-nginx.sh 的 `resolve_cert_dir` 优先取宝塔**站点证书目录**`/www/server/panel/vhost/cert/<域名>/` → 自动用上 Kevin 新签的 TrustAsia 证书并跳过签发；阶段 C 重写 443 vhost 把反代改回 8083。复验：`/` → 200 text/html 113982；证书 notAfter=Dec 26 2026；UI 探针 PASS；SYS-STAGING-001 2/2。教训：凡在宝塔面板上动这个站点（重签证书 / 改站点配置），之后都要重跑一次 `deploy.sh nginx`，并用**首页 content-type 与字节数**复验 —— ping 正常不代表站是好的。",
+      "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 357,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "milestone",
+      "title": "小程序体验版上传成功（1.0.1.test.a08b8fe4f7ad）—— 「本机构建 + 服务器固定 IP 上传」链路一次通过",
+      "detail": "Kevin 加好微信侧「小程序代码上传 IP 白名单」（118.178.109.11）后，`bash code/deploy/test/deploy.sh miniapp` 一次通过：版本 `1.0.1.test.a08b8fe4f7ad`、robot 2、appid `wxf7933ab70657e598`；体验版二维码回传本机 `code/miniapp/dist/体验版二维码-test-a08b8fe4f7ad.png`（470x470，已 gitignore）。产物无 mock 痕迹、接口地址 `https://songjian.tianda.studio` 已打进包。证据：staging-hardening/09-miniapp-uploaded.txt。仍需人工（微信公众平台，脚本做不了）：① 版本管理 → 把该版本**设为体验版**并添加体验成员；② 开发设置 → 服务器域名 → **request 合法域名** 登记 `https://songjian.tianda.studio`（注意：这与「服务器上部署 HTTPS 证书」是两件不同的事 —— 证书已由宝塔签发且可用，但真机体验版只认平台里登记过的域名）。",
+      "status": "open",
+      "decision": ""
     }
   ],
   "phase_plan": {

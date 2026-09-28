@@ -1,0 +1,22 @@
+# 小程序体验版上传成功（2026-09-28 09:24）
+
+命令：`bash code/deploy/test/deploy.sh miniapp`
+
+  ① 本机 `pnpm upload:mp --mode=test --build-only`（两道发布守卫）
+  ② rsync 物料 + 私钥（600）→ `/opt/lqg-test/miniapp/`
+  ③ 服务器 `node scripts/upload-mp.mjs --mode=test --skip-build` → miniprogram-ci
+  ④ 体验版二维码回传本机 `code/miniapp/dist/`
+
+结果：
+
+  ✓ 版本号：`1.0.1.test.a08b8fe4f7ad`　robot 2　appid `wxf7933ab70657e598`
+  ✓ 上传完成（微信侧无错误）。此前一直卡在 `invalid ip: 118.178.109.11`，白名单加好后**一次通过**
+  ✓ 体验版二维码：`code/miniapp/dist/体验版二维码-test-a08b8fe4f7ad.png`（470×470，已 gitignore）
+  ✓ 产物无 mock 痕迹；接口地址 `https://songjian.tianda.studio` 已打进包（`utils/baseUrl.js`）
+
+仍需人工（微信公众平台，脚本做不了）：
+
+  · 版本管理 → 把 `1.0.1.test.a08b8fe4f7ad` **设为体验版**，并添加体验成员
+  · 开发设置 → 服务器域名 → **request 合法域名** 登记 `https://songjian.tianda.studio`
+    （注意：这与「服务器上部署 HTTPS 证书」是**两件不同的事** —— 证书已由宝塔签发且可用，
+      但真机上的体验版只认平台里登记过的域名）
