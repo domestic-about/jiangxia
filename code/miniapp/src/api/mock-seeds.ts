@@ -31,9 +31,10 @@ export const MOCK_PANEL: { title: string, desc: string } | null = __LQG_MOCK_LOG
     }
   : null
 
-/** seed 身份（顺序：内部 → 外部 A–F → 未绑定新号） */
+/** seed 身份（顺序：管理员 → 内部 → 外部 A–F → 未绑定新号）—— 种子里的 8 个账号一个不少 */
 export const MOCK_SEEDS: MockSeed[] = __LQG_MOCK_LOGIN__
   ? [
+      { key: 'admin', label: '管理员 · 测试管理员', phone: '13800000000', expectIdentity: 'internal' },
       { key: 'staff', label: '内部人员 · 李工', phone: '13800000001', expectIdentity: 'internal' },
       { key: 'extA', label: '外部人员 · 王医生（已核验）', phone: '13800000011', expectIdentity: 'external' },
       { key: 'extB', label: '外部人员 · 陈医生（与王医生同组）', phone: '13800000012', expectIdentity: 'external' },
