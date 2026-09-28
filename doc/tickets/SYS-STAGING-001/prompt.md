@@ -25,23 +25,30 @@ blueprint_refs:
   - FLOW:F-OPS-01.step1
   - FLOW:F-OPS-02.step2
 accept:
-  - name: "测试环境跑的就是当前这份代码（提交号对得上）、库是 PostgreSQL、走 test 配置、测试数据已灌、外部隔离在远程环境同样成立"
+  - name: "测试环境跑的就是当前这份代码（提交号对得上）、库是 PostgreSQL、走 test 配置、测试数据已灌，且 **mock 登录是关的**"
     form: API
     run: |-
       export LQG_VERIFY_ENV_FILE=doc/verify/verify.test.env &&
       PING="$(bash doc/verify/api.sh --as admin GET /lqg/sys/ping)" &&
-      printf '%s' "${PING}" | jq -e --arg c "$(git -C code rev-parse --short=12 HEAD 2>/dev/null || git rev-parse --short=12 HEAD)" '.code==200 and .data.db=="PostgreSQL" and .data.profile=="test" and .data.encryptEnabled==true and (.data.buildCommit|startswith($c[0:7]))' &&
-      bash doc/verify/api.sh --as extA GET '/mp/ext/sample/list?pageSize=100' | jq -e '([.rows[].id|tostring]|sort)==["9000001001","9000001002","9000001003","9000001004"]' &&
-      bash doc/verify/api.sh --as extC GET /mp/ext/sample/9000001001 | jq -e '.code==404' &&
-      bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&mine=true' | jq -e '([.rows[].id|tostring]|sort)==["9000001008","9000001009"]' &&
-      bash doc/verify/api.sh --as staff GET '/mp/int/cryo/batch/list?pageSize=100' | jq -e '.tabCounts.overdue==2' &&
+      printf '%s' "${PING}" | jq -e --arg c "$(git -C code rev-parse --short=12 HEAD 2>/dev/null || git rev-parse --short=12 HEAD)" '.code==200 and .data.db=="PostgreSQL" and .data.profile=="test" and .data.encryptEnabled==true and .data.mockLogin==false and (.data.buildCommit|startswith($c[0:7]))' &&
+      bash doc/verify/api.sh --as admin GET '/lqg/sample/list?pageSize=200' | jq -e '([.rows[].id|tostring]|sort)==["9000001001","9000001002","9000001003","9000001004","9000001005","9000001006","9000001007","9000001008","9000001009"]' &&
+      bash doc/verify/api.sh --as admin GET /lqg/home/todo | jq -e '.data.pendingSamples==2 and .data.pendingTissue==2 and .data.pendingOrganoid==0 and .data.pendingEmbeds==1 and .data.cryoOverdue==2 and .data.pendingExtUsers==2 and .data.renderFailed==0' &&
       case "$(sed -n 's/^LQG_API_BASE=//p' doc/verify/verify.test.env)" in https://*) true ;; *) false ;; esac
     counterfeit: |-
       部署脚本推的是上周构建的旧镜像 → buildCommit 与本地 HEAD 对不上红。远程环境没法看 jar 的 mtime，只能靠这个。
       测试环境误用了 dev 或 prod 配置 → profile 不是 test 红。
-      加密口令和 seed 不一致 → extA 的列表能出来（不含加密列），但完工报告要求贴一条详情，供体姓名应是「测试供体甲」而不是乱码。
-      测试环境灌的不是 seed（或 reseed 没跑完）→ 内部历史编辑记录的集合、超期页签计数对不上红。
+      加密口令和 seed 不一致 → 管理面还能登（账号密码不走加密列），但**首页待办计数会不对**（密文读成乱码，外部档案/来源单位判定跟着错）。
+      测试环境灌的不是 seed（或 reseed 没跑完）→ 样本 id 集合与首页待办计数对不上红。
       测试环境走的是 http → 最后一段红：小程序体验版的请求域名必须是 https。
+      **有人把 mock 登录又打开了**（`LQG_MOCK_LOGIN=true`）→ `mockLogin==false` 红。这条是 2026-09-28 新加的：
+        测试环境公网可达，而 mock 登录允许调用方**自带手机号**换 token，绑定逻辑又按手机号复用已有账号
+        → 用种子里的内部人员手机号即可拿到 internal 身份，且工作台鉴权是角色制、同一个 token 还能读写业务数据
+        （台账 #346 有实测证据）。拿到真实 appid 后已经关掉，这条断言就是**防止它被悄悄打开**。
+      ★ 2026-09-28 改（诚实记录）：原来这一段用的是 `--as extA / extC / staff`（走 mock 登录），断言「外部隔离在远程环境同样成立」。
+        mock 关掉后那几句必然跑不通，所以把它们**从远程断言里去掉**了，换成上面两条**用工作台账号**断的种子数据指纹。
+        也就是说：**「外部隔离」这条性质现在由本地环境的 AUTH-EXT-002 acc1/acc2 等票承担**（那里有完整的可见集合/白名单/写保护断言），
+        远程这条只承担「环境本身对不对」。理由是：远程环境不再提供任何冒充身份的入口，我也没有第二种办法去扮演外部账号；
+        与其为了保住一句话而在公网环境留一个后门，不如把这句话交给真正能验它的地方。
   - name: "测试机的数据库与缓存端口不对公网开放；compose 与部署脚本在仓库里、密码不在"
     form: STATE
     run: |-

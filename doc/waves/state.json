@@ -3944,8 +3944,28 @@
       "severity": "S2",
       "type": "external-blocker",
       "title": "小程序体验版上传链路已打通（构建本机 + 上传服务器固定 IP），当前唯一阻塞：微信侧「小程序代码上传 IP 白名单」未放行 118.178.109.11",
-      "detail": "背景：Kevin 2026-09-28 给了真实 appid `wxf7933ab70657e598` 与上传私钥。【为什么上传不能在开发机做】微信要求上传来源 IP 在白名单里；开发机常年跑在代理后面，实测 `env` 里有 http_proxy/https_proxy=127.0.0.1:1081、且 `curl --noproxy '*'` 与直连拿到**同一个**出口 IP 160.16.223.125 → 说明是 TUN 层劫持，按进程绕不过去，而代理出口 IP 不稳定、也不该长期占白名单。【已建成的链路】`code/deploy/test/deploy.sh miniapp` 一条命令：① 本机 `pnpm upload:mp --mode=test --build-only`（**构建必须留本机** —— gotchas §6.5：不同 OS 产物不同，体验版真机会渲染空）并把上传脚本自带的**配置守卫 + 产物守卫**都跑一遍（appid 格式、https、非回环/内网、mock 痕迹、接口地址真的打进包）；② rsync 物料（scripts/、package.json、env/、dist/build/mp-weixin-test、私钥→600）到 `/opt/lqg-test/miniapp/`；③ 服务器上跑 `remote/04-miniapp-upload.sh`（`--skip-build`，守卫再跑一遍）→ miniprogram-ci 上传 + 出体验版二维码 → 回传二维码。为此给 `upload-mp.mjs` 加了 `--build-only`；`env/.env` 的 `VITE_WX_APPID` 从占位 `wx0000000000000000` 换成真实 appid（`src/manifest.json` 是 manifest.config.ts 的生成物，随之更新）。【踩到的坑】服务器上第一次 `npm install miniprogram-ci` 失败：那个目录里是小程序自己的 package.json（整棵 uni-app/vue 依赖树），npm 按 node 24 重新解析整棵树 → ERESOLVE。改为在独立目录 `/opt/lqg-test/mp-ci-deps` 装、再软链 `node_modules` 进上传目录（ESM 沿导入文件所在目录向上找 node_modules，软链照样命中）→ 秒过。【当前阻塞（外部，只能 Kevin 做）】微信返回 `{\"errCode\":-10008,\"errMsg\":\"invalid ip: 118.178.109.11\"}`。需要把 **118.178.109.11**（测试机固定公网 IP）加进「微信公众平台 → 开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」，然后重跑 `bash code/deploy/test/deploy.sh miniapp` 即可（脚本已就位、带失败自解释提示）。【另一项仍然缺】真实微信登录还需要 **AppSecret**（开发设置里的那个，不是上传密钥）→ 配进 `.env` 的 `LQG_WX_SECRET`。在拿到之前 mock 登录必须继续开着（否则小程序没法登录），台账 #346 的公网风险也就还在。【顺带待办】上传成功后要在「微信公众平台 → 版本管理」把该版本**设为体验版**并添加体验成员——这步只能人工做。",
+      "detail": "背景：Kevin 2026-09-28 给了真实 appid `wxf7933ab70657e598` 与上传私钥。【为什么上传不能在开发机做】微信要求上传来源 IP 在白名单里；开发机常年跑在代理后面，实测 `env` 里有 http_proxy/https_proxy=127.0.0.1:1081、且 `curl --noproxy '*'` 与直连拿到**同一个**出口 IP 160.16.223.125 → 说明是 TUN 层劫持，按进程绕不过去，而代理出口 IP 不稳定、也不该长期占白名单。【已建成的链路】`code/deploy/test/deploy.sh miniapp` 一条命令：① 本机 `pnpm upload:mp --mode=test --build-only`（**构建必须留本机** —— gotchas §6.5：不同 OS 产物不同，体验版真机会渲染空）并把上传脚本自带的**配置守卫 + 产物守卫**都跑一遍（appid 格式、https、非回环/内网、mock 痕迹、接口地址真的打进包）；② rsync 物料（scripts/、package.json、env/、dist/build/mp-weixin-test、私钥→600）到 `/opt/lqg-test/miniapp/`；③ 服务器上跑 `remote/04-miniapp-upload.sh`（`--skip-build`，守卫再跑一遍）→ miniprogram-ci 上传 + 出体验版二维码 → 回传二维码。为此给 `upload-mp.mjs` 加了 `--build-only`；`env/.env` 的 `VITE_WX_APPID` 从占位 `wx0000000000000000` 换成真实 appid（`src/manifest.json` 是 manifest.config.ts 的生成物，随之更新）。【踩到的坑】服务器上第一次 `npm install miniprogram-ci` 失败：那个目录里是小程序自己的 package.json（整棵 uni-app/vue 依赖树），npm 按 node 24 重新解析整棵树 → ERESOLVE。改为在独立目录 `/opt/lqg-test/mp-ci-deps` 装、再软链 `node_modules` 进上传目录（ESM 沿导入文件所在目录向上找 node_modules，软链照样命中）→ 秒过。【当前阻塞（外部，只能 Kevin 做）】微信返回 `{\"errCode\":-10008,\"errMsg\":\"invalid ip: 118.178.109.11\"}`。需要把 **118.178.109.11**（测试机固定公网 IP）加进「微信公众平台 → 开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」，然后重跑 `bash code/deploy/test/deploy.sh miniapp` 即可（脚本已就位、带失败自解释提示）。【另一项仍然缺】真实微信登录还需要 **AppSecret**（开发设置里的那个，不是上传密钥）→ 配进 `.env` 的 `LQG_WX_SECRET`。在拿到之前 mock 登录必须继续开着（否则小程序没法登录），台账 #346 的公网风险也就还在。【顺带待办】上传成功后要在「微信公众平台 → 版本管理」把该版本**设为体验版**并添加体验成员——这步只能人工做。 【2026-09-28 更新】AppSecret 已由 Kevin 提供并配进 code/deploy/test/.env 的 LQG_WX_SECRET，同时 LQG_MOCK_LOGIN 置 false（mock 关闭）。仍卡在微信侧 IP 白名单（118.178.109.11 待放行）。",
       "status": "open",
+      "decision": ""
+    },
+    {
+      "id": 354,
+      "ticket": "",
+      "severity": "S1",
+      "type": "secret-hygiene",
+      "title": "按 Kevin 明确要求，把误提交的小程序上传私钥从 git **历史**里彻底移除（并轮换口令、清掉文档里的明文凭据）",
+      "detail": "Kevin 2026-09-28 明确要求「密钥从 git 里去掉」，于是解除了此前「不许改写历史」的自我约束，执行真正的历史清除。【影响面（重写前实测）】含该文件的提交只有 f4cc5f5（加入）与 af4e153（停止跟踪），**两者都只在本地 task/D8 分支**；`main`/`integration` 从头到尾没有这个文件；`git remote -v` 为空（从未推送）。【做法】① `git filter-branch --index-filter 'git rm --cached --ignore-unmatch private.wxf7933ab70657e598.key' --prune-empty -- integration..task/D8` —— **只重写 task/D8**，main/integration/task/D1..D7 的提交号一个都没变；② 删除 refs/original/*、`git reflog expire --expire=now --all`、`git gc --prune=now` 让旧 blob 不可达；③ 复核三条：`git log --all -- <路径>` 空、`git cat-file -e 2b05c5ab…` 报 not a valid object、全库对象扫描（`git rev-list --objects --all` + 逐个 cat-file）扫不到私钥内容。【代价（已如实告知 Kevin）】task/D8 上从 f4cc5f5 起的约 30 个提交号全变了 —— 文档里引用过的部分 12 位短号失效（内容未丢）；测试环境随后重新部署一次，让 buildCommit 与新的 HEAD 对上。【顺带扫出的第二处凭据】测试环境管理员口令被写进了 4 处**被跟踪**的文档。处置：**轮换口令**（历史里那个旧值立即作废）+ 把文档里的明文改成「见 code/deploy/test/.env 的 LQG_ADMIN_PASSWORD」；复核 `git grep 'Lqg-Test-2026'` 为空。没为口令做历史重写 —— 口令轮换后历史值已无用，比再改一遍历史更划算。【教训（写死）】`git add -A` 在「别人刚往工作区放了凭据文件」时是危险的；提交前必须扫一眼新增文件里有没有 `.key`/`.env`/`.pem` 类；凭据一律不进被跟踪文档，改动引用写在文档里。",
+      "status": "closed",
+      "decision": "Kevin 2026-09-28 明确要求从 git 去掉；已完成历史重写 + 不可达化 + 三条复核"
+    },
+    {
+      "id": 355,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S2",
+      "type": "assertion-change",
+      "title": "mock 关闭后，SYS-STAGING-001 acc1 改为「环境指纹 + mockLogin==false」，并把「外部隔离」交给本地票承担（诚实收窄）",
+      "detail": "背景：Kevin 给了 AppSecret，测试环境的 LQG_MOCK_LOGIN 置 false，堵住 #346 那条「公网可用 mock 冒充内部身份并读写业务数据」的洞。但原 acc1 里有 5 段是走 mock 登录的（`--as extA/extC/staff`），mock 一关必然跑不通。处置（改写 + 诚实收窄）：① **新增** `mockLogin==false` 断言 —— 把「测试环境的 mock 必须是关的」变成受保护的断言，以后谁再打开就当场红；② 用 **admin 账号**（账号密码登录，不依赖 mock）断两处**种子数据指纹**：`GET /lqg/sample/list?pageSize=200` 的 id 集合 == 9000001001..9000001009；`GET /lqg/home/todo` == {pendingSamples:2, pendingTissue:2, pendingOrganoid:0, pendingEmbeds:1, cryoOverdue:2, pendingExtUsers:2, renderFailed:0} （覆盖样本/包埋/冻存/外部用户四段种子；冻存超期用 `CURRENT_DATE - N` 相对日期，不会随时间漂）；③ **去掉**原来那 4 段 mock 身份的「外部隔离在远程环境同样成立」。为什么可以去掉而不算放水：「外部隔离」是**产品性质**，本地环境的 AUTH-EXT-002 acc1/acc2 有完整断言（可见集合逐身份钉死、同组可看/异组按不存在、石蜡块白名单、写保护全套）；远程这条断言原本的职责是「环境本身对不对（提交号/库/profile/种子/https）」。远程环境现在不再提供任何冒充身份的入口，我也没有第二种办法扮演外部账号 —— 与其为了保住一句话在公网留一个后门，不如把这句话交给真正能验它的地方。这段理由已经写进票面的 counterfeit 里，不是悄悄删的。【复核】改写后全量重放 D5 = 6/6；acc1 的 mockLogin 断言做了反向变异（把测试环境的 mock 重新打开 → 断言必须红）。",
+      "status": "closed",
       "decision": ""
     }
   ],
