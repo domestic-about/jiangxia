@@ -136,8 +136,18 @@ run_remote_phase() {
 phase_artifacts() {
   sync_build_commit
   say "① 后端 jar（本地 mvn package；BUILD_COMMIT 由镜像阶段的 build-arg 注入，jar 里不落）"
+  # ★ 2026-09-28：maven settings 可覆盖。本机用仓库里的 .mvn-settings.xml（阿里云镜像，快）；
+  #   CI 里那个镜像**缺件**（实测 spring-boot-starter-data-redis:3.5.10 / spring-data-redis:3.5.8 拉不到），
+  #   而 GitHub runner 直连 Maven Central 又快又全 → 用 LQG_MVN_SETTINGS=none 显式声明「不要 -s」。
+  #   不设这个变量时行为与以前完全一致。
+  local mvn_settings=()
+  case "${LQG_MVN_SETTINGS:-}" in
+    none|"")  [ "${LQG_MVN_SETTINGS:-}" = "none" ] && warn "按 LQG_MVN_SETTINGS=none 使用 Maven 默认仓库（CI：阿里云镜像缺件）" ;;
+    *)        mvn_settings=(-s "${LQG_MVN_SETTINGS}") ;;
+  esac
+  [ "${LQG_MVN_SETTINGS:-}" = "" ] && mvn_settings=(-s "${ROOT}/.mvn-settings.xml")
   ( cd "${ROOT}/code/RuoYi-Vue-Plus" && \
-    mvn -q -s "${ROOT}/.mvn-settings.xml" -Dmaven.repo.local="${ROOT}/.m2repo" \
+    mvn -q "${mvn_settings[@]}" -Dmaven.repo.local="${ROOT}/.m2repo" \
         -Duser.home="${ROOT}/.buildhome" -DskipTests -pl ruoyi-admin -am package ) \
     || die "mvn package 失败"
   [ -f "${ROOT}/code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar" ] || die "没有产出 ruoyi-admin.jar"
