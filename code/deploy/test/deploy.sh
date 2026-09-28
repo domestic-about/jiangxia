@@ -10,6 +10,7 @@
 #   bash deploy.sh prove-ports  # accept[2] 等价取证：发夹探针+安全组+ss -lntp（本机 nc 不可用）
 #   bash deploy.sh reseed       # 只在服务器上：把 doc/verify/seed 灌进 lqg_test
 #   bash deploy.sh miniapp      # 小程序体验版：本机构建 → 同步 → 在服务器上传（固定 IP）
+#                               #   ★ 不在 all 里：它依赖微信侧 IP 白名单（外部前提），失败不该带崩部署
 #   bash deploy.sh verify       # 从本机打 https://<域名>/lqg/sys/ping 与工作台首页
 #   bash deploy.sh status       # 测试机现状（只读）
 #   bash deploy.sh down         # docker compose down（保留数据卷；不会碰别人的容器）
@@ -341,8 +342,10 @@ main() {
       phase_nginx
       phase_reseed
       phase_verify
-      phase_miniapp
       phase_prove_ports
+      # ★ 小程序上传**故意不放进 all**：它依赖一个微信侧的外部前提（上传来源 IP 在白名单里，
+      #   见台账 #353）。放进来会让「一个只能由甲方/微信后台操作的前提」把整个测试环境部署搞失败。
+      #   全自动化 = `deploy.sh all && deploy.sh miniapp`（后者失败不影响前者已部署好的环境）。
       ;;
     artifacts) phase_artifacts ;;
     upload)    sync_build_commit; phase_upload ;;
