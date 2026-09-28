@@ -152,6 +152,19 @@ phase_upload() {
     "${ROOT}/code/RuoYi-Vue-Plus/ruoyi-admin/Dockerfile" \
     "root@${LQG_TEST_HOST}:${d}/ruoyi-admin/Dockerfile"
 
+  # ★ 2026-09-28 修（本次部署实测踩到）：测试环境的前端产物必须是 **test 模式**。
+  #   `.env.test` 与 `.env.production` 只差一处：VITE_APP_ENCRYPT=false。test profile 的后端
+  #   **不解密**（api-decrypt 关着），若把 prod 模式的产物发上去，登录体是 AES 密文，后端拿它
+  #   当 JSON 解析 → `MismatchedInputException` → 登录回 code=500（错误编号可查 sys-error.log）。
+  #   而 `dist/` 是**共享目录**：QC-WEB-002 acc2 这类 accept 要求「前端构建是本次产物」，会在重放时
+  #   `rm -rf dist && pnpm build:prod` 把它覆盖成 prod 模式 —— 之后谁再跑一次 deploy.sh，就会把
+  #   这份 prod 产物发上测试机，登录当场坏掉（且现象是后端 500，很难一眼看出是前端模式问题）。
+  #   所以这里**自己重建**，不信任 dist/ 的现状：部署产物与部署动作绑定，谁都改不歪。
+  say "③ 重建工作台产物（test 模式：VITE_APP_ENCRYPT=false，与 test profile 的后端匹配）"
+  ( cd "${ROOT}/code/plus-ui" && rm -rf dist && pnpm build:test >/dev/null 2>&1 ) \
+    || die "工作台 build:test 失败——先手动跑：cd code/plus-ui && pnpm build:test"
+  [ -f "${ROOT}/code/plus-ui/dist/index.html" ] || die "build:test 跑完却没有 dist/index.html"
+
   # 工作台静态产物（--delete：旧 chunk 不许留在站根）
   rsync -az --delete -e "ssh -o BatchMode=yes" \
     "${ROOT}/code/plus-ui/dist/" "root@${LQG_TEST_HOST}:${d}/www/"

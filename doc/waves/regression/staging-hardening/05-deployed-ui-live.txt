@@ -1,6 +1,7 @@
 # 线上测试环境的工作台 UI 判据（2026-09-28，飞书行9/行10）
 # 命令：LQG_UI_BASE=https://songjian.tianda.studio LQG_UI_USER=lqgadmin LQG_UI_PASSWORD=<强口令> node doc/waves/regression/staging-hardening/03-deployed-workbench-ui.mjs
-# 时间：2026-09-28 07:04:19 +0800
+# 时间：2026-09-28 08:01:47 +0800
+# 产物：test 模式构建（VITE_APP_ENCRYPT=false）—— prod 模式会因后端不解密而登录 500，见台账 #351
 
 目标：https://songjian.tianda.studio（用户 lqgadmin）
 
