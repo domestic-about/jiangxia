@@ -4027,6 +4027,26 @@
       "detail": "Kevin 报：「在小程序上，红框内的区域都无法点击，但是 h5 上可以」（两张截图：首页「填写」四格；「我的」页的历史编辑记录/内部管理四行/协议与隐私两行）。【根因】源码里写的是 `<EntryTile @click=\"emit('pick', key)\" />` 与 `<MeRow @click=\"goPage(…)\" />` —— **`@click` 打在自定义组件上**：H5 上 Vue 3 用 attrs 兜底把 onClick 挂到组件根 DOM（所以 H5 能点）；而小程序编译成自定义组件标签的 `bindclick`，**只有子组件自己 `emit('click')` 才触发**。`EntryTile` / `MeRow` 两个组件既没有 `defineEmits` 也从不 emit → 小程序里点了毫无反应。★ 这类错**编译不报错、H5 也看不出来**（H5 恰好能跑），只有真机/开发者工具才暴露 —— 所以此前所有 H5 探针全绿也没抓到。【怎么定位的】没靠猜：直接把**编译产物**摊开看 —— `components/biz/EntryGrid.wxml` 里是 `<entry-tile … bindclick=\"{{key.b}}\">`，而子组件 `EntryTile.js` 里没有任何 emit；再把 `usingComponents` 与各组件 JS 做全量交叉比对，一次列全 6 处死键，与 Kevin 两张截图一一对应（entry-tile×1 + me-row×5）。【修复】两个组件各加 `const emit = defineEmits<{ (e: 'click', ev: unknown): void }>()` + 根节点 `@click=\"emit('click', $event)\"`。声明 emits 后 Vue 不再做原生兜底 → **H5 也只触发一次**（不会双跳）。【永久判据（本次的重点）】新增 `doc/waves/tools/check-mp-component-events.py`：读编译产物，按各 wxml 同目录 json 的 `usingComponents` 解析标签→组件，逐个断言「绑了 bindX 的组件自己调过 emit('X')」（事件名归一化处理 `click` / `update:modelValue` / `row-tap` 三种写法；第三方 wot-design-uni 不列为对象）。并**接进 `deploy.sh` 的 miniapp 阶段**：带死键的包发不出去。证据：修复前产物跑判据报 6 处死键、修复后 PASS（`staging-hardening/13-mp-custom-component-dead-keys.txt`）；H5 未被改坏（探针 ④⑤：首页板块跳 `/pages/sample/form`、我的页第一行跳 `/pages/history/index`）。【教训】「H5 全绿」不等于「小程序能用」—— 这一条以前只写在文档里，现在有机器判据了；凡在小程序里给**自定义组件**绑事件，就必须让那个组件真 emit（或用组件内部的根节点自己处理）。",
       "status": "closed",
       "decision": "两个组件声明并 emit click；新增编译产物级自检并接进部署流程"
+    },
+    {
+      "id": 362,
+      "ticket": "",
+      "severity": "S1",
+      "type": "secret-hygiene",
+      "title": "【安全事件】小程序上传私钥已进入**公开** GitHub 仓库历史（must rotate）—— 仓库是 public，main 里的 c222a6b 带这个文件",
+      "detail": "发现：Kevin 让我做 CI 时，我先核对远端，发现 origin = github.com/domestic-about/jiangxia **且为 public**；`git branch -a --contains c222a6b` 显示该提交在 main 与 staging 上，`git merge-base --is-ancestor c222a6b <远端 main>` 为真 → **上传私钥已经推到公开仓库**。提交 c222a6b「feat: new admin」把整个工作区扫了进去（还带上了 code/RuoYi-Vue-Plus/{,ruoyi-admin/}logs/**（三万行运行日志）、doc/.tmp/qa-env/8094/verify.env、*.flattened-pom.xml）。我上午排查时该仓库**还没有远端**（git remote -v 为空），所以当时「未外泄」的判断在当时成立；之后远端被配置并推送，判断随之失效 —— 这一点必须更正。【已做（本轮）】① `git rm --cached` 上传私钥 + 顶层 logs/ + code/RuoYi-Vue-Plus/{,ruoyi-admin/}logs/ + doc/.tmp/，并把这些路径写进 .gitignore（提交 2e229aa / b4bc2f3）；② 清掉 doc/waves/state.json 里一处**已轮换的旧口令**明文；③ 全量扫描被跟踪文件里还有没有别的凭据。【暴露面结论（实测）】除上传私钥外，**没有**其它真实凭据进仓库：当前与历史管理员口令、测试环境 DB/Redis/MinIO 口令、AppSecret 都搜不到；`admin123` 只出现在 .example 与测试夹具（种子默认值）；运行日志里只有字段名、没有值。【必须做（我做不到，只能 Kevin 做）】**在微信公众平台「开发管理 → 开发设置 → 小程序代码上传」重置一次上传密钥** —— 文件已经在公开历史里，改代码/删文件都救不回来，只有让旧密钥失效才是真正的止血。【建议（需 Kevin 拍）】把仓库改成 private；以及（可选）用 git filter-repo 清史 + force-push（会重写已发布历史，按既有纪律「不许改写历史」我不擅自做）。",
+      "status": "open",
+      "decision": "待 Kevin：重置上传密钥（必须）+ 仓库可见性/清史（可选）"
+    },
+    {
+      "id": 363,
+      "ticket": "SYS-STAGING-001",
+      "severity": "S3",
+      "type": "milestone",
+      "title": "CI 建成并跑通：push staging → GitHub Actions → 自动部署测试站（12m20s 全绿）",
+      "detail": "按 Kevin 要求「参考 dongjiaoshan 的分支即环境」：staging = 测试站，main = 生产（本次不配，资源未到位）。实现：`.github/workflows/deploy-staging.yml`（push staging 触发；concurrency 串行化；timeout 40min）+ `.github/maven-settings.xml`（CI 专用：阿里云与 Maven Central **双源**，无 mirror，谁通用谁）+ Code deploy.sh 的三处 CI 适配。凭据：4 个 repo secret（LQG_TEST_ENV / LQG_VERIFY_TEST_ENV / LQG_TEST_SSH_KEY / LQG_TEST_HOST），其中 SSH 用**CI 专用密钥**（公钥已加到测试机 root，可与 Kevin 个人密钥分开撤销）；仓库里永远没有 .env。【踩过的 5 个坑（都写在提交信息里）】① Secret 插值进 run 正文 → .env 注释里的反引号被当命令替换执行，写出的文件被搅烂（改走 env: 传值）；② 账号硬闸在 CI 无 profile → 加显式开关 LQG_SKIP_ACCOUNT_GATE=1；③ 仓库里的 .mvn-settings.xml 是 mirrorOf=* 单源且实测缺件 → 双源 settings；④ 给 .m2repo 加 actions/cache 反而**投毒**（上次失败的半拉子本地仓 → _remote.repositories id 不一致 → 误报 absent）→ 去掉缓存每次冷拉；⑤ LQG_MVN_SETTINGS 用相对路径 → deploy.sh 会 cd 进模块目录，文件找不到（maven 40 秒即失败）→ 改绝对路径；另：安全组清单那步走 aliyun CLI，CI 无云凭据会把 all 链带成 exit 3 → 降级跳过。【明确不进 CI 的部分】小程序体验版上传：微信要求上传来源 IP 在白名单，托管 runner 出口 IP 每次不同 → 仍由固定 IP 的机器发（`bash code/deploy/test/deploy.sh miniapp`），这条已写进 workflow 注释与 job summary。【结果】push staging → run 36394022078 → 部署到测试环境 **12m20s 全绿**（01-up / 宿主 nginx / reseed / 公网自检 / 端口取证 / 部署后冒烟 panel 账号可用性 全过）。",
+      "status": "closed",
+      "decision": ""
     }
   ],
   "phase_plan": {
