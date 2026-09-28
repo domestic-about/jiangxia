@@ -48,8 +48,13 @@ cd "${MP_DIR}"
 # appid 从 code/miniapp/env/.env 同步过来的那份读（deploy.sh 也允许用 LQG_WX_APPID 覆盖）
 export LQG_WX_APPID="${LQG_WX_APPID:-}"
 export LQG_WX_PRIVATE_KEY="${MP_DIR}/private.key"
+# 版本号：测试版按 .env 里的固定值（Kevin 2026-09-28 要求写死 1.1.2）；没配就走脚本自带的
+# <version>.<mode>.<commit> 串。带了 --version 时脚本不再拼后缀。
+VER_ARGS=()
+[ -n "${LQG_MINIPROGRAM_VERSION:-}" ] && VER_ARGS=(--version="${LQG_MINIPROGRAM_VERSION}")
+log "  版本号：${LQG_MINIPROGRAM_VERSION:-（未配，用脚本缺省的 <version>.<mode>.<commit>）}"
 set +e
-node scripts/upload-mp.mjs --mode=test --skip-build 2>&1 | tee /tmp/lqg-mp-upload.out | grep -vE '^\s*\[object Object\]' | tail -30
+node scripts/upload-mp.mjs --mode=test --skip-build "${VER_ARGS[@]+"${VER_ARGS[@]}"}" 2>&1 | tee /tmp/lqg-mp-upload.out | grep -vE '^\s*\[object Object\]' | tail -30
 rc="${PIPESTATUS[0]}"
 set -e
 

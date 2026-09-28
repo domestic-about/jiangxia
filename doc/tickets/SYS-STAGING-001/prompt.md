@@ -25,14 +25,16 @@ blueprint_refs:
   - FLOW:F-OPS-01.step1
   - FLOW:F-OPS-02.step2
 accept:
-  - name: "测试环境跑的就是当前这份代码（提交号对得上）、库是 PostgreSQL、走 test 配置、测试数据已灌，且 **mock 登录是关的**"
+  - name: "测试环境跑的就是当前这份代码（提交号对得上）、库是 PostgreSQL、走 test 配置、测试数据已灌，且 **mock 只认预置演示身份**（体验版的登录页快捷入口靠它，但任意身份必被拒）"
     form: API
     run: |-
       export LQG_VERIFY_ENV_FILE=doc/verify/verify.test.env &&
       PING="$(bash doc/verify/api.sh --as admin GET /lqg/sys/ping)" &&
-      printf '%s' "${PING}" | jq -e --arg c "$(git -C code rev-parse --short=12 HEAD 2>/dev/null || git rev-parse --short=12 HEAD)" '.code==200 and .data.db=="PostgreSQL" and .data.profile=="test" and .data.encryptEnabled==true and .data.mockLogin==false and (.data.buildCommit|startswith($c[0:7]))' &&
+      printf '%s' "${PING}" | jq -e --arg c "$(git -C code rev-parse --short=12 HEAD 2>/dev/null || git rev-parse --short=12 HEAD)" '.code==200 and .data.db=="PostgreSQL" and .data.profile=="test" and .data.encryptEnabled==true and .data.mockLogin==true and (.data.buildCommit|startswith($c[0:7]))' &&
       bash doc/verify/api.sh --as admin GET '/lqg/sample/list?pageSize=200' | jq -e '([.rows[].id|tostring]|sort)==["9000001001","9000001002","9000001003","9000001004","9000001005","9000001006","9000001007","9000001008","9000001009"]' &&
       bash doc/verify/api.sh --as admin GET /lqg/home/todo | jq -e '.data.pendingSamples==2 and .data.pendingTissue==2 and .data.pendingOrganoid==0 and .data.pendingEmbeds==1 and .data.cryoOverdue==2 and .data.pendingExtUsers==2 and .data.renderFailed==0' &&
+      bash doc/verify/api.sh --as staff GET /mp/me | jq -e '.code==200 and .data.identity=="internal"' &&
+      EVIL="$(bash doc/verify/api.sh --as phone:evilprobe:13900000000 GET /mp/me 2>&1 || true)" && printf '%s' "${EVIL}" | grep -q '不在允许清单里' &&
       case "$(sed -n 's/^LQG_API_BASE=//p' doc/verify/verify.test.env)" in https://*) true ;; *) false ;; esac
     counterfeit: |-
       部署脚本推的是上周构建的旧镜像 → buildCommit 与本地 HEAD 对不上红。远程环境没法看 jar 的 mtime，只能靠这个。
@@ -40,15 +42,18 @@ accept:
       加密口令和 seed 不一致 → 管理面还能登（账号密码不走加密列），但**首页待办计数会不对**（密文读成乱码，外部档案/来源单位判定跟着错）。
       测试环境灌的不是 seed（或 reseed 没跑完）→ 样本 id 集合与首页待办计数对不上红。
       测试环境走的是 http → 最后一段红：小程序体验版的请求域名必须是 https。
-      **有人把 mock 登录又打开了**（`LQG_MOCK_LOGIN=true`）→ `mockLogin==false` 红。这条是 2026-09-28 新加的：
-        测试环境公网可达，而 mock 登录允许调用方**自带手机号**换 token，绑定逻辑又按手机号复用已有账号
-        → 用种子里的内部人员手机号即可拿到 internal 身份，且工作台鉴权是角色制、同一个 token 还能读写业务数据
-        （台账 #346 有实测证据）。拿到真实 appid 后已经关掉，这条断言就是**防止它被悄悄打开**。
-      ★ 2026-09-28 改（诚实记录）：原来这一段用的是 `--as extA / extC / staff`（走 mock 登录），断言「外部隔离在远程环境同样成立」。
-        mock 关掉后那几句必然跑不通，所以把它们**从远程断言里去掉**了，换成上面两条**用工作台账号**断的种子数据指纹。
-        也就是说：**「外部隔离」这条性质现在由本地环境的 AUTH-EXT-002 acc1/acc2 等票承担**（那里有完整的可见集合/白名单/写保护断言），
-        远程这条只承担「环境本身对不对」。理由是：远程环境不再提供任何冒充身份的入口，我也没有第二种办法去扮演外部账号；
-        与其为了保住一句话而在公网环境留一个后门，不如把这句话交给真正能验它的地方。
+      ★ mock 这一段是 **2026-09-28 二次修订**，两次都写明白：
+        · 第一版（拿到 appid 后）要求 `mockLogin==false` —— 把 mock 整个关掉，堵住「公网可用 mock 冒充内部身份并读写业务数据」（台账 #346）。
+        · 第二版（Kevin 要求体验版保留登录页快捷入口后）改成 **`mockLogin==true` 且「预置身份可用 + 任意身份必被拒」**：
+          关掉 mock 会让甲方对接人登不进演示数据（seed 里绑定的 openid 换不出来），所以改成**收窄**而不是关闭 ——
+          后端 `WxIdentityResolver` 现在只认 `lqg.auth.mock-identities` 清单里的 key，且**手机号由服务端从清单取**，
+          不再采信调用方传的 phoneCode 值（原来正是这条路让「报出种子里的内部人员号码」就能拿到 internal 身份）。
+          两段断言合起来才是完整口径：`--as staff` 必须**能**登且拿到 `identity=="internal"`（证明快捷入口真的可用，
+          不是「全拒了」也算过），而自造身份 `phone:evilprobe:13900000000` 必须**被拒**并回「不在允许清单里」。
+          也就是说：**谁把清单挪掉/改成不校验，或者把 mock 关掉，这条都会红。**
+       ★ 关于原本那句「外部隔离在远程环境同样成立」：它用的 `--as extA / extC` 是 mock 身份，第一版改写到 admin 账号的
+        种子指纹时就已去掉；「外部隔离」这条产品性质由本地环境的 AUTH-EXT-002 acc1/acc2 等票承担（那里有完整的
+        可见集合 / 白名单 / 写保护断言）。这里只承担「环境本身对不对 + mock 的门是不是只开给预置身份」。
   - name: "测试机的数据库与缓存端口不对公网开放；compose 与部署脚本在仓库里、密码不在"
     form: STATE
     run: |-
