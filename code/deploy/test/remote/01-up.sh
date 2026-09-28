@@ -57,4 +57,37 @@ ss -lntp | grep -E ":(15432|16379|19000|19001|${LQG_API_PORT}|${LQG_WEB_PORT})\b
 log "===== 后端启动日志尾部（Flyway 迁移结果）====="
 docker logs --tail 40 lqg-test-backend 2>&1 | sed 's/^/  /' || true
 
+log "===== 5) OSS 配置对齐 compose 里的 MinIO（上传转圈 / 图片打不开的根因）====="
+# 2026-09-28：测试环境「工作台上传图片一直转圈」的根因有两个，都在这里一次性对齐：
+#   ① `sys_oss_config` 里启用的那条（config_key=minio）endpoint 是 RuoYi 的默认值 `127.0.0.1:9000`
+#      —— 那在**后端容器里**是容器自己，请求永远等不到响应（转圈到超时）。
+#   ② MinIO 里**根本没有这个桶**：RuoYi 不会替你建桶（实测 mc ls 为空）。
+# 另外两个必须守住的点（都是既有验收断言的性质）：
+#   · endpoint **不带 scheme**：RuoYi 的 OssClient#getEndpoint() 会自己补 `http://`，
+#     写 `http://minio:9000` 会变成 `http://http://minio:9000` → 建连卡死。
+#   · access_policy 必须是 **0（私有）**：验收里断言「OSS 裸地址匿名访问 403」，
+#     设成公开会破坏这条已验证的安全性质。
+OSSW="minio:9000|${LQG_MINIO_BUCKET}|0|N"
+CUR="$(docker exec lqg-test-postgres psql -U lqg -d lqg_test -At -c \
+  "SELECT coalesce(endpoint,'')||'|'||coalesce(bucket_name,'')||'|'||coalesce(access_policy,'')||'|'||coalesce(is_https,'') FROM sys_oss_config WHERE config_key='minio'" 2>/dev/null || true)"
+# 桶先建（私有；已存在则跳过）。mc 在 minio 服务端镜像里自带。
+if docker exec lqg-test-minio sh -c "mc alias set l http://127.0.0.1:9000 '${LQG_MINIO_USER}' '${LQG_MINIO_PASSWORD}' >/dev/null 2>&1 && mc mb --ignore-existing l/${LQG_MINIO_BUCKET}" >/dev/null 2>&1; then
+  log "  ✓ 桶 ${LQG_MINIO_BUCKET} 就位（私有）"
+else
+  log "  ⚠ 建桶失败（MinIO 没起来？）——上传会失败，继续按现状跑"
+fi
+if [ "${CUR}" = "${OSSW}" ]; then
+  log "  OSS 配置已是目标值（${OSSW}）→ 不动"
+else
+  log "  当前 ${CUR:-（读不到）} ≠ 目标 ${OSSW} → 改写并重启 backend（init() 才会重写 Redis 缓存）"
+  docker exec -i lqg-test-postgres psql -U lqg -d lqg_test -v ON_ERROR_STOP=1 <<SQL
+UPDATE sys_oss_config SET endpoint='minio:9000', bucket_name='${LQG_MINIO_BUCKET}',
+       access_key='${LQG_MINIO_USER}', secret_key='${LQG_MINIO_PASSWORD}',
+       access_policy='0', is_https='N', status='0' WHERE config_key='minio';
+UPDATE sys_oss_config SET status='1' WHERE config_key<>'minio';
+SQL
+  "${COMPOSE[@]}" restart backend
+  wait-for -t 420 -i 5 "http://127.0.0.1:${LQG_API_PORT}/lqg/sys/ping" && log "  ✓ backend 已重启并就绪"
+fi
+
 log "1) up 完成"

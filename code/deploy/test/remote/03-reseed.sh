@@ -150,6 +150,9 @@ else
       else
         log "  ✗ 接口报成功但新口令登不上 → 请人工复核"; exit 1
       fi ;;
+    *新密码不能与旧密码相同*)
+      # 目标口令 == seed 默认口令（Kevin 要求测试环境用 admin123）→ 已经是目标状态，不算失败
+      log "  ✓ 目标口令与当前口令相同（未改动）——已符合 .env 里的 LQG_ADMIN_PASSWORD" ;;
     *) log "  ✗ 改口令失败：${RESP}"; exit 1 ;;
   esac
 fi
