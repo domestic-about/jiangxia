@@ -120,6 +120,14 @@ async function start(sourceType: 'camera' | 'album') {
       state.value = 'idle'
       return
     }
+      // ★ 2026-09-28：真机上「拍照/相册识别」失败最常见的原因**不是**识别本身，而是
+      //   `uni.uploadFile` 被微信拦下 —— 微信的合法域名是**三张分开的白名单**
+      //   （request / uploadFile / downloadFile）；只配 request 时接口都正常、上传却必失败。
+      //   原来这里一律显示「没识别出来，请手动填写」，把真正原因盖住了（Kevin 实测踩到）。
+      const reason = String((e as { message?: string })?.message ?? '')
+      if (reason.includes('not in domain list')) {
+        uni.showToast({ title: '上传域名未在微信后台配置，请联系管理员', icon: 'none', duration: 3000 })
+      }
     state.value = 'failed'
   }
 }
