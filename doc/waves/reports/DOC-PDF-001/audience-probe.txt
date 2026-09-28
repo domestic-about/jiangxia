@@ -1,0 +1,24 @@
+════ 探针：内外部两套产物共存（部分唯一索引 uk_doc_file 里 audience 在键内）
+-- 反例：1006 没有样本质控表草稿 → 400 带原因（不是静默出空文件）
+{"code":400,"msg":"这个样本还没有样本质控表（先在工作台打开一次质控页）"}
+-- render 9000001005/sample_qc audience=internal
+{"status":"done","audience":"internal","hash":"a2ceb799"}
+-- pages audience=internal
+{"status":"done","pages":[1,2],"images":0}
+-- render 9000001005/sample_qc audience=external
+{"status":"done","audience":"external","hash":"bfb2d09c"}
+-- pages audience=external
+{"status":"done","pages":[1,2],"images":0}
+-- 库里这一份的行（两个 audience 各一套 docx/pdf/png）
+external docx/0 done hash=bfb2d09c
+external pdf/0 done hash=bfb2d09c
+external png/1 done hash=bfb2d09c
+external png/2 done hash=bfb2d09c
+internal docx/0 done hash=a2ceb799
+internal pdf/0 done hash=a2ceb799
+internal png/1 done hash=a2ceb799
+internal png/2 done hash=a2ceb799
+-- 外部版 PDF 里不许有内部编号（1005 的内部编号 = T-hga03）
+   T-hga03 出现 0 次（期望 0）；样本质控表出现 1 次
+-- 收尾 reseed
+   reseed ok

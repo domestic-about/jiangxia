@@ -1,0 +1,45 @@
+# 宝塔重签证书会重写站点 vhost，把 `/` 的反代目标从 8083 改成 8082（2026-09-28 实测踩到）
+
+## 现象
+
+Kevin 在宝塔面板里给 `songjian.tianda.studio` 重签了证书
+（Let's Encrypt → **TrustAsia LiteSSL**，有效期至 2026-12-26）之后：
+
+- `https://songjian.tianda.studio/` 返回 **HTTP 200 但 `content-type=text/plain`、`size=77`**，
+  内容是**若依后端自己的欢迎语**：「欢迎使用RuoYi-Vue-Plus后台管理框架，请通过前端地址访问。」
+- 即 `/` 被反代到了**后端 8082**，而不是工作台容器 **8083** → 网页工作台整站打不开
+  （`staging-hardening/03` 探针等 `.login-form` 45s 超时）。
+
+★ **迷惑点**：那一刻 `/lqg/sys/ping` **完全正常**。所以只靠探活（`deploy.sh verify` 的 ping 段）
+发现不了这个问题 —— 必须看**首页的 `content-type` 与字节数**（期望 `text/html`，约 113982 字节）。
+
+## 处置
+
+重跑 `bash code/deploy/test/deploy.sh nginx`：
+
+- `02-host-nginx.sh` 的 `resolve_cert_dir` 优先取宝塔**站点证书目录**
+  `/www/server/panel/vhost/cert/<域名>/` → 自动用上 Kevin 新签的那张并**跳过签发**；
+- 阶段 C 重写 443 vhost，把反代改回 `127.0.0.1:8083`。
+
+日志关键行：
+
+```
+证书已存在（/www/server/panel/vhost/cert/songjian.tianda.studio），跳过签发阶段
+使用证书目录：/www/server/panel/vhost/cert/songjian.tianda.studio
+阶段 C：写完整的 80（ACME + 301）+ 443（TLS + 反代 127.0.0.1:8083）
+阶段 C 完成：https://songjian.tianda.studio/ 已生效（→ 127.0.0.1:8083）
+证书到期：notAfter=Dec 26 23:59:59 2026 GMT
+```
+
+复验：
+
+- `/` → `HTTP 200 text/html size=113982`
+- 证书 `notAfter=Dec 26 23:59:59 2026 GMT`
+- `staging-hardening/03` 线上 UI 探针 **PASS**
+- `SYS-STAGING-001` **2/2**
+
+## 教训（写死）
+
+凡在**宝塔面板**上动这个站点（重签证书 / 改站点配置 / 改站点目录），之后都要**重跑一次
+`deploy.sh nginx`**，并用**首页的 content-type 与字节数**复验 ——
+`/lqg/sys/ping` 正常**不代表**站是好的。

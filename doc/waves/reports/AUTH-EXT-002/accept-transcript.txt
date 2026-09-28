@@ -1,0 +1,75 @@
+################ ext002-acc1.sh ################
+== accept 1 · 可见集合 / 白名单键 / 内部编号开关两态 / 四条不变量 ==
+-- 六身份 /mp/ext/embed/list id 集合 + onlyMine 两档 --
+extA            ["9000002001","9000002002","9000002003","9000002006"]
+extB            ["9000002001","9000002002","9000002003","9000002006"]
+extC            []
+extD            ["9000002004"]
+extE            []
+extF            []
+extA onlyMine   ["9000002006"]
+extB onlyMine   []
+-- 1001 详情的 embeds 键集合差集（对 24 键白名单，应为空）--
+[]
+-- 开关初值 --
+lqg.ext.show-internal-no=false
+true
+true
+true
+true
+true
+false
+true
+true
+true
+true
+true
+true
+ACCEPT-1 EXIT=0
+---- acc1 RC=0 ----
+
+################ ext002-acc2.sh ################
+== accept 2 · 写保护 / 夹带 / 无效重提 ==
+-- 1) extB 替 extA 的 1001 送样（可见但非本人）--
+400	只能挂本人送检过的样本
+-- 2) extA 挂到自己已无效的 1003 --
+400	这条样本已判无效，不能提交石蜡包埋送样
+-- 3) extC 挂到看不见的 1001 --
+400	只能挂本人送检过的样本
+-- 4) 被拒三次后 external 送样仍只有 seed 那一条 --
+1
+-- 5) extA 夹带编号 / 状态 / 包埋人 / 染色 / 操作人 / 来源 提交 --
+{"code":200,"msg":"操作成功"}
+-- 6) 库内：夹带的一个都没生效（external|pending|-|-|-|-|王医生）--
+external|pending|-|-|-|-|王医生
+-- 7) extB 改 extA 的 2006 / extA 改实验室录入的 2001 --
+400	只能修改重提本人提交的送样（同组的可以看，但不能改）
+400	只能修改重提本人提交的送样（同组的可以看，但不能改）
+-- 8) 两次被拒后库里没有这两条样本类型 --
+0
+-- 9) 实验室把 2006 判无效 --
+{"code":200,"msg":"操作成功"}
+-- 10) extA 改后重提 2006 --
+{"code":200,"msg":"操作成功"}
+-- 11) 库内：回 pending、无效原因清空、两个字段落库 --
+pending|-|类器官|胆管类器官
+1
+true
+external|pending|-|-|-|-|王医生
+0
+true
+true
+pending|-|类器官|胆管类器官
+ACCEPT-2 EXIT=0
+---- acc2 RC=0 ----
+
+################ ext002-acc3.sh ################
+== accept 3 · 小程序外部详情页包埋卡片 ==
+-- 产物 --
+-rw-r--r--  1 wkui  staff  2346 Sep 22 08:49 code/miniapp/dist/build/mp-weixin/components/lqg/EmbedCard.js
+-rw-r--r--  1 wkui  staff  2846 Sep 22 08:49 code/miniapp/dist/build/mp-weixin/pages/sample/detail-ext.js
+-- detail-ext 的 usingComponents（embed-card 必须在内）--
+{"embed-card":"../../components/lqg/EmbedCard","note-bar":"../../components/lqg/NoteBar","error-state":"../../components/lqg/ErrorState","loading-state":"../../components/lqg/LoadingState","status-chip":"../../components/lqg/StatusChip"}
+ACCEPT-3 EXIT=0
+---- acc3 RC=0 ----
+

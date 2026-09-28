@@ -1,0 +1,91 @@
+D7 L2 证伪抽样原始记录（每条：改坏 → 跑哪条 accept 的哪一段 → 结果 → 还原）
+环境：HEAD 00710be · 后端 8094 · 工作台 8093 · 小程序 H5 9204
+Playwright require 锚点 = code/miniapp/package.json（issue #229）；截图为 PNG，只落盘不读进上下文。
+
+────────────────────────────────────────────────────────────────────────
+F1 · DOC-MP-002 acc1/acc2 · 「真代码删掉、只在注释里留字面量」
+  改动：src/utils/fileHandoff.ts 的 openLocalFile()：把 api({...}) 里的 `showMenu: true` 整行删掉，
+        另加两行注释 `// ★F1 证伪…` / `// showMenu: true`。
+  跑：accept 2 的 grep 段（previewImage×2 / showMenu / shareFileMessage / .vue 导入数≥5 /
+      DownloadSheet→DownloadBar / DocTabs groupDocs / !errorMsg）+ download.fixture.spec.ts
+  结果：★ 绿（未捕捉）。真代码里已无 showMenu（grep -vE '^\s*//' 后为空），断言照样成立。
+  还原：cp 回备份，git diff 空。
+
+F2 · DOC-MP-002 acc1 · 「点缩略图看原图」改成看预览图
+  改动：src/components/lqg/ThumbStrip.vue 的 open()：`openUrls()`（imageOpenUrl → 原图 .png）
+        换成 `usable.map(i => ({url: thumbUrlOf(i)}))`（= previewUrl .jpg）。需求 REQ-DOC-005 现场落空。
+  跑：accept 2 的同一段 grep
+  结果：★ 绿（未捕捉）。accept 里对 ThumbStrip 只有 `grep -q previewImage`——ThumbStrip 用不用
+        原图、是否退回预览图，一个字都没断。
+  对照：本片 L2 脚本 .tmp/qa-d7-L2/scenarioA.mjs 的 A6 断言（打开地址含 .png 且不含 .jpg）会红。
+  还原：cp 回备份，git diff 空。
+
+F3 · SYS-EXPORT-001 acc2 · 「导出调用点不传鉴权头」
+  改动：src/pages/ledger/index.vue 的 exportExcel()：
+        downloadToTemp(exportUrl(...), authHeader()) → downloadToTemp(exportUrl(...))
+  跑：accept 2 的前 5 段 grep（fileHandoff×2 / showMenu / shareFileMessage /
+      grep -qE 'Authorization|clientid' export.ts fileHandoff.ts）+ 两条 vitest
+  结果：★ 绿（未捕捉）。grep 只问「这两个文件里有没有这两个词」——authHeader() 还在 export.ts 里
+        定义着，所以永远命中；调用点传没传、传给了哪个 URL，断言里没有。
+        vitest：export.spec.ts 10 passed / 0 failed；download.fixture.spec.ts 17 passed / 0 failed。
+  对照：本片 L2 场景 B（真浏览器点「导出 Excel」）会红——downloadToTemp 的运行时守卫会抛。
+  备注：★ 这条与 S1 缺陷同源（鉴权头该给哪个 URL）——见 audit issues[0]。
+  还原：cp 回备份，git diff 空。
+
+F4 · SYS-HOME-001 acc2 · 「五张卡片的数字写死」
+  改动：src/views/lqg/home/index.vue：:value="todo.pendingSamples" → :value="7"；
+        :value="todo.pendingEmbeds" → :value="9"（写死且是错的数）。
+  跑：accept 2 的 grep 段（home/todo in api / TodoCard≥5 / !v-if…0 / !echarts|el-statistic /
+      pendingEmbeds in lqgTodo.ts / lqgTodo in Sidebar / !home/todo in Sidebar）
+  结果：★ 绿（未捕捉）。accept 1（DATA）打的是后端 /lqg/home/todo，根本不看页面 → 整张票的
+        accept 全绿，而页面显示 7 / 9（真值 2 / 1）。
+  对照：本片 L2 场景 D 实测红——D1:卡片「样本」数字=2 FAIL（value=7）、D1:卡片「石蜡」数字=1 FAIL（value=9），
+        19/21（.tmp/qa-d7-L2/scenarioD.json 的那次运行）。
+  还原：cp 回备份，git diff 空。
+
+F5 · AUTH-EXT-003 acc1 · 「外部下载这条路发出内部版产物」★ 需要重打包
+  改动：doc/service/DocExternalQueryService.download()：
+        requireExternalObjectKey(...) → 新增的 requireInternalObjectKey(...)；
+        renderService.download(..., DocAudiences.EXTERNAL) → DocAudiences.INTERNAL。
+        （= 票面 counterfeit 第 5 条「外部拿到了带内部编号的那一份」的最直接形态）
+  跑：mvn -pl ruoyi-admin -am package -DskipTests（11.6s）→ qa-up --skip-build --no-reseed 重启
+      → AUTH-EXT-003 acc1 的 audience 段
+  结果：★ 红（捕捉到）。signing URL =
+        http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/organoid_score/internal/fa9054c94f6a.pdf
+        → `printf | grep -q '/external/' && ! grep -q '/internal/'` 不成立。
+        同一次运行里清单/可见性各段仍绿（extB 4 行、extC 空），说明只有这条针对性断言变红。
+  还原：git checkout 该文件 → 重新 mvn package（11.3s）→ qa-up --skip-build --no-reseed 重启
+        → 复跑该段 = 绿（/external/a94ee70d71f1.pdf），curl 下载后 pdftotext 含「类器官质量评分表」。
+        源码 staleness 复核：find src -newer jar = 空。
+
+F6 · DOC-PUBLISH-001 acc2 · 「四个下载入口删掉一个」
+  改动：src/views/lqg/qc/components/PreviewPane.vue：删掉整块「下载合并 PDF」的 el-button。
+  跑：accept 2 的 grep 段（PreviewPane in editor / audience / merged /
+      grep -cE "format…(docx|pdf)|'docx'|'pdf'" ≥2 / failed|重新生成 / !:disabled="true"）
+  结果：★ 绿（未捕捉）。四个入口只剩三个，五段 grep 全过（merged 还在、docx/pdf 字面量还在）。
+  对照：本片 L2 场景 C 的 C4「下载区恰好四个按钮」会红。
+  还原：cp 回备份，git diff 空。
+
+F7 · DOC-MP-001 acc1 · 「showMerge 由 ≥2 改成 >2」（对照组：断言应该抓得住）
+  改动：src/pages/doc/group.ts：showMerge: docs.length >= 2 → > 2
+  跑：pnpm vitest run src/pages/doc/group.fixture.spec.ts
+  结果：✔ 红（捕捉到）。numFailedTests=1 / numPassedTests=6。
+  还原：cp 回备份，git diff 空。
+
+F8 · SYS-EXPORT-001 acc2 · 「exportUrl 忽略筛选参数，永远导全量」（对照组）
+  改动：src/pages/ledger/export.ts 的 queryOf()：return pairs… → return ''
+  跑：pnpm vitest run src/pages/ledger/export.spec.ts
+  结果：✔ 红（捕捉到）。numFailedTests=4 / numPassedTests=6。
+  还原：cp 回备份，git diff 空。
+
+────────────────────────────────────────────────────────────────────────
+汇总：8 条里 5 条「改坏了还绿」（F1/F2/F3/F4/F6，全部是源码 grep 型断言）→ type: harness；
+      3 条红（F5 服务端越权、F7 fixture、F8 纯函数单测）→ 这三条断言是敏感的。
+
+环境备注（不是本片造成的）：
+  · api.sh --fresh-module 在本机不可用：/bin/ps: Operation not permitted → 取不到进程启动时间；
+    gate 的 L0+L1 已按 NF1 归一化（把 --fresh-module 从 accept 里去掉、新鲜度交给 L0.0）。
+    本片所有 accept 段复跑都按同一口径未带 --fresh-module，另用 find src -newer jar 复核无 stale。
+  · pnpm dev / vite 会改写两个 tracked 文件：code/miniapp/src/pages.json（有意保留，未还原）与
+    code/plus-ui/.eslintrc-auto-import.json（auto-import 插件重生成，删掉 ElLoading/ElMessage/
+    ElMessageBox/ElNotification 四行）。

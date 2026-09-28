@@ -1,0 +1,38 @@
+{
+  "phase": "D3",
+  "round": 2,
+  "auditor": "independent",
+  "levels": {
+    "L2": {
+      "status": "pass",
+      "evidence": "三组逐条自跑，全绿：g1 工作台 24/24（`.tmp/r2l2b-g1b.log`，截图 `doc/waves/regression/D3/L2-shots/r2-g1-web/`）；g2 小程序内部 32/32（`.tmp/r2l2b-g2.log`，`L2-shots/r2-g2-mp-int/`）；g3 小程序外部+核验闭环 21/21（`.tmp/r2l2b-g3.log`，`L2-shots/r2-g3-mp-ext/`）。断言值：g1A 列表 5 行=库 5 行、2006 置顶行 class `lqg-embed__row-pending` 计算底色 rgb(252,241,218)（对照行 rgb(255,255,255)）、表头=内/外部+核验状态+模板 16 列（`mark的表达情况` 逐字）；g1B 2006 核验抽屉「判为有效并保存」disabled=true + alert「所挂样本还没核验有效（当前状态：待核验），不能判为有效」+ 悬停同文案；g1D 三导出真落文件且确有数据行：embed-export.xlsx 4431B/sheet1 6 行（表头+5，suggested 石蜡包埋送样记录.xlsx）、sample-tissue-export.xlsx 4619B/9 行、sample-organoid-export.xlsx 3905B/2 行，三个均 PK 头；g1E 表头「切片染色」，1001=`石蜡块 2|已切片|HE|IHC`、1002=`—`、悬停 popper=`T-E01-2|—|T-E01-1|2026-08-27`、点徽标→`/embed?sampleId=9000001001`。g2 首建落库 id=2102236086011957250/sample=9000001001/create_by=9000000101/valid，POST body 日期为 `2026-08-23` 字符串非 ms；必填项（*选择样本+*石蜡块编号）都操作后提交成功；内部选样本弹层 6 条已核验有效样本、无 pending 的 SJ90000002；内部历史默认 6 行、开关打开 6→3；补填脱水时间写回 2026-09-22、PUT body `\"dehydrateTime\":\"2026-09-22\"`、库内 dehydrate_time=2026-09-22/update_by=9000000101/1001 名下石蜡块仍 3 行，冻结格圆点 `●●○○○○○○`→`●●○●○○○○`（+1，他行不变）；样本修改页入口点亮→`/pages/embed/form?mode=new&sampleId=9000001001` 且填写页样本已带好 `T-hli01 · SJ90000001`。g3 extA 首页三格（无冻存）→填写页仅 选择样本/样本类型/类器官来源类型→选自己 1001 提交落库 `2102236554213724161|9000001001|pending|-|9000000111|external`→工作台置顶且计算底色 rgb(252,241,218)→判有效落库 `valid|T-r2l2-E1|9000000100`→extA 历史首行 `T-r2l2-E1|有效|组织|我|新增`、1001 详情 3 张 `.ecard` nos=[T-E01-1,T-E01-2,T-r2l2-E1]→extB（token 解出 loginId=app_user:9000000112，与 extA 9000000111 不同，身份真实生效）1001 详情同样 3 张卡且标识=石蜡块编号。★#145 独立复验（真实点击，非复读）：已修。判有效路径网络仅 `PUT /lqg/embed/{id}/verify -> 200`、无任何预发 `PUT /lqg/embed`（G3B-08）；失败路径（G3B-11，r2 新增）填已存在编号 T-E01-1 → `/verify -> 500 {\"msg\":\"石蜡块编号「T-E01-1」已存在，请换一个\"}`、页面出现该文案 el-message、抽屉仍开、库内仍 `pending|-`；判无效分支（`L2-r2-issue145-invalid.mjs` 6/6，`L2-shots/r2-issue145/`）空原因不发请求，填原因后仅 `PUT /lqg/embed/9000002006/verify -> 200`，库 `invalid|测-r2-145-无效原因|9000000100`，toast「已判为无效」；源码佐证 preSaveIfEditable 仅当 isEditable(=verifyStatus==='valid') 才预保存，核验抽屉只开 pending/invalid 行→恒早返回；r1 那个未捕获 rejection（pageerror）本轮两脚本均不再出现。★#147 首验（`L2-r2-issue147.mjs` 9/9，`L2-shots/r2-issue147/`）：verify 模式抽屉渲染 16 个 form-item、其中 **15 个可填且全部 disabled=false/readonly=false**（7 个工序时间 + 染色 5 选项 + marker 名称/表达 + 操作人 + 备注），真填进去后点保存，请求体仅 `{\"action\":\"valid\",\"paraffinBlockNo\":\"T-r2-147\"}`，库内 `valid|T-r2-147|NULL|NULL|NULL|NULL|NULL`、t_lqg_embed_marker 0 行；提示语只有「之后照常补工序与染色」，未声明本次填写不保存 → 判 S2 ux（详见 issues）。反 stale：jar mtime 2026-09-22 10:13、`find ruoyi-lqg/src ruoyi-admin/src -newer jar`=0、8081 PID 69862 lsof 命中该 jar、进程启动 11:14:25 晚于 jar；前端 8082/9200 为 dev server 直跑源码；Flyway schema 版本 202609231110；本片每条脚本自 reseed。未覆盖：微信开发者工具/真机（沙箱 EPERM + 需扫码）→ 小程序侧三组全部用 H5(9200)+Playwright 真后端/真库/真 seed 等价覆盖，无 mock 兜底。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S2",
+      "level": "L2",
+      "type": "ux",
+      "ticket": "EMBED-WEB-001",
+      "title": "核验抽屉 verify 模式下渲染 15 个可填控件（7 工序时间/染色/marker/操作人/备注），保存时被静默丢弃",
+      "detail": "复现（L2-r2-issue147.mjs 9/9）：extA 走真实 UI 建一条 pending 外部送样（挂已核验有效的 1001）→ 工作台该行「核验」打开抽屉 → DOM 取证 16 个 form-item，除「选择样本」是只读文本外，其余 15 个（石蜡块编号、样本类型、类器官来源类型、包埋人、组织收样时间、组织处理时间、琼脂糖包埋样本时间、脱水时间、琼脂糖包埋样本送样时间、石蜡包埋时间、切片时间、染色、marker 表达、操作人、备注）全部 disabled=false/readonly=false；真的填 `脱水时间=2026-09-01`/`染色=HE`/`marker=M-147`/`操作人=测-147操作人`/`备注=测-147备注` 后点「判为有效并保存」：请求体只有 `{\"action\":\"valid\",\"paraffinBlockNo\":\"T-r2-147\"}`（契约 EmbedVerifyBo 只收 action/paraffinBlockNo/reason），核验成功但库内 t_lqg_embed = valid|T-r2-147|NULL|NULL|NULL|NULL|NULL（dehydrate_time/stain_types/operator_name/remark 全 NULL）、t_lqg_embed_marker 0 行，页面无任何「你填的内容没保存」的提示（抽屉顶部 alert 原话「判为有效要给石蜡块编号（全库唯一），之后照常补工序与染色；判为无效必须写原因。」，断言 /不保存|不会保存|请到编辑/ 不匹配）。影响：甲方/内部人员在核验这一步顺手补的工序与染色会全部丢失且无感知，需事后从列表点「编辑」重填。定级依据：不判 S1——契约（doc/api-contract.md 第 62 行）确实只收 3 键、工序时间全部可空、核验产出（verify_status+paraffin_block_no）本身正确、无下游 ticket 依赖核验这一步落染色、核验通过后记录变 valid 立刻可编辑（G1C 已验编辑抽屉回填正常）；但它不是「设计允许」的免费午餐——UI 把 15 个输入做成可编辑却全部丢弃且提示含糊，属真实产品体验缺陷，故记 S2 ux。建议修法：verify 模式隐藏或禁用这些控件，或提示改为明说「本次填写不会保存，核验后请点编辑补填」。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "doc-drift",
+      "ticket": "EMBED-MODEL-001",
+      "title": "#137 已知规格冲突：EMBED sort=recent 只排序不收窄到内部人员，内部历史页签出现外部人员建的待核验送样",
+      "detail": "g2 内部历史默认 6 行里第 2 行 = `SJ90000002 · 待核验|待核验|组织|王医生|新增`（extA 王医生建的外部送样，create_by=9000000111），与权威 UI:mp.history 及 SAMPLE 域「内部页签只看内部人员经手」不一致；G2C-04 打开「只看我提交的」后 6→3 才收窄。按台账 issue #137 记 doc-drift，不判实现缺陷、不拦门。"
+    },
+    {
+      "severity": "S3",
+      "level": "L2",
+      "type": "clarify",
+      "ticket": "EMBED-WEB-001",
+      "title": "编辑抽屉对 update_time 为空的记录显示「最后修改：从未修改」，即使该记录明显是别人录的且有数据",
+      "detail": "g1C-01：T-E01-1 编辑抽屉带出石蜡块编号/染色 HE,IF,IHC,OTHER,NONE/marker Ki67,CK19 与包埋人「李工」，但顶部小字为「最后修改：从未修改」（seed 记录 update_time 为 NULL，仅 update_time 判空→文案）。有修改的记录正常显示「最后修改：李工 · 2026-09-22 11:18:35」（g2C-06）。文案自洽但易误读，记账不拦门。"
+    }
+  ]
+}

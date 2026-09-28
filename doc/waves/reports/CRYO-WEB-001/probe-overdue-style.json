@@ -1,0 +1,16 @@
+{
+  "overdueRowCount": 2,
+  "overdueBg": [
+    "rgb(251, 228, 225)",
+    "rgb(251, 228, 225)"
+  ],
+  "nonOverdueBg": [
+    "rgb(255, 255, 255)"
+  ],
+  "badges": [
+    "今天到期",
+    "已超 6 天"
+  ],
+  "pinnedFirstTwo": true,
+  "switchCount": 0
+}

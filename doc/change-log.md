@@ -24,6 +24,148 @@
 
 ## CR 列表
 
+## CR-20260924-11: Kevin 本机验收 9 条——Word 定高缩字居中并真嵌细胞活率附件、私有桶下图片地址改签名、质控编辑页误报与串样本、四张表关联跳转理顺、小程序筛选页签与「我的」页
+
+- **提出人**：Kevin（2026-09-24 本机验收，填在《测试问题记录表》「小程序」row3-5、「网页工作台」row3-8；原「小程序」子表的甲方意见挪到了「旧版本」子表）
+- **范围归属**：合同内。3 条是缺陷（私有桶下质控编辑页图片打不开、切页签误报「还没生成」、换样本仍显示上一个样本），其余是版式与交互调整；细胞活率附件真嵌入是按甲方模板原本的标注（「表格里嵌了一个文件附件，显示一个图标，双击就能打开」）补齐，不另记合同外
+- **影响 ticket**（`authority_lint.py impact` 的输出：权威变更涉及 29 个锚，波及 23 个 ticket）：
+  - [AUTH-EXT-003]  ← ADR-0005, FLOW:F-DOC-01.step2, UI:mp.doc.preview
+  - [CRYO-MP-001]  ← UI:mp.history, UI:mp.ledger
+  - [CRYO-WEB-001]  ← UI:admin.cryo.list
+  - [DOC-MP-001]  ← UI:mp.doc.list
+  - [DOC-MP-002]  ← ADR-0005, UI:mp.doc.preview
+  - [DOC-PDF-001]  ← ADR-0005, FLOW:F-DOC-01.step3, FLOW:F-DOC-01.step4, FLOW:F-DOC-01.step5, FLOW:F-DOC-01.step6
+  - [DOC-PROOF-001]  ← ADR-0005, FLOW:F-DOC-01.step2, FLOW:F-DOC-01.step3
+  - [DOC-PUBLISH-001]  ← ADR-0005, FLOW:F-DOC-01.step5, UI:admin.doc.preview
+  - [DOC-RENDER-001]  ← ADR-0005, FIELD:t_lqg_doc_file.content_hash, FIELD:t_lqg_qc_sample.viability_oss_id, FLOW:F-DOC-01.step1, FLOW:F-DOC-01.step2
+  - [EMBED-MP-001]  ← UI:mp.history, UI:mp.ledger
+  - [EMBED-WEB-001]  ← UI:admin.embed.list
+  - [QC-MODEL-001]  ← FIELD:t_lqg_doc_attachment.oss_id, FIELD:t_lqg_doc_image.oss_id, FIELD:t_lqg_doc_image.preview_oss_id, FLOW:F-QC-01.step1
+  - [QC-WEB-001]  ← FIELD:t_lqg_doc_image.oss_id, FIELD:t_lqg_qc_sample.viability_oss_id, FLOW:F-QC-01.step1, UI:admin.qc.editor
+  - [QC-WEB-002]  ← UI:admin.qc.editor
+  - [SAMPLE-EXPORT-001]  ← UI:admin.sample.list, UI:admin.sample.organoid
+  - [SAMPLE-HINT-001]  ← FLOW:F-SAMPLE-02.step4, UI:admin.sample.list.hint
+  - [SAMPLE-MP-001]  ← UI:mp.history
+  - [SAMPLE-MP-002]  ← UI:mp.ledger
+  - [SAMPLE-WEB-001]  ← FLOW:F-SAMPLE-02.step3, UI:admin.sample.list, UI:admin.sample.organoid
+  - [SYS-ACCEPT-001]  ← UI:mp.doc.list
+  - [SYS-EXPORT-001]  ← ADR-0005, UI:mp.ledger
+  - [SYS-HOME-001]  ← FLOW:F-DOC-01.step6
+  - [SYS-MP-001]  ← UI:mp.home.entries, UI:mp.me
+- **背景**：CR-20260924-10 合进本机后 Kevin 自测，发现图片在私有桶下全部加载失败（生产同为私有桶，不修上线即坏），并对 Word 版式、四张表之间的跳转、小程序几处界面提了意见
+- **变更前与变更后**：
+  1. 质控编辑页图片与附件地址：`QcDocService#ossUrls` 原样给 `sys_oss.url` → **按桶类型给地址**：私有桶给 10 分钟签名地址、公有桶原样；前端取回满 5 分钟后在加载失败、放大、打开附件前自动重取（患者图片不挂长期链接）
+  2. 文档页面图：从没生成过的文档 `pages` 回 400 并弹红色提示、切一次页签发两次请求 → **回 `status=none`**，只显示空态，不弹提示；去掉重复请求
+  3. 质控编辑页：标签页缓存按路由复用，换 `sampleId` 仍显示第一次打开的样本 → **`sampleId` 变化整页按新样本重载**，标签标题带内部编号；有未保存改动时换样本先提示；没带样本时显示去两张样本表的引导
+  4. 样本两页的「操作」列：编辑、质控文档、石蜡包埋、冻存 → **操作只留编辑 / 核验、质控文档、删除**；新增「石蜡包埋 / 冻存」一列显示「蜡块 N · 待核验 N · 冻存 N 批」，数字可点、为 0 给「新增」；石蜡包埋 / 冻存页带 `sampleId` 进来时顶部显示「只看 ×× 的记录 · 共 N 条 · 打开样本 · 看全部」，行上的样本编号能点回样本并打开抽屉；石蜡包埋页加「合作单位送来待核验 N」一键筛选；样本列表 VO 加 `relation{pendingEmbedCount, cryoBatchCount}`，石蜡包埋、冻存列表 VO 加读时带出的 `sampleKind`
+  5. 三份 Word 版式：文字格随内容撑高、值格靠左或靠上 → **行高按甲方原件固定**，表格段落固定行距（字号 × 1.3）且不对齐文档网格；放不下按 12 → 10.5 → 9 → 8 → 7.5 磅逐档缩小，缩到最小仍放不下才让这一行长高，不截断；所有填值的格子水平、垂直居中
+  6. 细胞活率测定：Word 里印附件文件名、不做 OLE 嵌入（CR-20260918 起的口径，确认单也这样告诉过甲方） → **把附件作为 OLE Package 嵌进这一格**，显示文件图标加文件名，在 Word、WPS 里双击打开原文件；内部版、外部版、合并件都嵌；PDF 与预览图里是图标加文件名；附件大于 20MB 不嵌，改印文件名并注明去附件里看。模板版本升到 v5，已完成的文档按「旧版照给、后台重出」自动更新
+  7. 小程序：文档页两组筛选折成三行 → **同一张卡片里两行，行首标「时间」「类型」，第一项都叫「全部」**，类型用短名；历史编辑记录等页签折行 → **统一短名、不折行**（短名只在 `entries.ts` 一处定义）；「我的」页与首页入口的单字方块 → **一套线性图标**，页头加渐变底、头像、身份徽标与所属单位；「我的」页右侧多出 16px 留白的根因是根节点类名 `me` 撞了 UnoCSS 工具类，已改名
+- **影响下游**：`authority/field-ssot.yaml`（`t_lqg_qc_sample.viability_oss_id` 注释改为嵌入）、`authority/flows.yaml`（F-DOC-01 版式与嵌入、F-SAMPLE-02 关联列与互跳、F-QC-01 进入与重载）、`authority/ui-index.yaml`（mp.doc.list、mp.home.entries、mp.me、mp.history、admin.sample.*、admin.embed.list、admin.cryo.list、admin.doc.preview 等）、ADR-0005（嵌入、定高缩字）、`api-contract.md`（sample / embed / cryo 列表新字段、pages 的 `status=none`）、确认单 05 与样张说明、受影响票面；另把写死 Kevin 本机 dev 环境的 6 张票（DOC-PDF-001、SYS-HOME-001、SYS-ACCEPT-001、SYS-BASE-001、SYS-STAGING-001、SYS-PROD-001）改成从环境变量读容器名与端口（本批一个子组在隔离环境重放 SYS-HOME-001 时停过 Kevin 的 lqg-dev-gotenberg 几秒）
+- **决策**：✅ 接受
+- **签字**：Kevin @ 2026-09-24（「我在测试问题记录表的小程序和网页工作台里添加了一些问题，请自行规划解决」）
+
+## CR-20260924-10: 甲方看设计稿 v3 后的 12 条——类器官收样加代数、样本总表拆两页、小程序也能核验与冻存登记、内部首页加待办、取空提示、内部编号开关管到外部版文档、三份文档对照模板补齐
+
+- **提出人**：甲方（在《测试问题记录表》「小程序」子表 row15-row26 填的 12 条，逐字落在 `_input/feedback/2026-09-24-甲方看设计稿v3的12条意见.md`，截图存 `2026-09-24-shots/`）
+- **范围归属**：分两块。
+  - **合同外**：row20 第 2 点「小程序里也要能核验、能做冻存取用登记」。合同功能清单把核验与出入库登记放在网页工作台，2026-09-17 Kevin 也定过「工作台最全，小程序只放查看、筛选、导出」；这次在小程序新增待核验列表、核验页，批次详情里新增取走 / 补入 / 转液氮 / 改删登记，属于新增功能，后端接口复用。估约 1.5 人日，记作下次报价的依据，本次不另收
+  - **合同内**：其余。row17 内部首页待办约 0.3、row18 代数约 0.5、row22 取空提示与列序约 0.4、row23 开关管到外部版文档约 0.5、row24 / row26 模板查缺与样张约 0.5、row25 工作台样本总表拆两页约 0.5（合同原文「所有样本集中在一张表里」按甲方新要求改为两页，数据仍是一张表，不新增功能）；row15 / row16 / row19 / row21 只需答复
+- **影响 ticket**（`authority_lint.py impact` 的输出：权威变更涉及 70 个锚，波及 32 个 ticket）：
+  - [AUTH-EXT-001]  ← ADR-0004, FLOW:F-EXT-01.step3, FLOW:F-EXT-01.step4, FLOW:F-SAMPLE-01.step1, FLOW:F-SAMPLE-01.step4
+  - [AUTH-EXT-002]  ← ADR-0004, FLOW:F-EXT-01.step3, FLOW:F-EXT-01.step4, UI:mp.sample.detail.ext
+  - [AUTH-EXT-003]  ← ADR-0004, ADR-0005, FIELD:t_lqg_doc_file.audience, FLOW:F-DOC-01.step2, FLOW:F-DOC-02.step1, FLOW:F-DOC-02.step3, FLOW:F-EXT-01.step3
+  - [CRYO-FLOW-001]  ← FLOW:F-CRYO-01.step4, FLOW:F-CRYO-02.step1, FLOW:F-CRYO-02.step2, FLOW:F-CRYO-02.step3, FLOW:F-CRYO-02.step4, FLOW:F-CRYO-02.step5
+  - [CRYO-MODEL-001]  ← FLOW:F-CRYO-01.step1, FLOW:F-CRYO-02.step4, FLOW:F-CRYO-02.step5
+  - [CRYO-MP-001]  ← FLOW:F-CRYO-01.step1, FLOW:F-CRYO-01.step3, FLOW:F-CRYO-01.step4, FLOW:F-CRYO-02.step1, FLOW:F-CRYO-02.step5, UI:mp.cryo.flow, UI:mp.cryo.form, UI:mp.cryo.list, UI:mp.history, UI:mp.ledger
+  - [CRYO-REMIND-001]  ← FLOW:F-CRYO-01.step2, FLOW:F-CRYO-01.step3
+  - [CRYO-WEB-001]  ← FLOW:F-CRYO-01.step3, FLOW:F-CRYO-01.step5, FLOW:F-CRYO-02.step1, FLOW:F-CRYO-02.step3, FLOW:F-CRYO-02.step5, UI:admin.cryo.list
+  - [DOC-MP-001]  ← FLOW:F-DOC-02.step1
+  - [DOC-MP-002]  ← ADR-0005, FLOW:F-DOC-02.step3
+  - [DOC-PDF-001]  ← ADR-0005, FLOW:F-DOC-01.step3, FLOW:F-DOC-01.step4, FLOW:F-DOC-01.step5, FLOW:F-DOC-01.step6
+  - [DOC-PROOF-001]  ← ADR-0005, FLOW:F-DOC-01.step2, FLOW:F-DOC-01.step3
+  - [DOC-PUBLISH-001]  ← ADR-0005, FLOW:F-DOC-01.step5, UI:admin.doc.preview
+  - [DOC-RENDER-001]  ← ADR-0004, ADR-0005, FIELD:t_lqg_doc_file.audience, FIELD:t_lqg_doc_file.content_hash, FLOW:F-DOC-01.step1, FLOW:F-DOC-01.step2
+  - [EMBED-MODEL-001]  ← FLOW:F-EMBED-01.step7
+  - [EMBED-MP-001]  ← UI:mp.embed.form, UI:mp.embed.list, UI:mp.history, UI:mp.ledger
+  - [EMBED-WEB-001]  ← FLOW:F-EMBED-01.step7, FLOW:F-SAMPLE-02.step5, UI:admin.embed.list
+  - [QC-MODEL-001]  ← FLOW:F-QC-01.step1
+  - [QC-WEB-001]  ← FLOW:F-QC-01.step1
+  - [SAMPLE-EXPORT-001]  ← FLOW:F-SAMPLE-02.step5, UI:admin.sample.list
+  - [SAMPLE-HINT-001]  ← FIELD:t_lqg_embed.section_time, FLOW:F-SAMPLE-02.step4, UI:admin.sample.list.hint
+  - [SAMPLE-MODEL-001]  ← FLOW:F-SAMPLE-02.step1, FLOW:F-SAMPLE-02.step2
+  - [SAMPLE-MP-001]  ← ADR-0004, FLOW:F-MP-01.step2, FLOW:F-SAMPLE-01.step1, FLOW:F-SAMPLE-01.step4, FLOW:F-SAMPLE-02.step1, UI:mp.history, UI:mp.sample.detail.ext, UI:mp.sample.form
+  - [SAMPLE-MP-002]  ← FLOW:F-MP-01.step3, FLOW:F-MP-01.step4, FLOW:F-SAMPLE-02.step2, FLOW:F-SAMPLE-02.step6, UI:mp.ledger, UI:mp.organoid.form, UI:mp.sample.list
+  - [SAMPLE-VERIFY-001]  ← FLOW:F-SAMPLE-01.step3, FLOW:F-SAMPLE-01.step4, FLOW:F-SAMPLE-01.step5
+  - [SAMPLE-WEB-001]  ← FLOW:F-SAMPLE-01.step2, FLOW:F-SAMPLE-02.step3, UI:admin.sample.edit, UI:admin.sample.list
+  - [SYS-ACCEPT-001]  ← UI:admin.home
+  - [SYS-EXPORT-001]  ← ADR-0005, FLOW:F-SAMPLE-02.step7, UI:mp.ledger
+  - [SYS-HOME-001]  ← FLOW:F-CRYO-01.step3, FLOW:F-DOC-01.step6, FLOW:F-EMBED-01.step7, FLOW:F-SAMPLE-01.step2, UI:admin.home
+  - [SYS-MANUAL-001]  ← FLOW:F-CRYO-02.step1, FLOW:F-CRYO-02.step5, FLOW:F-MP-01.step2, FLOW:F-SAMPLE-01.step1, FLOW:F-SAMPLE-01.step3, FLOW:F-SAMPLE-02.step7
+  - [SYS-MP-001]  ← FLOW:F-MP-01.step1, UI:mp.home, UI:mp.me
+  - [SYS-WEB-001]  ← UI:admin.config, UI:admin.home
+- **背景**：甲方 9 月 24 日前在测试问题记录表里又填了 12 条，全部针对给甲方的设计稿 v3。系统此时已开发完、正在本机验收，所以这一轮直接改系统，不再出 v4 设计稿（Kevin 2026-09-24 定），答复回填在记录表「解决方式」一栏
+- **变更前与变更后**：
+  1. row17 小程序首页：内外部都只有填表入口，不放数字和提醒（CR-20260917-05） → **内部人员首页在填写入口上方加「待处理」**：待核验样本、待核验石蜡包埋送样、-80 超期未转液氮三项，数字与工作台首页同源（`GET /lqg/home/todo`），点了进对应列表；外部首页不变
+  2. row18 类器官收样记录：外部填三项（来源单位、类器官类型、备注） → **外部四项、内部在原七项里都加「代数」**，紧跟类器官类型；`t_lqg_sample.passage`，选填，形如 P3（与冻存代数同一规则）；只对类器官类有意义；属于送检段，外部待核验 / 无效时可改，核验时实验室可改；外部看得到；导出「类器官收样记录」在类器官类型后插入「代数」列（模板没有这一列，按甲方要求插入）
+  3. row20 小程序内部管理：只看、筛选、导出，点一行进详情可修改；核验与冻存取用登记只在工作台（CR-20260917-05、CR-20260918-07） → **小程序也能核验与登记**：新增「待核验」列表与核验页（样本记录、类器官收样、石蜡包埋送样，规则与工作台核验抽屉一致）；内部管理里点合作单位送来待核验的记录直接进核验；冻存批次详情里可取走、补入、转液氮、改删登记（规则与工作台一致）。「我的」与表格页上「核验、冻存取用请到网页工作台」一类文字撤掉
+  4. row22 冻存：取空的批次退出超期提醒、不另外提示 → **取空要提示**：剩 0 支的批次在两端列表与详情里标「已取空」，冻存列表加「已取空」页签，登记会让剩余变 0 的取走前多一步确认；各处冻存字段顺序对齐甲方模板（冻存时间、冻存样品、冻存数量、密度、暂存 -80、冻存人、转液氮时间、液氮储存位置、备注），小程序表格第一列仍固定为冻存样品；液氮储存位置与转液氮时间在各处都看得见
+  5. row23 内部编号开关：只管页面数据，外部版质控文档里内部编号一格始终留空（CR-20260918-07 写死的范围） → **开关也管外部版文档**：开着时外部版（单份、合并、预览图、Word、PDF）印内部编号，关着时留空；切换后不用重新「完成并同步」，按内容指纹自动重出；内部版一直印
+  6. row25 工作台：样本总表一张表（组织与类器官同表，类别筛选，两个导出按钮） → **拆成「样本记录信息表」「类器官收样记录」两个菜单页**，各自的列与导出按甲方模板；首页「待核验样本」拆成两张卡，各自跳对应页；`HomeTodoVo` 新增 `pendingTissue` / `pendingOrganoid`，`pendingSamples` 保留为两者之和
+  7. row24 / row26 三份质控文档：逐格对照甲方三份原件，内容一致，修了 5 处版式问题（下载的 Word 恢复原件的宋体 / Times New Roman，只在转 PDF 的副本上换服务器字体；评分表单独导出多出的空白页去掉；合并件每份自成一节、各用原件纸张；图片 1 至 3 张等比排、不出格；带图的行不跨页），模板升到 v4（ADR-0005 相应改写）；出一套内部版、外部版的真实样张（Word、PDF、合并版）放在 `doc/confirmation/质控文档样张-20260924/`，发甲方确认，作为合同第五条的验收依据（DOC-PROOF-001 的正式样张仍按该票约定另出）
+  8. 只需答复的：row15 外部可见范围、row16 内部历史编辑记录的范围、row17 第 1 点「新增」的意思、row19 看图体验（以后发的材料把图放在提到它的文字旁边）、row21 修改页（系统里修改页就是完整的填写页，全部字段都在，设计稿图 9 只画了几项）
+- **影响下游**：`authority/field-ssot.yaml`（t_lqg_sample.passage）、`authority/flows.yaml`（F-MP-01.step1-3、F-SAMPLE / F-EMBED 核验步骤、F-CRYO 取用与提醒、F-DOC / F-EXT-01.step3 内部编号）、`authority/ui-index.yaml`（mp.home、mp.me、mp.ledger、mp.organoid.form、mp.cryo.*、新增核验页锚、admin.sample.* 拆页、admin.home、admin.cryo、admin.config）、`api-contract.md`、ADR-0004 的开关范围、确认单 05、受影响 ticket 的 accept、操作说明（内部版要补小程序核验与冻存登记）
+- **决策**：✅ 接受
+- **签字**：Kevin @ 2026-09-24（三条拍板：小程序核验与冻存登记这次一起做；样本总表拆成两个菜单页；不出设计稿 v4，改完用真实系统给甲方看）
+
+## CR-20260923-09: 独立验收后的修复口径：取图失败外部判失败、外部预览补原图与附件、核验一并改送检段、生产密钥改注入、部署改三仓库加 GitHub Actions
+
+- **提出人**：Kevin（2026-09-23 看完 `doc/handover/独立验收报告-20260923.md` 后的答复：「其他问题按你的推荐修复」；「可以新创建一个jiangxia组织进行三个仓库的管理；生产会单独配一台机器，但是需要先在我的测试服务器上走通流程，目前阶段小程序用mock，代码先不用推送，仅在我的电脑上完成启动和验收测试，完成后我会找甲方一起安排上线」；「暂时不用管测试机，先都在本机」）
+- **范围归属**：合同内。修的是交付缺陷与口径缺口，不新增功能；部署方式属乙方实施方式调整，不改合同交付物
+- **影响 ticket**（`authority_lint.py diff`：权威变更 10 处，内容改 8、新增 2；`impact`）：
+  - AUTH-STAFF-001 ← FLOW:F-AUTH-02.step2
+  - DOC-PDF-001 ← FLOW:F-DOC-01.step5
+  - DOC-PROOF-001、DOC-RENDER-001 ← FLOW:F-DOC-01.step2
+  - SAMPLE-EXPORT-001、SAMPLE-MODEL-001 ← FIELD:t_lqg_sample.donor_name
+  - SAMPLE-VERIFY-001、SYS-MANUAL-001 ← FLOW:F-SAMPLE-01.step3
+  - SAMPLE-WEB-001 ← UI:admin.sample.edit
+  - SYS-HOME-001 ← FLOW:F-DOC-01.step6
+  - 第二次 diff，石蜡包埋核验：EMBED-MODEL-001 ← FLOW:F-EMBED-01.step7；EMBED-WEB-001 ← FLOW:F-EMBED-01.step7、UI:admin.embed.list；SYS-HOME-001 ← FLOW:F-EMBED-01.step7
+  - FIELD:t_lqg_sample.source_unit_id 改了但没有任何票引用：属历史漏写 blueprint_refs，外部提交归属单位的实现在 AUTH-EXT-001、SAMPLE-MODEL-001 一带，改票时补上
+  - 处理方式：不走 /zhixing 重排队。修复在隔离环境逐条活体验证后合入，受影响票的 accept 与说明原地更新，最后用全量 accept 重放复验
+- **背景**：独立验收用五路静态审查加两套隔离环境活体验证，查出 33 项问题，其中 5 条主流程数据错与信息泄露活体证实为 S1。另查实：AUTH-EXT-003 的期望反转援引的「#217 已裁定」不存在，产品口径「取图失败照出 done」是为了让一条用假图的 accept 变绿而定的；台账 #96、#105 的修复提交号不存在；门工具会把环境类失败记成通过
+- **变更前与变更后**：
+
+  | 项 | 变更前 | 变更后 |
+  |---|---|---|
+  | 取图失败（#217） | 图位被静默清空，照判 done 对外交付；规划资产 5 处写的是整份失败 | 外部版有任一张图取不到即整份 failed，外部不可见，补图后重新生成恢复；内部版照出，缺图数与明细记在 `t_lqg_doc_file.missing_image_count`、`missing_images`，质控页与首页可见。首页「渲染失败」计数改为渲染失败加内部版缺图，卡片点开是异常清单，可一键强制重出 |
+  | 外部文档预览 | 只给页面图，执行方以 #254 自定口径 | 按 `UI:mp.doc.preview` 与 `FLOW:F-DOC-02.step2` 给原图与附件，活率附件排最前；走同一隔离咽喉，签发前逐个核对对象只属于本样本外部版 |
+  | 撤回与合并件 | 撤回后合并件只改指纹不失效，旧产物照发，重新生成空转 | 完成、撤回、改回草稿都在同一请求里让合并件置回待渲染，旧产物不再下发；后台按新成员重出，一份不剩则撤下；「重新生成」加 force 真重出 |
+  | 样本核验 | 抽屉里送检段可编辑，保存时被丢弃 | 核验请求可带 `submitSegment`，与核验结论同一事务保存，校验与样本修改同一份规则；判无效时送检段照存、收样段不落库；来源单位可改选正式单位归口。石蜡包埋核验同理：核验请求可带 `fill`，判有效时补填的 15 项与 marker 和结论同一事务保存；判无效只存原因与样本类型、类器官来源类型的更正，实验室补填项不保存，界面在原因弹窗里明说，接口带了回 400 |
+  | 外部提交来源单位 | 小程序组织表单不发 id，库里为空，按单位筛选与导出漏掉 | 外部只能选本人绑定的单位或手填；后端按绑定单位兜底挂 id，只接受本人绑定单位的 id；迁移 `V202609271000` 回填能唯一匹配的历史外部行 |
+  | 外部写接口 | 缺字段打出 500，响应体回吐 SQL、整行数据、密文与内部 id | 写库前校验，违规 400 且一次列全；数据库与未知异常只回通用提示加错误编号，细节进日志；请求格式错误回 400 通用提示 |
+  | 列表 `mine` 参数（#191） | 只在 `sort=recent` 时生效 | 与 `sort` 无关，样本与石蜡包埋同口径 |
+  | 小程序与工作台的修改 | `updateById` 忽略 null，清空不生效却提示已保存 | 内部修改为补丁语义：没出现的键不改，出现且为空即清空，清必填项回 400；石蜡包埋与冻存同口径 |
+  | 改角色 | 旧 token 仍按旧角色可用 | 改角色后该账号全部 token 失效，重新登录按新角色生效；外部账号按手机号升级为内部时不踢下线，但访问内部接口要重新登录一次 |
+  | 上传上限 | 实际只有 2MB（Undertow 缺省），超限空响应 | 单个文件 50MB、一次请求 60MB，nginx 统一 60m，超限回 413 中文提示 |
+  | 生产密钥 | JWT、接口加解密 RSA 为若依公开默认值，字段加密口令注入点不明 | 三者都由环境变量注入且无缺省值；缺失、等于默认值或长度不合规就拒绝启动；工作台生产构建检测到默认 RSA 直接失败；`code/deploy/prod/gen-secrets.sh` 一次生成 |
+  | 启动 profile | jar 内缺省 dev，漏配即带 mock 登录启动 | jar 不带缺省 profile，没声明就拒绝启动 |
+  | actuator | 全部端点暴露，Basic 口令未配时期望值为字面 `null:null`，任何人可进 | 生产只开 health 与 info；未配口令时随机生成；nginx 不转发 actuator |
+  | 其他授权 | 环境诊断接口任何登录用户可读；`/mp/ext/profile` 缺外部角色校验；外部石蜡包埋写接口 400 与 404 可区分他人记录 | 前者只给内部角色；后者补外部角色；不可见与不存在统一 404 与同一句提示 |
+  | 构建 | 后端构建依赖 `doc/`、`_input/` 里的文件，`-DskipTests` 无效；工作台 lockfile 被忽略 | 后端只靠自身目录即可构建与测试；lockfile 入库 |
+  | 拍照识别 | 解析器把「姓名:张三 床号:12」读成姓名「张三床号」；dev、test 的桩缺请求头即失败 | 解析器修复；桩缺请求头时回 01 号样例。真实识别方案仍等甲方照片，OCR-SPIKE-001 维持 escalated，按次收费通道仍须甲方书面同意 |
+  | 部署 | 本机构建后 rsync 上机，票面写明不做 CI/CD，权威写明小程序不走 CI 构建 | 决定：GitHub 组织 jiangxia，后端、工作台、小程序三个仓库；GitHub Actions，staging 分支对测试机，main 分支对单独一台生产机；先在测试机走通流程。**实施待本机验收完成、Kevin 与甲方约定上线之后**，届时改 `FLOW:F-OPS-02.step2` 与 SYS-STAGING-001、SYS-PROD-001、SYS-RELEASE-001 的对应条目，前提是 wot-design-uni 放进源码树。现阶段小程序用 mock，代码不推送，测试机不动 |
+
+- **影响下游**：
+  - 代码：五组修复补丁合入工作区，未提交；新增迁移 `V202609271000__FIX-sample-source-unit-backfill.sql`、`V202609272000__FIX-doc-render-integrity.sql`
+  - 权威：`flows.yaml` 的 F-AUTH-02.step2、F-SAMPLE-01.step3、F-DOC-01.step2、step5、step6；`field-ssot.yaml` 的 `t_lqg_doc_file` 新增两列、`t_lqg_sample.source_unit_id` 与 `donor_name` 注释；`ui-index.yaml` 的 `UI:admin.sample.edit`
+  - 契约 `doc/api-contract.md` 与受影响票面的 accept 同步更新，另记于票面改动说明
+  - 模板生成脚本 `doc/waves/reports/DOC-RENDER-001/make-doc-templates.py` 重跑会把绿色高亮带回来，需同步去掉高亮并把模板版本改为 3
+  - 本机测试环境：dev 库 `sys_oss_config` 改指 jiangxia 自己的 MinIO 私有桶（开发期间一直指向另一个项目的 MinIO，D6、D7 的私有桶结论因此从未在本项目桶上验过）
+  - 遗留待定：公网测试机的 actuator 大概率可用 `null:null` 进入并下载内存快照，代码已修但测试机未重新部署，是否先挡掉或停掉测试环境、轮换口令，等 Kevin 决定；隐私政策的联系电话与邮箱等甲方提供；文档清单页仍按 100 条取，改分页排下一轮
+- **决策**：✅ 接受
+- **签字**：Kevin @ 2026-09-23（「其他问题按你的推荐修复」）
+
 ## CR-20260921-08: 小程序视觉方向定为 A「清爽卡片」——柔和阴影分层、圆角放大、token 挪到 src/style/tokens.scss 并映射 wot
 
 - **提出人**：Kevin（2026-09-21：「dongjiaoshan 有成熟的经验，样式和组件应该都是类似的」「需求拆解后，设计应先出几个页面，然后 2-3 个设计方向给我选择」；看过三个方向后：「那就选择A吧」）
@@ -70,7 +212,7 @@
   - DOC-RENDER-001 ← ADR-0004（逐条核过：外部版文档里内部编号一格仍留空，**开关不作用于预渲染文档**，已在任务书与确认单 05 写明）
   - 连带改的基线：`doc/verify/fixtures/java/ExtChokepointContractTest.java` 的 I3 禁用字段表——operatorName / embedBy 仍在禁用表里，只对 `ExtEmbedVo` 精确豁免（不是整张摘掉，免得样本 VO 顺着继承漏出操作人）；`doc/api-contract.md`、`doc/verify/README.md`、三份 form fixture 的 `_doc` 一并对齐
 - **背景**：甲方 9 月 18 日在测试问题记录表里提了 9 条。其中 5 条是改动，4 条是提问（首页顶部数字是什么、「不渲染」什么意思、预览排版是不是最终版式、文档预览那条「没有解决」），答复回填在记录表「解决方式」一栏，并把图廊上对应的说法改成人话
-- **变更前 → 变更后**：
+- **变更前与变更后**：
   1. ⑩ 内部管理表格页：只读，改记录只能走「我的 → 历史编辑记录」或网页工作台 → **点一行进只读详情，详情右上角「修改」进该表填写页的修改模式**；内部人员可改任何人录的记录（外部送来未核验的仍只读）。表格本身仍无行内编辑、无新增、无核验
   2. ⑪ 历史编辑记录（内部）：本人新增或最后一次由本人修改的记录 → **中心全部内部人员的记录，默认全列，顶部「只看我提交的」开关（默认关）**，每行显示经手人
   3. ⑦ 外部样本详情：看不到操作人、包埋人和冻存信息 → **看得到操作人与包埋人**，仍看不到冻存信息

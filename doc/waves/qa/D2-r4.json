@@ -1,0 +1,97 @@
+{
+ "phase": "D2",
+ "round": 4,
+ "verdict": "PASS",
+ "auditor": "independent",
+ "levels": {
+  "L0": {
+   "status": "pass",
+   "evidence": "后端编译+单测：`mvn -s .mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome -pl ruoyi-modules/ruoyi-lqg -am install` → BUILD SUCCESS，`Tests run: 64, Failures: 0, Errors: 0, Skipped: 0`。逐类：ExtChokepointContractTest 4/4（I1 /mp/ext 唯一入口·I2 返回类型只能是 Ext*·I3 Ext*Vo 禁内部字段·I4 只有 ExtScopeServiceImpl 持 Mapper；该文件与 doc/verify/fixtures/java/ExtChokepointContractTest.java `cmp` 逐字节一致，md5 双端 9e1a061556d2a241048f89ee5723ad90）；VerifyTransitionsContractTest 8/8（tissue 与 organoid 各穷举 3 状态×3 目标×2 身份=18 格，期望在测试里独立重述，合法恰 5 / 非法恰 13，另有 check 签名与成员类型的反射守卫）；SampleRecentFilterContractTest 6/6；MpSampleContractTest 10/10；SampleKindRulesContractTest 6/6；SampleTableQueryContractTest 9/9；MockLoginGuardContractTest 4/4；ExtBindStateMachineContractTest 11/11；StaffGrantRulesContractTest 6/6。反 stale 自验：`find ruoyi-lqg/src -newer ruoyi-admin/target/ruoyi-admin.jar` 为空；8081 PID 948 经 `lsof -p` 持 code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar；进程启动 07:19:42 晚于 jar mtime 07:03:37；`/lqg/sys/ping` 401（起活）。两个前端 build：plus-ui `rm -rf dist && pnpm build:prod` exit 0（`✓ built in 7.53s`，dist/index.html 113982B）；miniapp `rm -rf dist/build/mp-weixin && pnpm build:mp-weixin` exit 0（`DONE Build complete.`，app.json 1579B）。miniapp 单测 `pnpm test` → `Test Files 5 passed (5) / Tests 71 passed (71)`，其中四份 fixture 单测：entries 25、sample layout 22、organoid layout 13、ledger columns 7（另有 r3 新增的 organoid/api.spec 4）。",
+   "reported": "pass"
+  },
+  "L1": {
+   "status": "pass",
+   "evidence": "全部为本轮亲自重跑（干净 reseed 基线，脚本 .tmp/qa-r4-l1.sh / qa-r4-l1b.sh，输出 .tmp/qa-r4-l1.out）。①`ddl_vs_ssot.py --table t_lqg_sample --require-public create_dept,create_by,create_time,update_by,update_time,del_flag` → `✓ 1 张表与 SSOT 逐列相符`。新建样本(staff POST /mp/int/sample, internalNo=T-qa-r4-02) donor_name 落库 `S//GKUPXh1pH7Y3Ua6ZsZQ0qGmeyU3ob88yFz5t1QUU=` = `printf 明文 | openssl enc -aes-128-ecb -nosalt -base64 -K $(printf 'LqgTestAesKey#01'|xxd -p)` 独立算出，逐字节一致；donorName 精确命中 1 行、部分串('QA-r4-加密'/'加密供体')0 行，hospitalNo 同（ZY0000001 命中 1001、'ZY0000' 0 行）。②可见集合 /mp/ext/sample/list：extA=extB={1001,1002,1003,1004}、extC={1005}、extD={1006}、extE={1007}、extF=∅；软删 1010：/lqg/sample/1010 与 /mp/int/sample/1010 与 /mp/ext/sample/1010 均「样本不存在」，internalNo=T-del99 0 行、keyword=T-del99 0 行、/lqg/sample/list total=9 且不含 1010。③submit_source 快照：admin POST /lqg/auth/staff 把 extA(9000000111) 升为 lqg_internal（库内角色确认已变），其 1001/1002/1003 仍 submit_source=external；?submitSource=external 仍返回 {1001..1007}=7 条、internal={1008,1009}+对照行。④只看我提交的：extA onlyMine={1001,1002,1003}、extB onlyMine={1004}；staff sort=recent={1008,1009}；staff PUT 1001（update_by→9000000101、update_time 落库）后 sort=recent={1001,1008,1009} 且 1001 在首位；extC POST /mp/ext/organoid 落库 organoid/external/pending 且收样段 6 列（internal_no/receive_date/is_fixed/has_qc_sheet/has_viability_report/operator_name）全 NULL，该行在自己 /mp/ext/sample?sampleKind=organoid 页签可见、extA 看不到。★四组独立复验逐条结论（脚本 .tmp/qa-r4-probe-g12.mjs / g12b.mjs / qa-r4-l1.sh，均在 9200/8081 上亲跑）：[1]首页入口：entries.ts 的 ENTRY_FORM_TARGET 四格都带 ?mode=new；H5 上内部四格落点 = sample/organoid/embed/cryo form?mode=new、外部三格 = sample/organoid/embed form?mode=new，7 个落点 loadErr=false、console/pageerror 空；样本与类器官两页有「提交」按钮且可写（内部 9/6 个可输入框、外部 5/2 个）；真的提交成功——内部 T-qa-r4-05(tissue)、T-qa-r4-06(organoid) 落库 internal/valid 且跳「历史编辑记录」，外部 extA 新建 tissue 落 external/pending；判过。[2]三个组件：三个 .vue 都有 `const props = withDefaults(defineProps…)`；运行时历史编辑记录 4 行渲染 4 枚 .lqg-tag（文案「有效」）、无 StatusChip/props ReferenceError；内部管理点一行进 mode=view 的 .fr__text 出真值（A 医院 / QA-R4-ENTRY-EXTA / QA组织，其余「—」）证明 FieldRow 只读支路能取 props.modelValue；点 SegButtons「男」后 .lqg-seg__item--on 由空数组 变为只含「男」一项，证明 pick() 里 props.disabled 可读；判过。[3]#105：reseed→staff PUT 1001 使 update_by=9000000101 后，sort=recent&sampleKind=organoid 只回 {1009}(sampleKind=organoid)、sampleKind=bogus 回 0 行、sourceUnitId=9000009002 回 {1009}、internalNo=T-oco01 回 {1009}、internalNo=T-hli01 回 {1001}（无串味）；mine 真收窄——admin 新建行(create_by=update_by=9000000100)在不带 mine 的 recent 里可见(total 4 含它)，带 mine=true 时不返回(total 3 = {1001,1008,1009})；类目身份——PUT 1001 带 sampleKind=organoid → code:400 且库里 sample_kind 仍 tissue、remark 未被改（无部分写入），带 sampleKind=tissue 或不带 → code:200 且 remark 落库，PUT 1009 带 tissue → 400、带 organoid → 200；对照条：sourceUnitId=9000009001=6、groupId=9000009101=5 未变；前端口径另经抓包确认——organoid/sample 的 mode=edit 请求体里都没有 sampleKind 键；判过。[4]#96：GET /lqg/sample/list?sourceUnitId=9000009002 → total 2 = {1006(外部 tissue SJ90000006), 1009(内部 organoid SJ90000009)}（prompt 里写的 SJ9000000006/SJ9000000009 是 10 位笔误，seed 实际 8 位 submit_no）；判过。补充边界（均无异常）：sort=recent&groupId=9000009101={1001}、&mine=true&sampleKind=organoid={1009}、&mine=false 与不带同、&keyword=T-hli01={1001}、&keyword=本中心={1008}、&donorName=测试供体甲={1001}、&verifyStatus=valid={1001,1008,1009}；keyword 的 OR 已包组（keyword=T-oco01&sampleKind=tissue=0、keyword=本中心&sampleKind=organoid=0、keyword=B 大学&sampleKind=organoid={1009}）；非 recent 支 sampleKind=organoid={1009}、pageSize=2 前两行都 pending、submitSource=internal={1008,1009}、/mp/int/sample/list 全表=9；PUT 夹带 submitNo/submitSource/submitterId 均不生效（库内不变）。",
+   "reported": "pass"
+  },
+  "L2": {
+   "status": "pass",
+   "evidence": "本片三组全部自写脚本、独立复跑（不引用 doc/waves/regression/D2 既有脚本的结论——r1 返工改过那里的 G3-20 / WEB-L2-06b 探针期望值）。一次干净 reseed 连跑五段：g1a 9/9、g2 19/19、g1b 13/13、g3a 23/23、g3b 14/14 = 78/78 绿 0 FAIL（日志 .tmp/logs/r4-g{1a,2,1b,3a,3b}.log）。截图：doc/waves/regression/D2/shots/L2r4-mp-g1a（外部新增+我的+历史待核验）、L2r4-web-g2（总表置顶浅黄+九种筛选逐张+核验抽屉两出口+判无效原因弹窗）、L2r4-mp-g1b（无效原因行+edit 重提+有效后详情只读+extB 只看我提交的开关前后）、L2r4-mp-g3a（内部首页四格+历史两页签+表格页列序/冻结/横滑/只读）、L2r4-mp-g3b（类器官七列新增+修改+extC 提交）。断言值（关键几条）：外部首页正文数字 0 个、点表 URL=/#/pages/sample/form?mode=new、新交行库内=pending|external|tissue 且 donor_name 密文而接口读回明文『R4供体甲』、工作台判无效后库内 invalid|D2 r4 L2 判无效：缺住院号 且外部历史出现『无效原因：』原文、重提后库内 pending|已补住院号后重提|-、核验有效后库内 valid|T-l2r4ext01 且外部详情 inputs=0 save=0；九种筛选每条同一时刻用 api.sh --as staff 独立取 id 集合再与 UI 页内 /lqg/sample/list 响应比对一致（全量 10 行、A 医院 6、A 医院+肝胆外科组 5、类器官 1、内部 2、待核验 3、收样日期区间 2、A 医院+有效+外部 3、供体姓名精确 1），软删 1010 任何筛选不出现；待核验置顶 = 库内 pending 的 (verify_status='pending') DESC, create_time DESC, id DESC 顺序，行 class lqg-sample__row-pending、计算底色 rgb(252,241,218)=#fcf1da；表格页表头用 openpyxl 真读 _input/templates/样本记录信息表模板.xlsx（14 列）与类器官收样记录模板.xlsx（7 列）第 1 行后逐字逐序比对，UI 给 15/8 列（冻结列提到最前 + 追加『切片染色』）全等，首列 sticky/left:0px，横滑容器 scrollWidth 1798 > clientWidth 430 且能滚到最右，页面按钮只有『导出 Excel』（无新增/保存），点行进 mode=view 且输入控件 0、保存按钮 0；★硬断言：内部历史样本页签逐行 sample_kind=tissue、类器官页签逐行 organoid、两页签行集合不相交、点类器官行进 pages/organoid/form、点样本行进 pages/sample/form；类器官新增落库 organoid|internal|valid 且来源单位是点开底部弹层真选出的『A 医院』，extC 三项提交落库 organoid|external|pending。反 stale 本片自核实：ruoyi-admin.jar mtime 2026-09-22 07:03:37、find ruoyi-modules/ruoyi-lqg/src -newer jar 为空、后端 8081 PID 60476 启动于 07:33（晚于 jar mtime）、lsof -p 60476 持有该 jar（禁用 api.sh --fresh-module：本沙箱 ps 被禁）。微信开发者工具/真机未覆盖：本沙箱 EPERM + 需扫码跑不通，miniapp 侧一律用 H5(9200, VITE_MOCK_LOGIN=1) + Playwright 等价覆盖；extB/extC 两个 seed 身份在调试面板里没有按钮，用真后端 mock 登录取 token 后注入 lqg_mp_token 顶掉会话（仍连真后端真库）。",
+   "reported": "pass"
+  },
+  "L3": {
+   "status": "pass",
+   "evidence": "L3 = PASS（0×S0 / 0×S1）。两条本片自写脚本全绿：doc/waves/regression/D2/L3r4-api.sh 60/60（退出 0），doc/waves/regression/D2/L3r4-mp-shallow.mjs 22/22（退出 0）。日志 .tmp/l3r4/c1c5.log、.tmp/l3r4/c67.log；截图只落盘 doc/waves/regression/D2/shots/L3r4-mp/，未读进上下文。★ 未复跑 L2 深度 UI 走查，未引用 doc/waves/regression/D2/ 既有脚本（含 r1 返工改过期望值的 L2-mp-h5.mjs / L2-web-plusui.mjs）的任何结论，也未引用任何实现方报告。\n\n【反 stale 自跑证据（不引用他人结论）】jar=code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar mtime=2026-09-22 07:03:37；`find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -type f -newer <jar>` → 0 行（源码不新于 jar）；后端本片自起 `bash .tmp/run-backend.sh` → PID 4312 监听 8081，`lsof -ti tcp:8081 -sTCP:LISTEN`=4312 且 `lsof -p 4312 | grep -c ruoyi-admin.jar`=2（进程真持该 jar）；沙箱禁 ps，改用本片自起后端日志 .tmp/l3r4/backend-8081.log 首行时间戳 2026-09-22 08:12:07 > jar mtime 07:03:37（启动晚于 jar）。H5 dev 9200 亦本片自起（PID 5982）。跑前 `reseed.sh --yes` + 清 $TMPDIR/lqg-verify-token-*；8080/5432/6379 全程未碰。\n\n【第 1 条 越权 —— PASS 13/13】`api.sh --as extC GET /mp/ext/sample/9000001001` → {\"code\":404,\"msg\":\"样本不存在\",\"data\":null}；全文 grep 'SJ90000001|T-hli01|internalNo|submitSource|receiveDate|verifyBy|donorName|hospitalNo|submitNo' → 0 命中。`--as extE GET 9000001001` 同 404 同 0 命中。★ 正向对照防「全站 404」假绿：extA/extB(同组) GET 1001 → 200；extE GET 自己 1007 → 200。★ 新键 invalidReason 取证：ExtSampleVo 行 keys=[createTime,donorNameMasked,editable,id,invalidReason,mine,organoidType,sampleKind,submitNo,submitterName,tissueType,updateTime,verifyStatus]，ExtSampleDetailVo keys=[age,createTime,docs,donorName,editable,embeds,gender,hasPathology,hospitalNo,id,invalidReason,mine,organoidType,remark,sampleKind,sourceUnitName,submitNo,submitterName,tissueType,verifyStatus] —— 两者都没有 internalNo/verifyBy/submitSource/receiveDate/operatorName，新键没把内部字段带出来。\n\n【第 2 条 外部 PUT —— PASS】夹带：`extA PUT /mp/ext/sample/9000001002` 带 internalNo=HACK-C2/verifyStatus=valid/submitSource=internal/receiveDate=2020-01-01/sampleKind=organoid/submitNo=HACK-NO/verifyBy/submitterId → code=200，**库内不变断言**：internal_no=<null>、verify_status=pending、submit_source=external、receive_date=<null>、sample_kind=tissue —— 夹带列一条都没生效；整行 row_to_json diff 出的变化列=[source_unit_id,donor_name,gender,age,hospital_no,tissue_type,has_pathology,remark,update_by,update_time] ⊆ 外部可改送检段+审计列，无越界列；remark 落库证明请求真被处理。同组别人的：extB GET 1002=200（可看），extB PUT 1002 被拒且整行 json 逐字节不变。已有效的自己：extA PUT 1001 被拒且整行不变。★ 外部列表回归（SampleQueryService/SampleQueryBo 来源单位+keyword 改动）：extA sampleKind=tissue={1001,1002,1003,1004}、extC={1005}、extA onlyMine=true={1001,1002,1003} —— 外部口行为未被内部筛法改动影响。\n\n【第 3 条 内部经小程序 PUT —— PASS】`staff PUT /mp/int/sample {id:1002}` → 被拒 {\"code\":500,\"msg\":\"待核验与无效的样本只能在网页工作台核验或改判，小程序里不能改\"}，**整行 json 不变**；`{id:1003}`（无效）同被拒同不变。`{id:1001,remark:L3r4-c3-valid}` → 200，update_by=9000000101（= staff 本人）、update_time 在 5 分钟窗口内、remark 真落库。★ sampleKind 保护（契约第 49 行/issue #105）：不一致 organoid → 400 且整行不变；一致 tissue → 200 且落库；完全不传 sampleKind → 200 照常改 —— 只拦 kind 不一致，不误伤正常字段修改。\n\n【第 4 条 角色闸 —— PASS 8/8】extA GET /lqg/sample/list → 403；extA GET /mp/int/sample/list → 403；extA POST /mp/int/sample → 403；staff GET /mp/ext/sample/list → 403；staff POST /mp/ext/organoid → 403。正向对照：staff /mp/int/sample/list → 200、staff /lqg/sample/list → 200、extA /mp/ext/sample/list → 200。\n\n【第 5 条 核验状态机 —— PASS】判有效缺内部编号 → 被拒（msg「判有效必须同时给收样日期与内部编号，缺少：内部编号」）且整行不变；内部编号撞号 T-hli01 → 被拒且整行不变；判无效缺原因 → 被拒（msg「判无效必须写原因」）且整行不变。软删编号可重用：`admin PUT /lqg/sample/9000001002/verify {action:valid,receiveDate,internalNo:T-del99}` → 200，库里 1002 verify_status=valid / internal_no=T-del99（T-del99 原属 del_flag=1 的 1010）。反向对照：T-del99 被 1002 占用后（未软删）再给 1007 用 → 被拒。\n\n【第 6 条 空数据 —— PASS】接口（--as phone:newbie1:13800000099）：GET /mp/me → identity=external、ext.bindStatus=unbound、unitId/groupId=null；GET /mp/ext/sample/list / ?sampleKind=organoid / ?onlyMine=true → 三条均 code=200,total=0,rows=0；库里该号样本数=0。H5：首页 3 格 ['样本记录信息表','类器官收样记录','石蜡包埋送样记录']（无「-80 冻存」）、无 pageerror/console error；「我的」→「历史编辑记录」→ 空状态「你填过的记录会出现在这里」无错误文案、无 pageerror；切「只看我提交的」后仍不报错。\n\n【第 7 条 —— PASS】接口段：`extA POST /mp/ext/organoid` 带 internalNo/receiveDate/verifyStatus/submitSource/sampleKind/submitNo → 200 建行，**库内不变断言**：sample_kind=organoid、submit_source=external、verify_status=pending、internal_no=null、receive_date=null、submit_no=服务端自生成 —— 夹带列一条不生效。渲染段：外部 extA「我的」正文不含「内部管理」与「核验、冻存取用请到网页工作台」、.adm 节点数=0（不渲染，不是置灰）；内部 staff「我的」有「内部管理」板块且 .adm .merow__t=['样本记录信息表','类器官收样记录','石蜡包埋送样记录','-80 冻存记录']（4 入口）；身份缺失（route stub /lqg-api/mp/me → identity:null）首页 .lqg-tile=0 且显示「没能确认你的身份」，我的 .merow=0 且无任一板块名；identity=\"INTERNAL\" 未知串同样 0 格 0 板块（不默认当内部）；真·无 token 时首页/我的均 0 格 0 板块并弹回登录页、无错误文案。\n\n【契约码核对（信息项，不影响上面任一条 pass）】PUT /mp/int/sample 待核验/无效、PUT /lqg/sample/{id}/verify 缺必填：契约第 10/49 行与 MpSampleService 类注释写 400，实测 code=500；对照组 sampleKind 不一致实测 400（与契约一致）。前端 src/utils/request.ts 对任意非 200 一律 toast .msg → 无用户可见差异，判 doc-drift S3。",
+   "reported": "pass"
+  }
+ },
+ "escalated_noted": [],
+ "issues": [
+  {
+   "severity": "S2",
+   "level": "L1",
+   "type": "ux",
+   "ticket": "SAMPLE-MP-001",
+   "title": "来源单位(SSOT nullable:false)在小程序创建路径上没有任何校验：留空提交 → 500 + 裸 PostgreSQL 报错串（含失败行回显），表单也没给必填标记",
+   "detail": "复现 A（外部·真 UI）：H5 用调试入口登「外部人员 · 新号（未绑定）」(13800000099，首页明示「还没填单位与组别 · 未绑定」)，点首页格子「样本记录信息表」→ 填 供体姓名/组织类型 → 点「提交」。抓到的请求体 `{\"sourceUnitName\":\"\",\"donorName\":\"QA-R4-UNBOUND\",\"tissueType\":\"QA组织\",\"sampleKind\":\"tissue\",...}`，响应 `code:500`，msg 是 `### Error updating database. Cause: org.postgresql.util.PSQLException: ERROR: null value in column \"source_unit_name\" of relation \"t_lqg_sample\" violates not-null constraint / Detail: Failing row contains (…); SQL: INSERT INTO t_lqg_sample …` —— 请求层按业务码把这段 msg 原样 toast 给用户。复现 B（内部·API）：`--as staff POST /mp/int/sample {\"sampleKind\":\"tissue\",\"tissueType\":\"QA组织\",\"internalNo\":\"T-qa-r4-nounit\",\"receiveDate\":\"2026-09-20\",\"donorName\":\"QA-R4-NOUNIT\"}`（不带 sourceUnitName 或传 \"\"）同样 code:500 + 同一段裸 SQL；两种输入库里都没有多出行（事务回滚，未产生坏数据）。复现 C（外部·API）：`--as extA POST /mp/ext/sample`（不带 sourceUnitName）与 `--as extC POST /mp/ext/organoid`（不带 sourceUnitName）同样 500。根因：`doc/authority/field-ssot.yaml` 里 t_lqg_sample.source_unit_name 是 `nullable: false`（第 145 行），而 ExtSampleSubmitBo / ExtOrganoidSubmitBo / SampleSubmitBo 三个入参 BO 对 sourceUnitName 一个校验注解都没有（ExtSampleSubmitBo、ExtOrganoidSubmitBo 全字段无 @NotBlank/@NotNull），SampleKindRules.missingRequiredFields 也只查 tissueType/organoidType/internalNo/receiveDate，不查来源单位；前端 sample/form.vue 的 FieldRow 只给 donorName/tissueType 挂 required 星号、organoid/form.vue 的七项也没给来源单位挂必填，submit() 的守卫同样不看它——UI 把一个数据模型层面的必填项呈现成可选。影响：老师/甲方在「外部新号未绑定」或「内部漏填未打星号的来源单位」时拿到的是数据库内部错误串而不是一句「来源单位必填」，这一条记录建不出来；已绑定用户按说明书填满则不受影响，故按 S2 记账不拦门（若评审要求「正常观感操作不得吐裸 DB 错」，可升 S1）。建议：三个 BO 补 @NotBlank(sourceUnitName)（或 service 层归入 400 人话），并给来源单位加必填标记。"
+  },
+  {
+   "severity": "S2",
+   "level": "L0",
+   "type": "harness",
+   "ticket": "SAMPLE-MP-001 / SAMPLE-WEB-001",
+   "title": "实现方在 r1 返工中改动了 doc/waves/regression/D2/ 的两处既有探针期望值（G3-20 正负号翻转、WEB-L2-06b 改口径），这两条不能当独立证据",
+   "detail": "`git log --oneline -6 -- doc/waves/regression/D2/` + 逐提交 --stat 核对：只有 r1 返工 1e8ea8c 改了既有脚本（L2-mp-h5.mjs +5-1、L2-web-plusui.mjs +20-6），r2/r3 只新增脚本或只换截图，未动既有断言。1e8ea8c 把 `check('G3-20 StatusChip 渲染抛 ReferenceError（根因）', chipErr.length > 0, …)` 改成 `chipErr.length === 0`——即把「证明病灶存在」的期望值翻成「证明病灶消失」；把 WEB-L2-06b 从「假字典 key sample_kind 为空、真名 lqg_sample_kind 有 2 条」改成「带上页面 token+clientid 打真名 lqg_sample_kind 得 2 条」。两处的产品断言（G3-19 徽标数≥行数、字典下拉两个选项）未被放宽，改动方向是加强/跟随修复，且 commit message 已披露；但期望值确实被调成迎合实现，按任务要求记账。我本轮没有引用这两条：StatusChip/FieldRow/SegButtons 与首页入口都是自己写探针（.tmp/qa-r4-probe-g12.mjs / g12b.mjs）在 9200 上重跑判的。"
+  },
+  {
+   "severity": "S2",
+   "level": "L0",
+   "type": "harness",
+   "ticket": "SYS-MP-001",
+   "title": "QA 的期望值来源 doc/verify/fixtures/home-entries-cases.json 的 targetCases 被实现方在 r1 返工中改动（/pages/xxx/form → /pages/xxx/form?mode=new）",
+   "detail": "`git show 1e8ea8c -- doc/verify/fixtures/home-entries-cases.json`：targetCases 8 例的 expect 由 `/pages/sample/form`、`/pages/organoid/form`、`/pages/embed/form`、`/pages/cryo/form` 改成各自加 `?mode=new`（另 5 个 fixture 文件未被任何返工提交碰过）。该文件是 entries.fixture.spec.ts 的唯一期望来源（spec 自己不写期望），实现方改它 = 改 QA 的期望表；改动方向是补规格（ticket 明文「mode 缺失按只读」，所以 `?mode=new` 才是正确值，且产物里 `ENTRY_FORM_TARGET` 四格确实都带 mode=new），但独立性已被破坏，按任务要求记账。本轮不靠 fixture 判过：我在 H5 上逐格点，四格（内部）+ 三格（外部）落点 URL 全含 mode=new、页面有可输入控件与「提交」按钮、无「没能加载」错误态，且内部/外部各真的提交成功（内部 T-qa-r4-05 tissue、T-qa-r4-06 organoid；外部 extA 新建 tissue 落 pending）——结论与改后的 fixture 一致，非产品缺陷。"
+  },
+  {
+   "severity": "S2",
+   "level": "L2",
+   "type": "ux",
+   "ticket": "SAMPLE-MP-002",
+   "title": "小程序外部新增样本不落 source_unit_id，导致工作台「来源单位+组别」组合筛选带不出这条",
+   "detail": "复现：reseed 后用 extA（13800000011，档案 unit_id=9000009001 / group_id=9000009101）走小程序外部新增提交一条（POST /mp/ext/sample，body 只带 sourceUnitName='A 医院'）。库里新行 submitter_id=9000000111、source_unit_id 为空、verify_status=pending。随后同一时刻：GET /lqg/sample/list?groupId=9000009101 带得出这条（6 行），GET /lqg/sample/list?sourceUnitId=9000009001&groupId=9000009101 带不出（5 行，accept SAMPLE-WEB-001 第 1 条钉死的集合就是这 5 个）。工作台页面同时点『来源单位=A 医院』+『组别=肝胆外科组』时 UI 与接口一致（都是 5 行），所以不是页面与接口不一致，是样本行缺 source_unit_id 这个快照。影响：老师按来源单位+组别组合筛时，外部刚交的那条看不到（换单一条件『组别』能看到），不阻塞主流程，故 S2。核对过不是本片时序假象：新行是 curl 同步提交、随后立刻查库确认 submitter_id/source_unit_id 落定，再调两次列表。注：本片最初把它当成 S1 误红过两次（头一次是 extA 新行的 submitter_id 被后续 extC 探针行顶掉认错行），最终用『extA 同步提交 + 立刻查库 + 立刻两次列表』干净复现，才定成这条 S2。"
+  },
+  {
+   "severity": "S3",
+   "level": "L3",
+   "type": "doc-drift",
+   "ticket": "SAMPLE-MP-001",
+   "title": "状态机/核验「被拒」的响应码是 500，契约与代码注释都写 400",
+   "detail": "复现：`bash doc/verify/api.sh --as staff PUT /mp/int/sample '{\"id\":9000001002,\"remark\":\"x\"}'` → {\"code\":500,\"msg\":\"待核验与无效的样本只能在网页工作台核验或改判，小程序里不能改\"}；`--as admin PUT /lqg/sample/9000001007/verify '{\"action\":\"valid\",\"receiveDate\":\"2026-09-22\"}'` → {\"code\":500,\"msg\":\"判有效必须同时给收样日期与内部编号，缺少：内部编号\"}；`{\"action\":\"invalid\"}` → {\"code\":500,\"msg\":\"判无效必须写原因\"}。对照：同文件里的 sampleKind 保护实测正确回 400。契约 doc/api-contract.md 第 10 行「参数/业务校验不过 code=400 类」、第 49 行「待核验、无效的外部样本 → 400」，且 MpSampleService 类注释与 javadoc 也逐字写「PUT 直接 400 / 待核验、无效 → 400」——实现抛的是无 code 的 ServiceException（若依默认 500），注释/契约与实现不一致。影响：行为本身正确（被拒 + 整行 row_to_json 逐字节不变），且前端 src/utils/request.ts 对任意非 200 一律 toast .msg，用户可见行为无差异；受影响的是按契约码写断言的调用方（含连带 SAMPLE-VERIFY-001 的 /verify 缺必填路径）。依据：属口径/文档与实现不一致，不构成「老师拿不到东西/拿到错东西」，也非主流程坏产出 → 不判 S0/S1；若依默认 500 是常见写法，判 S3 doc-drift。修法：这两处 ServiceException 显式带上 400，或把契约与代码注释改成 500。"
+  },
+  {
+   "severity": "S3",
+   "level": "L3",
+   "type": "debt",
+   "ticket": "AUTH-EXT-001",
+   "title": "外部 PUT 重提会把样本原有的 source_unit_id 清成 null（与 L2 已记 S2 同源，本条是改路径上的表现）",
+   "detail": "复现：reseed 后 9000001002 的 source_unit_id=9000009001（A 医院）；`--as extA PUT /mp/ext/sample/9000001002 '{\"sourceUnitName\":\"A 医院\",\"remark\":\"L3r4-c2-tamper\",...}'` → code=200，事后 source_unit_id=null 而 source_unit_name 仍是「A 医院」。根因：ExtSampleSubmitService.resubmitTissue 把 ExtSampleSubmitBo.sourceUnitId 原样透传（line 152 → 200/227），没有「单位名 → id」解析；小程序外部表单只提交名字，故 id 恒为 null。L2-r4 已就 POST 路径记过同源 S2（新交样本 source_unit_id=null）。影响：工作台「来源单位=A 医院 + 组别」的组合筛选带不出这条（单条件「组别」仍带得出）；样本行展示的 source_unit_name 正确，主流程不受影响。依据：权威 doc/authority/field-ssot.yaml:144 明写 `{name: source_unit_id, nullable: true, comment: \"FK→t_lqg_source_unit.id；自填单位名时为空\"}` —— 该列为空是设计允许，按本轮口径不允许据此判 S0/S1；「改一条样本即断开中心原已建立的单位关联」比 L2 那条更重一点（既有数据被清），但仍只落在窄筛选场景 → 记 S3 并与 L2 的 S2 合并处理，不拦门。"
+  }
+ ],
+ "merged_from": [
+  {
+   "file": "D2-r4-L01.json",
+   "levels": "L0"
+  },
+  {
+   "file": "D2-r4-L01.json",
+   "levels": "L1"
+  },
+  {
+   "file": "D2-r4-L2.json",
+   "levels": "L2"
+  },
+  {
+   "file": "D2-r4-L3.json",
+   "levels": "L3"
+  }
+ ]
+}

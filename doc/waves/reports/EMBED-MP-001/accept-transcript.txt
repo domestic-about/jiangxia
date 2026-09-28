@@ -1,0 +1,24 @@
+########## EMBED-MP-001 · accept 1（API + STATE）##########
+（差异：去掉 --fresh-module；pnpm 前加 npm_config_store_dir；其余字面逐字）
+true
+true
+true
+true
+9000002001
+9000002003
+ACCEPT-1 EXIT=0
+########## EMBED-MP-001 · accept 2（STATE）##########
+（差异：去掉两处 --fresh-module；其余字面逐字）
+9000000100
+true
+2|2026-09-16|李工
+yes
+true
+T-E01-2
+pending|-|组织
+ACCEPT-2 EXIT=0
+########## EMBED-MP-001 · accept 3（STATE）##########
+（差异：pnpm 前加 npm_config_store_dir；其余字面逐字）
+true
+grep: src/pages/embed/SamplePickerExt.vue: No such file or directory
+ACCEPT-3 EXIT=0

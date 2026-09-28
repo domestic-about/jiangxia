@@ -1,0 +1,59 @@
+########## SAMPLE-MP-002 · accept transcript（复跑记录）##########
+## 时间：2026-09-22 00:18:20
+## 后端：8081（jar @ 2026-09-22 00:09:37）
+
+===== accept 1 · 逐字变体（保留 ticket 里的 db.py --quiet）—— 预期红 =====
+########## SAMPLE-MP-002 · accept 1（DATA）##########
+（MP002_ACC1_KEEP_QUIET=1：第 5 段逐字保留 ticket 的 --quiet —— 预期红）
+true
+1
+true
+organoid|internal|valid|B 大学|Y
+false
+ACCEPT-1 EXIT=1
+
+===== accept 1 =====
+########## SAMPLE-MP-002 · accept 1（DATA）##########
+（差异：去掉 --fresh-module；第 5 段去掉 db.py 的 --quiet，其余字面逐字）
+true
+1
+true
+organoid|internal|valid|B 大学|Y
+true
+王工|organoid|valid
+true
+true
+organoid|pending|-|-|赵医生
+true
+true
+ACCEPT-1 EXIT=0
+
+===== accept 2 =====
+########## SAMPLE-MP-002 · accept 2（DATA）##########
+（差异：pnpm 前加 npm_config_store_dir；其余字面逐字）
+true
+true
+ACCEPT-2 EXIT=0
+
+===== accept 3 =====
+########## SAMPLE-MP-002 · accept 3（STATE）##########
+（差异：pnpm 前加 npm_config_store_dir；其余字面逐字）
+true
+ACCEPT-3 EXIT=0
+
+===== vitest 全量 =====
+ RUN  v2.1.9 /Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/miniapp
+
+ ✓ src/pages/sample/layout.fixture.spec.ts (22 tests) 5ms
+ ✓ src/pages/ledger/columns.fixture.spec.ts (7 tests) 2ms
+ ✓ src/pages/index/entries.fixture.spec.ts (25 tests) 2ms
+ ✓ src/pages/organoid/layout.fixture.spec.ts (13 tests) 3ms
+
+ Test Files  4 passed (4)
+      Tests  67 passed (67)
+   Start at  00:18:31
+   Duration  193ms (transform 44ms, setup 0ms, collect 68ms, tests 12ms, environment 0ms, prepare 110ms)
+
+
+===== 方向 A / SYS-MP-001 accept3 的样式 grep（全 src）=====
+（裸 * / :not( 无命中）

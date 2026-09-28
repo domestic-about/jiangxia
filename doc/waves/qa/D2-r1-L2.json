@@ -1,0 +1,55 @@
+{
+  "phase": "D2",
+  "round": 1,
+  "auditor": "independent",
+  "levels": {
+    "L2": {
+      "status": "fail",
+      "evidence": "本片自跑，全部证据来自代码 / 库 / 运行中的系统（截图只落盘不解读，断言只读 DOM 文本 / 计算样式 / 接口返回）。反 stale：起 8081 前 `lsof -ti tcp:8081` 已空，再由本片 `bash .tmp/run-backend.sh` 起（日志 .tmp/d2l2-backend.log，启动成功时间 2026-09-22 00:32）；`find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer ruoyi-admin/target/ruoyi-admin.jar` 为空；jar mtime Sep 22 00:29；`lsof -p <8081 PID> | grep -c ruoyi-admin.jar` = 2（进程确持该 jar）；`ps` 被沙箱禁（Operation not permitted），启动时刻用后端日志时间戳佐证。三组脚本：doc/waves/regression/D2/L2-web-plusui.mjs（组 2，21/25）、doc/waves/regression/D2/L2-mp-h5.mjs（组 1+3，28/35）。两脚本的完整 stdout 与截图：doc/waves/regression/D2/shots/L2-web/（10-sample-list.png 待核验浅黄置顶、11-filter-*.png 11 个筛选、11b-samplekind-dropdown.png 空下拉、12-verify-drawer-1002.png 两个出口、13/15 after-valid/invalid、14-invalid-reason-dialog.png）、doc/waves/regression/D2/shots/L2-mp/（g1-01…g1-15、g3-01…g3-14）。关键断言值：待核验行序 = [9000001007,9000001002,9000001003,9000001006,9000001005,9000001004,9000001001,9000001008,9000001009]，`tr` 计算样式 background-color = rgb(252, 241, 218)；筛选集合逐项 = 来源单位A医院{1001,1002,1003,1004,1005,1007} / 组别肝胆外科{1001,1002,1003,1004,1007} / 提交来源内部{1008,1009} / 待核验{1002,1007} / 收样日期(今-26..今-19){1004,1005} / 组织类型肝组织(模糊){1001,1003,1004,1007,1008} / 内部编号T-hli01{1001} / 操作人李工{1001,1004,1005,1006,1008,1009} / 供体姓名测试供体甲{1001} / 住院号ZY0000001{1001} / 组合(A医院+有效+外部){1001,1004,1005}；核验抽屉「判为有效并保存」「判为无效」两出口各走一遍 code=200 且库内变 valid|T-l2a01 / invalid。组 1+3：首页三格/四格顺序、首页无数字（digits=[]）、extA 提交成功（库内 SJ00000030）、工作台判无效→改后重提→判有效（库 valid|T-l2ext01）、extB 同组看得到 + 打开「只看我提交的」后只剩 SJ90000004、表格页两工作表表头逐字逐序（样本记录 15 列 / 类器官收样 8 列）、首列冻结 position=sticky left=0px、可横滑（DIV.uni-scroll-view overflowX=auto scrollWidth 958 > clientWidth 390）、无新增/保存按钮且导出置灰、点一行 mode=view 只读、内部改本人有效样本 T-hli05 后 update_by=9000000101 且排到最前、extC 类器官三项提交后库 pending|external|organoid。★ 未覆盖（如实记账，不用 H5 冒充）：微信开发者工具（CLI 要写 ~/Library/Application Support/微信开发者工具/** EPERM + 需扫码）与真机 / 体验版全部未跑，小程序侧一律为 H5 dev(9200, VITE_MOCK_LOGIN=1) + Playwright 等价覆盖；extB / extC 不在调试面板的 3 个 seed 里（src/api/mock-seeds.ts），改用后端 mock 登录（ADR-0008）拿 token 注入 localStorage['lqg_mp_token']，走的仍是产品 mock 路径，仅绕开面板按钮；工作台一栏只跑了 lqgadmin 一个身份。",
+      "counts": {"L2-web": "21/25 通过", "L2-mp": "28/35 通过", "S0": 3, "S1": 2, "S2": 0, "S3": 0}
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S0",
+      "level": "L2",
+      "type": "arch",
+      "ticket": "SAMPLE-MP-001",
+      "title": "小程序首页四个入口都不带 mode=new，填写页变成「没能加载这条样本」——外部无法开始送检、内部无法从首页录收样",
+      "detail": "复现：外部（王医生）或内部（李工）登录 → 首页点「样本记录信息表」→ URL 停在 #/pages/sample/form（无 query）→ 页面正文 = 「样本记录信息表|没能加载这条样本|重试|2026-09-22」，页面上 0 个 uni-button（没有「提交」），截图 doc/waves/regression/D2/shots/L2-mp/g1-02-entry-sample.png 与 g3-02-entry-sample.png。机制（代码对齐）：src/pages/index/entries.ts 的 ENTRY_FORM_TARGET 给的是裸路径 /pages/sample/form，src/router/config.ts 的 goPage() 不追加任何参数；sample/form.vue 的 onLoad 把 undefined 交给 pages/sample/layout.ts:62-64 的 normalizeMode → 'view'，view 且 sampleId 为空 → sample/form.vue:150-153 直接 failed=true（organoid/form.vue 同形）。而 sample/form.vue:38 与 organoid/form.vue:45 的注释自己写的是「首页点表进来 → mode=new」，即实现与自己的契约不一致。影响范围：四个入口（样本记录信息表 / 类器官收样记录 / 石蜡包埋送样记录 / -80 冻存记录）共用同一个 entryTarget，一起坏；D2 主流程第 1 步「外部在小程序填样本记录信息表送检」从首页直接走不通（本片只能改用显式 #/pages/sample/form?mode=new 才把后续主线跑完）。注：doc/verify/fixtures/home-entries-cases.json 的 targetCases 也写的是 /pages/sample/form（L0 fixture 只比字符串、不进页面），所以 L0 全绿掩盖了它。"
+    },
+    {
+      "severity": "S0",
+      "level": "L2",
+      "type": "debt",
+      "ticket": "SAMPLE-MP-001",
+      "title": "StatusChip / FieldRow / SegButtons 三个组件在 <script setup> 里引用未声明的 props → 核验状态徽标不渲染、只读字段值全空、按钮组点不动",
+      "detail": "同一根因：三个组件都写成 `withDefaults(defineProps<{...}>(), {...})`（没有赋给 const props），脚本里却引用 `props.x`，运行时抛 `ReferenceError: props is not defined`。① src/components/lqg/StatusChip.vue:34（`computed(() => props.text || TEXT[props.value||''])`）→ 每次渲染抛错，DOM 里该位置是 <!--v-if--> 空占位：历史编辑记录每一行的「核验状态徽标」全部消失（UI:mp.history 明写外部行要有「核验状态徽标」），本片实测 G3-19 = {items:1, chips:0}，样本详情页「核验状态」只剩标签没有值（shots g1-13-ext-readonly.png），控制台原始栈见 G3-20 输出。② src/components/lqg/FieldRow.vue:45（readonly 分支的 display）→ 只读表单一个值都不渲染：内部管理表格页点一行 → mode=view 页面正文只剩字段名（「来源单位|*|供体姓名|性别|男|女|未知|年龄|住院号|*|组织类型|…|内部编号|有无固定|有|无|处理时间|…」，没有任何值），shots g3-05-ledger-row-readonly.png；独立探针 doc/waves/regression/D2/L2-probe-fieldrow-segbuttons.mjs 的 VIEW TEXT 同样一个值都没有。③ src/components/lqg/SegButtons.vue:23（pick() 里 `if (props.disabled)`）→ 按钮组点不动：独立探针点「性别·男」前后 `.lqg-seg__item--on` 都是 ['女','有','有','有']，即性别 / 有无病理 / 有无固定 / 质控表 / 细胞活率报告这些「模板里写按钮的字段」在小程序端全都选不了。对照：components/ui/IdentityBar.vue、components/biz/UnitGroupPicker.vue、components/biz/MeHeader.vue 都正确写了 `const props = withDefaults(...)`，所以只有这三个炸。影响：内部管理只读表格页点进去看不到任何数据；外部/内部都看不出哪条待核验 / 无效；内部录收样时按钮字段填不了。"
+    },
+    {
+      "severity": "S0",
+      "level": "L2",
+      "type": "arch",
+      "ticket": "SAMPLE-MP-002",
+      "title": "小程序日期/时间选择器永远不弹出（`:visible` 不是 wd-datetime-picker 的 prop）→ 内部类器官收样（收样日期必填）一条也建不出来",
+      "detail": "复现：内部（李工）→ #/pages/organoid/form?mode=new → 点「收样日期」→ `{\"action\":0,\"popup\":0,\"visible\":false}`（.wd-datetime-picker__action 与 .wd-datetime-picker__popup 在 DOM 里都不存在，字段值不变），截图 doc/waves/regression/D2/shots/L2-mp/g3-11-organoid-datepicker.png。机制：organoid/form.vue（sample/form.vue 同形）把 `:visible=\"pickerOpen\"` 传给 wd-datetime-picker，但该组件（node_modules/wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue）根本没有声明 visible 这个 prop —— 内部只有 `const popupShow = ref(false)` + `<wd-popup v-model=\"popupShow\">`（第 56 / 188 行），`:visible` 于是退化成落在根节点的普通 HTML 属性（DOM 上能看到 `visible=\"true\"` 属性但面板不渲染）；页面侧 onPick() 只把 pickerOpen 置 true，也没有调用组件暴露的 open()。影响：内部类器官收样 7 项里的「收样日期」是必填（organoid/form.vue:286-290 的提交校验），且该字段只能靠这个面板填（control='date'，无可输入框）→ 内部录类器官收样在提交处必然被拦（脚本 G3-16 库内 T-l2org01 = 0 行，toast「请选择来源单位」后即便补上单位也会卡在「请填收样日期」）；内部「处理时间」（datetime）同样选不了。"
+    },
+    {
+      "severity": "S1",
+      "level": "L2",
+      "type": "debt",
+      "ticket": "SAMPLE-WEB-001",
+      "title": "工作台样本总表「样本类别」筛选下拉永远是「无数据」——字典 key 写成 sample_kind，库里真名是 lqg_sample_kind",
+      "detail": "复现：lqgadmin → 样本总表 → 点「样本类别」下拉 → 下拉正文只有「无数据」，.el-select-dropdown__item 数量 0，截图 doc/waves/regression/D2/shots/L2-web/11b-samplekind-dropdown.png；用 UI 选「类器官」会一直等到 click 超时（脚本 WEB-L2-04.3 / WEB-L2-06a）。根因三方对齐：code/plus-ui/src/views/lqg/sample/index.vue:266 写 `proxy?.useDict('sample_kind', ...)`；库/迁移里真名是 lqg_sample_kind（V202609210810__SYS-BASE-001-lqg-dicts.sql:13-15），`GET /system/dict/data/type/lqg_sample_kind` → [('组织样本','tissue'),('类器官','organoid')]，而 `GET /system/dict/data/type/sample_kind` → code 200 + data []（脚本 WEB-L2-06b 实测）。后端筛选本身是对的：`api.sh --as staff GET '/lqg/sample/list?pageSize=100&sampleKind=organoid'` → total=1、ids=['9000001009']。影响：权威 UI:admin.sample.list 明写筛选区含「样本类别」，L2 口径「九种筛选各点一遍」里这一项从 UI 走不通——老师按类别找类器官收样/组织样本时拿不到结果（其余 10 个筛选 UI 驱动全部与 accept 的 id 集合一致）。"
+    },
+    {
+      "severity": "S1",
+      "level": "L2",
+      "type": "ux",
+      "ticket": "SAMPLE-VERIFY-001",
+      "title": "外部在「历史编辑记录」看不到无效原因（列表没有、点进去是 edit 表单也没有，detail-ext 红条对本人不可达）",
+      "detail": "复现：工作台把 extA 的样本判无效（原因「L2复验：缺住院号，请补」）→ extA 历史编辑记录：列表正文无该原因（「SJ…|L** · 肝组织|我|2026-09-22」，连核验状态徽标也没有，徽标缺失另记 S0-2），截图 shots/L2-mp/g1-09-history-invalid.png；点这一行进的是 #/pages/sample/form?id=…&mode=edit，页面正文也没有原因（shots g1-10-history-open-invalid.png）——sample/form.vue 的 NoteBar 只在 topNote 时出「这条记录现在不能修改」/「核验与改判请到网页工作台」（第 111-117 行），没有 invalidReason 字段（LABELS 里没有这个 key）。唯一带原因红条的是 pages/sample/detail-ext.vue:61-62/118，而 pages/history/sources.ts 的 target() 对「本人 + editable=true」的行一律进 form?mode=edit，只有「非本人 / 不可改」才进 detail-ext → 本人无效记录**没有任何入口能看到原因**。影响：L2 口径「外部在历史编辑记录看到原因并修改重提」只能盲改（可改可重提本身是通的：改备注保存 → 回 pending → 工作台可再判有效，库内 valid|T-l2ext01 已验证）。"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "htmlTitle": "类器官样本管理",
+  "loginTitle": "类器官样本管理",
+  "buttonBg": "rgb(14, 124, 123)",
+  "buttonBorder": "rgb(14, 124, 123)",
+  "hasTenantSelect": false,
+  "hasRegisterLink": false,
+  "footer": "类器官样本管理",
+  "hasSocialButtons": false
+}

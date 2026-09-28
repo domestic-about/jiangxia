@@ -1,0 +1,330 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import type { DocListRow } from '@/api/doc'
+import { fetchExtDocList } from '@/api/doc'
+import type { EmbedRow, SampleDetail } from '@/api/sample'
+import { fetchExtSampleDetail } from '@/api/sample'
+import EmbedCard from '@/components/lqg/EmbedCard.vue'
+import NoteBar from '@/components/lqg/NoteBar.vue'
+import ErrorState from '@/components/lqg/ErrorState.vue'
+import LoadingState from '@/components/lqg/LoadingState.vue'
+import StatusChip from '@/components/lqg/StatusChip.vue'
+import { docKindLabel } from '@/pages/doc/group'
+import { goPage } from '@/router/config'
+
+// 样本详情（外部版）· UI:mp.sample.detail.ext（SAMPLE-MP-001 做第①段，AUTH-EXT-002 接第②段，
+// DOC-MP-001 接第③段）。
+//
+// 三段（① 送检信息 ② 石蜡包埋情况 ③ 质控文档）：
+//   ② 该样本名下每条石蜡包埋记录一张 `EmbedCard`，**含外部提交还没核验的送样**
+//      （没编号、标「待核验」或「无效 · 原因」）；没有则「暂无包埋记录」。
+//   ③ 本票（DOC-MP-001）接上：走**外部**清单接口 `GET /mp/ext/doc/list?sampleId=`（AUTH-EXT-003），
+//      只列「可见 ∩ 已完成 ∩ 外部版渲染成功」的那几份；点条目进预览占位页
+//      （真正的预览/下载在 DOC-MP-002）。
+//      ★ **不**调内部的 `/lqg/doc/**`：那条路会带内部专用字段，是外部隔离守住的咽喉。
+//
+// ★ 五条硬口径：
+//   1. **内部编号一行照接口给的渲染**（CR-20260918-07）：外部接口在开关关着时
+//      **根本不给这个键**，页面就不显示这一行；打开后接口给了才显示。
+//      前端**不读系统参数、也不写死「永不渲染」** —— 该给不该给是后端的事。
+//   2. **冻存信息与核验人全页不出现**：模板里连字段名都没有（不是置灰）。
+//      收样段的其余字段同理：外面那个 `detail-ext.vue` 禁字 grep 卡的就是这件事。
+//   3. 无效时顶部红条 + 「修改后重新提交」，**仅 `editable=true` 时出现**（进 mode=edit）。
+//   4. 可写性以后端详情的 `editable` 为准（同组别人的样本可看不可改）。
+//   5. 包埋卡片的内容与禁字口径在 `components/lqg/EmbedCard.vue` 里；本页只负责
+//      「有几张、有没有」——`embeds` 空数组与缺键都按「暂无包埋记录」处理。
+definePage({
+  style: {
+    navigationBarTitleText: '样本详情',
+  },
+})
+
+const detail = ref<SampleDetail | null>(null)
+const loading = ref(true)
+const failed = ref(false)
+const sampleId = ref<string>('')
+/** 第③段：外部可见的质控文档（清单接口给的行，title / subtitle 由后端按身份给） */
+const docs = ref<DocListRow[]>([])
+
+onLoad((options) => {
+  sampleId.value = String(options?.id ?? '')
+  load()
+})
+
+async function load() {
+  if (!sampleId.value) {
+    failed.value = true
+    loading.value = false
+    return
+  }
+  loading.value = true
+  failed.value = false
+  try {
+    detail.value = await fetchExtSampleDetail(sampleId.value)
+    // 第③段：外部文档清单（与详情同一个样本；失败不把整页打红——详情还能看）
+    try {
+      const res = await fetchExtDocList({ sampleId: sampleId.value, pageSize: 100 })
+      docs.value = res.rows ?? []
+    }
+    catch {
+      docs.value = []
+    }
+  }
+  catch {
+    failed.value = true
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+const verifyStatus = computed(() => detail.value?.verifyStatus || '')
+const isInvalid = computed(() => verifyStatus.value === 'invalid')
+/** 无效原因（红条正文；没给原因时给一句兜底人话） */
+const invalidReason = computed(() => detail.value?.invalidReason || '这条记录被判无效，请按核验意见修改后重新提交')
+/** 只有后端说可改（本人 + 待核验 / 无效）才出「修改后重新提交」 */
+const canResubmit = computed(() => detail.value?.editable === true && (isInvalid.value || verifyStatus.value === 'pending'))
+/** 内部编号：接口给了才显示（开关在后端） */
+const internalNo = computed(() => (detail.value as Record<string, unknown> | null)?.['internalNo'] as string | undefined)
+/**
+ * 第②段的石蜡包埋卡片（AUTH-EXT-002）：后端按可见样本集合给全部未删记录，
+ * **含外部自己提交还没核验的送样**（`paraffinBlockNo` 空）。空数组 / 缺键都按空处理。
+ */
+const embeds = computed<EmbedRow[]>(() => detail.value?.embeds ?? [])
+
+/** 点条目进预览页（DOC-MP-002 换真页；本张是占位页，参数带 sampleId + docKind） */
+function openDoc(docKind?: string | null) {
+  goPage(`/pages/doc/preview?sampleId=${sampleId.value}&docKind=${docKind ?? ''}`)
+}
+
+function resubmit() {
+  goPage(`/pages/sample/form?id=${sampleId.value}&mode=edit`)
+}
+
+/** 送检信息三段里这个字段有值才渲染一行（空值不占位置） */
+function has(value: unknown): boolean {
+  return value !== null && value !== undefined && String(value) !== ''
+}
+
+// `mono`：编号类（送检单号、住院号）用等宽字体（落地规范 §3，G17）
+const rows = computed(() => {
+  const d = detail.value
+  if (!d) {
+    return [] as Array<{ label: string, value: string, mono: boolean }>
+  }
+  return [
+    { label: '送检单号', value: str(d.submitNo), mono: true },
+    { label: '供体姓名', value: str(d.donorName), mono: false },
+    { label: '性别', value: genderText(d.gender), mono: false },
+    { label: '年龄', value: str(d.age), mono: false },
+    { label: '住院号', value: str(d.hospitalNo), mono: true },
+    // 类器官收样记录的两行是「类器官类型」+「代数」（代数是外部自己填的，CR-20260924-10）；组织样本没有代数
+    { label: d.sampleKind === 'organoid' ? '类器官类型' : '组织类型', value: str(d.tissueType) || str(d.organoidType), mono: false },
+    { label: '代数', value: d.sampleKind === 'organoid' ? str(d.passage) : '', mono: true },
+    { label: '有无病理', value: ynText(d.hasPathology), mono: false },
+    { label: '来源单位', value: str(d.sourceUnitName), mono: false },
+    { label: '备注', value: str(d.remark), mono: false },
+  ].filter(r => r.value !== '')
+})
+
+/**
+ * 评分表的合计分（UI:mp.sample.detail.ext ③「评分表带合计分」，G16）：
+ * 只认清单接口行上的 `totalScore`（后端只在评分表那一行给这个键），前端不自己加分。
+ */
+function scoreText(doc: DocListRow): string {
+  return typeof doc.totalScore === 'number' ? `合计 ${doc.totalScore} 分` : ''
+}
+
+function str(value: unknown): string {
+  return value === null || value === undefined ? '' : String(value)
+}
+
+function genderText(value: unknown): string {
+  const map: Record<string, string> = { male: '男', female: '女', unknown: '未知' }
+  return map[str(value)] || ''
+}
+
+function ynText(value: unknown): string {
+  const map: Record<string, string> = { Y: '有', N: '无' }
+  return map[str(value)] || ''
+}
+</script>
+
+<template>
+  <view class="det">
+    <LoadingState v-if="loading" />
+
+    <ErrorState v-else-if="failed" text="没能加载这条样本" @retry="load" />
+
+    <template v-else-if="detail">
+      <!-- 无效：红条 + 修改后重新提交（仅 editable=true） -->
+      <NoteBar v-if="isInvalid" tone="danger" :text="invalidReason" />
+      <view v-if="canResubmit" class="lqg-bar det__bar">
+        <button class="det__btn" @click="resubmit">
+          修改后重新提交
+        </button>
+      </view>
+
+      <!-- ① 送检信息 -->
+      <view class="lqg-gl">送检信息</view>
+      <view class="lqg-card lqg-card--flush det__card">
+        <view class="det__row">
+          <text class="det__k">核验状态</text>
+          <StatusChip :value="verifyStatus" />
+        </view>
+        <!-- 内部编号：接口给了才渲染这一行（CR-20260918-07；开关在后端） -->
+        <view v-if="has(internalNo)" class="det__row">
+          <text class="det__k">内部编号</text>
+          <text class="det__v lqg-mono">{{ internalNo }}</text>
+        </view>
+        <view v-for="row in rows" :key="row.label" class="det__row">
+          <text class="det__k">{{ row.label }}</text>
+          <text class="det__v" :class="{ 'lqg-mono': row.mono }">{{ row.value }}</text>
+        </view>
+      </view>
+
+      <!-- ② 石蜡包埋情况（AUTH-EXT-002）：每条记录一张卡，含还没核验的送样 -->
+      <view class="lqg-gl">石蜡包埋情况</view>
+      <view class="det__embeds">
+        <template v-if="embeds.length">
+          <EmbedCard v-for="embed in embeds" :key="String(embed.id)" :embed="embed" />
+        </template>
+        <view v-else class="lqg-card">
+          <text class="det__empty">暂无包埋记录</text>
+        </view>
+      </view>
+
+      <!-- ③ 质控文档（DOC-MP-001 接外部清单；点条目进预览占位页） -->
+      <view class="lqg-gl">质控文档</view>
+      <view v-if="docs.length" class="lqg-card lqg-card--flush det__card">
+        <view
+          v-for="doc in docs"
+          :key="String(doc.docKind)"
+          class="det__doc"
+          @click="openDoc(doc.docKind)"
+        >
+          <view class="det__docmain">
+            <text class="det__docname">{{ docKindLabel(doc.docKind) }}</text>
+            <text class="det__doctime">{{ doc.publishedTime }}</text>
+          </view>
+          <text v-if="scoreText(doc)" class="det__score lqg-num">{{ scoreText(doc) }}</text>
+          <text class="det__arrow">›</text>
+        </view>
+      </view>
+      <view v-else class="lqg-card det__card">
+        <text class="det__empty">结果出具后会显示在这里</text>
+      </view>
+    </template>
+  </view>
+</template>
+
+<style lang="scss" scoped>
+.det {
+  padding: var(--lqg-sp-5) 0 calc(var(--lqg-sp-7) + env(safe-area-inset-bottom));
+}
+
+.det__bar {
+  margin-top: var(--lqg-sp-5);
+}
+
+/* 整块卡片左右留屏边距（落地规范 §7：屏边距 16，G14） */
+.det__card {
+  margin: 0 var(--lqg-gutter);
+}
+
+/* 第③段：每份文档一行（点一行进预览占位页） */
+.det__doc {
+  display: flex;
+  align-items: center;
+  gap: var(--lqg-sp-4);
+  min-height: var(--lqg-cell-h);
+  padding: var(--lqg-sp-5) var(--lqg-sp-6);
+  border-top: 1px solid var(--lqg-line);
+}
+
+.det__doc:first-child {
+  border-top: none;
+}
+
+.det__docmain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.det__docname {
+  font-size: var(--lqg-fs-body);
+  color: var(--lqg-ink);
+}
+
+.det__doctime {
+  font-size: var(--lqg-fs-sm);
+  color: var(--lqg-ink-3);
+}
+
+.det__score {
+  flex: none;
+  font-size: var(--lqg-fs-body);
+  font-weight: var(--lqg-fw-semibold);
+  color: var(--lqg-primary);
+}
+
+.det__arrow {
+  flex: none;
+  font-size: var(--lqg-fs-title);
+  color: var(--lqg-ink-3);
+}
+
+/* 第②段：一叠包埋卡片（每条一张），左右留 gutter、卡片之间留间距 */
+.det__embeds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lqg-sp-4);
+  padding: 0 var(--lqg-gutter);
+}
+
+.det__btn {
+  width: 100%;
+  height: var(--lqg-btn-h);
+  line-height: var(--lqg-btn-h);
+  font-size: var(--lqg-fs-title);
+  font-weight: var(--lqg-fw-semibold);
+  color: var(--lqg-on-primary);
+  background: var(--lqg-primary);
+  border: none;
+  border-radius: var(--lqg-radius-ctl);
+  box-shadow: var(--lqg-shadow-brand);
+}
+
+.det__btn::after {
+  border: none;
+}
+
+.det__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lqg-sp-5);
+  min-height: var(--lqg-cell-h);
+  padding: var(--lqg-sp-5) var(--lqg-sp-6);
+}
+
+.det__k {
+  font-size: var(--lqg-fs-body);
+  color: var(--lqg-ink-3);
+  flex: none;
+}
+
+.det__v {
+  font-size: var(--lqg-fs-body);
+  color: var(--lqg-ink);
+  text-align: right;
+}
+
+.det__empty {
+  font-size: var(--lqg-fs-body);
+  color: var(--lqg-ink-3);
+}
+</style>

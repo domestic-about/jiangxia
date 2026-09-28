@@ -1,0 +1,143 @@
+// 类器官送检 · 方向 A 范式类（样式真源）
+// 落地位置：code/miniapp/src/style/components.scss，由 src/style/index.scss 在 tokens.scss 之后 @import。
+// 只引用 tokens.scss 的变量，零色值。小程序 wxss 不支持否定伪类与通配选择器，本文件一律不用。
+// 页面优先用 wd-* 组件；wd-* 覆盖不到的展示件用这里的类，别在页面里各自手写白卡。
+
+/* —— 全局壳 —— */
+page {
+  background-color: var(--lqg-bg);
+  color: var(--lqg-ink);
+  font-family: var(--lqg-font);
+  font-size: var(--lqg-fs-base);
+}
+.lqg-mono { font-family: var(--lqg-font-mono); letter-spacing: 0; }
+.lqg-num { font-variant-numeric: tabular-nums; }
+
+/* —— 卡片：白底 + 柔阴影，不描边 —— */
+.lqg-card {
+  background: var(--lqg-card);
+  border-radius: var(--lqg-radius-card);
+  box-shadow: var(--lqg-shadow-sm);
+  padding: var(--lqg-sp-6);
+}
+.lqg-card--flush { padding: 0; overflow: hidden; }
+
+/* —— 区块标题行：左标题 600/15，右说明 12 弱色 —— */
+.lqg-sec {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 22px var(--lqg-sp-8) var(--lqg-sp-5);
+}
+.lqg-sec__t { font-size: var(--lqg-fs-title); font-weight: var(--lqg-fw-semibold); }
+.lqg-sec__x { font-size: var(--lqg-fs-sm); color: var(--lqg-ink-3); }
+
+/* —— cell 分组标题（wd-cell-group 上方那行）—— */
+.lqg-gl {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--lqg-sp-8) var(--lqg-sp-8) var(--lqg-sp-3);
+  font-size: var(--lqg-fs-body); font-weight: var(--lqg-fw-medium); color: var(--lqg-ink-2);
+}
+.lqg-gl__x { font-size: var(--lqg-fs-xs); font-weight: var(--lqg-fw-regular); color: var(--lqg-ink-3); }
+
+/* —— 首页入口宫格（EntryTile）—— */
+.lqg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lqg-gap); padding: 0 var(--lqg-gutter); }
+.lqg-tile {
+  background: var(--lqg-card); border-radius: var(--lqg-radius-card); box-shadow: var(--lqg-shadow-sm);
+  padding: var(--lqg-sp-7) var(--lqg-sp-6); display: flex; flex-direction: column; gap: var(--lqg-sp-6);
+}
+.lqg-tile--full { grid-column: span 2; flex-direction: row; align-items: center; }
+.lqg-tile__t { font-size: var(--lqg-fs-title); font-weight: var(--lqg-fw-semibold); }
+.lqg-tile__d { margin-top: 3px; font-size: var(--lqg-fs-sm); color: var(--lqg-ink-2); }
+.lqg-well {
+  width: 42px; height: 42px; flex: none; border-radius: var(--lqg-radius-ctl);
+  background: var(--lqg-primary-soft); color: var(--lqg-primary);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* —— 提示条（首页底部说明、页内提醒）—— */
+.lqg-note {
+  margin: var(--lqg-sp-7) var(--lqg-gutter) 0; padding: var(--lqg-sp-5) var(--lqg-sp-6);
+  border-radius: var(--lqg-radius-ctl); background: var(--lqg-primary-soft);
+  font-size: var(--lqg-fs-sm); color: var(--lqg-ink-2); display: flex; align-items: center; gap: var(--lqg-sp-3);
+}
+.lqg-note--warn { background: var(--lqg-warn-soft); color: var(--lqg-warn); }
+.lqg-note--danger { background: var(--lqg-danger-soft); color: var(--lqg-danger); }
+
+/* —— 按钮组（SegButtons）：模板写「按钮」的地方一律用它 —— */
+.lqg-seg { display: flex; gap: var(--lqg-sp-2); flex-wrap: wrap; }
+.lqg-seg__item {
+  min-width: 46px; height: 30px; padding: 0 var(--lqg-sp-4); border-radius: var(--lqg-radius-seg);
+  background: var(--lqg-inset); color: var(--lqg-ink-2); font-size: var(--lqg-fs-base);
+  display: flex; align-items: center; justify-content: center;
+}
+.lqg-seg__item--on {
+  background: var(--lqg-primary-soft); color: var(--lqg-primary);
+  font-weight: var(--lqg-fw-semibold); box-shadow: inset 0 0 0 1px var(--lqg-primary);
+}
+
+/* —— 状态徽标（StatusChip）：浅底深字，按字典值取色 —— */
+.lqg-tag {
+  display: inline-flex; align-items: center; padding: 3px var(--lqg-sp-3); border-radius: var(--lqg-radius-badge);
+  font-size: var(--lqg-fs-xs); font-weight: var(--lqg-fw-medium); white-space: nowrap;
+}
+.lqg-tag--internal, .lqg-tag--primary { background: var(--lqg-primary-soft); color: var(--lqg-primary); }
+.lqg-tag--external { background: var(--lqg-ext-soft); color: var(--lqg-ext); }
+.lqg-tag--pending, .lqg-tag--draft, .lqg-tag--ocr { background: var(--lqg-warn-soft); color: var(--lqg-warn); }
+.lqg-tag--valid, .lqg-tag--published { background: var(--lqg-ok-soft); color: var(--lqg-ok); }
+.lqg-tag--invalid, .lqg-tag--overdue { background: var(--lqg-danger-soft); color: var(--lqg-danger); }
+.lqg-tag--ln2 { background: var(--lqg-ext-soft); color: var(--lqg-ext); }
+
+/* —— 识别条（OcrBar）—— */
+.lqg-ocr { margin: var(--lqg-sp-5) var(--lqg-gutter) 0; }
+.lqg-ocr__row { display: flex; gap: var(--lqg-sp-4); }
+.lqg-ocr__btn {
+  flex: 1; height: 44px; border-radius: var(--lqg-radius-ctl);
+  display: flex; align-items: center; justify-content: center; gap: var(--lqg-sp-2);
+  font-size: var(--lqg-fs-base); font-weight: var(--lqg-fw-semibold);
+}
+.lqg-ocr__btn--p { background: var(--lqg-primary); color: var(--lqg-on-primary); box-shadow: var(--lqg-shadow-brand); }
+.lqg-ocr__btn--s { background: var(--lqg-primary-soft); color: var(--lqg-primary); }
+.lqg-ocr__tip { margin-top: var(--lqg-sp-4); font-size: var(--lqg-fs-sm); color: var(--lqg-ink-3); }
+
+/* —— 底部固定栏（提交 / 保存 / 导出）—— */
+.lqg-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  background: var(--lqg-card); box-shadow: 0 -1px 0 var(--lqg-line);
+  padding: var(--lqg-sp-4) var(--lqg-gutter) calc(var(--lqg-sp-4) + env(safe-area-inset-bottom));
+}
+.lqg-bar-spacer { height: calc(var(--lqg-btn-h) + 20px + env(safe-area-inset-bottom)); }
+
+/* —— 内部管理表格页（SheetTabs + LedgerTable）—— */
+.lqg-sheets {
+  margin: var(--lqg-sp-5) var(--lqg-gutter) 0; padding: var(--lqg-sp-1);
+  background: var(--lqg-card); border-radius: var(--lqg-radius-ctl); box-shadow: var(--lqg-shadow-sm); display: flex;
+}
+/* 页签文字一律不折行（Kevin 2026-09-24 本机验收）：页签用短名（entries.ts#ENTRY_SHORT），万一窄屏放不下就省略号收尾，
+   不折成两行、也不把切换条撑出屏幕 */
+.lqg-sheets__item {
+  flex: 1; min-width: 0; text-align: center; padding: var(--lqg-sp-3) 0; font-size: var(--lqg-fs-body); color: var(--lqg-ink-2); border-radius: var(--lqg-radius-seg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lqg-sheets__item--on { background: var(--lqg-primary); color: var(--lqg-on-primary); font-weight: var(--lqg-fw-semibold); }
+.lqg-filter { display: flex; gap: var(--lqg-sp-3); margin: var(--lqg-sp-5) var(--lqg-gutter) 0; }
+.lqg-filter__chip {
+  height: 38px; padding: 0 var(--lqg-sp-5); display: flex; align-items: center; gap: var(--lqg-sp-1);
+  background: var(--lqg-card); border-radius: var(--lqg-radius-field); box-shadow: var(--lqg-shadow-sm); font-size: var(--lqg-fs-body);
+}
+.lqg-count { margin: 14px var(--lqg-sp-8) var(--lqg-sp-3); font-size: var(--lqg-fs-sm); color: var(--lqg-ink-3); }
+.lqg-ledger { margin: 0 var(--lqg-gutter); background: var(--lqg-card); border-radius: var(--lqg-radius-card); box-shadow: var(--lqg-shadow-sm); overflow: hidden; }
+.lqg-ledger__th { background: var(--lqg-table-head); color: var(--lqg-ink-2); font-size: var(--lqg-fs-sm); font-weight: var(--lqg-fw-semibold); padding: var(--lqg-sp-4) var(--lqg-sp-5); white-space: nowrap; }
+.lqg-ledger__td { padding: 9px var(--lqg-sp-5); border-top: 1px solid var(--lqg-line); font-size: var(--lqg-fs-body); white-space: nowrap; background: var(--lqg-card); }
+.lqg-ledger__fz { position: sticky; left: 0; z-index: 1; width: 118px; box-shadow: 1px 0 0 var(--lqg-line), var(--lqg-shadow-freeze); }
+.lqg-ledger__fz-sub { display: block; margin-top: 2px; font-size: var(--lqg-fs-xs); color: var(--lqg-ink-3); }
+.lqg-ledger__row--pending .lqg-ledger__td { background: var(--lqg-warn-row); }
+.lqg-ledger__row--pending .lqg-ledger__fz-sub { color: var(--lqg-warn); font-weight: var(--lqg-fw-semibold); }
+.lqg-ledger__row--overdue .lqg-ledger__td { background: var(--lqg-danger-row); }
+
+/* —— 底部弹层内容（wd-popup 里用）—— */
+.lqg-sheet { padding: var(--lqg-sp-7) var(--lqg-gutter) calc(var(--lqg-sp-7) + env(safe-area-inset-bottom)); }
+.lqg-sheet__head { display: flex; align-items: center; justify-content: space-between; gap: var(--lqg-sp-3); }
+
+/* —— 空态 / 加载 / 失败（EmptyState / LoadingState / ErrorState）—— */
+.lqg-state { padding: 48px var(--lqg-gutter); display: flex; flex-direction: column; align-items: center; gap: var(--lqg-sp-5); text-align: center; }
+.lqg-state__text { font-size: var(--lqg-fs-body); color: var(--lqg-ink-3); }
+.lqg-skel { background: var(--lqg-inset); border-radius: var(--lqg-radius-seg); }

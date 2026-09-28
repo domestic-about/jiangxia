@@ -1,0 +1,29 @@
+# 小程序自定义组件「死键」自检：修复前 vs 修复后（2026-09-28）
+# 时间：2026-09-28 14:02:53 +0800
+# 判据：doc/waves/tools/check-mp-component-events.py（查编译产物）
+
+## 症状（Kevin 报）
+小程序里「首页·填写」四个板块、以及「我的」页的历史编辑记录/内部管理/协议与隐私都**点不动**，但 H5 上正常。
+
+## 根因
+源码里是 <EntryTile @click=… /> 与 <MeRow @click=… /> —— **在自定义组件上绑 @click**：
+  · H5：Vue 3 用 attrs 兜底，把 onClick 挂到组件根 DOM → 能点（所以 H5 正常）
+  · 小程序：编成自定义组件标签的 bindclick，只有子组件自己 emit('click') 才触发
+  而 EntryTile / MeRow 既没 defineEmits 也不 emit → 小程序里点了毫无反应。
+  这类错**编译不报错、H5 也看不出来**，只有真机/开发者工具才暴露。
+
+## 修复前产物（/tmp/mp-broken）跑判据的输出
+✗ 发现 6 处死键（绑了事件，但子组件从不 triggerEvent）—— 小程序里点了没反应：
+  · components/biz/EntryGrid.wxml：<entry-tile> 绑了 bindclick，但 components/ui/EntryTile.js 里没有 triggerEvent("click")
+  · components/biz/InternalAdminBlock.wxml：<me-row> 绑了 bindclick，但 components/biz/MeRow.js 里没有 triggerEvent("click")
+  · pages/me/index.wxml：<me-row> 绑了 bindclick，但 components/biz/MeRow.js 里没有 triggerEvent("click")
+  · pages/me/index.wxml：<me-row> 绑了 bindclick，但 components/biz/MeRow.js 里没有 triggerEvent("click")
+  · pages/me/index.wxml：<me-row> 绑了 bindclick，但 components/biz/MeRow.js 里没有 triggerEvent("click")
+  · pages/me/index.wxml：<me-row> 绑了 bindclick，但 components/biz/MeRow.js 里没有 triggerEvent("click")
+
+修法：在子组件里 `const emit = defineEmits<{ (e: 'click', ev: unknown): void }>()`，
+
+  ↑ 恰好 6 处，与 Kevin 截图里两个红框一一对应：
+    · components/biz/EntryGrid.wxml 的 <entry-tile>  → 首页「填写」四格
+    · components/biz/InternalAdminBlock.wxml 的 <me-row> → 「我的·内部管理」四行
+    · pages/me/index.wxml 的 <me-row> ×4        → 历史编辑记录 / 修改单位与组别 / 用户协议 / 隐私政策

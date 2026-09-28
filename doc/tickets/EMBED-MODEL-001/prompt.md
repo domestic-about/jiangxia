@@ -112,6 +112,55 @@ accept:
       先 UPDATE 再校验（或事务没回滚）→ 被拒之后库内不是 pending|- 红。
       PUT 的入参带着 verifyStatus 且被写进库 → 最后一段不是 valid 红：状态只许经核验接口改。
       没复用 VerifyTransitions、自己写了一份少了某条转移 → 完工报告里单测对照表会对不上（本条断的是这几条最容易漏的路径）。
+  - name: "外部送样的读写口不泄露记录在不在（CR-20260923-09，issue #299）：看不见的石蜡块与样本，和根本不存在的 id 相比业务码与提示逐字相同（404）；看得见但不是本人的、所挂样本已判无效的才回 400；每次被拒库里都不变"
+    form: STATE
+    run: |-
+      bash doc/verify/reseed.sh --yes >/dev/null &&
+      bash doc/verify/api.sh --as extC --fresh-module ruoyi-lqg GET /mp/me >/dev/null &&
+      test "$(bash doc/verify/api.sh --as extC --bizcode PUT /mp/ext/embed/9000002001 '{"sampleType":"x"}')" = "$(bash doc/verify/api.sh --as extC --bizcode PUT /mp/ext/embed/999999999 '{"sampleType":"x"}')" &&
+      bash doc/verify/api.sh --as extC --bizcode PUT /mp/ext/embed/9000002001 '{"sampleType":"x"}' | grep -qE '^404' &&
+      test "$(bash doc/verify/api.sh --as extC --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"x"}')" = "$(bash doc/verify/api.sh --as extC --bizcode POST /mp/ext/embed '{"sampleId":999999999,"sampleType":"x"}')" &&
+      bash doc/verify/api.sh --as extC --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"x"}' | grep -qE '^404' &&
+      test "$(bash doc/verify/api.sh --as extC --bizcode GET /mp/ext/embed/9000002001)" = "$(bash doc/verify/api.sh --as extC --bizcode GET /mp/ext/embed/999999999)" &&
+      bash doc/verify/api.sh --as extC --bizcode GET /mp/ext/embed/9000002001 | grep -qE '^404' &&
+      bash doc/verify/api.sh --as extB --bizcode PUT /mp/ext/embed/9000002006 '{"sampleType":"x"}' | grep -qE '^400' &&
+      bash doc/verify/api.sh --as extB --bizcode POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"x"}' | grep -qE '^400' &&
+      bash doc/verify/api.sh --as extA --bizcode POST /mp/ext/embed '{"sampleId":9000001003,"sampleType":"x"}' | grep -qE '^400' &&
+      python3 doc/verify/db.py --sql "SELECT (SELECT count(*) FROM t_lqg_embed WHERE sample_type='x') || '|' || (SELECT count(*) FROM t_lqg_embed WHERE submit_source='external') || '|' || (SELECT sample_type FROM t_lqg_embed WHERE id=9000002001)" --eq "0|1|组织" &&
+      bash doc/verify/reseed.sh --yes >/dev/null
+    counterfeit: |-
+      `EmbedExternalService` 自己按 id 查记录和样本：别人的回 400「只能改本人的」、不存在的回 404 → PUT / POST 两组逐字比对红：400 与 404 之差就是「这个 id 有没有」的预言机，雪花 id 难猜也不该留。
+      读口与写口各写一句提示（例如 GET 看不见的回「样本不存在」、不存在的回「石蜡包埋记录不存在」）→ GET 那组红：可见性只在 `ExtScopeService` 一处判，读写同一句。
+      只比对不断码 → 两边都连不上时空串相等也会过，所以每组后面再断一次 404。
+      把「看得见但不是本人的」也改成 404 → extB / extA 那三段 `^400` 红：同组的人在详情里明明看得见这条，写口却说它不存在，自相矛盾。
+      先写库再判可见（或事务没回滚）→ 最后的库内计数红：被拒之后库里不能多出外部送样、2001 的样本类型也不能被改成 x。
+  - name: "核验时一并保存补填段（CR-20260923-09，V02b）：判有效时带 fill，补填的工序时间、染色、marker、备注与核验结论同一次落库；fill 不合规（无染色与其余并存）、判无效却带实验室补填项、fill 里夹带所挂样本——整次被拒且库里一个字不变；判无效只存原因与样本类型的更正"
+    form: STATE
+    run: |-
+      bash doc/verify/reseed.sh --yes >/dev/null &&
+      v() { bash doc/verify/api.sh --as staff --bizcode PUT /lqg/embed/9000002006/verify "$1"; } &&
+      row() { python3 doc/verify/db.py --quiet --sql "SELECT e.verify_status || '|' || COALESCE(e.paraffin_block_no,'-') || '|' || COALESCE(e.sample_type,'-') || '|' || COALESCE(e.dehydrate_time::text,'-') || '|' || COALESCE(e.stain_types,'-') || '|' || COALESCE(e.remark,'-') || '|' || COALESCE(e.invalid_reason,'-') || '|' || (SELECT count(*) FROM t_lqg_embed_marker m WHERE m.embed_id=e.id AND m.del_flag='0') FROM t_lqg_embed e WHERE e.id=9000002006" | head -1; } &&
+      bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg PUT /lqg/sample/9000001002/verify '{"action":"valid","receiveDate":"2026-09-17","internalNo":"T-hli77"}' | jq -e '.code==200' &&
+      test "$(row)" = "pending|-|组织|-|-|-|-|0" &&
+      ! v '{"action":"valid","paraffinBlockNo":"T-F5-X","fill":{"stainTypes":["NONE","HE"],"dehydrateTime":"2026-09-19"}}' | grep -qE '^200' &&
+      test "$(row)" = "pending|-|组织|-|-|-|-|0" &&
+      v '{"action":"invalid","reason":"信息不符","fill":{"sampleType":"组织（更正）","dehydrateTime":"2026-09-19","stainTypes":["HE"]}}' | grep -qE '^400.*脱水时间' &&
+      test "$(row)" = "pending|-|组织|-|-|-|-|0" &&
+      v '{"action":"valid","paraffinBlockNo":"T-F5-X","fill":{"sampleId":9000001005,"dehydrateTime":"2026-09-19"}}' | grep -qE '^400' &&
+      test "$(row)" = "pending|-|组织|-|-|-|-|0" &&
+      v '{"action":"invalid","reason":"信息不符","fill":{"sampleType":"组织（更正）"}}' | grep -qE '^200' &&
+      test "$(row)" = "invalid|-|组织（更正）|-|-|-|信息不符|0" &&
+      v '{"action":"valid","paraffinBlockNo":"T-F5-1","fill":{"dehydrateTime":"2026-09-19","stainTypes":["IHC","HE"],"markers":[{"markerName":"Ki67","expression":"strong"}],"remark":"核验时补填"}}' | grep -qE '^200' &&
+      test "$(row)" = "valid|T-F5-1|组织（更正）|2026-09-19|HE,IHC|核验时补填|-|1" &&
+      bash doc/verify/reseed.sh --yes >/dev/null
+    counterfeit: |-
+      核验接口不认 fill、抽屉里补填的内容被静默丢弃（CR-20260923-09 之前的形态，issue #147）→ 最后一段库里脱水时间、染色、备注仍是空、marker 0 行，红。
+      fill 另起一个请求或另一个事务先存、再判核验 → 第 6 段（无染色与 HE 并存被拒）之后脱水时间已经落库，第 7 段红：核验被拒了，补填段却改了。
+      fill 不走石蜡包埋修改的同一份规则（EmbedFillRules）→ 无染色与 HE 并存被放行，第 6 段拿到 200 红。
+      判无效时把实验室补填项也照存、或静默丢掉却回 200 → 第 8 段不是 400「脱水时间…」红：界面必须在原因弹窗里明说这些不保存，接口带了就拒。
+      fill 能夹带 sampleId 换掉所挂样本 → 第 10 段不是 400 红：所挂样本核验时不能换。
+      判无效时样本类型的更正没随原因一起存 → 第 13 段不是「组织（更正）」红；改判有效时没清掉 invalid_reason → 最后一段不是「-」红。
+      每个被拒后面都跟一次整行比对：只看业务码的话，先落盘再报错也是绿的。
 ---
 
 # EMBED-MODEL-001 · 石蜡包埋送样记录：建模、染色与 marker 的校验规则、内部增删改查接口、外部送样的提交与核验状态机
@@ -152,9 +201,13 @@ accept:
   内部新增落 `submit_source='internal'`、`verify_status='valid'`、`submitter_id = verify_by = 当前用户`。`PUT /lqg/embed`：记录是待核验或无效 → 400。
 - 新建时 `tissue_receive_time`、`tissue_process_time` 未传则从样本带出（处理时间取日期部分）。
 - 列表每行读时带出 `internalNo`、`sourceUnitName`、`submitNo`、`sampleVerifyStatus`（所挂样本的核验状态，工作台核验抽屉据此置灰「判为有效」）；筛选：`paraffinBlockNo`、`internalNo`、`sampleId`、`stain`、`sectionTimeBegin/End`、`verifyStatus`、`submitSource`；待核验置顶，其余按创建时间倒序。
-- 核验：`EmbedVerifyService` + `PUT /lqg/embed/{id}/verify`（`{action, paraffinBlockNo, reason}`），转移合法性调 `VerifyTransitions.check`；判有效落编号、`verify_by`、`verify_time`，清 `invalid_reason`。
+- 核验：`EmbedVerifyService` + `PUT /lqg/embed/{id}/verify`（`{action, paraffinBlockNo, reason, fill?}`），转移合法性调 `VerifyTransitions.check`；判有效落编号、`verify_by`、`verify_time`，清 `invalid_reason`。
+  **核验一并保存补填段**（CR-20260923-09，V02b，`FLOW:F-EMBED-01.step7`）：`fill` 可选，键为 `PUT /lqg/embed` 去掉 `id`、`sampleId`、`paraffinBlockNo` 后的 15 项；补丁语义与校验同 `PUT /lqg/embed`（`EmbedFillRules` + `EmbedFillWriter` 同一份），与核验结论拼进同一个事务；判有效 15 项都收；判无效只收 `sampleType`、`organoidSourceType`，带其余 13 项回 400 并写明是哪几项；`fill` 里带 `sampleId` 或 `paraffinBlockNo` → 400；任何一条被拒库里都不变；不带 `fill`（或 `fill:null`）= 补填段不动（老调用方不受影响）。
+  调用方（CR-20260924-10）：工作台核验抽屉，以及小程序内部人员的核验页（`UI:mp.verify.embed`，mp client token、`lqg_internal`，权限串 `lqg:embed:verify` 同一个；外部 403）。小程序的 `fill` 只带改过的键，一项没改就不带；业务拒绝（如所挂样本还未核验有效、石蜡块编号重复）目前回的是 `ServiceException` 缺省码而不是 400，小程序与工作台都按「非 200 就原样显示后端原话」处理。
 - 外部送样（只写 service，外部 controller 在 AUTH-EXT-002）：`EmbedExternalService.submit(userId, sampleId, sampleType, organoidSourceType)`、`resubmit(userId, embedId, …)`——
   校验样本 `submitter_id == userId` 且样本状态 ≠ invalid；resubmit 另校验记录 `submitter_id == userId` 且状态 ∈ {pending, invalid}，改完回到 pending 并清 `invalid_reason / verify_by / verify_time`。
+  **可见性不在本类里判**（CR-20260923-09，issue #299）：挂样走 `ExtScopeService.assertUsableForEmbed`，按记录走 `ExtScopeService.assertEmbedVisible`——不可见、不存在、已软删同一个 404、同一句提示（「样本不存在」/「石蜡包埋记录不存在」，读口写口同一句），看得见之后才判「本人 / 没被判无效」，不满足回 400。
+  本类因此不持有样本的 mapper；`EmbedExternalScopeContractTest`（本票 test 目录下）钉住这条结构与「不可见 = 不存在」的行为。resubmit 的判定顺序：可见 → 本人 → 状态 → 字段 → 换挂的新样本。
 - 注册一个 `SampleChildrenChecker`：该样本名下有未删且**已核验有效**的石蜡块 → true（样本不许再改判无效）。
 
 ## 3 边界（明确不做）
@@ -172,3 +225,9 @@ accept:
 2. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 3. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 4. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+## 5 票面更新
+
+- 2026-09-23 按 CR-20260923-09 更新：新增 accept 5——外部送样的 PUT / POST / GET 对看不见的记录与根本不存在的 id（999999999）码与提示逐字相同且为 404，看得见但不是本人的、已判无效的回 400，被拒后库里不变；§2 写明可见性统一交给 `ExtScopeService`。
+- 2026-09-23 按 CR-20260923-09 更新（F5 石蜡包埋核验抽屉，V02b；权威 FLOW:F-EMBED-01.step7 变更）：§2 核验入参加上 `fill`（15 项补填、补丁语义与校验同 `PUT /lqg/embed`、同一事务；判无效只收样本类型与类器官来源类型）；新增 accept 6——2006 带非法 fill、判无效带实验室补填项、fill 夹带 sampleId 都被拒且库里整行不变，判无效只存原因与样本类型更正，判有效带合法 fill 后补填段与 marker 同一次落库。
+- 2026-09-24 按 CR-20260924-10 更新：§2 核验一段补「小程序核验页也调这个接口、fill 只带改过的键」（FLOW:F-EMBED-01.step7 的 actor 改为 mp/admin）；accept 逐条核过不用改。

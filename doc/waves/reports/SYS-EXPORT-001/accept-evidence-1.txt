@@ -1,0 +1,24 @@
+== 0) reseed + 清旧文件 ==
+reseed rc=0
+== 1) tissue 全量 ==
+  文件：4620 bytes
+  库内独立计数：8
+✓ 表头 14 列与模板逐字一致；数据 8 行
+== 2) organoid 全量 ==
+  文件：3905 bytes
+✓ 表头 7 列与模板逐字一致；数据 1 行
+== 3) embed 全量 ==
+  文件：4431 bytes
+  库内独立计数：5
+✓ 表头 16 列与模板逐字一致；数据 5 行
+== 4) cryo 全量 ==
+  文件：4485 bytes
+✓ 表头 11 列与模板逐字一致；数据 7 行
+== 5) tissue 带筛选 verifyStatus=pending ==
+  文件：4118 bytes
+✓ 表头 14 列与模板逐字一致；数据 2 行
+== 6) extA 打导出 ==
+  grep -qE '^403' rc=0
+== 7) 未知工作表 ==
+  grep -qE '^(400|404)' rc=0
+ALL SEGMENTS rc=0

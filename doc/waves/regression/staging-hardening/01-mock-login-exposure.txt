@@ -1,0 +1,7 @@
+# 测试环境加固取证 ①：mock 登录越权可达性（2026-09-28）
+# 命令：LQG_VERIFY_ENV_FILE=doc/verify/verify.test.env bash doc/verify/api.sh --as staff GET /mp/me
+# 时间：2026-09-28 06:41:10 +0800
+
+--- 用 staff 身份（手机号 13800000001）走 mock 登录拿 token，再读 /mp/me ---
+{"code":200,"msg":"操作成功","data":{"userId":9000000101,"name":"李工","phoneMasked":"138****0001","identity":"internal","ext":null}}
+

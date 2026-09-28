@@ -1,0 +1,8 @@
+PASS  前置：库里 lqg_score_pre_culture/lt40 的 remark 是 8 — 8
+PASS  基线（seed：选中 lt40/gt14/lt100/lt30）：<40 旁「8 分」、该项 8、合计 18（8+0+0+10） — {"points":"8 分","itemScore":"8","total":"18"}
+PASS  ★ 把字典 remark 改成 88（走字典管理接口，缓存已失效） — 88
+PASS  ★ 页面跟着变：<40 那档「88 分」、该项 88、合计 98 → 分值不是前端写死的 — {"points":"88 分","itemScore":"88","total":"98"}
+PASS  收尾：字典 remark 已改回 8（GET 复读确认） — 8
+PASS  收尾：页面已回到「8 分」/ 18 合计 — {"points":"8 分","itemScore":"8","total":"18"}
+
+6/6 PASS

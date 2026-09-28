@@ -18,6 +18,7 @@ depends_on:
   - AUTH-EXT-002
 touches:
   - code/miniapp/src/pages/embed/**
+  - code/miniapp/src/components/lqg/SamplePickerExt.vue
   - code/miniapp/src/api/embed.ts
   - code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java/org/dromara/lqg/embed/mp/**
   - code/miniapp/src/pages/ledger/sheets.ts
@@ -89,13 +90,14 @@ accept:
       jq -e '.numFailedTests == 0 and .numPassedTests >= 9' /tmp/lqg-embed-layout.json &&
       node -e "const f=require('../../doc/verify/fixtures/embed-form-cases.json'); const c=f.cases; if(c.length!==9||f.externalFields.length!==3||c.filter(x=>x.identity==='external').some(x=>x.expect.fields.some(k=>!f.externalFields.includes(k)))||c.filter(x=>!x.expect.editable).length!==5) process.exit(1)" &&
       grep -q 'showEditEntry' src/pages/embed/layout.ts && grep -q 'showEditEntry' src/pages/embed/form.vue &&
-      ! grep -nE 'internalNo' src/pages/embed/SamplePickerExt.vue
+      test -f src/components/lqg/SamplePickerExt.vue && ! grep -nE 'internalNo' src/components/lqg/SamplePickerExt.vue
     counterfeit: |-
       外部复用内部全字段表单再隐藏 → 「外部新增」用例 fields 里带着 paraffinBlockNo / embedBy 红：字段名进了外部的包。
       外部 editable 漏了 mine → 「外部看同组别人的待核验」用例红。
       内部看外部送来的待核验可改 → 用例红：会绕过工作台核验。把 `mode=view` 直接做成可编辑（以为 CR-20260918-07 是「表格页能改了」）→ 「内部管理只读查看」用例红：进来仍是只读详情，改要先点「修改」。
       只读详情上没有「修改」入口、或把它写死在模板里不看身份与状态（外部、待核验的外部送样也冒出一个「修改」）→ showEditEntry 那两段红。
       外部选样本的下拉里显示内部编号 → 最后一段红（REQ-AUTH-013：不想让外部知道内部编号）。删病灶用例来过关 → node 那段红。
+      组件挪了位置或改了名、`! grep` 对着一个不存在的文件 → `test -f` 红（这一段原先写成 `src/pages/embed/SamplePickerExt.vue`，文件不在那里，`! grep` 读不到文件照样返回真，恒绿）。
 ---
 
 # EMBED-MP-001 · 小程序 · 石蜡包埋送样记录：填写页（内部全字段、外部送样两项；新增 / 修改 / 只读）、内部管理的石蜡包埋工作表（只读表格 + 只读详情里的「修改」入口）、历史编辑记录的石蜡包埋页签（内部看全中心）
@@ -114,12 +116,15 @@ accept:
     ② 「我的 → 历史编辑记录」内部视角改为**中心全部内部人员**的记录（甲方原话：「我们内部人员也有多个哦，江夏实验室所有的工作人员」），默认全列，顶部「只看我提交的」开关（默认关），每行显示经手人（`UI:mp.history`）
 - [ ] 口径复述（本张最容易做反的）：
   1. 保存**不要求填完**；再次打开是补填（也就是修改，从历史编辑记录进来），不是新建。
+     内部修改是**补丁语义**（CR-20260923-09）：请求体里没出现的键不改；出现且值为 `null` 或空串 = 清空（工序时间填错了能清掉）；清必填项（所挂样本、石蜡块编号）→ 400「所挂样本不能为空」/「石蜡块编号不能为空」，库里不变。
+     所以补填只传做完的那一步就行，要清掉一项必须显式传空，别在前端把空值过滤掉。
   2. 染色五按钮多选 + 无染色互斥，逻辑与工作台同一份 fixture。
   3. 日期选择器的 value 是毫秒时间戳，后端要 `yyyy-MM-dd`，输入输出两侧都要转（栈包 gotchas §6.3）。
   4. 石蜡包埋工作表的列来自 `ledgerColumns('embed')`（SAMPLE-MP-002 已定，fixture 已和模板原件对过），本张只注册工作表、接数据；冻结格 = 石蜡块编号（外部送样还没核验的显示送检单号 +「待核验」），第二行小字是工序进度小圆点。
-     **表格只读**（没有行内编辑、没有新增、没有核验），点一行进 `mode=view` 的只读详情；只读详情右上角「修改」切到 `mode=edit`，内部人员改得动任何人录的（CR-20260918-07）。
+     **表格只读**（没有行内编辑、没有新增，表格上不做核验），点一行进 `mode=view` 的只读详情；只读详情右上角「修改」切到 `mode=edit`，内部人员改得动任何人录的（CR-20260918-07）。
+     CR-20260924-10 起合作单位送来、**待核验的那一条点进去是小程序核验页**（`UI:mp.verify.embed`，`sheets.ts` 的 `target` 用 `verifyTarget('embed', id)`，核验页归 SAMPLE-MP-002）；本张注册的工作表只是去向换了，别再写死 `mode=view`。
   5. **外部填写页只渲染「选择样本」+ 样本类型 + 类器官来源类型**；选样本只列本人送检过、没被判无效的（送检单号 + 掩码供体姓名，不出现内部编号）。石蜡块编号、工序、染色、marker、包埋人、操作人、备注都不渲染。
-  6. **内部修改模式里，待核验、无效的外部送样只读**（核验在工作台），后端 `PUT /mp/int/embed` 对这两种状态直接拒绝。这条 CR-20260918-07 没动：能改别人录的，不等于能改外部送来还没核验的。
+  6. **内部修改模式里，待核验、无效的外部送样只读**（核验走核验页 `PUT /lqg/embed/{id}/verify`，小程序与工作台都能核，CR-20260924-10；改判只在工作台），顶部提示「核验请从首页「待处理」进入，改判请到网页工作台」；后端 `PUT /mp/int/embed` 对这两种状态直接拒绝。这条 CR-20260918-07 没动：能改别人录的，不等于能用普通保存改外部送来还没核验的。
   7. **历史编辑记录（内部）默认是全中心**（CR-20260918-07）：数据源 `GET /mp/int/embed/list?sort=recent`，不带 `mine`；顶部「只看我提交的」开关（默认关）打开才追加 `mine=true`。
      `sort=recent` 只管排序，别拿 `mine=true` 兼当排序；行上多一列经手人（`handlerName`）与 `mine` 标记（本人显示「我」）。
 
@@ -136,12 +141,13 @@ accept:
   list 的三个参数按跨 ticket 约定（CRYO-MP-001 / SAMPLE-MP-001 同款，CR-20260918-07）：`sort=recent` = 按 `COALESCE(update_time, create_time)` 倒序；
   `mine=true`（只在「只看我提交的」打开时带）= `create_by = 当前用户 OR update_by = 当前用户`；行上返回 `handlerName`（`update_by` 非空取最后修改人姓名，否则取新增人姓名）与布尔 `mine`。详情带 `updateByName / updateTime`。
   **PUT 不看是谁录的**：内部人员改得动中心里任何人录的记录（CR-20260918-07），拦的只有外部送来待核验 / 无效的那两种状态。
-- 在 `pages/ledger/sheets.ts` 注册 `embed` 工作表：数据 `/mp/int/embed/list`；筛选 = 搜索（石蜡块编号 / 内部编号）+ 核验状态 + 染色；点一行 → `pages/embed/form?id=&mode=view`（只读详情，通用挂法 SAMPLE-MP-002 已定）。
+  PUT 与工作台 `PUT /lqg/embed` 走同一个 `EmbedService.update`，补丁语义与必填见 §0 口径 1（CR-20260923-09）。
+- 在 `pages/ledger/sheets.ts` 注册 `embed` 工作表：数据 `/mp/int/embed/list`；筛选 = 搜索（石蜡块编号 / 内部编号）+ 核验状态 + 染色；点一行 → `pages/embed/form?id=&mode=view`（只读详情，通用挂法 SAMPLE-MP-002 已定）；待核验的那一条 → 核验页（CR-20260924-10）。
 - `pages/embed/form` 按 `UI:mp.embed.form`：布局由纯函数 `embedLayout(identity, verifyStatus, mine, mode)`（`src/pages/embed/layout.ts`）决定，`layout.fixture.spec.ts` 读 `doc/verify/fixtures/embed-form-cases.json`。
   返回值加一个 `showEditEntry`（CR-20260918-07）：`mode==='view' && identity==='internal' && 该记录内部可改`（即不是外部送来待核验 / 无效的）才为真——只读详情右上角的「修改」据此渲染，点它把本页 `mode` 切成 `edit`，不新开页。
   fixture 的 9 条用例与 `fields / editable / showCard` 期望**不变**（`mode=view` 进来仍然是只读），`showEditEntry` 是新增的返回键，不改 fixture。
   内部：选择样本（搜内部编号，只列有效样本；从样本修改页跳入时带好）→ 全字段；marker 多行增删；`POST / PUT /mp/int/embed`。
-  外部：选择样本（组件 `SamplePickerExt.vue`，数据 `GET /mp/ext/sample/list?onlyMine=true`、排除无效的，显示送检单号 + 掩码供体姓名）→ 样本类型、类器官来源类型 → `POST /mp/ext/embed`；`mode=edit` 回填后 `PUT /mp/ext/embed/{id}`；无效时顶部红条显示原因；有效后只读，展示石蜡块编号与已填的工序、染色、marker（复用 AUTH-EXT-002 的 `EmbedCard`）。
+  外部：选择样本（组件 `src/components/lqg/SamplePickerExt.vue`，直接 .vue 路径导入；数据 `GET /mp/ext/sample/list?onlyMine=true`、排除无效的，显示送检单号 + 掩码供体姓名）→ 样本类型、类器官来源类型 → `POST /mp/ext/embed`；`mode=edit` 回填后 `PUT /mp/ext/embed/{id}`；无效时顶部红条显示原因；有效后只读，展示石蜡块编号与已填的工序、染色、marker（复用 AUTH-EXT-002 的 `EmbedCard`）。
   修改模式顶部小字「最后修改：某某 · 时间」。`toggleStain` 放 `src/pages/embed/stain.ts` + `stain.fixture.spec.ts`（读 `doc/verify/fixtures/stain-toggle-cases.json`）。
 - 历史编辑记录：在 `pages/history/sources.ts` 注册 `embed`——外部 `GET /mp/ext/embed/list?onlyMine=`（外部接口本来就按最近倒序，不另收 `sort`），
   内部 `GET /mp/int/embed/list?sort=recent`（默认全中心；「只看我提交的」开关默认关，打开才追加 `mine=true`）（CR-20260918-07）；
@@ -151,7 +157,7 @@ accept:
 ## 3 边界（明确不做）
 
 - 小程序不做删除石蜡块（删除只在工作台）
-- 小程序不做核验
+- 本张不做核验页（CR-20260924-10 起小程序也能核验石蜡包埋送样，核验页 `pages/verify/embed` 归 SAMPLE-MP-002）；小程序不做改判
 - 表格页不做行内编辑、不做新增——改只走「只读详情 → 修改」这一条路（CR-20260918-07）
 - 表格页那条通用的「点一行进只读详情」挂法归 SAMPLE-MP-002，本张只把石蜡包埋这张表接上去
 - 不做导出（SYS-EXPORT-001）
@@ -163,3 +169,8 @@ accept:
 3. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 4. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 5. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+## 5 票面更新
+
+- 2026-09-23 按 CR-20260923-09 更新：accept 3 最后一段改查组件的真实位置 `src/components/lqg/SamplePickerExt.vue`（先 `test -f`，原路径不存在导致恒绿），touches 补上这个文件；§0 口径 1 与 §2 补内部修改的补丁语义（没出现的键不改、出现且为空即清空、清所挂样本或石蜡块编号回 400）。
+- 2026-09-24 按 CR-20260924-10 更新：小程序也能核验石蜡包埋送样——§0 口径 4、6 与 §2、§3 改写（表格里待核验的那一条进核验页、填写页只读时的提示换成新文案、核验页归 SAMPLE-MP-002）；accept 逐条核过不用改（`PUT /mp/int/embed` 对待核验仍拒、布局 fixture 未变）。

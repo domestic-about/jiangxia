@@ -1,0 +1,26 @@
+########## CRYO-MP-001 · 反 stale 等价证据（freshness）##########
+① jar：2026-09-22 12:51:24 174104024
+② 源码比 jar 新的文件（必须为空，两处：ruoyi-lqg 与 ruoyi-admin）：
+② 命中行数 = 0
+③ 8081 监听 PID = 4265
+   jar mtime = 2026-09-22 12:51:24 (1790052684)
+   进程启动  = 2026-09-22 12:51:33 (1790052693)
+   ✓ 进程不早于 jar
+④ 进程持有 jar：2
+⑤ 嵌套 jar 内含本票新 class（cryo/mp）：
+   org/dromara/lqg/cryo/mp/
+   org/dromara/lqg/cryo/mp/MpCryoQueryBo.class
+   org/dromara/lqg/cryo/mp/MpCryoQueryBo__Javadoc.json
+   org/dromara/lqg/cryo/mp/MpCryoService__Javadoc.json
+   org/dromara/lqg/cryo/mp/MpCryoService.class
+   org/dromara/lqg/cryo/mp/MpCryoController.class
+   org/dromara/lqg/cryo/mp/MpCryoController__Javadoc.json
+   命中 7 个条目
+⑥ flyway 里最新的三支（本票不新增迁移）：
+202609241210|CRYO-WEB-001-menu
+202609241205|CRYO-REMIND-001-config
+202609241200|CRYO-MODEL-001-cryo
+⑦ GET /lqg/sys/ping（--as staff）：
+200	操作成功
+⑧ GET /mp/int/cryo/batch/list（--as staff，本票新端点）：
+{"code":200,"total":7,"tabCounts":{"all":7,"overdue":2,"ln2":2}}

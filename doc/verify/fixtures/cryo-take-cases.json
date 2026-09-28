@@ -1,0 +1,27 @@
+{
+  "_doc": "冻存取用登记提交前的两条前端判据（2026-09-24 甲方「支数取空的要提示」+「小程序和工作台界面都能操作」，G 批 B2）。小程序 src/pages/cryo/flow.ts 与工作台 src/views/lqg/cryo/flow.ts 各有一份同名纯函数，两边的 spec 都读这一份用例，所以两端的规则只能一起改。字段：kind = take 取走 / add 补入；mode = new 新登记 / edit 改一笔（oldDelta = 被改那一笔原来的带符号支数，新登记为 0）；qty = 这次填的支数（正整数才合法）；remaining = 批次现在的剩余（读时算，接口给的 remainingQty）。期望：qtyProblem = null 合法 / invalid 支数不是正整数 / overRemaining 新登记的取走超过当前剩余（改一笔时不在前端判超取：那一刻的余额只有后端逐笔重算得出来）；remainingAfter = 保存后批次的剩余（qty 不合法时为 null）；confirm = 提交前要不要多问一句「登记后这一批就取空了（剩 0 支），确定吗？」—— 只有取走、且这一笔让剩余从大于 0 变成恰好 0 时才问。后端的逐笔校验不因此放松：前端只是别让人白点一次、以及在取空前多确认一下。",
+  "cases": [
+    { "name": "新登记取走，正好取到 0 支 → 要确认", "kind": "take", "mode": "new", "qty": 2, "remaining": 2, "oldDelta": 0,
+      "expect": { "qtyProblem": null, "remainingAfter": 0, "confirm": true } },
+    { "name": "新登记取走，还剩几支 → 不问", "kind": "take", "mode": "new", "qty": 1, "remaining": 4, "oldDelta": 0,
+      "expect": { "qtyProblem": null, "remainingAfter": 3, "confirm": false } },
+    { "name": "新登记取走超过剩余 → 前端先拦（后端同样会拒）", "kind": "take", "mode": "new", "qty": 5, "remaining": 4, "oldDelta": 0,
+      "expect": { "qtyProblem": "overRemaining", "remainingAfter": -1, "confirm": false } },
+    { "name": "已取空的批次再取 1 支 → 超取", "kind": "take", "mode": "new", "qty": 1, "remaining": 0, "oldDelta": 0,
+      "expect": { "qtyProblem": "overRemaining", "remainingAfter": -1, "confirm": false } },
+    { "name": "支数填 0 → 不合法", "kind": "take", "mode": "new", "qty": 0, "remaining": 4, "oldDelta": 0,
+      "expect": { "qtyProblem": "invalid", "remainingAfter": null, "confirm": false } },
+    { "name": "支数带小数 → 不合法", "kind": "add", "mode": "new", "qty": 1.5, "remaining": 4, "oldDelta": 0,
+      "expect": { "qtyProblem": "invalid", "remainingAfter": null, "confirm": false } },
+    { "name": "补入从来不问取空（哪怕原来是 0）", "kind": "add", "mode": "new", "qty": 2, "remaining": 0, "oldDelta": 0,
+      "expect": { "qtyProblem": null, "remainingAfter": 2, "confirm": false } },
+    { "name": "改一笔取走：原取 2 改成取 3，现剩 1 → 改完正好 0，要确认", "kind": "take", "mode": "edit", "qty": 3, "remaining": 1, "oldDelta": -2,
+      "expect": { "qtyProblem": null, "remainingAfter": 0, "confirm": true } },
+    { "name": "改一笔取走但支数没变，批次本来就是 0 → 不是「变成」0，不问", "kind": "take", "mode": "edit", "qty": 3, "remaining": 0, "oldDelta": -3,
+      "expect": { "qtyProblem": null, "remainingAfter": 0, "confirm": false } },
+    { "name": "改一笔取走：原取 1 改成取 2，现剩 4 → 还剩 3，不问", "kind": "take", "mode": "edit", "qty": 2, "remaining": 4, "oldDelta": -1,
+      "expect": { "qtyProblem": null, "remainingAfter": 3, "confirm": false } },
+    { "name": "改一笔取走改大到透支：前端不判（交给后端逐笔校验并原样提示）", "kind": "take", "mode": "edit", "qty": 9, "remaining": 1, "oldDelta": -2,
+      "expect": { "qtyProblem": null, "remainingAfter": -6, "confirm": false } }
+  ]
+}

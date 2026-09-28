@@ -1,5 +1,5 @@
 {
-  "_doc": "SAMPLE-MP-002 的验收用例（小程序内部表格页，CR-20260917-04）。被测函数：ledgerColumns(sheet) → { frozen: {key, label}, columns: [{key, label}] }。规则：冻结列 = frozen；其余列 = 模板第 1 行（template，由脚本从甲方 xlsx 原件读出、accept 里再逐字 diff 一次）去掉冻结列后按原顺序，再追加 extra。spec 只比 label：frozen.label === frozen、columns.map(c => c.label) 深相等 expect。改列名只能改模板原件，不能改这里迁就代码。",
+  "_doc": "SAMPLE-MP-002 的验收用例（小程序内部表格页，CR-20260917-04）。被测函数：ledgerColumns(sheet) → { frozen: {key, label}, columns: [{key, label}] }。规则：冻结列 = frozen；其余列 = 模板第 1 行（template，由脚本从甲方 xlsx 原件读出、accept 里再逐字 diff 一次）去掉冻结列后按原顺序，把 inserted（没有这个键 = 空）里的每一列插到它的 after 列后面，再追加 extra。spec 只比 label：frozen.label === frozen、columns.map(c => c.label) 深相等 expect。改模板列只能改模板原件，不能改这里迁就代码；甲方自己要求加、模板原件里没有的列只能进 inserted（插在模板列中间）或 extra（追加在最后），并写明 source。",
   "sheets": {
     "tissue": {
       "templateFile": "_input/templates/样本记录信息表模板.xlsx",
@@ -52,12 +52,20 @@
         "操作人"
       ],
       "frozen": "内部编号",
+      "inserted": [
+        {
+          "label": "代数",
+          "after": "类器官类型",
+          "source": "甲方 2026-09-24 测试问题记录表第 18 行（CR-20260924-10）：合作单位和内部人员填类器官收样记录都要再加一项「代数」；模板原件里没有这一列，所以不进 template"
+        }
+      ],
       "extra": [
         "切片染色"
       ],
       "expect": [
         "来源单位",
         "类器官类型",
+        "代数",
         "收样日期",
         "处理时间",
         "细胞活率报告",

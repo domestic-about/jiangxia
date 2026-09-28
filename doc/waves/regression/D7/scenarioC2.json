@@ -1,0 +1,184 @@
+{
+ "results": [
+  {
+   "name": "C5:1004 起点徽标（样本=已完成 / 类器官=草稿）",
+   "ok": true,
+   "detail": "[\"样本质控表已完成\",\"类器官质控表草稿\",\"类器官质量评分表草稿\"]"
+  },
+  {
+   "name": "C5:草稿态底部按钮 =「完成并同步给送检方」",
+   "ok": true,
+   "detail": "保存草稿 预览 完成并同步给送检方 「预览」只看不发布；「完成并同步」之后送检方才看得到"
+  },
+  {
+   "name": "C5:弹确认框（要求二次确认）",
+   "ok": true,
+   "detail": "完成并同步给送检方 确定「完成并同步」这份文档吗？完成后送检方就能看到它。 取消 完成并同步给送检方"
+  },
+  {
+   "name": "C5:调 POST …/organoid-qc/publish 且 code=200",
+   "ok": true,
+   "detail": "[\"POST /dev-api/lqg/qc/9000001004/organoid-qc/publish 200\"]"
+  },
+  {
+   "name": "C5:完成并同步后徽标 → 已完成",
+   "ok": true,
+   "detail": "[\"样本质控表已完成\",\"类器官质控表已完成\",\"类器官质量评分表草稿\"]"
+  },
+  {
+   "name": "C5:已完成态底部按钮变「撤回」+ 页脚提示已同步",
+   "ok": true,
+   "detail": "保存草稿 预览 撤回 已同步给送检方 · 修改后需重新同步"
+  },
+  {
+   "name": "C5:调 POST …/unpublish 且 code=200",
+   "ok": true,
+   "detail": "[\"/dev-api/lqg/qc/9000001004/organoid-qc/unpublish\"]"
+  },
+  {
+   "name": "C5:撤回后徽标 → 草稿",
+   "ok": true,
+   "detail": "[\"样本质控表已完成\",\"类器官质控表草稿\",\"类器官质量评分表草稿\"]"
+  }
+ ],
+ "net": [
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/index.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/index.vue\");/* unplugin-vue-components disabled */import { ElLoadingDirective as __unplugin_directives_0 } from \"/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_loading_style_css.js?v=d1e4a4ec\";\ni"
+  },
+  {
+   "status": 200,
+   "url": "/src/api/lqg/qc/index.ts",
+   "method": "GET",
+   "body": "import.meta.env = {\"BASE_URL\": \"/\", \"DEV\": true, \"MODE\": \"development\", \"PROD\": false, \"SSR\": false, \"VITE_APP_BASE_API\": \"/dev-api\", \"VITE_APP_CLIENT_ID\": \"e5cd7e4891bf95d1d19206ce24a7b32e\", \"VITE_APP_CONTEXT_PATH\": \"/\", \"VITE_APP_ENCRYPT\": \"false\", \"VITE_APP_ENV\": \"development\", \"VITE_APP_LOGO_TITLE\": \"类器官样本管理\", \"VITE_APP_MONITOR_ADMIN\": \"http://localhost:9090/admin/applications\", \"VITE_APP_PORT\": \"8093\", \"VITE_APP_PROXY_TARGET\": \"http://127.0.0.1:8094\", \"VITE_APP_RSA_PRIVATE_KEY\": \"MIIBVAIBAD"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/SampleQcTab.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/SampleQcTab.vue\");/* unplugin-vue-components disabled */import { ElForm as __unplugin_components_5 } from \"/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_form_style_css.js?v=d1e4a4ec\";\nimport { E"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/OrganoidQcTab.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/OrganoidQcTab.vue\");/* unplugin-vue-components disabled */import { ElForm as __unplugin_components_3 } from \"/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_form_style_css.js?v=d1e4a4ec\";\nimport {"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/ScoreTab.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/ScoreTab.vue\");/* unplugin-vue-components disabled *//* Injection by vite-plugin-vue-inspector Start */\nimport { createElementVNode as __createElementVNode,createElementBlock as __createElementBlock,createBlock as __createBlock,createVNode as __createVNode } from \"/node_modules/.vite/deps/vue.js?v=d1e4a4ec\"\nfunction _interopVNode(vnode) {\n  if (vnode &"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/index.vue?vue&type=style&index=0&scoped=59f1cbea&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/index.vue?vue&type=style&index=0&scoped=59f1cbea&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/editor/index.vue?vue&type=sty"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/PreviewPane.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/PreviewPane.vue\");/* unplugin-vue-components disabled */import { ElImage as __unplugin_components_5 } from \"/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_image_style_css.js?v=d1e4a4ec\";\nimpo"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/SampleQcTab.vue?vue&type=style&index=0&scoped=2664ea3e&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/SampleQcTab.vue?vue&type=style&index=0&scoped=2664ea3e&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/editor/SampleQcTab.vue?"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/ImageSlotUploader.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/ImageSlotUploader.vue\");/* unplugin-vue-components disabled */import { ElUpload as __unplugin_components_3 } from \"/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_upload_style_css.js?v=d1e4a4e"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/AttachmentList.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/AttachmentList.vue\");/* unplugin-vue-components disabled */import { ElLink as __unplugin_components_3 } from \"/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_link_style_css.js?v=d1e4a4ec\";\nimp"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/OrganoidQcTab.vue?vue&type=style&index=0&scoped=80814fd5&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/OrganoidQcTab.vue?vue&type=style&index=0&scoped=80814fd5&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/editor/OrganoidQcTab."
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/ScoreTab.vue?vue&type=style&index=0&scoped=f6b5d872&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/editor/ScoreTab.vue?vue&type=style&index=0&scoped=f6b5d872&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/editor/ScoreTab.vue?vue&ty"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/ScoreRadioGroup.vue",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/ScoreRadioGroup.vue\");/* unplugin-vue-components disabled */import { ElRadioGroup as __unplugin_components_1 } from \"/node_modules/.vite/deps/element-plus_es.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_base_style_css.js?v=d1e4a4ec\";import \"/node_modules/.vite/deps/element-plus_es_components_radio-group_style_css.js?v="
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/editor/score.ts",
+   "method": "GET",
+   "body": "export const SCORE_KEYS = [\"preCulture\", \"cultureDays\", \"organoidCount\", \"diameter\"];\nconst toScore = (raw) => {\n  if (raw === null || raw === void 0 || raw === \"\") {\n    return null;\n  }\n  const value = typeof raw === \"number\" ? raw : Number(String(raw).trim());\n  return Number.isFinite(value) ? value : null;\n};\nexport function scoreSummary(levels, dictScores) {\n  const items = SCORE_KEYS.map((key) => {\n    const level = levels?.[key];\n    if (level === null || level === void 0 || level === \"\")"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/PreviewPane.vue?vue&type=style&index=0&scoped=c2ca752c&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/PreviewPane.vue?vue&type=style&index=0&scoped=c2ca752c&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/components/PreviewP"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/ImageSlotUploader.vue?vue&type=style&index=0&scoped=974fedf8&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/ImageSlotUploader.vue?vue&type=style&index=0&scoped=974fedf8&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/components/Im"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/AttachmentList.vue?vue&type=style&index=0&scoped=f9f3d311&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/AttachmentList.vue?vue&type=style&index=0&scoped=f9f3d311&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/components/Attac"
+  },
+  {
+   "status": 200,
+   "url": "/src/views/lqg/qc/components/ScoreRadioGroup.vue?vue&type=style&index=0&scoped=54dcdccd&lang.scss",
+   "method": "GET",
+   "body": "import { createHotContext as __vite__createHotContext } from \"/@vite/client\";import.meta.hot = __vite__createHotContext(\"/src/views/lqg/qc/components/ScoreRadioGroup.vue?vue&type=style&index=0&scoped=54dcdccd&lang.scss\");/* unplugin-vue-components disabled */import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from \"/@vite/client\"\nconst __vite__id = \"/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/src/views/lqg/qc/components/Scor"
+  },
+  {
+   "status": 200,
+   "url": "/dev-api/lqg/qc/9000001004",
+   "method": "GET",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"sample\":{\"id\":9000001004,\"submitNo\":\"SJ90000004\",\"sampleKind\":\"tissue\",\"internalNo\":\"T-hli02\",\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体丁\",\"gender\":\"male\",\"receiveDate\":\"2026-08-28\",\"processTime\":\"2026-08-28 09:40:00\",\"operatorName\":\"李工\"},\"sampleQc\":{\"id\":9000005002,\"sampleId\":9000001004,\"patientNo\":\"P-0004\",\"samplingSite\":\"肝左叶\",\"samplingMethod\":null,\"clinicalDiagnosis\":null,\"receiveDesc\":null,\"viabilityOssId\":null,\"viabilityFileName\":null,\"origDesc\":null,\"observ"
+  },
+  {
+   "status": 200,
+   "url": "/dev-api/lqg/qc/9000001004/organoid-qc/publish",
+   "method": "POST",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":null}"
+  },
+  {
+   "status": 200,
+   "url": "/dev-api/lqg/qc/9000001004",
+   "method": "GET",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"sample\":{\"id\":9000001004,\"submitNo\":\"SJ90000004\",\"sampleKind\":\"tissue\",\"internalNo\":\"T-hli02\",\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体丁\",\"gender\":\"male\",\"receiveDate\":\"2026-08-28\",\"processTime\":\"2026-08-28 09:40:00\",\"operatorName\":\"李工\"},\"sampleQc\":{\"id\":9000005002,\"sampleId\":9000001004,\"patientNo\":\"P-0004\",\"samplingSite\":\"肝左叶\",\"samplingMethod\":null,\"clinicalDiagnosis\":null,\"receiveDesc\":null,\"viabilityOssId\":null,\"viabilityFileName\":null,\"origDesc\":null,\"observ"
+  },
+  {
+   "status": 200,
+   "url": "/dev-api/lqg/qc/9000001004/organoid-qc/unpublish",
+   "method": "POST",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":null}"
+  },
+  {
+   "status": 200,
+   "url": "/dev-api/lqg/qc/9000001004",
+   "method": "GET",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"sample\":{\"id\":9000001004,\"submitNo\":\"SJ90000004\",\"sampleKind\":\"tissue\",\"internalNo\":\"T-hli02\",\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体丁\",\"gender\":\"male\",\"receiveDate\":\"2026-08-28\",\"processTime\":\"2026-08-28 09:40:00\",\"operatorName\":\"李工\"},\"sampleQc\":{\"id\":9000005002,\"sampleId\":9000001004,\"patientNo\":\"P-0004\",\"samplingSite\":\"肝左叶\",\"samplingMethod\":null,\"clinicalDiagnosis\":null,\"receiveDesc\":null,\"viabilityOssId\":null,\"viabilityFileName\":null,\"origDesc\":null,\"observ"
+  }
+ ]
+}

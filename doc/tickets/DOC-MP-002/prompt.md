@@ -31,21 +31,30 @@ blueprint_refs:
   - FLOW:F-DOC-02.step3
   - FLOW:F-DOC-02.step4
 accept:
-  - name: "构建是本次产物；预览页用到了两层放大、打开、发送到微信四个平台能力；组件直接路径导入；失败态不泄露内部错误；列表上的下载弹层与预览页顶部三份切换已接上"
+  - name: "构建是本次产物；预览页用到了两层放大、打开、发送到微信四个平台能力；**点缩略图看的是原图（真打开层 src == 原图 url 且 ≠ previewUrl）**、**`showMenu: true` 在真代码里（剥注释后仍命中）**；组件直接路径导入；失败态不泄露内部错误；列表上的下载弹层与预览页顶部三份切换已接上"
     form: API
     run: |-
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/doc/preview.js &&
-      grep -q 'previewImage' src/components/lqg/PageImageViewer.vue && grep -q 'previewImage' src/components/lqg/ThumbStrip.vue &&
-      grep -qE 'showMenu:[[:space:]]*true' src/components/lqg/DownloadBar.vue && grep -q 'shareFileMessage' src/components/lqg/DownloadBar.vue &&
+      grep -q 'previewImage' src/components/lqg/PageImageViewer.vue &&
+      grep -q 'shareFileMessage' src/utils/fileHandoff.ts &&
       grep -c "@/components/lqg/.*\.vue" src/pages/doc/preview.vue | awk '{exit !($1 >= 5)}' &&
       grep -q "@/components/lqg/DownloadSheet.vue" src/components/lqg/DocGroupCard.vue && grep -q "@/components/lqg/DownloadBar.vue" src/components/lqg/DownloadSheet.vue && grep -q 'groupDocs' src/components/lqg/DocTabs.vue &&
       ! grep -nE 'errorMsg|error_msg' src/pages/doc/preview.vue &&
-      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl.json
+      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl.json &&
+      cd ../.. && bash doc/waves/regression/D7/mutation-assert.sh --verify-only --hotspot H3a,H3b
     counterfeit: |-
       「文档中的图片」点开用的还是预览图地址 → 甲方要的「看得更清楚一点」落空；要求 ThumbStrip 用 url（原图）而缩略用 previewUrl，完工报告贴代码片段。
       openDocument 没带 showMenu → 用户打开了文件却没有任何保存 / 转发入口，等于没法「下载」，第 3 段红。
       把后端的 error_msg 原样显示给外部 → 第 5 段红。
       列表上的「下载」另写了一套 downloadFile + openDocument、没复用 DownloadBar → DownloadSheet 里找不到 DownloadBar 红：两处下载迟早一处带 showMenu、一处不带。
+      ★ **H3a / H3b 两条不再由源码 grep 判**（旧写法 `grep -qE 'showMenu:[[:space:]]*true' fileHandoff.ts` 与 `grep -q previewImage ThumbStrip.vue`；
+      D7 r1 L2 证伪 F1/F2：把真代码那行 showMenu 删掉只留注释 → 仍绿；把「看原图」换成看 `previewUrl` → 仍绿）。现在由 `mutation-assert.sh --hotspot H3a,H3b` 判：
+      · H3b（行为型）：真浏览器打开 1001 的样本质控表预览页 → 真 DOM 点「文档中的图片」缩略图 → 读 H5 打开层（对应真机 `wx.previewImage`）拿到的 src，
+        必须 **== pages 接口给的原图 `url`** 且 **≠ `previewUrl`**（夹具先上传 2400×1600 真 PNG，后端另存 .jpg 预览图，两者才可区分）；
+        已定义变异 = 把 `urls` 换成 `previewUrl` → 必须变红。
+      · H3a（本票唯一允许读源码的例外，`showMenu` 是平台参数、H5 上无可施加的行为变异）：把注释（行/块）剥掉后 `showMenu: true` 仍须在真代码里，
+        且位于 `uni.openDocument({filePath, …, showMenu: true})` 的参数位置；已定义变异 = **删掉真代码那一行、只在注释保留字面量** → 必须变红（这就是「与注释无关」的证明）。
+      两条变异后必须变红、还原必须复绿；任一条「改坏了还绿」→ 脚本 exit 1。
   - name: "内部的页面图片接口可用且只给内部；页数与 PDF 一致；外部身份打内部接口被拒"
     form: DATA
     run: |-
@@ -78,6 +87,7 @@ accept:
   3. 下载有两处入口、同一套实现：预览页底部的 `DownloadBar`，和文档列表每份 / 每组上的「下载」「合并下载」（点开 `DownloadSheet` 弹层，里面就是 `DownloadBar`）——甲方 2026-09-17 看设计稿后要求列表上直接能下（CR-20260917-04）。
   4. 顶部 `DocTabs` 取这个样本已完成的几份（`…/doc/list?sampleId=`），复用 DOC-MP-001 的 `groupDocs` 决定顺序与要不要「合并」，别另写排序；外部走外部接口，拿到的也是三份。
   5. 文件名 = 文档名 + 编号：外部用送检单号、内部用内部编号；合并文件叫「质控文档（合并）」。
+  6. **外部预览同样有原图与附件**（CR-20260923-09；「外部那条只给页面图（#254）」的做法作废）：外部按 `UI:mp.doc.preview` 与 `FLOW:F-DOC-02.step2` 给原图与附件，活率附件排最前，走同一隔离咽喉（签发前逐个核对对象只属于本样本外部版）。外部 `pages` 的形状是 `{docKind, status, pages, images, attachments}`，没有失败原因、指纹与缺图明细；「文档中的图片」「附件」两段内外部都要接上，别按身份藏掉。
 
 ## 1 背景与口径
 
@@ -85,9 +95,9 @@ accept:
 
 ## 2 实现要点
 
-- 后端：`GET /mp/int/doc/{sampleId}/{docKind}/pages`、`…/download`（内部，audience 固定 internal）。外部用 AUTH-EXT-003 的。
+- 后端：`GET /mp/int/doc/{sampleId}/{docKind}/pages`、`…/download`（内部，audience 固定 internal）。外部用 AUTH-EXT-003 的（两条形状不同：内部那条与工作台同款，另带 `errorMsg` 与缺图字段；外部那条是 `{docKind, status, pages, images, attachments}`，见 §0 第 6 条）。
 - `pages/doc/preview`：路由参数 `sampleId, docKind`（含 `merged`）；按身份选内部 / 外部接口。
-  - `DocTabs`：顶部切换条（该样本已完成的几份 + ≥2 份时的「合并」），切换时重新取 pages。
+  - `DocTabs`：顶部切换条（该样本已完成的几份 + ≥2 份时的「合并」），切换时重新取 pages。CR-20260924-11 起一行排开、文字仍是全称（D7 回归脚本 scenarioA 按全称找这几个页签），放不下时横向滑动，当前那一份自动滑进可见范围（从「合并预览」进来时「合并」就在眼前）；等切换条画出来之后再设 `scroll-into-view`。
   - `PageImageViewer`：逐页 `image`（`mode="widthFix"`，懒加载）；点任一页 → `wx.previewImage({urls: 全部页, current})`。
   - `ThumbStrip`：`images` 的 `previewUrl` 作缩略图，点开 `wx.previewImage` 用 `url`（原图）。原图是 TIFF 等小程序打不开的格式时退回预览图并提示。
   - `AttachmentList`：点开 → `wx.downloadFile` → `wx.openDocument`（pdf / doc / xls 等）或 `wx.previewImage`（图片）。
@@ -111,3 +121,6 @@ accept:
 4. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 5. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 6. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-23 按 CR-20260923-09 更新：「外部那条只给页面图（#254）」的做法作废，外部预览按 UI:mp.doc.preview 给原图与附件（活率附件排最前）、走同一隔离咽喉，外部 pages 形状写明为 {docKind, status, pages, images, attachments}；两条 accept 走的都是内部身份与内部接口，不依赖外部形状，未改。
+- 2026-09-24 按 CR-20260924-11 更新：§2 `DocTabs` 补一行排开、横向滑动、当前那一份自动滑进可见范围（文字不改短名）。accept 不动（H 批已在隔离环境重放 2/2 绿）。

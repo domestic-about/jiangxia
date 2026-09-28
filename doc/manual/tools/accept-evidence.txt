@@ -1,0 +1,30 @@
+# SYS-MANUAL-001 · accept 逐条证据（2026-09-23 09:34:38）
+
+## accept run 原样执行（逐字取自 doc/tickets/SYS-MANUAL-001/prompt.md 的 front-matter run）
+```
+I=doc/manual/内部人员操作说明.md && E=doc/manual/外部用户操作说明.md && test -f "${I}" && test -f "${E}" &&
+for K in 四张表 历史编辑记录 内部管理 修改 拍照识别 预览 下载 微信登录 同组 样本总表 导出 切片 质控文档 冻存代数 超过两周 无染色 备份; do grep -q "${K}" "${I}" || { echo "内部版缺：${K}"; exit 1; }; done &&
+test "$(grep -cE '^\| *[0-9]+ *\|' "${I}")" -ge 14 && test "$(grep -c '!\[' "${I}")" -ge 12 &&
+! grep -nE '内部编号|核验状态|verify|ExtScope' "${E}" && grep -q '发送到微信' "${E}" && grep -q '右上角' "${E}" && grep -q '核对' "${E}" && grep -q '历史编辑记录' "${E}" && ! grep -q '冻存' "${E}" &&
+test "$(pdfinfo doc/manual/pdf/外部用户操作说明.pdf | awk '/^Pages:/{print $2}')" -le 2 &&
+test doc/manual/pdf/内部人员操作说明.pdf -nt "${I}" && test doc/manual/pdf/外部用户操作说明.pdf -nt "${E}" &&
+pdftotext doc/manual/pdf/外部用户操作说明.pdf - | tr -d ' \n' | grep -q '送检'
+```
+EXIT=0
+
+## 逐条拆开看
+1) 两份 md 存在: doc/manual/内部人员操作说明.md ✓ doc/manual/外部用户操作说明.md ✓
+2) 内部版 17 个必含词（grep -c）：
+   四张表=9   历史编辑记录=6   内部管理=14   修改=8   拍照识别=4   预览=11   下载=10   微信登录=3   同组=5   样本总表=13   导出=18   切片=3   质控文档=9   冻存代数=2   超过两周=3   无染色=2   备份=3
+3) 编号表格行(^\| *[0-9]+ *\|) = 22（要求 ≥14）
+     · 文末「合同功能清单 14 行」对照表: 14 行
+     · 第十二章 常见问题: 8 行
+4) 内部版配图 ![...] = 25 处（要求 ≥12）；PDF 内嵌图 25 张
+5) 外部版禁词（内部编号/核验状态/verify/ExtScope/冻存）：✓ 一个都没有
+6) 外部版必含词: 发送到微信=2 右上角=1 核对=2 历史编辑记录=3 
+7) 页数: 内部版 16 页；外部版 1 页（要求 ≤2，目标 1）
+8) PDF 比 md 新:
+   内部 md 09:23:44 → pdf 09:34:27 ✓
+   外部 md 09:29:37 → pdf 09:34:28 ✓
+9) 中文真字抽取（pdftotext | grep 送检，tr 掉空白后按行计数=1 表示抽到）：外部版 1 / 内部版 1
+10) 配图 34 张，_page-text.txt 记录 34 条「这一屏写了什么」

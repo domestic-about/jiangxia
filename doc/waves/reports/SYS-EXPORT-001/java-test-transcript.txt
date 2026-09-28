@@ -1,0 +1,91 @@
+# SYS-EXPORT-001 · Java 单测（ruoyi-lqg 全模块，含本票新增 MpExportContractTest 11 例）
+$ cd code/RuoYi-Vue-Plus && mvn -pl ruoyi-modules/ruoyi-lqg test -s ../../.mvn-settings.xml -Dmaven.repo.local=../../.m2repo -Duser.home=../../.buildhome
+
+Running org.dromara.lqg.embed.mp.MpEmbedContractTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 s -- in org.dromara.lqg.embed.mp.MpEmbedContractTest
+Running org.dromara.lqg.embed.export.EmbedExportContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in org.dromara.lqg.embed.export.EmbedExportContractTest
+Running org.dromara.lqg.embed.service.EmbedQueryContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.033 s -- in org.dromara.lqg.embed.service.EmbedQueryContractTest
+Running org.dromara.lqg.embed.guard.EmbedRulesContractTest
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.embed.guard.EmbedRulesContractTest
+Running org.dromara.lqg.embed.guard.EmbedChildrenCheckerContractTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in org.dromara.lqg.embed.guard.EmbedChildrenCheckerContractTest
+Running org.dromara.lqg.embed.domain.EmbedShapeContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.embed.domain.EmbedShapeContractTest
+Running org.dromara.lqg.auth.group.guard.ExtBindStateMachineContractTest
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.auth.group.guard.ExtBindStateMachineContractTest
+Running org.dromara.lqg.auth.staff.guard.StaffGrantRulesContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.auth.staff.guard.StaffGrantRulesContractTest
+Running org.dromara.lqg.auth.guard.MockLoginGuardContractTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.auth.guard.MockLoginGuardContractTest
+Running org.dromara.lqg.ext.ExtDocShapeContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in org.dromara.lqg.ext.ExtDocShapeContractTest
+Running org.dromara.lqg.ext.ExtEmbedShapeContractTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.ext.ExtEmbedShapeContractTest
+Running org.dromara.lqg.ext.ExtChokepointContractTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.113 s -- in org.dromara.lqg.ext.ExtChokepointContractTest
+Running org.dromara.lqg.ocr.OcrProviderSelectionTest
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.071 s -- in org.dromara.lqg.ocr.OcrProviderSelectionTest
+Running org.dromara.lqg.ocr.OcrFieldParserFixtureTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.dromara.lqg.ocr.OcrFieldParserFixtureTest
+Running org.dromara.lqg.sys.home.HomeCounterContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.sys.home.HomeCounterContractTest
+Running org.dromara.lqg.sys.export.MpExportContractTest
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in org.dromara.lqg.sys.export.MpExportContractTest
+Running org.dromara.lqg.cryo.batch.CryoBalanceCheckerTest
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.cryo.batch.CryoBalanceCheckerTest
+Running org.dromara.lqg.cryo.batch.service.CryoQueryContractTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.dromara.lqg.cryo.batch.service.CryoQueryContractTest
+Running org.dromara.lqg.cryo.batch.guard.CryoChildrenCheckerContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.cryo.batch.guard.CryoChildrenCheckerContractTest
+Running org.dromara.lqg.cryo.batch.domain.CryoShapeContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.cryo.batch.domain.CryoShapeContractTest
+Running org.dromara.lqg.cryo.mp.MpCryoContractTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.cryo.mp.MpCryoContractTest
+Running org.dromara.lqg.cryo.remind.service.CryoOverdueServiceTest
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.dromara.lqg.cryo.remind.service.CryoOverdueServiceTest
+Running org.dromara.lqg.cryo.export.CryoExportContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.cryo.export.CryoExportContractTest
+Running org.dromara.lqg.cryo.flow.controller.CryoFlowEndpointContractTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.cryo.flow.controller.CryoFlowEndpointContractTest
+Running org.dromara.lqg.cryo.flow.service.CryoFlowConcurrencyTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in org.dromara.lqg.cryo.flow.service.CryoFlowConcurrencyTest
+Running org.dromara.lqg.cryo.flow.service.CryoFlowRulesContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.cryo.flow.service.CryoFlowRulesContractTest
+Running org.dromara.lqg.sample.hint.SampleHintContractTest
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.sample.hint.SampleHintContractTest
+Running org.dromara.lqg.sample.verify.VerifyTransitionsContractTest
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.sample.verify.VerifyTransitionsContractTest
+Running org.dromara.lqg.sample.mp.MpSampleContractTest
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.sample.mp.MpSampleContractTest
+Running org.dromara.lqg.sample.export.SampleExportContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in org.dromara.lqg.sample.export.SampleExportContractTest
+Running org.dromara.lqg.sample.service.SampleRecentFilterContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.sample.service.SampleRecentFilterContractTest
+Running org.dromara.lqg.sample.guard.SampleKindRulesContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.dromara.lqg.sample.guard.SampleKindRulesContractTest
+Running org.dromara.lqg.sample.query.SampleTableQueryContractTest
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.sample.query.SampleTableQueryContractTest
+Running org.dromara.lqg.doc.pdf.MultipartFormTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.dromara.lqg.doc.pdf.MultipartFormTest
+Running org.dromara.lqg.doc.pdf.PdfConvertServiceTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.097 s -- in org.dromara.lqg.doc.pdf.PdfConvertServiceTest
+Running org.dromara.lqg.doc.pdf.PdfPageRasterizerTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.466 s -- in org.dromara.lqg.doc.pdf.PdfPageRasterizerTest
+Running org.dromara.lqg.doc.render.DocTemplateContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.285 s -- in org.dromara.lqg.doc.render.DocTemplateContractTest
+Running org.dromara.lqg.doc.render.DocFingerprintTest
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.dromara.lqg.doc.render.DocFingerprintTest
+Running org.dromara.lqg.doc.publish.DocPublishStateContractTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.doc.publish.DocPublishStateContractTest
+Running org.dromara.lqg.qc.service.QcScoreRulesContractTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.dromara.lqg.qc.service.QcScoreRulesContractTest
+Running org.dromara.lqg.qc.service.QcDocRulesContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.dromara.lqg.qc.service.QcDocRulesContractTest
+Running org.dromara.lqg.qc.guard.QcChildrenCheckerContractTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in org.dromara.lqg.qc.guard.QcChildrenCheckerContractTest
+Running org.dromara.lqg.qc.domain.QcShapeContractTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.dromara.lqg.qc.domain.QcShapeContractTest
+Tests run: 274, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS

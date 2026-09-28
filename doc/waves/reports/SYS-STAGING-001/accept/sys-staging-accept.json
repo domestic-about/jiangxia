@@ -1,0 +1,52 @@
+{
+ "total": 2,
+ "passed": 0,
+ "failed": [
+  {
+   "ticket": "SYS-STAGING-001",
+   "index": 1,
+   "form": "API",
+   "name": "测试环境跑的就是当前这份代码（提交号对得上）、库是 PostgreSQL、走 test 配置、测试数据已灌、外部隔离在远程环境同样成立",
+   "exit": 1,
+   "seconds": 8.3,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-STAGING-001-acc1.sh",
+   "log": ".tmp/sys-staging-accept-logs/SYS-STAGING-001-acc1.sh.log"
+  },
+  {
+   "ticket": "SYS-STAGING-001",
+   "index": 2,
+   "form": "STATE",
+   "name": "测试机的数据库与缓存端口不对公网开放；compose 与部署脚本在仓库里、密码不在",
+   "exit": 1,
+   "seconds": 0.0,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-STAGING-001-acc2.sh",
+   "log": ".tmp/sys-staging-accept-logs/SYS-STAGING-001-acc2.sh.log"
+  }
+ ],
+ "results": [
+  {
+   "ticket": "SYS-STAGING-001",
+   "index": 1,
+   "form": "API",
+   "name": "测试环境跑的就是当前这份代码（提交号对得上）、库是 PostgreSQL、走 test 配置、测试数据已灌、外部隔离在远程环境同样成立",
+   "exit": 1,
+   "seconds": 8.3,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-STAGING-001-acc1.sh",
+   "log": ".tmp/sys-staging-accept-logs/SYS-STAGING-001-acc1.sh.log"
+  },
+  {
+   "ticket": "SYS-STAGING-001",
+   "index": 2,
+   "form": "STATE",
+   "name": "测试机的数据库与缓存端口不对公网开放；compose 与部署脚本在仓库里、密码不在",
+   "exit": 1,
+   "seconds": 0.0,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/SYS-STAGING-001-acc2.sh",
+   "log": ".tmp/sys-staging-accept-logs/SYS-STAGING-001-acc2.sh.log"
+  }
+ ]
+}

@@ -10,9 +10,31 @@ code/deploy/**/.env
 *.dump
 *.dump.gz
 __pycache__/
-.pnpm-store/*
-.m2repo/*
-.buildhome/*
-.tmp/*
-code/**/.tmp/*
-code/**/.vite/*
+
+# 本地环境变量（密钥不进仓库）；doc/verify/verify.env 见上
+*.env.local
+# 本地构建/依赖缓存（SYS-BASE-001：本机 ~/.m2 在构建沙箱里只读、~/.msp 写不进去，改用工作区内的）
+.m2repo/
+.buildhome/
+# 本机临时脚本（起后端的 run-backend.sh 之类）
+.tmp/
+# pnpm 内容寻址仓库（本机 ~/.pnpm-store 写不进去，改放工作区内；826MB，绝不进仓库）
+.pnpm-store/
+# 各端构建产物（后端 code/**/target 见上；网页与小程序补这几类）
+code/**/dist-ssr/
+code/**/.vite/
+code/**/unpackage/
+code/**/.hbuilderx/
+# 后端运行日志目录（logback 在项目根写 sys-*.log；每个跑过后端的人/分片都要手动删一次，见 2026-09-22 模式 B）
+logs/
+
+# Playwright MCP 的调试产物：console 日志与页面快照（H01，不入库）
+.playwright-mcp/
+
+# plus-ui dev server 生成的 eslint 自动导入全局（#307：每次跑验收都重写，不入库）
+code/plus-ui/.eslintrc-auto-import.json
+
+# 小程序代码上传私钥（Kevin 2026-09-28 提供；**绝不进仓库**）
+private.*.key
+*.key
+!**/*.key.example

@@ -1,0 +1,13 @@
+# 体验版产物去掉 mock 后的守卫结果（2026-09-28）
+# 时间：2026-09-28 08:57:35 +0800
+# 命令：cd code/miniapp && LQG_WX_APPID=wxf7933ab70657e598 pnpm upload:mp --mode=test --build-only
+# 变更：env/.env.test 的 VITE_MOCK_LOGIN '1' → '0'（后端 mock 已关，体验版不该再挂点了必失败的调试入口）
+
+[upload:mp] mode=test  robot=2  appid=wxf7933ab70657e598
+[upload:mp] serverBaseUrl=https://songjian.tianda.studio  mockLogin=关
+[upload:mp] ✓ 发布守卫（配置）通过
+[upload:mp] ✓ 发布守卫（产物）通过
+
+改动前（VITE_MOCK_LOGIN=1）：产物守卫报「产物里有 mock 登录的痕迹：api/mock-seeds.js」（test 模式只提示不拦）
+改动后：两条守卫**无警告通过**；直接扫 dist/build/mp-weixin-test 也搜不到 mock: / mock-openid- / 1380000 任何一处。
+产物里的 appid = wxf7933ab70657e598；接口地址在 utils/baseUrl.js（https://songjian.tianda.studio）。

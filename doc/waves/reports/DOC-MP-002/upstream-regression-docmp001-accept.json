@@ -1,0 +1,33 @@
+{
+ "total": 2,
+ "passed": 2,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "DOC-MP-001",
+   "index": 1,
+   "form": "STATE",
+   "name": "分组规则过 fixture：组内固定顺序、组间按最新完成时间倒序、两份起才有合并入口、混进来的 merged 行不算一份",
+   "exit": 0,
+   "seconds": 0.7,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-MP-001-acc1.sh",
+   "log": ".tmp/doc-mp001-accept-logs/DOC-MP-001-acc1.sh.log"
+  },
+  {
+   "ticket": "DOC-MP-001",
+   "index": 2,
+   "form": "API",
+   "name": "构建是本次产物；内部清单只给内部角色且带内部编号、外部清单不带；页签名走配置；分组卡片上有单份下载与合并预览、合并下载",
+   "exit": 0,
+   "seconds": 10.5,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/DOC-MP-001-acc2.sh",
+   "log": ".tmp/doc-mp001-accept-logs/DOC-MP-001-acc2.sh.log"
+  }
+ ]
+}

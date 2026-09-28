@@ -1,0 +1,51 @@
+{
+  "title": "编辑样本",
+  "lastMod": "从未修改",
+  "footerButtons": [
+    "保存",
+    "取 消"
+  ],
+  "moreButtons": [
+    "更多"
+  ],
+  "flagGroupState": [
+    {
+      "label": "样本类别",
+      "checked": [
+        "组织样本"
+      ]
+    },
+    {
+      "label": "性别",
+      "checked": [
+        "男"
+      ]
+    },
+    {
+      "label": "有无病理",
+      "checked": []
+    },
+    {
+      "label": "有无固定",
+      "checked": [
+        "有"
+      ]
+    },
+    {
+      "label": "质控表",
+      "checked": [
+        "有"
+      ]
+    },
+    {
+      "label": "细胞活率报告",
+      "checked": [
+        "有"
+      ]
+    }
+  ],
+  "switchCount": 0,
+  "invalidReasonRow": [
+    "无效原因 —"
+  ]
+}

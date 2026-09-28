@@ -1,0 +1,34 @@
+ACCEPT-1 EXIT=0
+----- EMBED-MODEL-001 acc1 EXIT=0 -----
+ACCEPT-2 EXIT=0
+----- EMBED-MODEL-001 acc2 EXIT=0 -----
+ACCEPT-3 EXIT=0
+----- EMBED-MODEL-001 acc3 EXIT=0 -----
+ACCEPT-4 EXIT=0
+----- EMBED-MODEL-001 acc4 EXIT=0 -----
+ACCEPT-1 EXIT=0
+----- EMBED-WEB-001 acc1 EXIT=0 -----
+ACCEPT-2 EXIT=0
+----- EMBED-WEB-001 acc2 EXIT=0 -----
+ACCEPT-1 EXIT=0
+----- AUTH-EXT-002 acc1 EXIT=0 -----
+ACCEPT-2 EXIT=0
+----- AUTH-EXT-002 acc2 EXIT=0 -----
+ACCEPT-3 EXIT=0
+----- AUTH-EXT-002 acc3 EXIT=0 -----
+----- SAMPLE-MP-001 acc1 EXIT=0 -----
+----- SAMPLE-MP-001 acc2 build EXIT=0 -----
+----- SAMPLE-MP-001 acc2 api EXIT=0 -----
+ACCEPT-1 EXIT=0
+----- SAMPLE-MP-002 acc1 EXIT=0 -----
+ACCEPT-2 EXIT=0
+----- SAMPLE-MP-002 acc2 EXIT=0 -----
+ACCEPT-3 EXIT=0
+----- SAMPLE-MP-002 acc3 EXIT=0 -----
+ACCEPT-1 EXIT=0
+----- SAMPLE-HINT-001 acc1 EXIT=0 -----
+ACCEPT-2 EXIT=0
+----- SAMPLE-HINT-001 acc2 EXIT=0 -----
+D1 EXIT=1
+===== 外部打 /mp/int/embed/list（AUTH-EXT-002 的 404→403 收口）=====
+403	没有访问权限，请联系管理员授权

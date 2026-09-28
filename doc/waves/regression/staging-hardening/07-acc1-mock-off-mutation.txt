@@ -1,0 +1,17 @@
+# acc1 的 mockLogin==false 断言：变异验证（2026-09-28）
+# 时间：2026-09-28 08:56:32 +0800
+
+判据：/lqg/sys/ping 的 .data.mockLogin 必须为 false（测试环境公网可达，mock 允许自带手机号换 internal 身份，见台账 #346）。
+
+变异（把测试机的 LQG_MOCK_LOGIN 改回 true 并只重建 backend 容器）：
+  ✗ SYS-STAGING-001 acc1 → exit=1   ← 断言真的在守这件事
+  ✓ SYS-STAGING-001 acc2 → exit=0
+
+恢复（LQG_MOCK_LOGIN=false）：
+  ✓ SYS-STAGING-001 acc1 → exit=0
+  ✓ SYS-STAGING-001 acc2 → exit=0
+
+辅助反证（同一个假 code 请求，看微信错误码随配置变化）：
+  仅 appid 无 secret → 41002 缺少 appid 参数
+  配上 secret      → 40029 code 无效（= 微信真的去校验了 code，说明 appid+secret 被接受）
+  详见同目录 06-appsecret-effective.txt

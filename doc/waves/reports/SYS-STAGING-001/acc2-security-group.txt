@@ -1,0 +1,19 @@
+# accept[2] 等价取证 ③ 安全组入方向清单（只读；Kevin 说「只报告，不动」）
+# 实例：i-bp14wbcfphboybx9idug → 安全组：sg-bp17g616h67b936e6b1b（从实例现查，不写死）
+# 命令：aliyun ecs DescribeSecurityGroupAttribute --profile tianda-admin --RegionId cn-hangzhou --SecurityGroupId sg-bp17g616h67b936e6b1b
+# 生成时间：2026-09-28 06:51:03 +0800
+
+ICMP	-1/-1	0.0.0.0/0	ingress	System created rule.
+TCP	22/22	0.0.0.0/0	ingress	System created rule.
+TCP	23127/23127	0.0.0.0/0	ingress	宝塔端口
+TCP	3306/3306	0.0.0.0/0	ingress	
+TCP	3389/3389	0.0.0.0/0	ingress	System created rule.
+TCP	443/443	0.0.0.0/0	ingress	
+TCP	5432/5432	0.0.0.0/0	ingress	
+TCP	80/80	0.0.0.0/0	ingress	
+TCP	8080/8080	0.0.0.0/0	ingress	guzi-backend
+TCP	8881/8881	0.0.0.0/0	ingress	
+
+# 读法：下面若有 5432/6379/9000 且 SourceCidrIp=0.0.0.0/0 才是「对公网开放」。
+#      本项目 compose 只把这三个发布到 127.0.0.1（见 acc2-port-proof.txt ①③），
+#      所以即使安全组开着也连不上 —— 本票不改安全组（Kevin 明确只报告不动）。

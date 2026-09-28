@@ -1,0 +1,121 @@
+{
+ "phase": "D3",
+ "round": 2,
+ "verdict": "PASS",
+ "auditor": "independent",
+ "levels": {
+  "L0": {
+   "status": "pass",
+   "evidence": "后端：cd code/RuoYi-Vue-Plus && mvn -s ../../.mvn-settings.xml -Dmaven.repo.local=<ws>/.m2repo -Duser.home=<ws>/.buildhome -pl ruoyi-modules/ruoyi-lqg -am install → BUILD SUCCESS，Tests run: 120, Failures: 0, Errors: 0, Skipped: 0；逐类读 surefire：EmbedRulesContractTest 8（染色固定序/NONE 互斥/OTHER 必填/字典外 PAS 拒）、SampleHintContractTest 9（含 twentySampleIdsTriggerExactlyOneQuery 断言 mapper.calls==1 且 asked.size()==20；emptyOrNullIdSetDoesNotHitTheDatabase calls==0）。反 stale 自核（不用 api.sh --fresh-module，ps 被沙箱禁）：find ruoyi-lqg/src ruoyi-admin/src -newer ruoyi-admin.jar 为空 + lsof -p 13039 确认进程持该 jar + 进程启动 11:04:52 晚于 jar mtime 10:13:47。前端：plus-ui `pnpm build:prod` exit 0（dist/index.html+assets 重建）；miniapp `pnpm build:mp-weixin` exit 0（dist/build/mp-weixin/pages/embed/form.js 存在）。fixture：plus-ui `vitest run src/views/lqg/embed/stain.fixture.spec.ts` → numTotalTests 19 / numPassedTests 19 / numFailedTests 0，无 .skip/.only；miniapp `vitest run src/pages/embed/stain.fixture.spec.ts` → 19/19；miniapp `vitest run src/pages/embed/layout.fixture.spec.ts`（embed-form-cases.json）→ 17/17，且 fixture 形状自核 cases=9 / externalFields=3 / 非 editable=5 成立。D1 回归包 verify.sh 也重放了同一套 mvn+两个前端 build，均绿。",
+   "reported": "pass"
+  },
+  "L1": {
+   "status": "pass",
+   "evidence": "① ddl_vs_ssot：python3 doc/verify/ddl_vs_ssot.py --table t_lqg_embed --table t_lqg_embed_marker --require-public create_dept,create_by,create_time,update_by,update_time,del_flag → '✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）'；flyway 14 行全 success。② 三张导出（先 reseed）：tissue 表头 14 列与 _input/templates/样本记录信息表模板.xlsx 逐字逐序一致、8 行 == db count == list total；T-hli01 行 --expect '来源单位=A 医院,供体姓名=测试供体甲,性别=男,年龄=56,住院号=ZY0000001,组织类型=肝组织,有无固定=有,质控表=有,细胞活率报告=有,操作人=李工' 全中；库里 donor_name=TcVJXrqPUYwPPs4JJt6NRg==（密文），base64 -d | openssl enc -d -aes-128-ecb -nosalt -K $(printf 'LqgTestAesKey#01'|xxd -p) 独立解出 '测试供体甲'，与导出一致；把 1001 的 is_fixed/has_qc_sheet/has_viability_report 临时改成 'N' 后重导 → 三格都是 '无'（'有 / 无' 映射双向成立，随后 reseed 还原）。organoid 表头 7 列逐字一致、1 行 == list total，T-oco01 行 --expect 全中。embed 表头 16 列逐字一致、5 行 == db count（含 pending 外部送样 2006），T-E01-1（样本编号=T-hli01, 染色=HE染色、IHC染色, mark的表达情况=Ki67：强表达；CK19：阴性, 包埋人=李工）、T-E04-1（染色=其他（Masson）, mark的表达情况=弱表达）、T-E02-1（染色=无染色, mark的表达情况=空）全中；带筛选：internalNo=T-hli01 → 2 行 == list total 2，verifyStatus=valid → 4 行 == list total 4，tissue sourceUnitId=9000009002 → 1 行 == list total 1；extA/extC 调三个导出端点全部 403。③ 切片提示逐样本：1001=[2,true,[HE,IHC]]、1004=[1,true,[]]、1006=[1,true,[OTHER]]、1008=[0,false,[]]（软删 2005 不计）、1002=[0,false,[]]（待核验 2006 不计）；sum(hint.blockCount)=4 == 直连库 SELECT count(*) FROM t_lqg_embed e JOIN t_lqg_sample s ON s.id=e.sample_id AND s.del_flag='0' WHERE e.del_flag='0' AND e.verify_status='valid' = 4；/mp/int/sample/list 的 1001.blockCount=2。④ 外部可见石蜡包埋：extA=extB=[2001,2002,2003,2006]、extC=extE=extF=[]、extD=[2004]；onlyMine extA=[2006]、extB=[]；工作台 /lqg/embed/list 首行 id=2006（sort 后的 order [2006,2004,2003,2002,2001]），其 sampleVerifyStatus=pending、verifyStatus=pending、submitSource=external。⑤ #145 独立复验（真后端 8081 + 真库 5433 + plus-ui 8082 + Playwright 真 DOM，.tmp/qa2/probe-145.mjs）：A 判为有效 → 只发 1 次 PUT /lqg/embed/<id>/verify body={\"action\":\"valid\",\"paraffinBlockNo\":\"T-QA2-A1\"}，无预保存 PUT /lqg/embed，响应 code=200，抽屉关闭，库落 valid|T-QA2-A1|9000000100|-（核验人=lqgadmin）；B 判为无效 → 只发 1 次 /verify body={\"action\":\"invalid\",\"reason\":\"QA2 复验：材料不全\"}，无预保存，code=200，抽屉关闭，库落 invalid|-|9000000100|QA2 复验：材料不全；C 编号撞号（T-E01-1）→ /verify 确实发出、响应 code=500『石蜡块编号「T-E01-1」已存在，请换一个』、抽屉不关、toast 两条可见、库里仍 pending|-|-|-；三条路径均 0 pageerror。合计 22/22。⑥ D1 回归包重放：bash doc/waves/regression/D1/verify.sh → L0.1 BUILD SUCCESS/Tests run 120、L0.3/L0.4 两个前端 build 均 ✓、L1.2/L1.3 全 ✓，唯一红是 harness 写死 flyway 迁移数 7（实际 14）——非产品回归。",
+   "reported": "pass"
+  },
+  "L2": {
+   "status": "pass",
+   "evidence": "三组逐条自跑，全绿：g1 工作台 24/24（`.tmp/r2l2b-g1b.log`，截图 `doc/waves/regression/D3/L2-shots/r2-g1-web/`）；g2 小程序内部 32/32（`.tmp/r2l2b-g2.log`，`L2-shots/r2-g2-mp-int/`）；g3 小程序外部+核验闭环 21/21（`.tmp/r2l2b-g3.log`，`L2-shots/r2-g3-mp-ext/`）。断言值：g1A 列表 5 行=库 5 行、2006 置顶行 class `lqg-embed__row-pending` 计算底色 rgb(252,241,218)（对照行 rgb(255,255,255)）、表头=内/外部+核验状态+模板 16 列（`mark的表达情况` 逐字）；g1B 2006 核验抽屉「判为有效并保存」disabled=true + alert「所挂样本还没核验有效（当前状态：待核验），不能判为有效」+ 悬停同文案；g1D 三导出真落文件且确有数据行：embed-export.xlsx 4431B/sheet1 6 行（表头+5，suggested 石蜡包埋送样记录.xlsx）、sample-tissue-export.xlsx 4619B/9 行、sample-organoid-export.xlsx 3905B/2 行，三个均 PK 头；g1E 表头「切片染色」，1001=`石蜡块 2|已切片|HE|IHC`、1002=`—`、悬停 popper=`T-E01-2|—|T-E01-1|2026-08-27`、点徽标→`/embed?sampleId=9000001001`。g2 首建落库 id=2102236086011957250/sample=9000001001/create_by=9000000101/valid，POST body 日期为 `2026-08-23` 字符串非 ms；必填项（*选择样本+*石蜡块编号）都操作后提交成功；内部选样本弹层 6 条已核验有效样本、无 pending 的 SJ90000002；内部历史默认 6 行、开关打开 6→3；补填脱水时间写回 2026-09-22、PUT body `\"dehydrateTime\":\"2026-09-22\"`、库内 dehydrate_time=2026-09-22/update_by=9000000101/1001 名下石蜡块仍 3 行，冻结格圆点 `●●○○○○○○`→`●●○●○○○○`（+1，他行不变）；样本修改页入口点亮→`/pages/embed/form?mode=new&sampleId=9000001001` 且填写页样本已带好 `T-hli01 · SJ90000001`。g3 extA 首页三格（无冻存）→填写页仅 选择样本/样本类型/类器官来源类型→选自己 1001 提交落库 `2102236554213724161|9000001001|pending|-|9000000111|external`→工作台置顶且计算底色 rgb(252,241,218)→判有效落库 `valid|T-r2l2-E1|9000000100`→extA 历史首行 `T-r2l2-E1|有效|组织|我|新增`、1001 详情 3 张 `.ecard` nos=[T-E01-1,T-E01-2,T-r2l2-E1]→extB（token 解出 loginId=app_user:9000000112，与 extA 9000000111 不同，身份真实生效）1001 详情同样 3 张卡且标识=石蜡块编号。★#145 独立复验（真实点击，非复读）：已修。判有效路径网络仅 `PUT /lqg/embed/{id}/verify -> 200`、无任何预发 `PUT /lqg/embed`（G3B-08）；失败路径（G3B-11，r2 新增）填已存在编号 T-E01-1 → `/verify -> 500 {\"msg\":\"石蜡块编号「T-E01-1」已存在，请换一个\"}`、页面出现该文案 el-message、抽屉仍开、库内仍 `pending|-`；判无效分支（`L2-r2-issue145-invalid.mjs` 6/6，`L2-shots/r2-issue145/`）空原因不发请求，填原因后仅 `PUT /lqg/embed/9000002006/verify -> 200`，库 `invalid|测-r2-145-无效原因|9000000100`，toast「已判为无效」；源码佐证 preSaveIfEditable 仅当 isEditable(=verifyStatus==='valid') 才预保存，核验抽屉只开 pending/invalid 行→恒早返回；r1 那个未捕获 rejection（pageerror）本轮两脚本均不再出现。★#147 首验（`L2-r2-issue147.mjs` 9/9，`L2-shots/r2-issue147/`）：verify 模式抽屉渲染 16 个 form-item、其中 **15 个可填且全部 disabled=false/readonly=false**（7 个工序时间 + 染色 5 选项 + marker 名称/表达 + 操作人 + 备注），真填进去后点保存，请求体仅 `{\"action\":\"valid\",\"paraffinBlockNo\":\"T-r2-147\"}`，库内 `valid|T-r2-147|NULL|NULL|NULL|NULL|NULL`、t_lqg_embed_marker 0 行；提示语只有「之后照常补工序与染色」，未声明本次填写不保存 → 判 S2 ux（详见 issues）。反 stale：jar mtime 2026-09-22 10:13、`find ruoyi-lqg/src ruoyi-admin/src -newer jar`=0、8081 PID 69862 lsof 命中该 jar、进程启动 11:14:25 晚于 jar；前端 8082/9200 为 dev server 直跑源码；Flyway schema 版本 202609231110；本片每条脚本自 reseed。未覆盖：微信开发者工具/真机（沙箱 EPERM + 需扫码）→ 小程序侧三组全部用 H5(9200)+Playwright 真后端/真库/真 seed 等价覆盖，无 mock 兜底。",
+   "reported": "pass"
+  },
+  "L3": {
+   "status": "pass",
+   "evidence": "反 stale（自跑，未用 api.sh --fresh-module；脚本改动核查 git log --oneline -8 -- doc/waves/regression/D3/ = 094bf87/10c3558/59c053f，r1 脚本未动，本片自写新脚本独立重跑）：后端 8081 PID 21501；`lsof -p 21501 | grep ruoyi-admin.jar` → 2 个 REG fd 指向 code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar；jar mtime 2026-09-22 10:13:47；`find code/RuoYi-Vue-Plus -path '*/src/*' -newer <jar> | wc -l` → 0；后端自身启动日志 `Starting DromaraApplication ... with PID 21501 (...ruoyi-admin.jar)` 于 11:26:20（晚于 jar mtime）；LQG_API_BASE=http://127.0.0.1:8081；8080 PID 55735（Kevin 的）未碰。探针自写 doc/waves/regression/D3/L3-r2-probes.sh（g1..g6，新文件未覆盖他人资产），全量日志 doc/waves/regression/D3/L3-r2-full.log，每条被拒 = 业务码白名单 + msg 关键词 + 紧跟 db.py --eq 精确库内不变断言；关键前置带正向存在性断言。**80/80 pass，0 fail，0×S0/S1**。 1 染色与挂靠规则(g1 11/11)：baseline t_lqg_embed=6。staff POST /lqg/embed `{\"sampleId\":9000001005,\"paraffinBlockNo\":\"T-X1\",\"stainTypes\":[\"NONE\",\"HE\"]}`→500「「无染色」与其余染色互斥，不能同时选」；`stainTypes:[\"OTHER\"]`(无名称)→500「选了「其他」必须写具体染色名称」；`stainTypes:[\"PAS\"]`→500「染色「PAS」不在字典 lqg_stain_type 里（只能是 HE / IF / IHC / OTHER / NONE）」；`sampleId:9000001002`(前置库断 verify_status=pending)+T-X4→500「内部录入只能挂到已核验有效的样本（当前状态：pending）」。每条后 `SELECT count(*) FROM t_lqg_embed` 恒=6；终态 `SELECT count(*) ... WHERE paraffin_block_no LIKE 'T-X%'`=0。 2 valid→invalid 闸(g2 6/6)：前置 `SELECT count(*) FROM t_lqg_embed WHERE sample_id=9000001004 AND verify_status='valid' AND del_flag='0'`=1、样本=valid；staff PUT /lqg/sample/9000001004/verify `{\"action\":\"invalid\",\"reason\":\"想改判\"}`→500「该样本名下已有包埋 / 冻存 / 质控文档，不能改判无效」；库 `verify_status`=valid、`count(*) ... AND invalid_reason IS NULL`=1、石蜡块数仍=1。 3 外部送样(g3 21/21)：baseline external=1 / all=6 / marker=3。extB POST /mp/ext/embed `{\"sampleId\":9000001001,...}`（替同组 extA）→400「只能挂本人送检过的样本」，库 external 仍=1；extA 挂自己 invalid 的 1003→400「这条样本已判无效，不能提交石蜡包埋送样」，库 all 仍=6；夹带 6 字段 `{\"sampleType\":\"类器官\",\"organoidSourceType\":\"肝类器官\",\"paraffinBlockNo\":\"T-hack9\",\"verifyStatus\":\"valid\",\"embedBy\":\"外部\",\"stainTypes\":[\"HE\"],\"operatorName\":\"外部\",\"submitSource\":\"internal\"}`→body code=200，但库精确断言 `submit_source|verify_status|paraffin_block_no|embed_by|stain_types|operator_name` = external|pending|-|-|-|-，submitter join ext_profile=王医生，all=7（只多 1 行）、marker 仍=3、全库无 T-hack9；前置 2006 与所挂 1002 均 pending，staff PUT /lqg/embed/9000002006/verify `{\"action\":\"valid\",\"paraffinBlockNo\":\"T-E06-1\"}`→500「所挂样本还未核验有效（当前状态：pending）」，2006 仍 `pending|-`；staff PUT /lqg/embed `{id:9000002006,...\"sampleType\":\"被普通保存改掉\"}`→400「待核验 / 无效的送样不能通过普通保存修改（核验与改判只走 PUT /lqg/embed/{id}/verify）」，库 2006 仍 pending|-|-|组织；extA PUT /mp/ext/embed/9000002001（实验室录的块）→400「只能修改重提本人提交的送样（同组的可以看，但不能改）」、extB PUT /mp/ext/embed/9000002006→同 400；库 `count(*) WHERE sample_type IN ('被同组人改','改实验室的块')`=0、2001 仍 valid|T-E01-1|组织。 4 外部详情 embeds 键集合(g4 13/13，按 CR-20260918-07 与 doc/verify/fixtures/java/ExtChokepointContractTest.java:47-51 的精确豁免，不按 phase-plan 旧写法)：extB GET /mp/ext/sample/9000001001→embeds paraffinBlockNo=[T-E01-1,T-E01-2]、[0].sectioned=true、[0].stainTypes=[HE,IHC]、[0].embedBy=李工、[0].operatorName=李工、[1].embedBy=null（包埋人/操作人**必须对外可见**，并有键存在性断言防「被漏掉而恒绿」）；实到 24 键 = [agaroseEmbedTime,agaroseSendTime,dehydrateTime,editable,embedBy,id,invalidReason,markers,mine,operatorName,organoidSourceType,paraffinBlockNo,paraffinEmbedTime,sampleId,sampleType,sectionTime,sectioned,stainOther,stainTypes,submitNo,submitterName,tissueProcessTime,tissueReceiveTime,verifyStatus]——恰=契约 ExtEmbedVo 列表、⊆白名单；默认开关关时详情级与 embeds 级均无 internalNo；embeds 无 verifyBy/verifiedBy/remark/冻存/创建更新人/手机号键，样本详情级也无 operatorName/embedBy/verifyBy；extC 与 extE GET /mp/ext/sample/9000001001→均 404「样本不存在」；admin 把 sys_config lqg.ext.show-internal-no 置 true 后 extB 详情 internalNo=T-hli01、再还原 false 并经库 sys_config 确认 false。 5 导出边界(g5 12/12)：全量 POST /lqg/sample/export/tissue→xlsx_header 表头 14 列与模板逐字一致、8 行（=同条件列表 total，>1，非空前置）；extA POST /lqg/sample/export/tissue→403「没有访问权限，请联系管理员授权」；带筛选 POST '/lqg/sample/export/tissue?sourceUnitId=9000009002'→1 行（= `/lqg/sample/list?sourceUnitId=9000009002&sampleKind=tissue` 的 total=1、ids=[9000001006]），--find 内部编号=T-hco04 命中、--find 内部编号=T-hli01 不命中、且非 0 行；空结果 POST '/lqg/sample/export/tissue?sourceUnitId=9999999999'→接口 exit=0（不报错）、产出 3935 bytes 非空 xlsx、xlsx_header --rows 0 通过（只有表头）。 #145 后端侧独立复验(g6 17/17)：extA 建 pending 外部送样 E1（挂已核验 1001，前置库断 pending|-）→ staff PUT /lqg/embed 仍拒 400 且库 `pending|-|组织` 原样；staff PUT /lqg/embed/{E1}/verify `{\"action\":\"valid\",\"paraffinBlockNo\":\"T-r2l3-A\"}`→200，库 `valid|T-r2l3-A|verify_by=set`；再建 E2 → verify `{\"action\":\"invalid\",\"reason\":\"测-r2l3-无效原因\"}`→200，库 `invalid|测-r2l3-无效原因`；PUT /lqg/embed 对 invalid 仍拒 400 且库原样；再 verify `{\"action\":\"valid\",\"paraffinBlockNo\":\"T-r2l3-B\"}`（invalid→valid 改判）→200，库 `valid|T-r2l3-B|-`（旧原因已清）；负向 E3 verify 缺编号→500「判有效必须填石蜡块编号」、缺原因→500「判无效必须写原因」，库仍 pending|-|-。两条状态（pending/invalid）都有库内对照，verify 端点正常、普通保存仍拒 → #145 后端侧无缺陷。 台账规格冲突：#146（phase-plan D3 qa_scope L3 第 4 条 embeds 键集合是 CR 前旧写法）已单列 issue；#129/#137/#138 本轮 L3 未触及其断言点，未据以判实现缺陷。",
+   "reported": "pass"
+  }
+ },
+ "escalated_noted": [],
+ "issues": [
+  {
+   "severity": "S3",
+   "level": "L0",
+   "type": "harness",
+   "ticket": "D1-regression",
+   "title": "doc/waves/regression/D1/verify.sh L1.1 把 D1 的迁移总数写死成 7，现在库里 14 行 → 每次重放必红一条",
+   "detail": "复现：bash doc/waves/regression/D1/verify.sh → 唯一失败 'L1.1 D1 的 7 支迁移全部记录在案 → [FAIL] 期望 7，实际 14'。影响：D1 回归包对后续每个任务都声称 1 条失败，淹没真回归；不改变产品行为。定级依据：断言陈旧（D2/D3 又加了 7 支迁移），是 harness 层漂移，不是产品缺陷；2 轮内已两次出现，已按题面登记。"
+  },
+  {
+   "severity": "S3",
+   "level": "L0",
+   "type": "harness",
+   "ticket": "EMBED-MP-001",
+   "title": "EMBED-MP-001 accept 3 的 `! grep -nE 'internalNo' src/pages/embed/SamplePickerExt.vue` 打在不存在的路径上 → 恒真（issue #138）",
+   "detail": "复现：code/miniapp/src/pages/embed/ 下没有 SamplePickerExt.vue（真实文件在 src/components/lqg/SamplePickerExt.vue）→ grep 退出 2，`! grep` 退出 0，该条断言无条件通过。影响：accept 里『外部选样本不显示内部编号』的一道闸形同虚设。缓解：同一票的 layout.fixture.spec.ts 已按真实路径补了一道等价的 readFileSync + not.toMatch(/internalNo/)，我实跑 17/17 通过，实际覆盖没有缺口。定级依据：断言弱化（harness），非已知产品缺陷；已在台账 issue #138。"
+  },
+  {
+   "severity": "S3",
+   "level": "L1",
+   "type": "doc-drift",
+   "ticket": "SAMPLE-WEB-001 / SAMPLE-EXPORT-001",
+   "title": "SAMPLE-WEB-001 要求 5210 下 perms 精确等于六个，SAMPLE-EXPORT-001 必须新增第七个 → 正确现状为七个（issue #129）",
+   "detail": "复现：python3 doc/verify/db.py --quiet --sql \"SELECT string_agg(perms, ',' ORDER BY menu_id) FROM sys_menu WHERE parent_id=5210 AND menu_type='F'\" → lqg:sample:list,query,add,edit,remove,verify,export（七个）；SAMPLE-WEB-001 prompt.md:66 的 --col-set 只列六个。影响：按票面字面重放 SAMPLE-WEB-001 的 MENU accept 会红，但按需求归属（导出权限是 SAMPLE-EXPORT-001 加的）现状是对的。定级依据：两票票面互斥（规格层），实现按需求归属，属设计允许，不判实现缺陷；已在台账 issue #129。"
+  },
+  {
+   "severity": "S3",
+   "level": "L1",
+   "type": "doc-drift",
+   "ticket": "EMBED-MP-001",
+   "title": "EMBED 的 sort=recent 只排序、不收窄到『内部人员新增/修改过』，与权威 UI:mp.history 及 SAMPLE 域行为不一致（issue #137）",
+   "detail": "复现：/mp/int/embed/list?pageSize=100&sort=recent → [2001,2002,2003,2004,2006]（含 extA 提交、无内部经手的 2006）；同栈的 /mp/int/sample/list?pageSize=100&sort=recent → 只有 [1008,1009]（内部人员经手的两条），而权威 doc/authority/ui-index.yaml UI:mp.history 写的是『内部：中心全部内部人员新增或修改过的记录』。影响：EMBED-MP-001 的 accept 与权威互斥（票面要求全 5 条），谁对谁错需 Kevin 裁；不拦本轮。定级依据：票面与权威互斥（规格层），已在台账 issue #137。"
+  },
+  {
+   "severity": "S3",
+   "level": "L1",
+   "type": "doc-drift",
+   "ticket": "D3 / doc/phase-plan.yaml",
+   "title": "doc/phase-plan.yaml 的 D3 qa_scope L3 第 4 条仍是 CR-20260918-07 之前的旧写法（要求 embeds 里没有 embedBy/operatorName）（issue #146）",
+   "detail": "复现：doc/phase-plan.yaml D3 qa_scope L3 第 4 条=『外部详情的 embeds 里没有 embedBy / operatorName / internalNo 键』；而 code/.../ext/ExtChokepointContractTest.java:47-51 的 BANNED_EXEMPT 明确把 ExtEmbedVo 的 operatorName/embedBy 豁免，注释写 CR-20260918-07 要外部看得到这两个；不许出现的只是 internalNo（除非 sys_config lqg.ext.show-internal-no 打开）/verifyBy/remark/冻存。影响：照 qa_scope 字面跑会误判 AUTH-EXT-002 的正确实现为红。定级依据：文档未随 CR 更新（规格层），实现与契约测试一致，不判实现缺陷；已在台账 issue #146。"
+  },
+  {
+   "severity": "S2",
+   "level": "L2",
+   "type": "ux",
+   "ticket": "EMBED-WEB-001",
+   "title": "核验抽屉 verify 模式下渲染 15 个可填控件（7 工序时间/染色/marker/操作人/备注），保存时被静默丢弃",
+   "detail": "复现（L2-r2-issue147.mjs 9/9）：extA 走真实 UI 建一条 pending 外部送样（挂已核验有效的 1001）→ 工作台该行「核验」打开抽屉 → DOM 取证 16 个 form-item，除「选择样本」是只读文本外，其余 15 个（石蜡块编号、样本类型、类器官来源类型、包埋人、组织收样时间、组织处理时间、琼脂糖包埋样本时间、脱水时间、琼脂糖包埋样本送样时间、石蜡包埋时间、切片时间、染色、marker 表达、操作人、备注）全部 disabled=false/readonly=false；真的填 `脱水时间=2026-09-01`/`染色=HE`/`marker=M-147`/`操作人=测-147操作人`/`备注=测-147备注` 后点「判为有效并保存」：请求体只有 `{\"action\":\"valid\",\"paraffinBlockNo\":\"T-r2-147\"}`（契约 EmbedVerifyBo 只收 action/paraffinBlockNo/reason），核验成功但库内 t_lqg_embed = valid|T-r2-147|NULL|NULL|NULL|NULL|NULL（dehydrate_time/stain_types/operator_name/remark 全 NULL）、t_lqg_embed_marker 0 行，页面无任何「你填的内容没保存」的提示（抽屉顶部 alert 原话「判为有效要给石蜡块编号（全库唯一），之后照常补工序与染色；判为无效必须写原因。」，断言 /不保存|不会保存|请到编辑/ 不匹配）。影响：甲方/内部人员在核验这一步顺手补的工序与染色会全部丢失且无感知，需事后从列表点「编辑」重填。定级依据：不判 S1——契约（doc/api-contract.md 第 62 行）确实只收 3 键、工序时间全部可空、核验产出（verify_status+paraffin_block_no）本身正确、无下游 ticket 依赖核验这一步落染色、核验通过后记录变 valid 立刻可编辑（G1C 已验编辑抽屉回填正常）；但它不是「设计允许」的免费午餐——UI 把 15 个输入做成可编辑却全部丢弃且提示含糊，属真实产品体验缺陷，故记 S2 ux。建议修法：verify 模式隐藏或禁用这些控件，或提示改为明说「本次填写不会保存，核验后请点编辑补填」。"
+  },
+  {
+   "severity": "S3",
+   "level": "L2",
+   "type": "doc-drift",
+   "ticket": "EMBED-MODEL-001",
+   "title": "#137 已知规格冲突：EMBED sort=recent 只排序不收窄到内部人员，内部历史页签出现外部人员建的待核验送样",
+   "detail": "g2 内部历史默认 6 行里第 2 行 = `SJ90000002 · 待核验|待核验|组织|王医生|新增`（extA 王医生建的外部送样，create_by=9000000111），与权威 UI:mp.history 及 SAMPLE 域「内部页签只看内部人员经手」不一致；G2C-04 打开「只看我提交的」后 6→3 才收窄。按台账 issue #137 记 doc-drift，不判实现缺陷、不拦门。"
+  },
+  {
+   "severity": "S3",
+   "level": "L2",
+   "type": "clarify",
+   "ticket": "EMBED-WEB-001",
+   "title": "编辑抽屉对 update_time 为空的记录显示「最后修改：从未修改」，即使该记录明显是别人录的且有数据",
+   "detail": "g1C-01：T-E01-1 编辑抽屉带出石蜡块编号/染色 HE,IF,IHC,OTHER,NONE/marker Ki67,CK19 与包埋人「李工」，但顶部小字为「最后修改：从未修改」（seed 记录 update_time 为 NULL，仅 update_time 判空→文案）。有修改的记录正常显示「最后修改：李工 · 2026-09-22 11:18:35」（g2C-06）。文案自洽但易误读，记账不拦门。"
+  },
+  {
+   "severity": "S3",
+   "level": "L3",
+   "type": "doc-drift",
+   "ticket": "EMBED-MODEL-001",
+   "title": "#146 已知规格冲突：phase-plan D3 qa_scope L3 第 4 条仍是 CR-20260918-07 之前的旧写法（要求 embeds「没有 embedBy / operatorName」）",
+   "detail": "复现：`doc/phase-plan.yaml` D3 qa_scope L3 第 4 条原文「外部详情的 embeds 里没有 embedBy / operatorName / internalNo 键；extC 取 1001 仍 404」。权威侧：`doc/change-log.md` CR-20260918-07（外部样本详情包埋卡片加操作人、包埋人；internalNo 按 lqg.ext.show-internal-no 显示）+ `doc/api-contract.md` ExtEmbedVo 明列 embedBy/operatorName 对外可见 + `doc/verify/fixtures/java/ExtChokepointContractTest.java:47-51` 的 BANNED_EXEMPT 只对 `ExtEmbedVo` 精确豁免 operatorName/embedBy。实测（g4 13/13）：extB GET /mp/ext/sample/9000001001 → embeds[0].embedBy=李工、operatorName=李工 确实对外可见，24 键恰=契约 ExtEmbedVo，无 internalNo（默认开关 false）/verifyBy/remark/冻存键。影响：qa_scope 旧写法若被照抄执行，会把「对外可见操作人/包埋人」这条甲方要求误判成缺陷（r1 已据此无需返工）。定级依据：纯文档口径与权威互斥，实现按 CR 正确、不影响任何 ticket 的实现路径与主流程 → S3 doc-drift，不判实现缺陷、不拦门（与台账 #146 一致）。"
+  }
+ ],
+ "merged_from": [
+  {
+   "file": "D3-r2-L01.json",
+   "levels": "L0"
+  },
+  {
+   "file": "D3-r2-L01.json",
+   "levels": "L1"
+  },
+  {
+   "file": "D3-r2-L2.json",
+   "levels": "L2"
+  },
+  {
+   "file": "D3-r2-L3.json",
+   "levels": "L3"
+  }
+ ]
+}

@@ -1,0 +1,131 @@
+{
+ "hotspot": "H2",
+ "green": true,
+ "ran_at": "2026-09-28T03:46:58.376Z",
+ "results": [
+  {
+   "name": "H2:工作台登录 lqgadmin",
+   "ok": true,
+   "detail": "http://127.0.0.1:8093/index"
+  },
+  {
+   "name": "H2:真 DOM 渲染出六张待办卡片",
+   "ok": true,
+   "detail": "[\"待核验样本记录\",\"待核验类器官收样\",\"待核验石蜡包埋送样\",\"-80 超期批次\",\"待核验外部用户\",\"文档渲染失败 / 缺图\"]"
+  },
+  {
+   "name": "H2:抓到同一次 /lqg/home/todo 的响应（判据的另一侧是真接口返回值）",
+   "ok": true,
+   "detail": "{\"n\":1,\"data\":{\"pendingSamples\":2,\"pendingTissue\":2,\"pendingOrganoid\":0,\"pendingEmbeds\":1,\"cryoOverdue\":2,\"pendingExtUsers\":2,\"renderFailed\":0}}"
+  },
+  {
+   "name": "H2:★ 卡片「样本记录」的 DOM 数字 == /lqg/home/todo.pendingTissue",
+   "ok": true,
+   "detail": "{\"dom\":\"2\",\"api\":\"2\"}"
+  },
+  {
+   "name": "H2:★ 卡片「类器官收样」的 DOM 数字 == /lqg/home/todo.pendingOrganoid",
+   "ok": true,
+   "detail": "{\"dom\":\"0\",\"api\":\"0\"}"
+  },
+  {
+   "name": "H2:★ 卡片「石蜡」的 DOM 数字 == /lqg/home/todo.pendingEmbeds",
+   "ok": true,
+   "detail": "{\"dom\":\"1\",\"api\":\"1\"}"
+  },
+  {
+   "name": "H2:★ 卡片「超期」的 DOM 数字 == /lqg/home/todo.cryoOverdue",
+   "ok": true,
+   "detail": "{\"dom\":\"2\",\"api\":\"2\"}"
+  },
+  {
+   "name": "H2:★ 卡片「外部」的 DOM 数字 == /lqg/home/todo.pendingExtUsers",
+   "ok": true,
+   "detail": "{\"dom\":\"2\",\"api\":\"2\"}"
+  },
+  {
+   "name": "H2:★ 卡片「渲染」的 DOM 数字 == /lqg/home/todo.renderFailed",
+   "ok": true,
+   "detail": "{\"dom\":\"0\",\"api\":\"0\"}"
+  }
+ ],
+ "observed": {
+  "api_get_lqg_home_todo": {
+   "url": "http://127.0.0.1:8093/dev-api/lqg/home/todo",
+   "status": 200,
+   "data": {
+    "pendingSamples": 2,
+    "pendingTissue": 2,
+    "pendingOrganoid": 0,
+    "pendingEmbeds": 1,
+    "cryoOverdue": 2,
+    "pendingExtUsers": 2,
+    "renderFailed": 0
+   }
+  },
+  "dom_cards": [
+   {
+    "title": "待核验样本记录",
+    "value": "2"
+   },
+   {
+    "title": "待核验类器官收样",
+    "value": "0"
+   },
+   {
+    "title": "待核验石蜡包埋送样",
+    "value": "1"
+   },
+   {
+    "title": "-80 超期批次",
+    "value": "2"
+   },
+   {
+    "title": "待核验外部用户",
+    "value": "2"
+   },
+   {
+    "title": "文档渲染失败 / 缺图",
+    "value": "0"
+   }
+  ],
+  "dom_vs_api": [
+   {
+    "card": "样本记录",
+    "field": "pendingTissue",
+    "api_value": "2",
+    "dom_value": "2"
+   },
+   {
+    "card": "类器官收样",
+    "field": "pendingOrganoid",
+    "api_value": "0",
+    "dom_value": "0"
+   },
+   {
+    "card": "石蜡",
+    "field": "pendingEmbeds",
+    "api_value": "1",
+    "dom_value": "1"
+   },
+   {
+    "card": "超期",
+    "field": "cryoOverdue",
+    "api_value": "2",
+    "dom_value": "2"
+   },
+   {
+    "card": "外部",
+    "field": "pendingExtUsers",
+    "api_value": "2",
+    "dom_value": "2"
+   },
+   {
+    "card": "渲染",
+    "field": "renderFailed",
+    "api_value": "0",
+    "dom_value": "0"
+   }
+  ]
+ }
+}

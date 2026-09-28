@@ -1,0 +1,4 @@
+# OCR-MP-001 accept[1] 预填合并规则过 fixture：只填空项、已手填的不覆盖、空值不填不标、表单里没有的键忽略
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true

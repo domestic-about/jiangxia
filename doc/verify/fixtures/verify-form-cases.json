@@ -1,0 +1,254 @@
+{
+  "_doc": "小程序核验页的表单规则（甲方 2026-09-24 测试问题记录表第 20 行：核验要小程序和工作台都能做；Kevin 定这次做，推翻 CR-20260917-05「小程序里不做核验」）。被测纯函数在 code/miniapp/src/pages/verify/rules.ts，后端规则是权威（SampleVerifyService + SubmitSegmentRules / EmbedVerifyService + EmbedFillRules），与工作台 SampleDrawer / EmbedDrawer 逐项对齐。★ 两个接口的「改过才提交」形状不同：样本的 submitSegment 是整段替换（没给的键写成空）——送检信息一项没改就不带 submitSegment；改了任一项就带整段、没改的项带原值（只带改过的键会把别的项清空，实测后端回「组织类型不能为空」）。石蜡包埋的 fill 是补丁——只带改过的键，一项没改就不带；判无效只收样本类型、类器官来源类型，改过的实验室补填项在原因面板里列出来（不静默丢）。代数 passage（A 组加的列）：详情里有这个键就当送检段的普通一项；详情里没有也没改就不发。sampleCases 的 detail = 详情接口返回（/mp/int/sample/{id}），edits = 用户在页面上改了什么，me = 当前登录人（操作人为空时的默认值）。embedCases 的 detail = /mp/int/embed/{id} 返回，sampleValid = 所挂样本是否已核验有效。",
+  "sampleFields": {
+    "tissue": {
+      "submit": ["sourceUnitName", "donorName", "gender", "age", "hospitalNo", "tissueType", "hasPathology", "remark"],
+      "receive": ["receiveDate", "internalNo", "isFixed", "processTime", "hasQcSheet", "hasViabilityReport", "operatorName"],
+      "requiredValid": ["sourceUnitName", "tissueType", "receiveDate", "internalNo"],
+      "requiredInvalid": ["sourceUnitName", "tissueType"]
+    },
+    "organoid": {
+      "submit": ["sourceUnitName", "organoidType", "passage", "remark"],
+      "receive": ["receiveDate", "internalNo", "processTime", "hasViabilityReport", "operatorName"],
+      "requiredValid": ["sourceUnitName", "organoidType", "receiveDate", "internalNo"],
+      "requiredInvalid": ["sourceUnitName", "organoidType"]
+    }
+  },
+  "sampleCases": [
+    {
+      "name": "组织样本判有效、送检信息没改：不带 submitSegment；操作人默认当前登录人",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitId": 9000009001, "sourceUnitName": "A 医院", "donorName": "测试供体乙", "gender": "female", "age": "48", "hospitalNo": "ZY0000002", "tissueType": "胆管组织", "hasPathology": "N", "remark": null, "receiveDate": null, "internalNo": null, "operatorName": null },
+      "me": "李工",
+      "edits": { "receiveDate": "2026-09-24", "internalNo": " T-hli09 ", "isFixed": "Y" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "",
+      "expectBody": { "action": "valid", "receiveDate": "2026-09-24", "internalNo": "T-hli09", "isFixed": "Y", "processTime": null, "hasQcSheet": null, "hasViabilityReport": null, "operatorName": "李工" }
+    },
+    {
+      "name": "组织样本判有效、改了组织类型：带整段送检信息（没改的项带原值）",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitId": 9000009001, "sourceUnitName": "A 医院", "donorName": "测试供体乙", "gender": "female", "age": "48", "hospitalNo": "ZY0000002", "tissueType": "胆管组织", "hasPathology": "N", "remark": null, "operatorName": null },
+      "me": "李工",
+      "edits": { "tissueType": "肝组织", "receiveDate": "2026-09-24", "internalNo": "T-hli09", "processTime": "2026-09-24 10:30:00" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "",
+      "expectBody": { "action": "valid", "receiveDate": "2026-09-24", "internalNo": "T-hli09", "isFixed": null, "processTime": "2026-09-24 10:30:00", "hasQcSheet": null, "hasViabilityReport": null, "operatorName": "李工", "submitSegment": { "sourceUnitId": 9000009001, "sourceUnitName": "A 医院", "donorName": "测试供体乙", "gender": "female", "age": "48", "hospitalNo": "ZY0000002", "tissueType": "肝组织", "hasPathology": "N", "remark": "" } }
+    },
+    {
+      "name": "只多敲了空格不算改：不带 submitSegment",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitId": 9000009001, "sourceUnitName": "A 医院", "donorName": "测试供体乙", "tissueType": "胆管组织" },
+      "me": "李工",
+      "edits": { "tissueType": "胆管组织  ", "remark": "   " },
+      "action": "invalid",
+      "reason": "  信息不全：缺住院号 ",
+      "expectProblem": "",
+      "expectBody": { "action": "invalid", "reason": "信息不全：缺住院号" }
+    },
+    {
+      "name": "换了来源单位（选了另一个单位）：算改过，整段带新单位 id",
+      "detail": { "id": 9000001007, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitId": 9000009001, "sourceUnitName": "A 医院", "donorName": "测试供体庚", "gender": "male", "age": "52", "hospitalNo": "ZY0000007", "tissueType": "肝组织", "hasPathology": null, "remark": "急" },
+      "me": "李工",
+      "edits": { "sourceUnitId": 9000009002, "sourceUnitName": "B 大学" },
+      "action": "invalid",
+      "reason": "单位填错了",
+      "expectProblem": "",
+      "expectBody": { "action": "invalid", "reason": "单位填错了", "submitSegment": { "sourceUnitId": 9000009002, "sourceUnitName": "B 大学", "donorName": "测试供体庚", "gender": "male", "age": "52", "hospitalNo": "ZY0000007", "tissueType": "肝组织", "hasPathology": null, "remark": "急" } }
+    },
+    {
+      "name": "类器官判无效、改了类器官类型；详情里没有代数这个键：整段里不带 passage",
+      "detail": { "id": 9000001011, "sampleKind": "organoid", "verifyStatus": "pending", "sourceUnitId": null, "sourceUnitName": "C 研究所", "organoidType": "胃类器官", "remark": "外部送类器官" },
+      "me": "李工",
+      "edits": { "organoidType": "肠类器官" },
+      "action": "invalid",
+      "reason": "类型不对",
+      "expectProblem": "",
+      "expectBody": { "action": "invalid", "reason": "类型不对", "submitSegment": { "sourceUnitId": null, "sourceUnitName": "C 研究所", "organoidType": "肠类器官", "remark": "外部送类器官" } }
+    },
+    {
+      "name": "类器官判有效、详情里有代数 P2、只改了备注：整段带原代数",
+      "detail": { "id": 9000001011, "sampleKind": "organoid", "verifyStatus": "pending", "sourceUnitId": 9000009002, "sourceUnitName": "B 大学", "organoidType": "肝类器官", "passage": "P2", "remark": null, "operatorName": "王工" },
+      "me": "李工",
+      "edits": { "remark": "复核过", "receiveDate": "2026-09-24", "internalNo": "T-oco09", "hasViabilityReport": "Y" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "",
+      "expectBody": { "action": "valid", "receiveDate": "2026-09-24", "internalNo": "T-oco09", "processTime": null, "hasViabilityReport": "Y", "operatorName": "王工", "submitSegment": { "sourceUnitId": 9000009002, "sourceUnitName": "B 大学", "organoidType": "肝类器官", "passage": "P2", "remark": "复核过" } }
+    },
+    {
+      "name": "类器官：详情里没有代数、实验室这次填了 p3 → 规范成 P3 并带上",
+      "detail": { "id": 9000001011, "sampleKind": "organoid", "verifyStatus": "pending", "sourceUnitId": 9000009002, "sourceUnitName": "B 大学", "organoidType": "肝类器官", "remark": null },
+      "me": "李工",
+      "edits": { "passage": " p3 ", "receiveDate": "2026-09-24", "internalNo": "T-oco09" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "",
+      "expectBody": { "action": "valid", "receiveDate": "2026-09-24", "internalNo": "T-oco09", "processTime": null, "hasViabilityReport": null, "operatorName": "李工", "submitSegment": { "sourceUnitId": 9000009002, "sourceUnitName": "B 大学", "organoidType": "肝类器官", "passage": "P3", "remark": "" } }
+    },
+    {
+      "name": "判有效没选收样日期：拦下",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitName": "A 医院", "tissueType": "胆管组织" },
+      "me": "李工",
+      "edits": { "internalNo": "T-hli09" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "请选收样日期"
+    },
+    {
+      "name": "判有效没填内部编号：拦下",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitName": "A 医院", "tissueType": "胆管组织" },
+      "me": "李工",
+      "edits": { "receiveDate": "2026-09-24", "internalNo": "  " },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "请填内部编号"
+    },
+    {
+      "name": "把组织类型清空了：两个动作都拦（改过的送检信息会一起保存，后端同样查）",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitName": "A 医院", "tissueType": "胆管组织" },
+      "me": "李工",
+      "edits": { "tissueType": "" },
+      "action": "invalid",
+      "reason": "写个原因",
+      "expectProblem": "请填组织类型"
+    },
+    {
+      "name": "类器官类型清空：拦下",
+      "detail": { "id": 9000001011, "sampleKind": "organoid", "verifyStatus": "pending", "sourceUnitName": "B 大学", "organoidType": "肝类器官" },
+      "me": "李工",
+      "edits": { "organoidType": " ", "receiveDate": "2026-09-24", "internalNo": "T-oco09" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "请填类器官类型"
+    },
+    {
+      "name": "来源单位清空：拦下",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitId": null, "sourceUnitName": "A 医院", "tissueType": "胆管组织" },
+      "me": "李工",
+      "edits": { "sourceUnitName": "" },
+      "action": "invalid",
+      "reason": "写个原因",
+      "expectProblem": "请选择来源单位"
+    },
+    {
+      "name": "代数格式不对：拦下",
+      "detail": { "id": 9000001011, "sampleKind": "organoid", "verifyStatus": "pending", "sourceUnitName": "B 大学", "organoidType": "肝类器官" },
+      "me": "李工",
+      "edits": { "passage": "第三代", "receiveDate": "2026-09-24", "internalNo": "T-oco09" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "代数请填 P 加数字，如 P3"
+    },
+    {
+      "name": "判无效没写原因：拦下",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitName": "A 医院", "tissueType": "胆管组织" },
+      "me": "李工",
+      "edits": {},
+      "action": "invalid",
+      "reason": "   ",
+      "expectProblem": "请写判为无效的原因"
+    },
+    {
+      "name": "判无效：原因超过 200 字拦下",
+      "detail": { "id": 9000001002, "sampleKind": "tissue", "verifyStatus": "pending", "sourceUnitName": "A 医院", "tissueType": "胆管组织" },
+      "me": "李工",
+      "edits": {},
+      "action": "invalid",
+      "reasonRepeat": { "char": "缺", "times": 201 },
+      "expectProblem": "无效原因不能超过 200 字"
+    }
+  ],
+  "embedCases": [
+    {
+      "name": "判有效、一项补填都没改：只带石蜡块编号，不带 fill",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "submitNo": "SJ90000002", "sampleVerifyStatus": "valid", "verifyStatus": "pending", "sampleType": "组织", "organoidSourceType": null, "stainTypes": [], "markers": [] },
+      "sampleValid": true,
+      "edits": { "paraffinBlockNo": " T-E09-1 " },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "",
+      "expectBody": { "action": "valid", "paraffinBlockNo": "T-E09-1" },
+      "expectDropped": []
+    },
+    {
+      "name": "判有效、顺手补了切片时间、染色与一行 marker：fill 只带改过的键（空行 marker 丢掉）",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "submitNo": "SJ90000002", "sampleVerifyStatus": "valid", "verifyStatus": "pending", "sampleType": "组织", "stainTypes": [], "markers": [] },
+      "sampleValid": true,
+      "edits": { "paraffinBlockNo": "T-E09-1", "sectionTime": "2026-09-24", "stainTypes": ["HE", "IHC"], "markers": [{ "markerName": " Ki67 ", "expression": "strong" }, { "markerName": "", "expression": "" }] },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "",
+      "expectBody": { "action": "valid", "paraffinBlockNo": "T-E09-1", "fill": { "sectionTime": "2026-09-24", "stainTypes": ["HE", "IHC"], "markers": [{ "markerName": "Ki67", "expression": "strong" }] } },
+      "expectDropped": ["切片时间", "染色", "mark 的表达情况"]
+    },
+    {
+      "name": "判有效、把合作单位填的样本类型改了：fill 带 sampleType",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "submitNo": "SJ90000002", "sampleVerifyStatus": "valid", "verifyStatus": "pending", "sampleType": "组织", "organoidSourceType": "" },
+      "sampleValid": true,
+      "edits": { "paraffinBlockNo": "T-E09-1", "sampleType": "类器官", "organoidSourceType": "肝" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "",
+      "expectBody": { "action": "valid", "paraffinBlockNo": "T-E09-1", "fill": { "sampleType": "类器官", "organoidSourceType": "肝" } },
+      "expectDropped": []
+    },
+    {
+      "name": "判无效：只带原因与改过的送样两项；改过的工序时间不发、列进「不会保存」",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "submitNo": "SJ90000002", "sampleVerifyStatus": "pending", "verifyStatus": "pending", "sampleType": "组织", "embedBy": null },
+      "sampleValid": false,
+      "edits": { "sampleType": "组织块", "sectionTime": "2026-09-24", "embedBy": "张三" },
+      "action": "invalid",
+      "reason": " 样本还没到 ",
+      "expectProblem": "",
+      "expectBody": { "action": "invalid", "reason": "样本还没到", "fill": { "sampleType": "组织块" } },
+      "expectDropped": ["包埋人", "切片时间"]
+    },
+    {
+      "name": "判无效、什么都没改：只带原因",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "sampleVerifyStatus": "pending", "verifyStatus": "pending", "sampleType": "组织" },
+      "sampleValid": false,
+      "edits": {},
+      "action": "invalid",
+      "reason": "重复送样",
+      "expectProblem": "",
+      "expectBody": { "action": "invalid", "reason": "重复送样" },
+      "expectDropped": []
+    },
+    {
+      "name": "所挂样本还没核验有效：判有效拦下（先核验样本）",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "sampleVerifyStatus": "pending", "verifyStatus": "pending", "sampleType": "组织" },
+      "sampleValid": false,
+      "edits": { "paraffinBlockNo": "T-E09-1" },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "所挂样本还没核验有效，先核验样本"
+    },
+    {
+      "name": "判有效没填石蜡块编号：拦下",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "sampleVerifyStatus": "valid", "verifyStatus": "pending", "sampleType": "组织" },
+      "sampleValid": true,
+      "edits": { "paraffinBlockNo": "  " },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "请填石蜡块编号"
+    },
+    {
+      "name": "选了「其他」没写名称：拦下（与填写页同一句）",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "sampleVerifyStatus": "valid", "verifyStatus": "pending", "sampleType": "组织" },
+      "sampleValid": true,
+      "edits": { "paraffinBlockNo": "T-E09-1", "stainTypes": ["OTHER"] },
+      "action": "valid",
+      "reason": "",
+      "expectProblem": "选了「其他」必须写明具体染色名称"
+    },
+    {
+      "name": "判无效没写原因：拦下",
+      "detail": { "id": 9000002006, "sampleId": 9000001002, "sampleVerifyStatus": "pending", "verifyStatus": "pending" },
+      "sampleValid": false,
+      "edits": {},
+      "action": "invalid",
+      "reason": "",
+      "expectProblem": "请写判为无效的原因"
+    }
+  ]
+}

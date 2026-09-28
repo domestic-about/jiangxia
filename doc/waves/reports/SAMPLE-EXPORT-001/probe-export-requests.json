@@ -1,0 +1,26 @@
+{
+  "requests": [
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:8082/dev-api/lqg/sample/export/tissue?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:8082/dev-api/lqg/sample/export/organoid?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      "bytes": 4087,
+      "url": "http://127.0.0.1:8082/dev-api/lqg/sample/export/tissue?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"
+    },
+    {
+      "status": 200,
+      "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      "bytes": 3804,
+      "url": "http://127.0.0.1:8082/dev-api/lqg/sample/export/organoid?pageNum=1&pageSize=10&internalNo=T-hli01&operatorName=%E6%9D%8E"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# wait-for —— 等一个 TCP 端口 / 一个 HTTP 地址变成「可达」。纯 bash（/dev/tcp），不依赖 nc / curl。
+#
+#   wait-for [-t 秒数] [-i 间隔秒] <目标>...
+#     目标 = host:port          连得上即通过（用于 postgres / redis / minio 的宿主环回端口）
+#          = http(s)://url      拿到 200/204/3xx/401/403 即通过；401/403 也算通过，
+#                               因为「应用活着但要求鉴权」正是 /lqg/sys/ping 的正常形态
+#          = http(s)://url:code 指定一个可接受的 HTTP 码（可重复写多个 URL）
+#
+# 退出码：0 = 全部目标就绪；1 = 有目标在超时内没就绪；2 = 用法错。
+#
+# 为什么不用 docker-compose 的 depends_on.condition 就完事：compose 只管容器**之间**的依赖，
+# 管不了「宿主环回端口 + 公网域名」这一层。deploy.sh 在服务器上等 postgres 的 15432、
+# 等后端在 8082 上真的回了 401、等 https://songjian.tianda.studio/lqg/sys/ping 通——
+# 这些都用这一支。票面 §2 要求 code/deploy/common/ 有这支小脚本，出处就在这里。
+set -uo pipefail
+
+TIMEOUT=180
+INTERVAL=3
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -t|--timeout) TIMEOUT="$2"; shift 2 ;;
+    -i|--interval) INTERVAL="$2"; shift 2 ;;
+    --) shift; break ;;
+    -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) break ;;
+  esac
+done
+[ $# -ge 1 ] || { echo "用法：wait-for [-t 秒] [-i 间隔秒] <host:port|http(s)://url>..." >&2; exit 2; }
+
+probe() {
+  local target="$1"
+  case "${target}" in
+    http://*|https://*)
+      # 有 curl 就用 curl（能看状态码）；没有就退回 bash 的 /dev/tcp + 原始 HTTP 请求
+      if command -v curl >/dev/null 2>&1; then
+        local code
+        code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 "${target}" 2>/dev/null)" || return 1
+        case "${code}" in 200|204|301|302|307|308|401|403) return 0 ;; *) return 1 ;; esac
+      fi
+      local hostport="${target#*://}"
+      hostport="${hostport%%/*}"
+      local host="${hostport%%:*}"
+      local port="${hostport##*:}"
+      [ "${port}" = "${host}" ] && port=443
+      local path="/${target#*://*/}"
+      [ "${path}" = "/${target}" ] && path="/"
+      exec 3<>"/dev/tcp/${host}/${port}" 2>/dev/null || return 1
+      printf 'GET %s HTTP/1.0\r\nHost: %s\r\n\r\n' "${path}" "${host}" >&3 || { exec 3<&- 3>&-; return 1; }
+      local line=""
+      read -r line <&3 || true
+      exec 3<&- 3>&- 2>/dev/null
+      case "${line}" in *" 200 "*|*" 204 "*|*" 301 "*|*" 302 "*|*" 307 "*|*" 308 "*|*" 401 "*|*" 403 "*) return 0 ;; *) return 1 ;; esac
+      ;;
+    *:*)
+      local host="${target%%:*}" port="${target##*:}"
+      (exec 3<>"/dev/tcp/${host}/${port}") 2>/dev/null || return 1
+      exec 3<&- 3>&- 2>/dev/null
+      return 0
+      ;;
+    *) return 2 ;;
+  esac
+}
+
+deadline=$(( $(date +%s) + TIMEOUT ))
+for t in "$@"; do
+  printf '[wait-for] %s ...' "${t}"
+  ok=0
+  while [ "$(date +%s)" -lt "${deadline}" ]; do
+    if probe "${t}"; then ok=1; break; fi
+    sleep "${INTERVAL}"
+  done
+  if [ "${ok}" = 1 ]; then
+    printf ' ok\n'
+  else
+    printf ' 超时（%ss）\n' "${TIMEOUT}" >&2
+    exit 1
+  fi
+done
+exit 0

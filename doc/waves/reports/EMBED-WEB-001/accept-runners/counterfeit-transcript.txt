@@ -1,0 +1,21 @@
+---- (b) 染色筛选是整元素匹配：HE 不串 OTHER，OTHER 不串 HE ----
+stain=HE    → ["T-E01-1"]
+stain=OTHER → ["T-E04-1"]
+---- (c) 待核验的外部送样也导出（石蜡块编号 / 样本编号 两格为空） ----
+  rows: 5 第一行（待核验）= (None, None)
+---- (d) 带筛选导出只出筛选结果 ----
+  rows: 2 blockNos: ['T-E01-2', 'T-E01-1']
+---- (f) 判无效后仍然导出，且与列表 total 一致 ----
+{"code":200}
+200	操作成功
+  export rows: 1 [(None, 'T-probe-invalid')]
+  list total: {"total":1}
+---- (g) 导出视图不是实体 VO：没有 样本ID / 创建时间 / 核验状态 ----
+  header: ['石蜡块编号', '样本编号', '样本类型', '类器官来源类型', '组织收样时间', '组织处理时间', '琼脂糖包埋样本时间', '包埋人', '脱水时间', '琼脂糖包埋样本送样时间', '石蜡包埋时间', '切片时间', '染色', 'mark的表达情况', '操作人', '备注']
+  contains 样本ID            : False
+  contains sampleId        : False
+  contains 创建时间            : False
+  contains 核验状态            : False
+  contains 内部编号            : False
+  contains marker 的表达情况    : False
+PROBES DONE

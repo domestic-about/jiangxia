@@ -1,0 +1,73 @@
+# ── 工作台站点（compose 里的 nginx 容器用）—— SYS-STAGING-001 ──────────────────
+# 渲染后的实际文件：code/deploy/test/nginx/workspace.conf
+#   → 测试机上 /opt/lqg-test/nginx/workspace.conf
+#   → 挂进 nginx 容器 /etc/nginx/conf.d/default.conf
+#
+# 分层（doc/waves/ops/tianda-test-env.md §6.2）：
+#   浏览器/小程序 ──HTTPS 443──> 宿主 nginx（宝塔，songjian.tianda.studio）
+#                                  └── 全量 proxy_pass ──> 127.0.0.1:${LQG_WEB_PORT}（本容器）
+#   本容器：静态 plus-ui dist + /prod-api 反代 + 小程序/api.sh 直连的根路径接口反代
+#   ★ 宿主 80/443 归宝塔，容器一律**不许**抢；所以 HTTPS 在宿主层终止（见 baota-site.conf.template），
+#     本容器只监听 80、且只发布到宿主 127.0.0.1。
+#
+# 模板变量（由 deploy.sh 用 envsubst 渲染）：
+#   ${LQG_BACKEND_UPSTREAM}  compose 网络里后端服务名:端口，默认 backend:8080
+server {
+    listen       80;
+    server_name  _;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    # 上传/导出走同一个后端；与宿主 nginx 的值保持一致。
+    # 60m = 后端 spring.servlet.multipart.max-request-size（60MB），生产 nginx 同口径（V05）
+    client_max_body_size 60m;
+
+    # 上传体积超限（V05）：回与后端同口径的 JSON（{code,msg}），不回 nginx 默认的 413 HTML ——
+    # 工作台 / 小程序按响应体的 code、msg 给提示。数值与后端 spring.servlet.multipart 同口径。
+    error_page 413 = @lqg_413;
+    location @lqg_413 {
+        default_type "application/json; charset=utf-8";
+        return 413 '{"code":413,"msg":"上传的文件太大：单个文件不能超过 50MB，一次上传合计不能超过 60MB","data":null}';
+    }
+
+    # ── 0) actuator 一律不对外（V18）：根路径与 /prod-api 前缀两条路都挡，统一 404 ─────────
+    #    上游 SecurityConfig 用 Basic 认证护 /actuator，而本项目从没配过那对口令 —— 期望值是字面量
+    #    「null:null」，dev / test 下全量暴露（env、heapdump 都在）。这里在入口直接挡掉；
+    #    `^~` 前缀比下面的 `^~ /prod-api/` 长、又压过正则，/prod-api/actuator/… 也进不去。
+    location ^~ /actuator {
+        return 404;
+    }
+    location ^~ /prod-api/actuator {
+        return 404;
+    }
+
+    # ── 1) 网页工作台的 API：plus-ui 的 VITE_APP_BASE_API=/prod-api ─────────────
+    #    带 ^~ 前缀，避免被下面的正则 location 抢走。proxy_pass 末尾的 `/` 会**剥掉** /prod-api 前缀。
+    location ^~ /prod-api/ {
+        proxy_pass http://${LQG_BACKEND_UPSTREAM}/;
+        include /etc/nginx/conf.d/lqg-proxy-headers.inc;
+    }
+
+    # ── 2) 小程序 / doc/verify/api.sh 直连的根路径接口（**不剥前缀**）────────────
+    #    小程序 env/.env.test 的 VITE_SERVER_BASEURL=https://<域名>，请求路径是 /auth/login、/mp/...；
+    #    api.sh 请求 /auth/login、/lqg/sys/ping、/mp/ext/... —— 两边都不带 /prod-api。
+    #    proxy_pass 不带 URI 部分 → 原样透传路径。
+    location ~ ^/(auth|lqg|mp|system|monitor|resource|tool|workflow|snail-job)/ {
+        proxy_pass http://${LQG_BACKEND_UPSTREAM};
+        include /etc/nginx/conf.d/lqg-proxy-headers.inc;
+    }
+
+    # ── 3) 工作台静态资源 + SPA history 回退 ────────────────────────────────────
+    #    缺 try_files 这条，深链直接 404（首页 200 会骗人，栈坑手册 §7）
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 静态资源缓存（plus-ui 的产物带 hash，长缓存安全）
+    location ~* \.(?:js|css|png|jpg|jpeg|gif|svg|woff2?|ttf|eot|ico)$ {
+        expires 30d;
+        access_log off;
+        try_files $uri =404;
+    }
+}

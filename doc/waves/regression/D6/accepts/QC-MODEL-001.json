@@ -1,0 +1,46 @@
+{
+ "total": 3,
+ "passed": 3,
+ "failed": [],
+ "known_red": [],
+ "unknown_failed": [],
+ "results": [
+  {
+   "ticket": "QC-MODEL-001",
+   "index": 1,
+   "form": "DDL",
+   "name": "五张表与 SSOT 逐列相符、出自本票 Flyway；每个样本每种文档至多一份（部分唯一索引）",
+   "exit": 0,
+   "seconds": 0.5,
+   "nf": [],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-d6-L2/accepts/QC-MODEL-001-acc1.sh",
+   "log": ".tmp/qa-d6-L2/acceptlogs/QC-MODEL-001/QC-MODEL-001-acc1.sh.log"
+  },
+  {
+   "ticket": "QC-MODEL-001",
+   "index": 2,
+   "form": "DATA",
+   "name": "评分由后端按字典回填：前端夹带的假分值不生效、0 分档不被当成未选、没选全合计为空；落库的分值与字典表两侧对得上",
+   "exit": 0,
+   "seconds": 2.3,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-d6-L2/accepts/QC-MODEL-001-acc2.sh",
+   "log": ".tmp/qa-d6-L2/acceptlogs/QC-MODEL-001/QC-MODEL-001-acc2.sh.log"
+  },
+  {
+   "ticket": "QC-MODEL-001",
+   "index": 3,
+   "form": "STATE",
+   "name": "首次打开幂等建三份草稿且默认文字逐字照模板；图片位规则（归属、每位至多三张）被拒时库里不变；患者编号落库是密文",
+   "exit": 0,
+   "seconds": 2.2,
+   "nf": [
+    "NF1"
+   ],
+   "path": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-d6-L2/accepts/QC-MODEL-001-acc3.sh",
+   "log": ".tmp/qa-d6-L2/acceptlogs/QC-MODEL-001/QC-MODEL-001-acc3.sh.log"
+  }
+ ]
+}

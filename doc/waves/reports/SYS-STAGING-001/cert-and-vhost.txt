@@ -1,0 +1,18 @@
+# 测试环境证书与宿主 nginx（只读取证）
+# 生成时间：2026-09-22 16:26:37 +0800
+
+--- 证书 SAN / 有效期 ---
+subject=CN = songjian.tianda.studio
+issuer=C = US, O = Let's Encrypt, CN = YR1
+notAfter=Dec 21 07:13:02 2026 GMT
+X509v3 Subject Alternative Name: 
+    DNS:songjian.tianda.studio
+
+--- 宿主 vhost 文件 ---
+-rw-r--r-- 1 root root 3256 Sep 22 16:12 /www/server/panel/vhost/nginx/songjian.tianda.studio.conf
+
+--- SNI 实测（127.0.0.1:443）---
+subject=CN = songjian.tianda.studio
+notAfter=Dec 21 07:13:02 2026 GMT
+
+--- 宝塔续签相关计划任务 ---

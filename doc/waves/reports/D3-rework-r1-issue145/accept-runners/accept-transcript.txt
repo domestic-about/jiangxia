@@ -1,0 +1,142 @@
+
+##################### 1) EMBED-WEB-001 · accept 1（DATA · 按模板导出） #####################
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 5 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 2 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 16 列与模板逐字一致；数据 4 行
+ACCEPT-1 EXIT=0
+
+##################### 2) EMBED-WEB-001 · accept 2（MENU · 菜单 5310 段 / 接核验接口 / 染色 fixture） #####################
+lqg:embed:remove
+lqg:embed:export
+lqg:embed:verify
+true
+true
+ACCEPT-2 EXIT=0
+
+##################### 3) EMBED-MP-001 · accept 1（API + STATE · 小程序构建 + 内部历史 + 角色） #####################
+（差异：去掉 --fresh-module；pnpm 前加 npm_config_store_dir；其余字面逐字）
+true
+true
+true
+true
+9000002001
+9000002003
+ACCEPT-1 EXIT=0
+
+##################### 4) EMBED-MODEL-001 · accept 1（DDL） #####################
+✓ 2 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+1
+ACCEPT-1 EXIT=0
+
+##################### 5) EMBED-MODEL-001 · accept 2（STATE · 核验转移表 + 唯一性） #####################
+0
+True
+2
+valid
+ACCEPT-2 EXIT=0
+
+##################### 6) AUTH-EXT-002 · accept 1（API · 含 ExtChokepointContractTest 4 条） #####################
+true
+true
+true
+true
+false
+true
+true
+true
+true
+true
+true
+ACCEPT-1 EXIT=0
+
+##################### 7) AUTH-EXT-002 · accept 2（STATE · 写保护 / 夹带 / 无效重提） #####################
+external|pending|-|-|-|-|王医生
+0
+true
+true
+pending|-|类器官|胆管类器官
+ACCEPT-2 EXIT=0
+
+##################### 8) SAMPLE-HINT-001 · accept 1（DATA） #####################
+db=4 sum=4
+4
+---- 8) /mp/int/sample/list 同样带 hint
+true
+---- 9) 收尾 reseed
+ACCEPT-1 EXIT=0
+
+##################### 9) SAMPLE-EXPORT-001 · accept 1（DATA · 两张导出） #####################
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 7 列与模板逐字一致；数据 1 行
+/Users/wkui/.pyenv/versions/3.10.13/lib/python3.10/site-packages/openpyxl/styles/stylesheet.py:237: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+✓ 表头 14 列与模板逐字一致；数据 1 行
+ACCEPT-1 EXIT=0
+
+##################### 10) D1 回归（L0 + L1，--skip-build；已知只剩 flyway 写死总数一条假红） #####################
+  [32m✓[0m L1.2 6 个外部档案的单位 / 组别 / 核验状态逐一对上（A 同组、C 同单位异组、D 异单位、E 待核验、F 自填）
+  [32m✓[0m L1.2 extF 的自填单位 / 组别原样保留（未核验不许落 unit_id）
+  [32m✓[0m L1.2 t_lqg_wx_bind / t_lqg_ext_profile / t_lqg_source_unit / t_lqg_unit_group ddl_vs_ssot 全过
+  [32m✓[0m L1.2 没有任何手机号在 sys_user 里有两行（活跃行）
+
+[1mL1.3 同一手机号在 sys_user 里恒为 1 行（首登自动建 / 换微信号再登 / 按手机号授权升级）[0m
+  [32m✓[0m L1.3a 首登自动建：identity=external、bind_status=unbound、手机号打码
+  [32m✓[0m L1.3a 首登后同手机号 1 行
+  [32m✓[0m L1.3b 换微信号再登：还是同一个人（external）
+  [32m✓[0m L1.3b 换微信号再登后同手机号仍 1 行
+  [32m✓[0m L1.3b 是同一 user_id 上挂了 2 个 openid（不是建了第二个账号）
+  [32m✓[0m L1.3c 按手机号授权升级：upgraded=true
+  [32m✓[0m L1.3c 授权升级后同手机号仍 1 行
+  [32m✓[0m L1.3c 角色换成内部、微信绑定原样（2 行）
+  [32m✓[0m L1.3c 升级后同一微信号再登：identity=internal
+  [32m✓[0m L1.3d 先授权后首登：授权建号 upgraded=false
+  [32m✓[0m L1.3d 该手机号首次微信登录：identity=internal（认到授权建出的账号）
+  [32m✓[0m L1.3d 授权 + 首登后同手机号仍 1 行
+
+[1m═══ 汇总 ═══[0m
+[31m失败 1 条：[0m
+  - L1.1 D1 的 7 支迁移全部记录在案（D1 无迁移的只有 SYS-MP-001） → [FAIL] 期望 '7'，实际 '14' 14
+
+[1m收尾[0m
+  已 reseed + 清孤儿账号（含回归手机号 13800000097 / 13800000098）+ 清 token 缓存
+D1-RC=1
+
+##################### 11) mvn -pl ruoyi-modules/ruoyi-lqg -am test（要求 Tests run > 0 且 0 失败） #####################
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.auth.guard.MockLoginGuardContractTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.ext.ExtEmbedShapeContractTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.104 s -- in org.dromara.lqg.ext.ExtChokepointContractTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.dromara.lqg.sample.hint.SampleHintContractTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.sample.verify.VerifyTransitionsContractTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.dromara.lqg.sample.mp.MpSampleContractTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in org.dromara.lqg.sample.export.SampleExportContractTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.dromara.lqg.sample.service.SampleRecentFilterContractTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.dromara.lqg.sample.guard.SampleKindRulesContractTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in org.dromara.lqg.sample.query.SampleTableQueryContractTest
+[INFO] Tests run: 120, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+##################### 12) plus-ui build:prod #####################
+dist//Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/assets/404-juXbQc1s.css.gz                                                             2.79kb / gzip: 0.72kb
+dist//Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/index.html.gz                                                                          111.31kb / gzip: 48.39kb
+dist//Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/assets/index-B8qybWQ-.js.gz                                                            262.10kb / gzip: 70.94kb
+dist//Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/assets/index-DmQjKG7W.css.gz                                                           531.43kb / gzip: 79.12kb
+dist//Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/assets/index-gShvkBf5.js.gz                                                            1017.73kb / gzip: 336.52kb
+dist//Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/plus-ui/assets/index-DldrCX30.js.gz                                                            1652.69kb / gzip: 552.21kb
+
+
+BUILD-PROD-RC=0
+
+##################### 收尾：reseed + 清孤儿账号 + 清 token 缓存 #####################
+reseed ok
+bash: doc/verify/clean-orphan-accounts.sh: No such file or directory
+ALL DONE

@@ -1,0 +1,14 @@
+### CRYO-WEB-001 · accept transcript（逐条实跑）
+
+$ bash doc/waves/reports/CRYO-WEB-001/accept-runners/cryoweb001-acc1-export.sh
+✓ 表头 11 列与模板逐字一致；数据 7 行
+✓ 表头 11 列与模板逐字一致；数据 7 行
+✓ 表头 11 列与模板逐字一致；数据 7 行
+✓ 表头 11 列与模板逐字一致；数据 7 行
+ACCEPT-1 EXIT=0
+
+$ bash doc/waves/reports/CRYO-WEB-001/accept-runners/cryoweb001-acc2-menu.sh
+5410:cryo:lqg/cryo/index
+true
+true
+ACCEPT-2 EXIT=0

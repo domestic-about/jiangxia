@@ -1,0 +1,8 @@
+# QC-WEB-001 accept[2] 前端构建是本次产物；编辑页用了图片位上传与附件组件；带出的只读字段没有进表单；样本总表的「质控文档」入口已点亮
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

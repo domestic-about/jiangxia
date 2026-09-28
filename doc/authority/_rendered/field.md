@@ -156,7 +156,7 @@
 
 **锚 id**：`FIELD:t_lqg_doc_attachment.oss_id`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "FK→sys_oss.oss_id", "name": "oss_id", "nullable": false, "type": "id"}
+{"comment": "FK→sys_oss.oss_id。私有桶；对外（含工作台质控编辑页）只发短时签名链接（CR-20260924-11）", "name": "oss_id", "nullable": false, "type": "id"}
 
 ## t_lqg_doc_attachment.sort
 
@@ -168,13 +168,13 @@
 
 **锚 id**：`FIELD:t_lqg_doc_file.audience`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "★ internal 内部版（含内部编号）/ external 外部版（内部编号按开关留空）；外部接口只许取 external", "dict": "lqg_doc_audience", "length": 16, "name": "audience", "nullable": false, "type": "dict", "unique": "uk_doc_file"}
+{"comment": "★ internal 内部版（一直印内部编号）/ external 外部版（「内部编号」一格随系统参数 lqg.ext.show-internal-no：开印、关留空，CR-20260924-10）；外部接口只许取 external", "dict": "lqg_doc_audience", "length": 16, "name": "audience", "nullable": false, "type": "dict", "unique": "uk_doc_file"}
 
 ## t_lqg_doc_file.content_hash
 
 **锚 id**：`FIELD:t_lqg_doc_file.content_hash`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "★ 内容指纹 = sha256(文档各字段 + 图片 oss_id 列表 + 模板版本 + audience)；与当前算出的不一致 = 缓存过期，必须重出", "length": 64, "name": "content_hash", "nullable": false, "type": "str"}
+{"comment": "★ 内容指纹 = sha256(文档各字段 + 图片 oss_id 列表 + 嵌进 Word 的细胞活率附件 oss_id（CR-20260924-11，换附件必重出） + 模板版本 + audience + 「内部编号」一格印没印)；与当前算出的不一致 = 缓存过期，必须重出。开关切换 → 外部版样本质控表与合并件的指纹随之变（CR-20260924-10）", "length": 64, "name": "content_hash", "nullable": false, "type": "str"}
 
 ## t_lqg_doc_file.doc_kind
 
@@ -199,6 +199,18 @@
 **锚 id**：`FIELD:t_lqg_doc_file.id`（ticket 的 blueprint_refs 写这个）
 
 {"comment": "主键", "name": "id", "nullable": false, "type": "id"}
+
+## t_lqg_doc_file.missing_image_count
+
+**锚 id**：`FIELD:t_lqg_doc_file.missing_image_count`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "内部版缺图张数；外部版有任一张图取不到即整份 failed（CR-20260923-09，裁定 #217）；计入工作台首页渲染异常数", "default": "0", "name": "missing_image_count", "nullable": false, "type": "int"}
+
+## t_lqg_doc_file.missing_images
+
+**锚 id**：`FIELD:t_lqg_doc_file.missing_images`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "缺了哪几张（图位与取不到的原因），工作台可见", "length": 500, "name": "missing_images", "nullable": true, "type": "str"}
 
 ## t_lqg_doc_file.oss_id
 
@@ -230,6 +242,12 @@
 
 {"comment": "FK→t_lqg_sample.id", "name": "sample_id", "nullable": false, "type": "id", "unique": "uk_doc_file"}
 
+## t_lqg_doc_file.show_internal_no
+
+**锚 id**：`FIELD:t_lqg_doc_file.show_internal_no`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "★ 这一版「内部编号」一格是否印出 Y / N（header 行 docx / page_no=0 上有意义），落 done 时与指纹同一次写下；外部版随系统参数 lqg.ext.show-internal-no，开关关着时印了内部编号（Y）的外部版在清单 / 预览 / 下载一律不对外、后台按新设置重出。迁移 V202609284001（CR-20260924-10）", "default": "N", "name": "show_internal_no", "nullable": false, "type": "flag"}
+
 ## t_lqg_doc_file.template_version
 
 **锚 id**：`FIELD:t_lqg_doc_file.template_version`（ticket 的 blueprint_refs 写这个）
@@ -258,13 +276,13 @@
 
 **锚 id**：`FIELD:t_lqg_doc_image.oss_id`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "原图 FK→sys_oss.oss_id（预览页点开看的就是它）", "name": "oss_id", "nullable": false, "type": "id"}
+{"comment": "原图 FK→sys_oss.oss_id（预览页点开看的就是它）。私有桶；对外（含工作台质控编辑页）只发短时签名链接（CR-20260924-11）", "name": "oss_id", "nullable": false, "type": "id"}
 
 ## t_lqg_doc_image.preview_oss_id
 
 **锚 id**：`FIELD:t_lqg_doc_image.preview_oss_id`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "预览图 FK→sys_oss.oss_id（长边 ≤ 2000px 的 JPEG；TIFF 等浏览器打不开的格式靠它显示；进 Word 的也是它）", "name": "preview_oss_id", "nullable": true, "type": "id"}
+{"comment": "预览图 FK→sys_oss.oss_id（长边 ≤ 2000px 的 JPEG；TIFF 等浏览器打不开的格式靠它显示；进 Word 的也是它）。私有桶；对外只发短时签名链接（CR-20260924-11）", "name": "preview_oss_id", "nullable": true, "type": "id"}
 
 ## t_lqg_doc_image.slot
 
@@ -360,7 +378,7 @@
 
 **锚 id**：`FIELD:t_lqg_embed.section_time`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "切片时间（非空 = 已切片，总表的切片染色提示读它）", "name": "section_time", "nullable": true, "type": "date"}
+{"comment": "切片时间（非空 = 已切片，样本表（样本记录信息表 / 类器官收样记录两页）的切片染色提示读它）", "name": "section_time", "nullable": true, "type": "date"}
 
 ## t_lqg_embed.stain_other
 
@@ -660,7 +678,7 @@
 
 **锚 id**：`FIELD:t_lqg_qc_sample.viability_oss_id`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "细胞活率测定附件 FK→sys_oss.oss_id（文档里这一格印文件名，不做 OLE 嵌入）", "name": "viability_oss_id", "nullable": true, "type": "id"}
+{"comment": "细胞活率测定附件 FK→sys_oss.oss_id。★ 文档里这一格嵌入附件本身（CR-20260924-11）：Word 里是 OLE Package，显示文件图标 + 文件名，在 Word / WPS 里双击打开；PDF 与预览图里是图标 + 文件名；大于 20MB 不嵌、只印文件名并注明去附件里看。私有桶，对外只发短时签名链接", "name": "viability_oss_id", "nullable": true, "type": "id"}
 
 ## t_lqg_qc_score.culture_days_level
 
@@ -756,7 +774,7 @@
 
 **锚 id**：`FIELD:t_lqg_sample.donor_name`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "★ 供体姓名，@EncryptField 加密落库（ADR-0006），只支持精确查询；organoid 类可空", "length": 255, "name": "donor_name", "nullable": true, "type": "str"}
+{"comment": "★ 供体姓名，加密落库（ADR-0006，实现为 SampleFieldCipher 手工加解密，与 @EncryptField 等价），只支持精确查询；外部提交的组织样本必填，内部录入选填（后端校验，CR-20260923-09）；organoid 类可空", "length": 255, "name": "donor_name", "nullable": true, "type": "str"}
 
 ## t_lqg_sample.gender
 
@@ -824,6 +842,12 @@
 
 {"comment": "类器官类型（organoid 类必填；自由文本，联想词来自字典 lqg_hint_organoid_type）", "length": 100, "name": "organoid_type", "nullable": true, "type": "str"}
 
+## t_lqg_sample.passage
+
+**锚 id**：`FIELD:t_lqg_sample.passage`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "代数（类器官收样记录才有，紧跟类器官类型；选填，形如 P3，去空格、小写 p 转大写后按冻存批次代数同一规则 ^P\\d{1,3}$ 校验）；属于送检段：外部可填、待核验 / 无效时可改，核验时实验室可改，外部看得到；组织样本恒为空（写路径一律写 NULL）。迁移 V202609281000（CR-20260924-10）", "length": 10, "name": "passage", "nullable": true, "type": "str"}
+
 ## t_lqg_sample.process_time
 
 **锚 id**：`FIELD:t_lqg_sample.process_time`（ticket 的 blueprint_refs 写这个）
@@ -852,7 +876,7 @@
 
 **锚 id**：`FIELD:t_lqg_sample.source_unit_id`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "FK→t_lqg_source_unit.id；自填单位名时为空", "name": "source_unit_id", "nullable": true, "type": "id"}
+{"comment": "FK→t_lqg_source_unit.id；自填单位名时为空。外部提交时后端按提交人绑定的单位挂 id（单位名与绑定单位同名即挂），只接受本人绑定的单位；实验室核验时可改选正式单位归口（CR-20260923-09）", "name": "source_unit_id", "nullable": true, "type": "id"}
 
 ## t_lqg_sample.source_unit_name
 

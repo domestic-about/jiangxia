@@ -1,0 +1,51 @@
+# DOC-MP-002 · accept 1（API）逐段重放 —— 票面 run 逐字，唯一差别见 §NF1
+
+## 全文（一条 && 链，最后一段是 accept 的判据）
+$ cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/doc/preview.js
+  pnpm build exit=0
+  preview.js 存在
+-rw-r--r--  1 wkui  staff  3417 Sep 22 21:34 dist/build/mp-weixin/components/lqg/DownloadBar.js
+-rw-r--r--  1 wkui  staff  3638 Sep 22 21:34 dist/build/mp-weixin/pages/doc/preview.js
+
+$ grep -q previewImage src/components/lqg/PageImageViewer.vue   → exit 0
+4:// 点任一页 → `uni.previewImage({urls: 全部页, current})`：微信内置的全屏看图器，
+33:  uni.previewImage({ urls: all, current, indicator: 'number' })
+$ grep -q previewImage src/components/lqg/ThumbStrip.vue        → exit 0
+9://   → `uni.previewImage` 喂的是 `imageOpenUrl()` 算出来的地址（原图优先）。
+10:// ★ 原图是 TIFF / DICOM / 全片扫描格式时 `wx.previewImage` 打不开：退回 `previewUrl`
+50:  uni.previewImage({ urls, current: Math.min(index, urls.length - 1), indicator: 'number' })
+$ grep -qE "showMenu:[[:space:]]*true" src/components/lqg/DownloadBar.vue → exit 0
+12://   2. 「打开」→ `uni.downloadFile` → `uni.openDocument({showMenu: true})`
+118:/** 微信内置查看器；`showMenu: true` 才有右上角的保存 / 转发入口（accept 1 的 grep 钉着它） */
+130:      showMenu: true,
+$ grep -q shareFileMessage src/components/lqg/DownloadBar.vue → exit 0
+14://   3. 「发送到微信」→ `uni.shareFileMessage({filePath, fileName})` 发到聊天。
+33:  /** 编号（内部编号 / 送检单号）：`shareFileMessage` 的兜底文件名要用 */
+140:    const api = (uni as any).shareFileMessage
+150:      fail: () => reject(new Error('shareFileMessage 失败')),
+162: *   平台专属能力（`openDocument` / `shareFileMessage`）**在 H5 上不可验**，报告里如实标注。
+$ grep -c "@/components/lqg/.*\.vue" src/pages/doc/preview.vue | awk "{exit !(\$1 >= 5)}" → exit 0
+7
+29:import AttachmentList from '@/components/lqg/AttachmentList.vue'
+30:import DocTabs from '@/components/lqg/DocTabs.vue'
+31:import DownloadBar from '@/components/lqg/DownloadBar.vue'
+32:import ErrorState from '@/components/lqg/ErrorState.vue'
+33:import LoadingState from '@/components/lqg/LoadingState.vue'
+34:import PageImageViewer from '@/components/lqg/PageImageViewer.vue'
+35:import ThumbStrip from '@/components/lqg/ThumbStrip.vue'
+$ grep -q "@/components/lqg/DownloadSheet.vue" src/components/lqg/DocGroupCard.vue → exit 0
+4:import DownloadSheet from '@/components/lqg/DownloadSheet.vue'
+$ grep -q "@/components/lqg/DownloadBar.vue" src/components/lqg/DownloadSheet.vue → exit 0
+14:import DownloadBar from '@/components/lqg/DownloadBar.vue'
+$ grep -q groupDocs src/components/lqg/DocTabs.vue → exit 0
+6:// ★★ 顺序与「要不要出合并」**不在这里判**：那是 DOC-MP-001 的 `groupDocs`
+10://   「复用 groupDocs 决定顺序与要不要合并，别另写排序」）。
+14:  /** 已由 groupDocs 定好顺序的几份 + 末尾的「合并」（有合并入口时才给） */
+$ ! grep -nE "errorMsg|error_msg" src/pages/doc/preview.vue → exit 0（无命中）
+  grep exit=1（1 = 无命中 = 断言成立）
+
+$ pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl.json
+  vitest exit=0
+$ jq -e ".numFailedTests == 0 and .numPassedTests >= 4" /tmp/lqg-dl.json
+{"numPassedTests":17,"numFailedTests":0,"numTotalTests":17}
+true

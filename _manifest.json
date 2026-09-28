@@ -1,6 +1,99 @@
 {
- "skill": "xuqiu",
+ "skill": "zhixing",
  "status": "needs_human",
+ "task": {
+  "current": "D8",
+  "status": "pending",
+  "qa_rounds": 0,
+  "progress": "ticket 38/44 done, 任务 7/8 通过 QA 门",
+  "branch_model": "integration 集成分支 + 每任务一条 task/D<N>；不 push、不合 main（push 与部署留给 Kevin）"
+ },
+ "tickets": {
+  "AUTH-EXT-001": "done",
+  "AUTH-EXT-002": "done",
+  "AUTH-EXT-003": "done",
+  "AUTH-GROUP-001": "done",
+  "AUTH-LOGIN-001": "done",
+  "AUTH-STAFF-001": "done",
+  "CRYO-FLOW-001": "done",
+  "CRYO-MODEL-001": "done",
+  "CRYO-MP-001": "done",
+  "CRYO-REMIND-001": "done",
+  "CRYO-WEB-001": "done",
+  "DOC-MP-001": "done",
+  "DOC-MP-002": "done",
+  "DOC-PDF-001": "done",
+  "DOC-PROOF-001": "escalated",
+  "DOC-PUBLISH-001": "done",
+  "DOC-RENDER-001": "done",
+  "EMBED-MODEL-001": "done",
+  "EMBED-MP-001": "done",
+  "EMBED-WEB-001": "done",
+  "OCR-IMPL-001": "done",
+  "OCR-MP-001": "done",
+  "OCR-SPIKE-001": "escalated",
+  "QC-MODEL-001": "done",
+  "QC-WEB-001": "done",
+  "QC-WEB-002": "done",
+  "SAMPLE-EXPORT-001": "done",
+  "SAMPLE-HINT-001": "done",
+  "SAMPLE-MODEL-001": "done",
+  "SAMPLE-MP-001": "done",
+  "SAMPLE-MP-002": "done",
+  "SAMPLE-VERIFY-001": "done",
+  "SAMPLE-WEB-001": "done",
+  "SYS-ACCEPT-001": "done",
+  "SYS-BACKUP-001": "pending",
+  "SYS-BASE-001": "done",
+  "SYS-EXPORT-001": "done",
+  "SYS-HOME-001": "done",
+  "SYS-MANUAL-001": "pending",
+  "SYS-MP-001": "done",
+  "SYS-PROD-001": "pending",
+  "SYS-RELEASE-001": "pending",
+  "SYS-STAGING-001": "done",
+  "SYS-WEB-001": "done"
+ },
+ "gates": {
+  "L0": "pass",
+  "L1": "pass",
+  "L2": "pass",
+  "L3": "pass",
+  "note": "DD1,D2,D3,D4,D5,D6,D7 的 QA 门 已通过"
+ },
+ "exception": null,
+ "open_issues": {
+  "total": 307,
+  "by_severity": {
+   "S2": 120,
+   "S3": 174,
+   "S1": 9,
+   "S0": 4
+  },
+  "escalated_tickets": [
+   "DOC-PROOF-001",
+   "OCR-SPIKE-001"
+  ],
+  "s0_s1_unresolved": [
+   "OCR-SPIKE-001 被挂起（escalated）",
+   "DOC-PROOF-001 被挂起（escalated）",
+   "★ S1：小程序文档下载把 API 鉴权头带到了 OSS 预签名直链上 → MinIO 400 多重认证 → H5 单份/合并下载 0/4 全失败",
+   "★ S1：外部账号（小程序 token）可读 /lqg/home/recent —— 跨单位送检单号+单位名+核验状态；/todo 五数亦可读（升格 #270）"
+  ],
+  "note": "S0/S1 会在 qa_gate 的 pending_issues 里被拦；S2/S3 推到 all_done 一起清（载体是 doc/waves/state.json 的 open_issues，勿另建台账）"
+ },
+ "summary": "ticket 38/44 done；已通过 QA 门的任务：D1,D2,D3,D4,D5,D6,D7。当前 D8（pending，QA 第 0 轮）。未决台账 307 条（S0/S1 4 条）。",
+ "needs_human": {
+  "route": "kevin",
+  "why": "zhixing 停在等人：escalated 票 DOC-PROOF-001,OCR-SPIKE-001",
+  "what": "① 设计稿 v3（14 张图）与确认单是否发甲方：这一版含 9-18 的 5 条改动；② 图廊链接要不要继续给甲方（已清内部话术，但它仍是内部视觉基准，每次改都会即时对外可见）；③ 计费：CR-20260918-07 估约 1.3 人日，加上 CR-04 的 2.5-3、CR-05 的 1.5，累计约 5.3-5.8 人日，算不算二次开发（合同第六条第 5 款）；④ 新开的 OQ-17：中心内部人员之间能否互改对方录的记录，现按不分级做，已写进确认单第 5 条请甲方答；⑤ 外部版质控文档里的内部编号仍留空（开关只作用于页面），已写进确认单 05，甲方若要一并放开需另记变更；⑥ 过目 8 份 proposed ADR（0004 本次更新了 decision）"
+ },
+ "known_gaps": [
+  "全部 accept 是在实现之前写的：125 条 SQL 已在真实表结构（上游若依 PG 脚本 + SSOT 生成的 DDL）上逐条 EXPLAIN 通过，seed 期望值已在 PostgreSQL 16 上实跑核对；但 API 类断言无法空转，接口形状以 doc/api-contract.md 为准，实现时若要改先改契约再改断言",
+  "skill 建议的「冻结后抽 20% accept 做变异测试」未做（没有被测对象）；建议 D1 过 QA 门后补一轮",
+  "OCR-SPIKE-001 依赖甲方提供 10-20 张真实照片；SYS-PROD-001 / SYS-RELEASE-001 依赖云资源购买、域名备案与甲方小程序主体认证——都是非开发前置，写在 phase-plan.yaml 顶部",
+  "图廊 16 帧与给甲方的设计稿 v3 仍是方向 A 之前的外观（无阴影、小圆角）；实现以 direction-a/落地规范.md 为准，帧只取内容与排布。按方向 A 重绘与同步 claude.ai/design 设计系统留作后续，不挡 /zhixing"
+ ],
  "artifacts": {
   "final_idea": "doc/00-最终想法.md",
   "requirements": "doc/requirements.yaml",
@@ -80,18 +173,5 @@
    "REQ-OCR-004"
   ],
   "note": "分母 = 87 条在范围内（5 条 deferred、2 条 dropped 不计）；8 条 clarify 都带默认口径并已被 ticket 认领，不卡开发"
- },
- "summary": "94 条需求（87 在范围内 / 5 deferred / 2 dropped）→ 43 张 ticket → D1-D8，闸门全绿。设计已定稿：CR-20260917-04/05/06 之后，CR-20260918-07 落地甲方 2026-09-18 在测试问题记录表里提的 9 条——5 条改动（⑩ 表格页加「修改」入口、⑪ 历史编辑记录内部看中心全员、⑦ 外部可见操作人与包埋人、内部编号开关 lqg.ext.show-internal-no、⑧ 冻存超期阈值 lqg.cryo.overdue-days 并写明转液氮后提醒消失），4 条是提问、答复已回填飞书记录表；11 张 ticket 已按新口径更新，估约 1.3 人日，排进 D2/D3/D4/D7，不动交付日期。同日把内部图廊的内部话术清干净（甲方这轮看的是图廊，不是给甲方的设计稿），给甲方的设计稿重出为 v3（19 张图，5 张是 9-18 晚按 Kevin 要求补画的：表格页只读详情与修改模式、开关打开后的外部详情、工作台取用登记与转液氮、系统管理参数设置） 2026-09-21：出三个视觉方向，Kevin 选 A「清爽卡片」（CR-20260921-08），SYS-MP-001 加 token 落地 accept，另 7 张 MP 票必读指向落地规范；闸门重跑全绿。",
- "needs_human": {
-  "route": "kevin",
-  "why": "发甲方前待 Kevin 过目",
-  "what": "① 设计稿 v3（14 张图）与确认单是否发甲方：这一版含 9-18 的 5 条改动；② 图廊链接要不要继续给甲方（已清内部话术，但它仍是内部视觉基准，每次改都会即时对外可见）；③ 计费：CR-20260918-07 估约 1.3 人日，加上 CR-04 的 2.5-3、CR-05 的 1.5，累计约 5.3-5.8 人日，算不算二次开发（合同第六条第 5 款）；④ 新开的 OQ-17：中心内部人员之间能否互改对方录的记录，现按不分级做，已写进确认单第 5 条请甲方答；⑤ 外部版质控文档里的内部编号仍留空（开关只作用于页面），已写进确认单 05，甲方若要一并放开需另记变更；⑥ 过目 8 份 proposed ADR（0004 本次更新了 decision）"
- },
- "known_gaps": [
-  "全部 accept 是在实现之前写的：125 条 SQL 已在真实表结构（上游若依 PG 脚本 + SSOT 生成的 DDL）上逐条 EXPLAIN 通过，seed 期望值已在 PostgreSQL 16 上实跑核对；但 API 类断言无法空转，接口形状以 doc/api-contract.md 为准，实现时若要改先改契约再改断言",
-  "skill 建议的「冻结后抽 20% accept 做变异测试」未做（没有被测对象）；建议 D1 过 QA 门后补一轮",
-  "OCR-SPIKE-001 依赖甲方提供 10-20 张真实照片；SYS-PROD-001 / SYS-RELEASE-001 依赖云资源购买、域名备案与甲方小程序主体认证——都是非开发前置，写在 phase-plan.yaml 顶部",
-  "图廊 16 帧与给甲方的设计稿 v3 仍是方向 A 之前的外观（无阴影、小圆角）；实现以 direction-a/落地规范.md 为准，帧只取内容与排布。按方向 A 重绘与同步 claude.ai/design 设计系统留作后续，不挡 /zhixing"
- ],
- "next": "zhixing D1（SYS-BASE-001 / AUTH-LOGIN-001 / SYS-WEB-001 / SYS-MP-001 / AUTH-STAFF-001 / AUTH-GROUP-001）；needs_human 里发甲方与计费几件不挡开发，可并行"
+ }
 }

@@ -1,0 +1,25 @@
+# SYS-EXPORT-001 · 上游回归（动过 utils/request.ts / DownloadBar.vue / index.vue / 新增 fileHandoff.ts）
+
+## 1) DOC-MP-001（下载弹层/预览页的上游）
+[run] 2 条 accept，单条超时 900s
+  [32m✓[0m DOC-MP-001 acc1 [STATE] 分组规则过 fixture：组内固定顺序、组间按最新完成时间倒序、两份起才有合并入口、混进来的 merged 行不算一份 (0.7s)
+  [32m✓[0m DOC-MP-001 acc2 [API] 构建是本次产物；内部清单只给内部角色且带内部编号、外部清单不带；页签名走配置；分组卡片上有单份下载与合并预览、合并下载 (10.3s)
+[ok] 结果落盘 .tmp/reg-docmp001.json
+[run] 通过 2/2
+
+## 2) SYS-MP-001（utils/request.ts 被本票动过：resolveBaseUrl 抽到 utils/baseUrl.ts）
+[run] 3 条 accept，单条超时 900s
+  [31m✗[0m SYS-MP-001 acc1 [API] 产物是本次构建的、三个页签名称与顺序钉死、组件导入与选择器两条小程序专属坑已避开、调试登录入口没进生产构建 → exit 1 (4.3s) 日志 .tmp/reg-sysmp001-logs/SYS-MP-001-acc1.sh.log
+  [32m✓[0m SYS-MP-001 acc2 [STATE] 首页与「我的」只认后端给的身份：内部四个入口、外部三个（没有冻存），顺序 = 模板顺序；点哪个都是填写页；内部管理板块只给内部； (0.7s)
+  [32m✓[0m SYS-MP-001 acc3 [API] 方向 A 设计 token 落地：src/style/tokens.scss 与 doc 里的规范逐变量一致、全局引入 toke (0.0s)
+[ok] 结果落盘 .tmp/reg-sysmp001.json
+[run] 通过 2/3
+[run] ⛔ 1 条未登记的红（= 产品断言不成立）：SYS-MP-001 acc1
+
+## 3) DOC-MP-002（本票把它的下载段抽成公共段 —— 见报告 §6 的 acc1 冲突）
+[run] 2 条 accept，单条超时 900s
+  [31m✗[0m DOC-MP-002 acc1 [API] 构建是本次产物；预览页用到了两层放大、打开、发送到微信四个平台能力；组件直接路径导入；失败态不泄露内部错误；列表上的下载弹层与预 → exit 1 (4.1s) 日志 .tmp/reg-docmp002-logs/DOC-MP-002-acc1.sh.log
+  [32m✓[0m DOC-MP-002 acc2 [DATA] 内部的页面图片接口可用且只给内部；页数与 PDF 一致；外部身份打内部接口被拒 (6.2s)
+[ok] 结果落盘 .tmp/reg-docmp002.json
+[run] 通过 1/2
+[run] ⛔ 1 条未登记的红（= 产品断言不成立）：DOC-MP-002 acc1

@@ -1,0 +1,272 @@
+# ── SYS-PROD-001 · 生产环境（一台代购的云服务器上的全套）────────────────────────────────
+#
+#   cd code/deploy/prod
+#   cp .env.example .env && chmod 600 .env    # 填真口令 / 域名 / AK；.env 不进仓库
+#   bash deploy.sh all                        # 本机构建产物 → 送上机 → 建镜像 → 起容器 → 自检
+#
+# ★★ 这份文件是**生产**的，不是测试的。二者的差别只有四处，别互相抄：
+#   1. **只有 nginx 映射宿主端口 80 / 443**；postgres / redis / gotenberg / backend 一个宿主端口
+#      都不映射（accept 2 第 1 段用 nc 打 5432/6379/3000/8080，第 2 段在 compose 里 grep 这四行）。
+#      要连库走 SSH 隧道，见 doc/ops/部署手册.md §7。
+#   2. **TLS 在 nginx 容器里终止**（测试机是宿主宝塔 nginx 终止，因为那台机器上还有别的项目；
+#      生产这台上只有我们，80/443 直接给容器，acme.sh 用 webroot 续期，见 deploy.sh 的 cert 阶段）。
+#   3. 库名 lqg（不含 test）——`doc/verify/reseed.sh` 的护栏靠这个字符串挡住「对生产灌 seed」。
+#   4. 应用内**不开** mock 登录（application-prod.yml 里连 `mock-login` 这个键都不出现）。
+#
+# ★ 数据落数据盘：LQG_DATA_DIR 默认 /opt/lqg，买机器时把数据盘挂到那里（部署手册 §1）。
+#   compose 的 named volume 落在 /var/lib/docker 里，所以 postgres 用 **bind mount** 到数据盘；
+#   redis 是可丢的缓存，留在 named volume 里。
+#
+# ★ 资源规格：2 核 4G。故 backend 固定 -Xmx1g、gotenberg 上限 1G（两者都是 OOM 源，页首注释见
+#   doc/ops/部署手册.md §2 的容量账）。
+name: lqg-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lqg-prod-postgres
+    restart: unless-stopped
+    environment:
+      # 库名**不许**含 test（reseed.sh 的护栏靠它）；生产库名就是 lqg
+      POSTGRES_DB: ${LQG_DB_NAME:-lqg}
+      POSTGRES_USER: ${LQG_DB_USER:-lqg}
+      POSTGRES_PASSWORD: ${LQG_DB_PASSWORD:?LQG_DB_PASSWORD 未设置——照 code/deploy/prod/.env.example 建 .env}
+      # 中文排序/大小写按 C 排序，与 dev / test 一致，避免索引行为漂移
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      TZ: Asia/Shanghai
+    # ★ 不映射任何宿主端口（要连库走 SSH 隧道，部署手册 §7）
+    volumes:
+      - ${LQG_DATA_DIR:-/opt/lqg}/pgdata:/var/lib/postgresql/data
+    # 2 核 4G 调参：shared_buffers=1GB、max_connections=100（后端 Hikari maxPoolSize=20，
+    # 其余留给 pg_dump / 运维连接）。PostgreSQL 的并行查询走 POSIX 共享内存，shm_size 给小了
+    # 会报 "could not resize shared memory segment"，所以给到与 shared_buffers 同量级。
+    shm_size: 1gb
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=2GB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - max_connections=100
+      - -c
+      - max_worker_processes=4
+      - -c
+      - max_parallel_workers=2
+      - -c
+      - max_parallel_workers_per_gather=1
+      - -c
+      - log_min_duration_statement=2000
+      - -c
+      - timezone=Asia/Shanghai
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LQG_DB_USER:-lqg} -d ${LQG_DB_NAME:-lqg}"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    container_name: lqg-prod-redis
+    restart: unless-stopped
+    # 必须设口令：若依的 Redisson 配了口令就发 AUTH，服务端没口令时 AUTH 直接报错 → 后端起不来
+    environment:
+      LQG_REDIS_PASSWORD: ${LQG_REDIS_PASSWORD:?LQG_REDIS_PASSWORD 未设置——照 .env.example 建 .env}
+    # ★ 不映射任何宿主端口。
+    # 2 核 4G：缓存不是数据源（丢了靠重启重建），给 256MB 上限 + allkeys-lru，
+    # 并且**关掉快照**（appendonly no / save 空）：省内存，也免得磁盘 IO 与 pg_dump 抢带宽。
+    # 生产数据只以 PostgreSQL 为准（ADR-0002），Redis 只放会话 / 锁 / 缓存。
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec redis-server --requirepass "$$LQG_REDIS_PASSWORD"
+        --maxmemory 256mb --maxmemory-policy allkeys-lru
+        --appendonly no --save ""
+    volumes:
+      - lqg-prod-redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$LQG_REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  gotenberg:
+    # DOC-PDF-001 / ADR-0005：docx → PDF（LibreOffice + 开源中文字体，见 ../common/gotenberg/）。
+    # 构建上下文是仓库里的 common/gotenberg —— 与 backend 同一思路：**在服务器上原生构建**
+    # （开发机是 arm64、生产机是 amd64）。基础镜像 gotenberg/gotenberg:8 必须在服务器上能拉到。
+    # ★ 不映射任何宿主端口（accept 2 的第 1 段就是打 3000）。
+    build:
+      context: ../common/gotenberg
+      dockerfile: Dockerfile
+    image: lqg-gotenberg:8
+    container_name: lqg-prod-gotenberg
+    restart: unless-stopped
+    command:
+      - gotenberg
+      - --api-timeout=60s
+      # ★ gotenberg 的 LibreOffice 是无 Java 的进程模型，**只认 GOMAXPROCS 类的并行度**；
+      #   真正压住内存的是下面的 mem_limit=1g（见部署手册 §2 的容量账）。
+      #   并发转换数压到 2：2 核机器上一次转换就能吃掉半核，串起来比堆并发更稳。
+      - --libreoffice-restart-after=10
+    # ★ 内存上限 1G（票面 §2 硬要求）。用 mem_limit 而不是 deploy.resources.limits，
+    #   因为后者只在 `docker compose --compatibility` 或 Swarm 下生效，普通 compose 会静默忽略。
+    mem_limit: 1g
+    # LibreOffice 转换会 fork 子进程；不加这两个上限时一次大文档能瞬间吃掉主机的 swap。
+    memswap_limit: 1g
+    cpus: 1.0
+    # 转换临时目录落数据盘：容器可写层在 /var/lib/docker，默认可能只有系统盘容量
+    tmpfs:
+      - /tmp:size=1g,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  backend:
+    # 镜像在**生产服务器上原生构建**（单阶段 COPY 已打好的 jar）：
+    #   本机 mvn package → rsync jar 上机 → docker build（amd64 原生，秒级）。
+    #   多阶段那份（code/deploy/common/Dockerfile.backend，maven 构建 → JRE 运行）留给 amd64 CI，
+    #   本地用它建出来的是 arm64 镜像，上机是 `exec format error`。理由与测试环境同源：
+    #   code/deploy/common/README.md。
+    build:
+      context: ./ruoyi-admin
+      dockerfile: Dockerfile
+      args:
+        # 反 stale：/lqg/sys/ping 的 buildCommit 必须与本地 HEAD 对得上（accept 1 第 2 段）。
+        # deploy.sh 每次部署前用 `git rev-parse --short=7 HEAD` 覆写 .env 里的 LQG_BUILD_COMMIT。
+        BUILD_COMMIT: ${LQG_BUILD_COMMIT:?LQG_BUILD_COMMIT 未设置——deploy.sh 会写入 .env}
+    # ★ 镜像 tag = 提交号 → **回滚 = 把 LQG_BUILD_COMMIT 改回上一个提交号再 up -d**
+    #   （旧镜像还在本地，docker compose up 会直接用它，不用重新构建）。
+    #   完整回滚步骤见 doc/ops/部署手册.md §6。
+    image: lqg-backend:${LQG_BUILD_COMMIT:?}
+    container_name: lqg-prod-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+    environment:
+      # ★ prod profile（下面 command 再显式给一次，两道保险）
+      SPRING_PROFILES_ACTIVE: prod
+      BUILD_COMMIT: ${LQG_BUILD_COMMIT:?}
+      TZ: Asia/Shanghai
+      LQG_API_PORT: "8080"
+      # 容器内走 compose 网络的服务名，不是宿主端口
+      LQG_DB_HOST: postgres
+      LQG_DB_PORT: "5432"
+      LQG_DB_NAME: ${LQG_DB_NAME:-lqg}
+      LQG_DB_USER: ${LQG_DB_USER:-lqg}
+      LQG_DB_PASSWORD: ${LQG_DB_PASSWORD:?}
+      LQG_REDIS_HOST: redis
+      LQG_REDIS_PORT: "6379"
+      LQG_REDIS_PASSWORD: ${LQG_REDIS_PASSWORD:?}
+      # 文档转换容器：走 compose 网络的服务名（不发布宿主端口）
+      LQG_GOTENBERG_URL: http://gotenberg:3000
+      # 字段加密口令（ADR-0006）：**生产口令与 dev/test 的 LqgTestAesKey#01 不同**，
+      # 只存在于服务器 .env（600）。丢了这份数据就读不出来 —— 另存一份给 Kevin（部署手册 §8）。
+      LQG_ENCRYPT_PASSWORD: ${LQG_ENCRYPT_PASSWORD:?LQG_ENCRYPT_PASSWORD 未设置——见 .env.example}
+      # ★ V13 / V14（F4）：JWT 签名密钥、接口加解密的两把后端 RSA 密钥 —— 只从 .env 来、没有缺省值。
+      #   缺失时 compose 在这里就报错；就算绕过 compose 起了，后端的 StartupSafetyGuard 也会在连库之前拒绝启动。
+      #   生成：bash gen-secrets.sh（与工作台构建用的 VITE_APP_RSA_* 成对生成）。
+      LQG_JWT_SECRET: ${LQG_JWT_SECRET:?LQG_JWT_SECRET 未设置——先跑 gen-secrets.sh}
+      LQG_API_REQUEST_PRIVATE_KEY: ${LQG_API_REQUEST_PRIVATE_KEY:?LQG_API_REQUEST_PRIVATE_KEY 未设置——先跑 gen-secrets.sh}
+      LQG_API_RESPONSE_PUBLIC_KEY: ${LQG_API_RESPONSE_PUBLIC_KEY:?LQG_API_RESPONSE_PUBLIC_KEY 未设置——先跑 gen-secrets.sh}
+      # ★ -Xmx1g（票面 §2 硬要求；2 核 4G，还要养 postgres 1G + gotenberg 1G + redis 256M）。
+      #   镜像里那条 JAVA_TOOL_OPTIONS 是给测试机（~2.8G 可用）的 MaxRAMPercentage=60；
+      #   这里显式给 -Xmx1g 覆盖它——同一环境变量重复出现时**后者生效**，
+      #   所以 compose 的这份必须写在 Dockerfile 那份之后（compose 的 environment 天然在后）。
+      #   ExitOnOutOfMemoryError：堆爆了直接退出让 restart 策略拉起来，不带病苟活。
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx1g -XX:+ExitOnOutOfMemoryError -Duser.timezone=Asia/Shanghai"
+      # 真实微信小程序凭据（甲方主体，SYS-RELEASE-001 到位后填；邮箱等运营参数同源）
+      LQG_WX_APPID: ${LQG_WX_APPID:-}
+      LQG_WX_SECRET: ${LQG_WX_SECRET:-}
+    # ★ 不映射任何宿主端口（accept 2 第 1 段打 8080）。nginx 容器用服务名 backend:8080 进。
+    volumes:
+      # 日志落数据盘，排查不用进容器；后端 logback 写 ./logs（WORKDIR=/app）
+      - ${LQG_DATA_DIR:-/opt/lqg}/logs/backend:/app/logs
+      # 临时文件（multipart 落盘 + docx 渲染中间产物）落数据盘
+      - ${LQG_DATA_DIR:-/opt/lqg}/tmp:/ruoyi/server/temp
+    # ★ 容量的那笔账写在 doc/ops/部署手册.md §2（堆上限由上面的 JAVA_TOOL_OPTIONS 给）。
+    command: ["--spring.profiles.active=prod"]
+    healthcheck:
+      # 基础镜像只有 JRE（没有 curl/wget/nc）。用 JDK 自带的 jwebserver 探本机 8080 会另起一个
+      # 服务，不行；所以用 bash 的 /dev/tcp 探端口（jammy 里有 bash）。
+      # 「应用真的能应答 HTTP」由 deploy.sh 在宿主上打 https://<域名>/lqg/sys/ping 断言（那一步更严，
+      # 见部署手册 §11）。这里的 /dev/tcp 只负责「进程还活着、端口还听着」。
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 180s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lqg-prod-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    # ★★ 全套里**唯一**映射宿主端口的服务（accept 2 第 1 段 / 第 2 段都查这一点）。
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # 网页工作台静态产物（plus-ui 的 dist，由 deploy.sh rsync 到 ${LQG_DATA_DIR}/www）
+      - ${LQG_DATA_DIR:-/opt/lqg}/www:/usr/share/nginx/html:ro
+      - ./nginx/workspace.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/proxy-headers.inc:/etc/nginx/conf.d/lqg-proxy-headers.inc:ro
+      - ./nginx/security-headers.inc:/etc/nginx/conf.d/lqg-security-headers.inc:ro
+      # 证书目录（只读）：${LQG_DATA_DIR}/certs/<域名>/fullchain.pem。由宿主的 acme.sh 续期，
+      # 续期后 deploy.sh 的 cron 钩子 `docker exec lqg-prod-nginx nginx -s reload` 重新加载。
+      - ${LQG_DATA_DIR:-/opt/lqg}/certs:/etc/nginx/certs:ro
+      # acme.sh 的 webroot：宿主 acme.sh 写 /.well-known/acme-challenge/<token>，
+      # 容器 80 端口的 location ^~ /.well-known/acme-challenge/ 从这里读（续期不用停 nginx）
+      - ${LQG_DATA_DIR:-/opt/lqg}/acme-webroot:/var/www/acme:rw
+      - ${LQG_DATA_DIR:-/opt/lqg}/logs/nginx:/var/log/nginx
+    healthcheck:
+      # 80 端口必须 301 到 https（accept 1 最后一段查的就是这个重定向，这里顺手当存活探针）。
+      # 不用 443：首启时证书可能还没签发，健康检查不该因为「证书还没到」判死。
+      test: ["CMD-SHELL", "wget -q -S -O /dev/null http://127.0.0.1/ 2>&1 | grep -qE '30[12]|Location: https' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+volumes:
+  # Redis 缓存卷（可重建）；postgres 的数据是 bind mount 到数据盘，不在这里。
+  lqg-prod-redisdata:

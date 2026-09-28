@@ -1,0 +1,36 @@
+模板目录：/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/resources/lqg/doc-templates
+当前 template-version = 1
+
+════ sample_qc.docx（改前 3 种 rFonts）
+    110  <w:rFonts w:hint="default" w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+      9  <w:rFonts w:hint="eastAsia" w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+      4  <w:rFonts w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+
+════ organoid_qc.docx（改前 3 种 rFonts）
+     17  <w:rFonts w:hint="default" w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+      3  <w:rFonts w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+      3  <w:rFonts w:hint="eastAsia" w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+
+════ organoid_score.docx（改前 3 种 rFonts）
+     81  <w:rFonts w:hint="default" w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+     22  <w:rFonts w:hint="eastAsia" w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+      2  <w:rFonts w:ascii="Tinos" w:hAnsi="Tinos" w:eastAsia="Noto Serif SC" w:cs="Tinos"/>
+
+════ sample_qc.docx：改写 4 处 rFonts
+   [word/theme/theme1.xml] (<a:latin typeface=")[^"]*(") × 2 → \g<1>Tinos\g<2>
+   [word/theme/theme1.xml] (<a:cs typeface=")[^"]*(") × 2 → \g<1>Tinos\g<2>
+   [word/theme/theme1.xml] (<a:ea typeface=")[^"]*(") × 2 → \g<1>Noto Serif SC\g<2>
+   [word/theme/theme1.xml] (<a:font script="Hans" typeface=")[^"]*(") × 2 → \g<1>Noto Serif SC\g<2>
+
+════ organoid_qc.docx：改写 4 处 rFonts
+   [word/theme/theme1.xml] (<a:latin typeface=")[^"]*(") × 2 → \g<1>Tinos\g<2>
+   [word/theme/theme1.xml] (<a:cs typeface=")[^"]*(") × 2 → \g<1>Tinos\g<2>
+   [word/theme/theme1.xml] (<a:ea typeface=")[^"]*(") × 2 → \g<1>Noto Serif SC\g<2>
+   [word/theme/theme1.xml] (<a:font script="Hans" typeface=")[^"]*(") × 2 → \g<1>Noto Serif SC\g<2>
+
+════ organoid_score.docx：改写 3 处 rFonts
+   [word/theme/theme1.xml] (<a:latin typeface=")[^"]*(") × 2 → \g<1>Tinos\g<2>
+   [word/theme/theme1.xml] (<a:cs typeface=")[^"]*(") × 2 → \g<1>Tinos\g<2>
+   [word/theme/theme1.xml] (<a:ea typeface=")[^"]*(") × 2 → \g<1>Noto Serif SC\g<2>
+
+template-version：1 → 2（换模板必须加一，指纹随之全量失效重出）

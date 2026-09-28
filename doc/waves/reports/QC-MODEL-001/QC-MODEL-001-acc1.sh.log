@@ -1,0 +1,7 @@
+# QC-MODEL-001 accept[1] 五张表与 SSOT 逐列相符、出自本票 Flyway；每个样本每种文档至多一份（部分唯一索引）
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+✓ 5 张表与 SSOT 逐列相符（含公共字段 6 个、部分唯一索引、普通索引）
+2
+character varying
+character varying

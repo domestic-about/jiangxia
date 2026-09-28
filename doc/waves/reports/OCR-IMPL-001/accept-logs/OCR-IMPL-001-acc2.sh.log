@@ -1,0 +1,6 @@
+# OCR-IMPL-001 accept[2] 付费通道默认关且 prod 配置里不出现这个开关；没配 provider 时明确报「请手动填写」而不是 500；限流生效
+# 归一化 NF1,NF2
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true
+15:15:09.465 [main] INFO org.dromara.lqg.ocr.provider.StubOcrProvider -- 识别测试桩已就绪：5 组用例（ocr-cases.json）

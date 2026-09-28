@@ -27,40 +27,49 @@ blueprint_refs:
   - FLOW:F-SAMPLE-02.step7
   - FLOW:F-DOC-02.step4
 accept:
-  - name: "小程序导出的四个文件与甲方模板原件逐字对表头、行数与库内独立计数一致；带筛选只出筛选结果；外部角色 403、未知工作表被拒"
+  - name: "小程序导出的四个文件与甲方模板原件逐字对表头（类器官收样记录在「类器官类型」后插入「代数」，CR-20260924-10）、行数与库内独立计数一致；带筛选只出筛选结果（含冻存「已取空」筛选）；外部角色 403、未知工作表被拒"
     form: DATA
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null && rm -f /tmp/lqg-mpx-*.xlsx &&
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg --out /tmp/lqg-mpx-tissue.xlsx GET /mp/int/export/tissue &&
       python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-tissue.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND sample_kind='tissue'" | head -1)" --find "内部编号=T-hli01" --expect "供体姓名=测试供体甲,有无固定=有" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-organoid.xlsx GET /mp/int/export/organoid &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-organoid.xlsx --template "_input/templates/类器官收样记录模板.xlsx" --rows 1 &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-organoid.xlsx --template "_input/templates/类器官收样记录模板.xlsx" --insert "代数@类器官类型" --rows 1 --find "内部编号=T-oco01" --expect "代数=P3" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-embed.xlsx GET /mp/int/export/embed &&
       python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-embed.xlsx --template "_input/templates/石蜡包埋送样记录模板.xlsx" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_embed e JOIN t_lqg_sample s ON s.id = e.sample_id AND s.del_flag='0' WHERE e.del_flag='0'" | head -1)" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-cryo.xlsx GET /mp/int/export/cryo &&
       python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --rows 7 --find "冻存样品=T-hli01-GZ-N-P2-EM2-2e5" --expect "冻存数量/支=8,当前剩余/支=6" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-tissue-f.xlsx GET '/mp/int/export/tissue?verifyStatus=pending' &&
       python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-tissue-f.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --rows 2 &&
+      bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-cryo-e.xlsx GET '/mp/int/export/cryo?emptiedOnly=true' &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-cryo-e.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --rows 1 --find "冻存样品=T-hli01-GZ-N-P5-EM2-1e5" --expect "当前剩余/支=0" &&
       bash doc/verify/api.sh --as extA --bizcode GET /mp/int/export/tissue | grep -qE '^403' &&
       bash doc/verify/api.sh --as staff --bizcode GET /mp/int/export/qc | grep -qE '^(400|404)'
     counterfeit: |-
       sys 包里另写了一份导出 VO → 表头与模板不一致红，或某列格式和工作台不同（有无固定导成 Y）→ --expect 红。两侧不同源：小程序导出的文件 vs 甲方发来的模板原件 + 直连库计数。
-      忽略筛选参数、永远导全量 → 带 verifyStatus=pending 那段行数不是 2 红。
+      忽略筛选参数、永远导全量 → 带 verifyStatus=pending 那段行数不是 2 红；冻存导出不认 emptiedOnly（列表有「已取空」页签，导出却还是全量）→ emptiedOnly 那段行数不是 1 红（seed 里只有 3004 取空）。
+      小程序类器官导出没跟上工作台插入的「代数」列（sys 包另写了一份 VO）→ 带 --insert 的表头比对红，或代数=P3 那格红。
       /mp/int/export 忘了角色注解 → extA 拿到 200 红：外部能把全部样本连同供体姓名明文导走。
       sheet 不校验、未知值落到默认表 → 最后一段拿到 200 红。
-  - name: "构建是本次产物；导出与文档下载共用同一段「打开 / 发送到微信」；下载带鉴权头；拼查询串的纯函数过单测；抽公共函数后文档下载的单测仍过"
+  - name: "构建是本次产物；导出与文档下载共用同一段「打开 / 发送到微信」；**导出请求真发一次**必须带 Authorization + clientid（且 200 / 真 xlsx），**文档下载真点一次**必须不带 Authorization（且 OSS 200）；拼查询串的纯函数过单测；抽公共函数后文档下载的单测仍过"
     form: API
     run: |-
       cd code/miniapp && rm -rf dist/build/mp-weixin && pnpm build:mp-weixin >/dev/null && test -f dist/build/mp-weixin/pages/ledger/index.js &&
       grep -q 'fileHandoff' src/components/lqg/DownloadBar.vue && grep -q 'fileHandoff' src/pages/ledger/index.vue &&
       grep -qE 'showMenu:[[:space:]]*true' src/utils/fileHandoff.ts && grep -q 'shareFileMessage' src/utils/fileHandoff.ts &&
-      grep -qE 'Authorization|clientid' src/pages/ledger/export.ts src/utils/fileHandoff.ts &&
       pnpm vitest run src/pages/ledger/export.spec.ts --reporter=json --outputFile=/tmp/lqg-export.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 3' /tmp/lqg-export.json &&
-      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl2.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl2.json
+      pnpm vitest run src/pages/doc/download.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-dl2.json >/dev/null && jq -e '.numFailedTests == 0 and .numPassedTests >= 4' /tmp/lqg-dl2.json &&
+      cd ../.. && bash doc/waves/regression/D7/mutation-assert.sh --verify-only --hotspot H1a,H1b
     counterfeit: |-
       表格导出另写了一套 downloadFile + openDocument、没带 showMenu → 用户打开了 Excel 却没有保存 / 转发入口，第 3、4 段红。
-      downloadFile 没带 Authorization → 真机上拿到的是一段 401 的 JSON，当成 xlsx 打开失败；第 5 段要求请求头出现在导出链路里，完工报告附真机录屏。
-      抽 fileHandoff 时把文档下载改坏 → 最后一段 DOC-MP-002 的单测红。
+      ★ **这一条不再用源码 grep 判「带没带鉴权头」**（旧写法 `grep -qE 'Authorization|clientid' export.ts fileHandoff.ts` 只问「文件里有没有这两个词」，
+      对**调用点**与**目标 URL** 零覆盖 —— D7 r1 L2 实测：把 `ledger/index.vue` 的调用点改成不传 header，整条 acc2 仍全绿，
+      而同一处错配在文档下载那条链路上制造了 issue #279 的 S1）。现在由 `mutation-assert.sh --hotspot H1a,H1b` 用**真浏览器**判：
+      · H1a：真点一次「导出 Excel」→ `page.route` 抓这一发的**真请求头**，必须 `Authorization: Bearer …` + `clientid`，响应 200 且响应体是 **ZIP 魔数 PK 的真 xlsx**；
+      · H1b：真点一次单份「下载」→ 抓发往 OSS 预签名直链的**真请求头**，必须**没有** `Authorization`，且 OSS 响应 200（多带这个头 MinIO 判「multiple authentication types」回 400）。
+      两条判据各配一个**已定义变异**（H1a 去掉调用点 `header: authHeader()`；H1b 给 `DownloadBar` 传回 `authHeader()`），变异后必须变红、还原后必须复绿；
+      任一条「改坏了还绿」→ 脚本 exit 1。证据落 `doc/waves/regression/D7/accept-strengthened/evidence.json`（含真请求头观测值）。
+      ★ 其余几条仍是源码/单测判据（不在本次强化范围内），但「鉴权头这件事已经验过」的假信心不能再由它们提供。
 ---
 
 # SYS-EXPORT-001 · 小程序 · 内部管理：表格页「导出 Excel」——四张表按当前筛选导出，与工作台同一个导出视图，打开或发送到微信
@@ -83,14 +92,14 @@ accept:
 
 ## 1 背景与口径
 
-2026-09-17 甲方看设计稿 v1：「这4个表都要求内部人员可下载，导出为 excel」（REQ-SYS-017，CR-20260917-04）。工作台四张表本来就能导出，这次要的是在小程序里也能导。同日晚 Kevin 定表格页挪到「我的 → 内部管理」、表格本身只读，导出是它底部唯一的按钮（CR-20260917-05）。2026-09-18 表格页加了修改入口——点一行进只读模式、只读页右上角「修改」切到修改模式（CR-20260918-07）：**导出逻辑本身不变**，只有页底那行小字去掉「修改」二字。
+2026-09-17 甲方看设计稿 v1：「这4个表都要求内部人员可下载，导出为 excel」（REQ-SYS-017，CR-20260917-04）。工作台四张表本来就能导出，这次要的是在小程序里也能导。同日晚 Kevin 定表格页挪到「我的 → 内部管理」、表格本身只读，导出是它底部唯一的按钮（CR-20260917-05）。2026-09-18 表格页加了修改入口——点一行进只读模式、只读页右上角「修改」切到修改模式（CR-20260918-07）：**导出逻辑本身不变**，只有页底那行小字去掉「修改」二字。2026-09-24（CR-20260924-10）：类器官导出与工作台同步插入「代数」列（复用同一个导出 VO，自动同步）；冻存导出跟列表一样收 `emptiedOnly`；页底小字改成「核验、冻存登记在小程序和网页工作台都能做」（小程序里也能核验与冻存登记了）。
 
 ## 2 实现要点
 
 - 后端 `org.dromara.lqg.sys.export`：`GET /mp/int/export/{sheet}`（`sheet` ∈ `tissue | organoid | embed | cryo`，未知值 400），类级 `@SaCheckRole("lqg_internal")`；
   查询参数绑定到对应工作表 list 的查询对象，调 `SampleExportService` / `EmbedExportService` / 冻存的导出 service，响应 xlsx 流（`Content-Disposition` 用 RFC 5987 写中文文件名，如 `样本记录信息表-20260918.xlsx`）。
 - `src/utils/fileHandoff.ts`：`downloadToTemp(url, header?)`、`openFile(path, fileType)`（`showMenu: true`）、`shareFile(path, fileName)`；`DownloadBar` 改为调用它。
-- `src/pages/ledger/export.ts`：`exportUrl(sheet, filters)` 纯函数（拼查询串，空值不带）+ `export.spec.ts`；表格页底部「导出 Excel」点亮 → 生成中提示 → 弹出「打开 / 发送到微信」；页底那行小字是「核验、冻存取用请到网页工作台」（CR-20260918-07，SAMPLE-MP-002 已按新口径改成这句，点亮导出时别改回旧版）。
+- `src/pages/ledger/export.ts`：`exportUrl(sheet, filters)` 纯函数（拼查询串，空值不带）+ `export.spec.ts`；表格页底部「导出 Excel」点亮 → 生成中提示 → 弹出「打开 / 发送到微信」；页底那行小字现行是「核验、冻存登记在小程序和网页工作台都能做」（CR-20260924-10；此前 CR-20260918-07 是「核验、冻存取用请到网页工作台」，点亮导出时别改回旧版）。取证脚本 `code/miniapp/scripts/shots-sys-export-001.mjs` 第 186 行仍断旧文案，重跑会打印 false，要跟着改（不是 accept，`code/**` 不在文档组范围）。
 
 ## 3 边界（明确不做）
 
@@ -106,3 +115,5 @@ accept:
 4. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 5. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 6. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-24 按 CR-20260924-10 更新：accept 1 的类器官表头比对加 `--insert "代数@类器官类型"` 并断 T-oco01 的代数 = P3，补「冻存导出带 emptiedOnly=true 只出 3004 一行、剩余 0」两段；§1 / §2 页底小字改为新文案，注明取证脚本的旧文案要跟着改。accept 2 逐条核过不用改。

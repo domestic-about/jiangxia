@@ -1,0 +1,104 @@
+{
+ "results": [
+  {
+   "name": "B1:进入「我的」",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/pages/me/index"
+  },
+  {
+   "name": "B1:我的页出现「内部管理」板块（仅内部身份）",
+   "ok": true,
+   "detail": "我的|李|李工|内部人员|138****0001|我的记录|史|历史编辑记录|找回自己填过的记录，点进去修改|›|内部管理|查看 · 筛选 · 导出|样|样本记录信息表|›|类|类器官收样记录|›|蜡|石蜡包埋送样记录|›|冻|-80 冻存记录|›|核验、冻存取用请到网页工作台|协|用户协议|›|隐|隐私政策|›|退出登录|首页|文档|我的"
+  },
+  {
+   "name": "B1:进入内部管理表格页（样本记录信息表 = sheet=sample）",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/pages/ledger/index?sheet=sample"
+  },
+  {
+   "name": "B2:筛「待核验」→ 表格行数=2 且接口 total=2",
+   "ok": true,
+   "detail": "dom=2 api=2 url=http://127.0.0.1:9204/lqg-api/mp/int/sample/list?sampleKind=tissue&verifyStatus=pending&pageSize=100"
+  },
+  {
+   "name": "B3:页底有唯一的「导出 Excel」按钮",
+   "ok": true,
+   "detail": "导出 Excel"
+  },
+  {
+   "name": "B3:页底小字是 CR-20260918-07 新口径（无「修改」二字）",
+   "ok": true,
+   "detail": "核验、冻存取用请到网页工作台"
+  },
+  {
+   "name": "B3:导出接口被调且带筛选 verifyStatus=pending",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending"
+  },
+  {
+   "name": "B3:导出返回 xlsx 且 HTTP 200",
+   "ok": true,
+   "detail": "status=200 ct=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8 len=0"
+  },
+  {
+   "name": "B3:导出后弹出「打开 / 发送到微信」选择器（真机上此处可右上角转发）",
+   "ok": true,
+   "detail": "sheet=2"
+  },
+  {
+   "name": "B3:H5「打开」= window.open(blob)（真机 wx.openDocument{showMenu:true} + 右上角转发，H5 不可验）",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "X:无未捕获 JS 异常",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "api": [
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/auth/login",
+   "status": 200,
+   "ct": "application/json; charset=UTF-8",
+   "len": 0,
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"scope\":null,\"openid\":\"mock-openid-staff\",\"access_token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjo5MDAwMDAwMTAxIiwicm5TdHIiOiJZNHJrMVN0d2hjOWhPeUxhZThSVlNDV21zN0NXSXJQbiIsImNsaWVudGlkIjoiMjJiMmFlY2QwNzEwNjcxNjkxZWMxYzA3ZjI1NDJiOWQiLCJ1c2VySWQiOjkwMDAwMDAxMDEsInVzZXJOYW1lIjoibHFnXzEzODAwMDAwMDAxIn0.w-k94oa7v4512hsp62FImYIrcKmVDQM6An7E4qZJmz8\",\"refresh_token\":null,\"expire_in\":604800,\"refresh_expire_in\":null,\"client_id\":\"22b2aecd0710671691ec1c07f2542b9d\"}}"
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/me",
+   "status": 200,
+   "ct": "application/json;charset=UTF-8",
+   "len": 0,
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"userId\":9000000101,\"name\":\"李工\",\"phoneMasked\":\"138****0001\",\"identity\":\"internal\",\"ext\":null}}"
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/sample/list?sampleKind=tissue&pageSize=100",
+   "status": 200,
+   "ct": "application/json;charset=UTF-8",
+   "len": 0,
+   "body": "{\"total\":8,\"rows\":[{\"id\":9000001007,\"submitNo\":\"SJ90000007\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000115,\"verifyStatus\":\"pending\",\"verifyBy\":null,\"verifyTime\":null,\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体庚\",\"gender\":\"male\",\"age\":\"52\",\"hospitalNo\":\"ZY0000007\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-22 00:00:02\",\"updateTime\":null,\"submitterName\":\"周医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"周医生\",\"handlerName\":\"周医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001002,\"submitNo\":\"SJ90000002\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000111,\"verifyStatus\":\"pending\",\"verifyBy\":null,\"verifyTime\":null,\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体乙\",\"gender\":\"female\",\"age\":\"48\",\"hospitalNo\":\"ZY0000002\",\"tissueType\":\"胆管组织\",\"organoidType\":null,\"hasPathology\":\"N\",\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-22 00:00:01\",\"updateTime\":null,\"submitterName\":\"王医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"王医生\",\"handlerName\":\"王医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001003,\"submitNo\":\"SJ90000003\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000111,\"verifyStatus\":\"invalid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-09-14 10:00:00\",\"invalidReason\":\"信息不全：缺住院号\",\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体丙\",\"gender\":\"unknown\",\"age\":null,\"hospitalNo\":null,\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-13 10:00:00\",\"updateTime\":null,\"submitterName\":\"王医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"王医生\",\"handlerName\":\"王医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001006,\"submitNo\":\"SJ90000006\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000114,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-09-04 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009002,\"sourceUnitName\":\"B 大学\",\"donorName\":\"测试供体己\",\"gender\":\"male\",\"age\":\"70\",\"hospitalNo\":\"ZY0000006\",\"tissueType\":\"结直肠组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-09-04\",\"internalNo\":\"T-hco04\",\"isFixed\":\"Y\",\"processTime\":\"2026-09-04 10:00:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-09-03 10:00:00\",\"updateTime\":null,\"submitterName\":\"孙老师\",\"groupId\":9000009103,\"groupName\":\"类器官课题组\",\"updateByName\":\"孙老师\",\"handlerName\":\"孙老师\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":1,\"sectioned\":true,\"stains\":[\"OTHER\"]}},{\"id\":9000001005,\"submitNo\":\"SJ90000005\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000113,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-09-02 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体戊\",\"gender\":\"female\",\"age\":\"39\",\"hospitalNo\":\"ZY0000005\",\"tissueType\":\"胃组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-09-02\",\"internalNo\":\"T-hga03\",\"isFixed\":\"Y\",\"processTime\":\"2026-09-02 10:00:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-09-01 10:00:00\",\"updateTime\":null,\"submitterName\":\"赵医生\",\"groupId\":9000009102,\"groupName\":\"消化内科组\",\"updateByName\":\"赵医生\",\"handlerName\":\"赵医生\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001004,\"submitNo\":\"SJ90000004\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000112,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-08-28 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体丁\",\"gender\":\"male\",\"age\":\"61\",\"hospitalNo\":\"ZY0000004\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-08-28\",\"internalNo\":\"T-hli02\",\"isFixed\":\"Y\",\"processTime\":\"2026-08-28 09:40:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-08-27 10:00:00\",\"updateTime\":null,\"submitterName\":\"陈医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"陈医生\",\"handlerName\":\"陈医生\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":1,\"sectioned\":true,\"stains\":[]}},{\"id\":9000001001,\"submitNo\":\"SJ90000001\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000111,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-08-23 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体甲\",\"gender\":\"male\",\"age\":\"56\",\"hospitalNo\":\"ZY0000001\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":\"Y\",\"receiveDate\":\"2026-08-23\",\"internalNo\":\"T-hli01\",\"isFixed\":\"Y\",\"processTime\":\"2026-08-23 14:20:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-08-22 10:00:00\",\"updateTime\":null,\"submitterName\":\"王医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"王医生\",\"handlerName\":\"王医生\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":2,\"sectioned\":true,\"stains\":[\"HE\",\"IHC\"]}},{\"id\":9000001008,\"submitNo\":\"SJ90000008\",\"sampleKind\":\"tissue\",\"submitSource\":\"internal\",\"submitterId\":9000000101,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-08-08 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":null,\"sourceUnitName\":\"本中心\",\"donorName\":\"测试供体辛\",\"gender\":\"female\",\"age\":\"45\",\"hospitalNo\":\"ZY0000008\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-08-08\",\"internalNo\":\"T-hli05\",\"isFixed\":\"Y\",\"processTime\":\"2026-08-08 10:00:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-08-08 10:00:00\",\"updateTime\":null,\"submitterName\":null,\"groupId\":null,\"groupName\":null,\"updateByName\":\"李工\",\"handlerName\":\"李工\",\"mine\":true,\"editable\":true,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}}],\"code\":200,\"msg\":\"查询成功\"}"
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/sample/list?sampleKind=tissue&pageSize=100",
+   "status": 200,
+   "ct": "application/json;charset=UTF-8",
+   "len": 0,
+   "body": "{\"total\":8,\"rows\":[{\"id\":9000001007,\"submitNo\":\"SJ90000007\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000115,\"verifyStatus\":\"pending\",\"verifyBy\":null,\"verifyTime\":null,\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体庚\",\"gender\":\"male\",\"age\":\"52\",\"hospitalNo\":\"ZY0000007\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-22 00:00:02\",\"updateTime\":null,\"submitterName\":\"周医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"周医生\",\"handlerName\":\"周医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001002,\"submitNo\":\"SJ90000002\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000111,\"verifyStatus\":\"pending\",\"verifyBy\":null,\"verifyTime\":null,\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体乙\",\"gender\":\"female\",\"age\":\"48\",\"hospitalNo\":\"ZY0000002\",\"tissueType\":\"胆管组织\",\"organoidType\":null,\"hasPathology\":\"N\",\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-22 00:00:01\",\"updateTime\":null,\"submitterName\":\"王医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"王医生\",\"handlerName\":\"王医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001003,\"submitNo\":\"SJ90000003\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000111,\"verifyStatus\":\"invalid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-09-14 10:00:00\",\"invalidReason\":\"信息不全：缺住院号\",\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体丙\",\"gender\":\"unknown\",\"age\":null,\"hospitalNo\":null,\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-13 10:00:00\",\"updateTime\":null,\"submitterName\":\"王医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"王医生\",\"handlerName\":\"王医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001006,\"submitNo\":\"SJ90000006\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000114,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-09-04 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009002,\"sourceUnitName\":\"B 大学\",\"donorName\":\"测试供体己\",\"gender\":\"male\",\"age\":\"70\",\"hospitalNo\":\"ZY0000006\",\"tissueType\":\"结直肠组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-09-04\",\"internalNo\":\"T-hco04\",\"isFixed\":\"Y\",\"processTime\":\"2026-09-04 10:00:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-09-03 10:00:00\",\"updateTime\":null,\"submitterName\":\"孙老师\",\"groupId\":9000009103,\"groupName\":\"类器官课题组\",\"updateByName\":\"孙老师\",\"handlerName\":\"孙老师\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":1,\"sectioned\":true,\"stains\":[\"OTHER\"]}},{\"id\":9000001005,\"submitNo\":\"SJ90000005\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000113,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-09-02 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体戊\",\"gender\":\"female\",\"age\":\"39\",\"hospitalNo\":\"ZY0000005\",\"tissueType\":\"胃组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-09-02\",\"internalNo\":\"T-hga03\",\"isFixed\":\"Y\",\"processTime\":\"2026-09-02 10:00:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-09-01 10:00:00\",\"updateTime\":null,\"submitterName\":\"赵医生\",\"groupId\":9000009102,\"groupName\":\"消化内科组\",\"updateByName\":\"赵医生\",\"handlerName\":\"赵医生\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001004,\"submitNo\":\"SJ90000004\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000112,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-08-28 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体丁\",\"gender\":\"male\",\"age\":\"61\",\"hospitalNo\":\"ZY0000004\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-08-28\",\"internalNo\":\"T-hli02\",\"isFixed\":\"Y\",\"processTime\":\"2026-08-28 09:40:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-08-27 10:00:00\",\"updateTime\":null,\"submitterName\":\"陈医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"陈医生\",\"handlerName\":\"陈医生\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":1,\"sectioned\":true,\"stains\":[]}},{\"id\":9000001001,\"submitNo\":\"SJ90000001\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000111,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-08-23 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体甲\",\"gender\":\"male\",\"age\":\"56\",\"hospitalNo\":\"ZY0000001\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":\"Y\",\"receiveDate\":\"2026-08-23\",\"internalNo\":\"T-hli01\",\"isFixed\":\"Y\",\"processTime\":\"2026-08-23 14:20:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-08-22 10:00:00\",\"updateTime\":null,\"submitterName\":\"王医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"王医生\",\"handlerName\":\"王医生\",\"mine\":false,\"editable\":true,\"hint\":{\"blockCount\":2,\"sectioned\":true,\"stains\":[\"HE\",\"IHC\"]}},{\"id\":9000001008,\"submitNo\":\"SJ90000008\",\"sampleKind\":\"tissue\",\"submitSource\":\"internal\",\"submitterId\":9000000101,\"verifyStatus\":\"valid\",\"verifyBy\":9000000101,\"verifyTime\":\"2026-08-08 10:00:00\",\"invalidReason\":null,\"sourceUnitId\":null,\"sourceUnitName\":\"本中心\",\"donorName\":\"测试供体辛\",\"gender\":\"female\",\"age\":\"45\",\"hospitalNo\":\"ZY0000008\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":\"2026-08-08\",\"internalNo\":\"T-hli05\",\"isFixed\":\"Y\",\"processTime\":\"2026-08-08 10:00:00\",\"hasQcSheet\":\"Y\",\"hasViabilityReport\":\"Y\",\"operatorName\":\"李工\",\"remark\":null,\"createTime\":\"2026-08-08 10:00:00\",\"updateTime\":null,\"submitterName\":null,\"groupId\":null,\"groupName\":null,\"updateByName\":\"李工\",\"handlerName\":\"李工\",\"mine\":true,\"editable\":true,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}}],\"code\":200,\"msg\":\"查询成功\"}"
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/sample/list?sampleKind=tissue&verifyStatus=pending&pageSize=100",
+   "status": 200,
+   "ct": "application/json;charset=UTF-8",
+   "len": 0,
+   "body": "{\"total\":2,\"rows\":[{\"id\":9000001007,\"submitNo\":\"SJ90000007\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000115,\"verifyStatus\":\"pending\",\"verifyBy\":null,\"verifyTime\":null,\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体庚\",\"gender\":\"male\",\"age\":\"52\",\"hospitalNo\":\"ZY0000007\",\"tissueType\":\"肝组织\",\"organoidType\":null,\"hasPathology\":null,\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-22 00:00:02\",\"updateTime\":null,\"submitterName\":\"周医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"周医生\",\"handlerName\":\"周医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}},{\"id\":9000001002,\"submitNo\":\"SJ90000002\",\"sampleKind\":\"tissue\",\"submitSource\":\"external\",\"submitterId\":9000000111,\"verifyStatus\":\"pending\",\"verifyBy\":null,\"verifyTime\":null,\"invalidReason\":null,\"sourceUnitId\":9000009001,\"sourceUnitName\":\"A 医院\",\"donorName\":\"测试供体乙\",\"gender\":\"female\",\"age\":\"48\",\"hospitalNo\":\"ZY0000002\",\"tissueType\":\"胆管组织\",\"organoidType\":null,\"hasPathology\":\"N\",\"receiveDate\":null,\"internalNo\":null,\"isFixed\":null,\"processTime\":null,\"hasQcSheet\":null,\"hasViabilityReport\":null,\"operatorName\":null,\"remark\":null,\"createTime\":\"2026-09-22 00:00:01\",\"updateTime\":null,\"submitterName\":\"王医生\",\"groupId\":9000009101,\"groupName\":\"肝胆外科组\",\"updateByName\":\"王医生\",\"handlerName\":\"王医生\",\"mine\":false,\"editable\":false,\"hint\":{\"blockCount\":0,\"sectioned\":false,\"stains\":[]}}],\"code\":200,\"msg\":\"查询成功\"}"
+  },
+  {
+   "url": "http://127.0.0.1:9204/lqg-api/mp/int/export/tissue?verifyStatus=pending",
+   "status": 200,
+   "ct": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+   "len": 0,
+   "body": ""
+  }
+ ],
+ "jsErrors": []
+}

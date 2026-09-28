@@ -1,0 +1,62 @@
+### ext001-acc1.sh
+== accept 1 · 四条结构性不变量 ==
+1a cmp 逐字节未改: OK (sha256 6b1da29a7c127447…)
+ACCEPT-1 EXIT=0
+### rc=0
+
+### ext001-acc2.sh
+== accept 2 · 可见集合 / 越权 / 键集合 / 角色闸 ==
+true
+true
+true
+true
+true
+ACCEPT-2 EXIT=0
+== 正文倒数第 2 段（/mp/int，上游未注册，预期红）==
+MPINT-LITERAL EXIT=1 （1 = 该端点是 404 而不是 403，原因见 WARN-3）
+### rc=0
+
+### ext001-acc3.sh
+== accept 3 · 写保护 / 夹带 / 类别闸 ==
+true
+true
+pending|-|external|-|-
+true
+tissue|external|pending|9000000113|true
+true
+organoid|external|pending|-|-|-|-|-
+0
+ACCEPT-3 EXIT=0
+### rc=0
+
+### probes/ext001-probes.sh
+PASS P1-列表排序-COALESCE倒序 — [9000001002,9000001003,9000001004,9000001001]
+PASS P2a-开关关-详情无internalNo键 — false
+PASS P2b-开关开-详情有internalNo键 — true|T-hli01
+PASS P2c-开关还原-详情又无该键 — false
+PASS P3-POST组织-夹带内部字段不生效 — tissue|external|pending|9000000116|-|-|-|-|-|-|true
+PASS P4-POST类器官-夹带全不生效 — organoid|external|pending|-|-|-|-|-|-|-|-|-|-|-
+PASS P5-重提-回pending且清痕迹且夹带不生效 — pending|-|-|-|-|-|-|external|重提了
+PASS P6a-组织入口改类器官-业务码 — 400
+PASS P6b-组织入口改类器官-库里不变 — -|-|肝类器官
+PASS P7a-外单位改-404 — 404
+PASS P7b-外单位改-库里不变 — valid|lGSKaQVYm8UmBZ296TFGDw==
+PASS P8a-同组未核验改-404 — 404
+PASS P8b-同组未核验改-库里不变 — pending|HXIVgGKK4X1fEZO12s896w==
+PASS P9a-自己的valid改-400 — 400
+PASS P9b-自己的valid改-库里不变 — valid|lGSKaQVYm8UmBZ296TFGDw==
+PASS P10a-软删详情-404 — 404
+PASS P10b-软删不在列表 — false
+PASS P11a-admin打POST-organoid-403 — 403
+PASS P11b-staff打POST-sample-403 — 403
+PASS P11c-staff打PUT-sample-403 — 403
+PASS P11d-admin打GET-详情-403 — 403
+PASS P12-外部打lqg-403 — 403
+PASS P12b-外部打mpint-未越权 — 404
+PASS P13a-POST组织缺组织类型-500 — 500
+PASS P13b-POST类器官缺类器官类型-500 — 500
+PASS P13c-选了单位-id-单位名取快照 — 9000009002|B 大学
+PASS P13d-来源单位不存在-500且不落库 — 500|0
+
+PROBE EXT001 PASS=27 FAIL=0
+### rc=0

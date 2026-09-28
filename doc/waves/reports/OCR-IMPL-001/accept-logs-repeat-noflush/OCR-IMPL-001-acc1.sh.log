@@ -1,0 +1,5 @@
+# OCR-IMPL-001 accept[1] 五个解析用例逐例过：该出现的字段相等、不该出现的字段不出现（噪声里的数字不当年龄、单位名不硬匹配）；识别前后业务表与文件表一行不多
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+false

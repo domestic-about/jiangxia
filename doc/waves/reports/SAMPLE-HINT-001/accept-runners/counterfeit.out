@@ -1,0 +1,23 @@
+== ① 不加 del_flag 守卫：1008 名下会数出 1 块（那块 2005 是软删的） ==
+1
+   正确口径（叠上 del_flag='0'）：
+0
+== ② 不加 verify_status 守卫：1002 名下会数出 1 块（那 2006 还在待核验） ==
+1
+   正确口径（叠上 verify_status='valid'）：
+0
+== ③ 不拆 NONE：1004 那一块的 stain_types 原样是「NONE」 ==
+NONE
+   接口给的是（应为空数组）：
+[]
+== ④ 每一行都有 hint 对象（含没有包埋记录的行），没有一个是 null ==
+true
+true
+== ⑤ 一页只发一次聚合查询：一次请求在前端日志里只出现 1 条那条 SQL ==
+   一次 /lqg/sample/list?pageSize=100（9 行）触发的聚合 SQL 条数 = 1
+   一次 /mp/int/sample/list?pageSize=100（9 行）触发的聚合 SQL 条数 = 1
+== ⑥ 样本表上没有被偷加的冗余列（读时计算，两个真相源会打架） ==
+0
+== ⑦ 两条读路径同源：/lqg/sample/list 与 /mp/int/sample/list 的 hint 逐行相等 ==
+   true（两侧逐行一致）
+COUNTERFEIT PROBES EXIT=0

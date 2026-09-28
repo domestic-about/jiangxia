@@ -79,7 +79,7 @@ accept:
 
 - 后端 `org.dromara.lqg.doc.mp`：`GET /mp/int/doc/list`（内部：全部已完成且内部版渲染成功的；行带 `internalNo`、`sourceUnitName`），类级 `@SaCheckRole("lqg_internal")`。外部用 AUTH-EXT-003 的 `/mp/ext/doc/list`。
   两个接口的行形状对齐到：`{sampleId, title, subtitle, docKind, publishedTime, totalScore?}`——`title / subtitle` 由后端按身份给（外部：送检单号 / 掩码姓名；内部：内部编号 / 来源单位）。
-- `pages/doc/index`（tab 页）：筛选（近一周 / 近一月 / 自定义；文档类型）→ `groupDocs(rows)`（`group.ts`，fixture 单测）→ `DocGroupCard`。空状态「结果出具后会显示在这里」。
+- `pages/doc/index`（tab 页）：筛选（CR-20260924-11 起是一张卡片两行：「时间」全部 / 近一周 / 近一月 / 自定义，「类型」全部 / 样本质控 / 类器官质控 / 质量评分——类型用短名只在筛选按钮上，卡片与预览页仍是全称；两行都不换行，放不下横向滑动；见 UI:mp.doc.list）→ `groupDocs(rows)`（`group.ts`，fixture 单测）→ `DocGroupCard`。空状态「结果出具后会显示在这里」。
   `DocGroupCard`：每份一行 = 文档名 + 完成时间 + 右侧「下载」小按钮（点这一行别处进预览）；组底「合并预览」「合并下载」两个按钮。
   页签文字与板块标题取自 `src/config/app.ts` 的 `DOC_TAB_NAME` / `DOC_SECTION_NAME`。
 - 外部样本详情第三段「质控文档」接上，点条目进预览页（DOC-MP-002；本张先跳占位页）。
@@ -97,3 +97,5 @@ accept:
 3. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 4. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 5. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-24 按 CR-20260924-11 更新：§2 文档页筛选改写为一张卡片两行（「时间」「类型」行首标签、两个「全部」、类型短名、不换行可横滑）。accept 不动（H 批已在隔离环境重放 2/2 绿）。

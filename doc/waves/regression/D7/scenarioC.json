@@ -1,0 +1,289 @@
+{
+ "results": [
+  {
+   "name": "C0:工作台登录 lqgadmin",
+   "ok": true,
+   "detail": "http://127.0.0.1:8093/index"
+  },
+  {
+   "name": "C1:三个页签徽标=已完成",
+   "ok": true,
+   "detail": "[\"样本质控表已完成\",\"类器官质控表已完成\",\"类器官质量评分表已完成\"]"
+  },
+  {
+   "name": "C2:点「预览」触发 render（内部版）",
+   "ok": true,
+   "detail": "[\"/dev-api/lqg/doc/9000001001/sample_qc/render?audience=internal\"]"
+  },
+  {
+   "name": "C2:预览面板逐页显示页面图（2 页，内部版对象键 /internal/）",
+   "ok": true,
+   "detail": "[\"internal/e5ea27e427d6-p1.png\",\"internal/e5ea27e427d6-p2.png\"]"
+  },
+  {
+   "name": "C2:面板标题/提示显示「内部版」",
+   "ok": true,
+   "detail": "内部版含内部编号"
+  },
+  {
+   "name": "C3:切外部版 → 重新取 pages（audience=external）",
+   "ok": true,
+   "detail": "[\"/dev-api/lqg/doc/9000001001/sample_qc/pages?audience=external\"]"
+  },
+  {
+   "name": "C3:外部版页面图对象键 /external/（与内部版是两份独立产物）",
+   "ok": true,
+   "detail": "[\"external/8cc47eb84254-p1.png\",\"external/8cc47eb84254-p2.png\"]"
+  },
+  {
+   "name": "C3:面板提示切到「外部版」",
+   "ok": true,
+   "detail": "外部版里内部编号一格为空"
+  },
+  {
+   "name": "C4:下载区恰好四个按钮",
+   "ok": true,
+   "detail": "[\"下载 Word\",\"下载 PDF\",\"下载合并 Word\",\"下载合并 PDF\"]"
+  },
+  {
+   "name": "C4:「Word」→ GET download?format=docx 且 code=200",
+   "ok": true,
+   "detail": "/dev-api/lqg/doc/9000001001/sample_qc/download?format=docx&audience=external"
+  },
+  {
+   "name": "C4:「Word」返回签名链接（非空）",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.docx"
+  },
+  {
+   "name": "C4:「Word」真下载：浏览器真的取到了字节（OSS 200 ）",
+   "ok": true,
+   "detail": "popup= oss=[{\"status\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.docx\",\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
+  },
+  {
+   "name": "C4:「Word」下载文件名后缀 = .docx",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.docx"
+  },
+  {
+   "name": "C4:「PDF」→ GET download?format=pdf 且 code=200",
+   "ok": true,
+   "detail": "/dev-api/lqg/doc/9000001001/sample_qc/download?format=pdf&audience=external"
+  },
+  {
+   "name": "C4:「PDF」返回签名链接（非空）",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.pdf"
+  },
+  {
+   "name": "C4:「PDF」真下载：浏览器真的取到了字节（OSS 200 ）",
+   "ok": true,
+   "detail": "popup= oss=[{\"status\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.pdf\",\"ct\":\"application/pdf\"}]"
+  },
+  {
+   "name": "C4:「PDF」下载文件名后缀 = .pdf",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.pdf"
+  },
+  {
+   "name": "C4:「合并 Word」→ GET download?format=docx 且 code=200",
+   "ok": true,
+   "detail": "/dev-api/lqg/doc/9000001001/merged/download?format=docx&audience=external"
+  },
+  {
+   "name": "C4:「合并 Word」返回签名链接（非空）",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.docx"
+  },
+  {
+   "name": "C4:「合并 Word」真下载：浏览器真的取到了字节（OSS 200 merged）",
+   "ok": true,
+   "detail": "popup= oss=[{\"status\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.docx\",\"ct\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}]"
+  },
+  {
+   "name": "C4:「合并 Word」下载文件名后缀 = .docx",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.docx"
+  },
+  {
+   "name": "C4:「合并 PDF」→ GET download?format=pdf 且 code=200",
+   "ok": true,
+   "detail": "/dev-api/lqg/doc/9000001001/merged/download?format=pdf&audience=external"
+  },
+  {
+   "name": "C4:「合并 PDF」返回签名链接（非空）",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.pdf"
+  },
+  {
+   "name": "C4:「合并 PDF」真下载：浏览器真的取到了字节（OSS 200 merged）",
+   "ok": true,
+   "detail": "popup= oss=[{\"status\":200,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.pdf\",\"ct\":\"application/pdf\"}]"
+  },
+  {
+   "name": "C4:「合并 PDF」下载文件名后缀 = .pdf",
+   "ok": true,
+   "detail": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.pdf"
+  }
+ ],
+ "net": [
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/src/api/lqg/doc/index.ts",
+   "body": "import request from \"/src/utils/request.ts\";\nexport function renderDoc(sampleId, docKind, audience) {\n  return request({\n    url: `/lqg/doc/${sampleId}/${docKind}/render`,\n    method: \"post\",\n    params: { audience }\n  });\n}\nexport function getDocPages(sampleId, docKind, audience) {\n  return request({\n    url: `/lqg/doc/${sampleId}/${docKind}/pages`,\n    method: \"get\",\n    params: { audience }\n  });\n}\nexport function getDocDownload(sampleId, docKind, format, audience) {\n  return request({\n    url: `/lqg/doc/${sampleId}/${docKind}/download`,\n    method: \"get\",\n    params: { format, audience }\n  });\n}\nexport function publishQcDoc(sampleId, docType) {\n  return request({\n    url: `/lqg/qc/${sampleId}/${docType}/publish`,\n    method: \"post\"\n  });\n}\nexport function unpublishQcDoc(sampleId, docType) {\n  return request({\n    url: `/lqg/qc/${sampleId}/${docType}/unpublish`,\n    method: \"post\"\n  }"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/dev-api/lqg/doc/9000001001/sample_qc/pages?audience=internal",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"status\":\"done\",\"errorMsg\":null,\"docKind\":\"sample_qc\",\"audience\":\"internal\",\"contentHash\":\"e5ea27e427d6784fd197406cb0435ad7e27303f66f055d520f6e4a45f5f9f689\",\"templateVersion\":\"2\",\"pages\":[{\"pageNo\":1,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144219Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=1fb832fd1d556ed2cf959209a6b3601f936455bf7640c608a35514528ccab32f\"},{\"pageNo\":2,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144219Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=3854b35dc2e26b25873a85272acf63"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144219Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=3854b35dc2e26b25873a85272acf632b5184460d662743d1ea29c9aab47f69da",
+   "body": "�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0004�\u0000\u0000\u0006�\b\u0002\u0000\u0000\u0000\u001e\u0017/�\u0000\u0000�\u0000IDATx^��\t�Uu�?~&E\u0005qB�D%Pq '�D�*�k*j��\\\r���U�n�Y�4\u0015%�L�JqH�p��jE��8�i\u000e8�t\u0015'D\u0019�\u001f���Yv�u8G�˯���_������:����|�ޞ}�n�\u0004\u0000\u0000\u0000%j�?\u0000\u0000\u0000\u0000�$E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144219Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=1fb832fd1d556ed2cf959209a6b3601f936455bf7640c608a35514528ccab32f",
+   "body": "�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0004�\u0000\u0000\u0006�\b\u0002\u0000\u0000\u0000\u001e\u0017/�\u0000\u0000�\u0000IDATx^��y��������A�]\u0012��Z!T�$%BD�\nm֯��D(QJE!�D�I�\"�R$�����N���Y�����uw�k\u0016�\u001e��f���\u000f���^θ�k��zϽy�\u0000\u0000\u0000\u0000\u0000��c\u0016\u0000\u0000\u0000\u0000\u0000\u0010I\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000"
+  },
+  {
+   "status": 200,
+   "method": "POST",
+   "url": "/dev-api/lqg/doc/9000001001/sample_qc/render?audience=internal",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"sampleId\":9000001001,\"docKind\":\"sample_qc\",\"audience\":\"internal\",\"status\":\"done\",\"ossId\":\"2102405268917772289\",\"contentHash\":\"e5ea27e427d6784fd197406cb0435ad7e27303f66f055d520f6e4a45f5f9f689\",\"templateVersion\":\"2\",\"errorMsg\":null,\"renderedTime\":\"2026-09-22 22:30:52\",\"cached\":true}}"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/dev-api/lqg/doc/9000001001/sample_qc/pages?audience=internal",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"status\":\"done\",\"errorMsg\":null,\"docKind\":\"sample_qc\",\"audience\":\"internal\",\"contentHash\":\"e5ea27e427d6784fd197406cb0435ad7e27303f66f055d520f6e4a45f5f9f689\",\"templateVersion\":\"2\",\"pages\":[{\"pageNo\":1,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144222Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=8af7382456447c2ffca6df74385167669fb00791913882a2eeabb0011e70df4a\"},{\"pageNo\":2,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144222Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=fb7810e7631abd82aa0a0a8fba9a5f"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144222Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=fb7810e7631abd82aa0a0a8fba9a5f58aa18633aff02065bbd75b3238d31af56",
+   "body": "�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0004�\u0000\u0000\u0006�\b\u0002\u0000\u0000\u0000\u001e\u0017/�\u0000\u0000�\u0000IDATx^��\t�Uu�?~&E\u0005qB�D%Pq '�D�*�k*j��\\\r���U�n�Y�4\u0015%�L�JqH�p��jE��8�i\u000e8�t\u0015'D\u0019�\u001f���Yv�u8G�˯���_������:����|�ޞ}�n�\u0004\u0000\u0000\u0000%j�?\u0000\u0000\u0000\u0000�$E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144222Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=8af7382456447c2ffca6df74385167669fb00791913882a2eeabb0011e70df4a",
+   "body": "�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0004�\u0000\u0000\u0006�\b\u0002\u0000\u0000\u0000\u001e\u0017/�\u0000\u0000�\u0000IDATx^��y��������A�]\u0012��Z!T�$%BD�\nm֯��D(QJE!�D�I�\"�R$�����N���Y�����uw�k\u0016�\u001e��f���\u000f���^θ�k��zϽy�\u0000\u0000\u0000\u0000\u0000��c\u0016\u0000\u0000\u0000\u0000\u0000\u0010I\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/dev-api/lqg/doc/9000001001/sample_qc/pages?audience=external",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"status\":\"done\",\"errorMsg\":null,\"docKind\":\"sample_qc\",\"audience\":\"external\",\"contentHash\":\"8cc47eb84254e4c2ccb435a9c7816097d8fcd77ee400bbe361a1c5728a111679\",\"templateVersion\":\"2\",\"pages\":[{\"pageNo\":1,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144224Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=0a1e8806bbd944b4ca8fa94becf89cf1a5a96a5d61dd8bb18e34a7813ab4fe32\"},{\"pageNo\":2,\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144224Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=63e98b6feb9d942757ecdec92aba69"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254-p2.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144224Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=63e98b6feb9d942757ecdec92aba69fb2c75e44f1f458e142332865b5a6d5ee2",
+   "body": "�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0004�\u0000\u0000\u0006�\b\u0002\u0000\u0000\u0000\u001e\u0017/�\u0000\u0000�\u0000IDATx^��\t�Uu�?~&E\u0005qB�D%Pq '�D�*�k*j��\\\r���U�n�Y�4\u0015%�L�JqH�p��jE��8�i\u000e8�t\u0015'D\u0019�\u001f���Yv�u8G�˯���_������:����|�ޞ}�n�\u0004\u0000\u0000\u0000%j�?\u0000\u0000\u0000\u0000�$E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000\u0000\u0000�RD\u0001\u0000\u0000(�\"\n\u0000\u0000@�\u0014Q\u0000\u0000\u0000J��\u0002\u0000\u0000P*E\u0014\u0000\u0000�R)�\u0000\u0000\u0000�J\u0011\u0005\u0000\u0000�T�(\u0000"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254-p1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144224Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=0a1e8806bbd944b4ca8fa94becf89cf1a5a96a5d61dd8bb18e34a7813ab4fe32",
+   "body": "�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0004�\u0000\u0000\u0006�\b\u0002\u0000\u0000\u0000\u001e\u0017/�\u0000\u0000�\u0000IDATx^��y��������A�]\u0012��Z!T�$%BD�\nm֯��D(QJE!�D�I�\"�R$�����N���Y�����uw�k\u0016�\u001e��f���\u000f���^θ�k��zϽy�\u0000\u0000\u0000\u0000\u0000��c\u0016\u0000\u0000\u0000\u0000\u0000\u0010I\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000\u0000�� \n\u0000\u0000\u0000\u0000p\u0015A\u0014\u0000\u0000\u0000\u0000�*�(\u0000\u0000\u0000\u0000�U\u0004Q\u0000\u0000\u0000\u0000��\b�\u0000\u0000\u0000\u0000\u0000W\u0011D\u0001\u0000\u0000\u0000\u0000�\"�\u0002\u0000\u0000\u0000\u0000\\E\u0010\u0005\u0000\u0000\u0000"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/dev-api/lqg/doc/9000001001/sample_qc/download?format=docx&audience=external",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144228Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=30733d189bc9a7d6750b6cd5318b729811fa65eaf99f76f0bdd5842ff0b29ce9\",\"fileName\":\"样本质控表-SJ90000001.docx\"}}"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/dev-api/lqg/doc/9000001001/sample_qc/download?format=pdf&audience=external",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144232Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=db0aa6f0e73e362c0dd113402f81c97869f940f6dda5a2946fdf61ddee0fa9d3\",\"fileName\":\"样本质控表-SJ90000001.pdf\"}}"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/dev-api/lqg/doc/9000001001/merged/download?format=docx&audience=external",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144236Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=d80e82052178f697c82196c43b0ae230ddc39ca5abae18494339bd62c4528653\",\"fileName\":\"质控文档（合并）-SJ90000001.docx\"}}"
+  },
+  {
+   "status": 200,
+   "method": "GET",
+   "url": "/dev-api/lqg/doc/9000001001/merged/download?format=pdf&audience=external",
+   "body": "{\"code\":200,\"msg\":\"操作成功\",\"data\":{\"url\":\"http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260922T144241Z&X-Amz-SignedHeaders=host&X-Amz-Credential=ruoyi%2F20260922%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=600&X-Amz-Signature=00186a2dd68cf2830bde2c7b041f1ec3a53327ac0ac382b689237f80d9e6489a\",\"fileName\":\"质控文档（合并）-SJ90000001.pdf\"}}"
+  }
+ ],
+ "oss": [
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/9d590e7a234543eb8c4f4824bf9f771a.jpg",
+   "ct": "image/jpeg"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/2026/09/22/98a0faed83a144df805fc7abcff2476d.png",
+   "ct": "image/png"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png",
+   "ct": "image/png"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png",
+   "ct": "image/png"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p1.png",
+   "ct": "image/png"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/internal/e5ea27e427d6-p2.png",
+   "ct": "image/png"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254-p2.png",
+   "ct": "image/png"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254-p1.png",
+   "ct": "image/png"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.docx",
+   "ct": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/sample_qc/external/8cc47eb84254.pdf",
+   "ct": "application/pdf"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.docx",
+   "ct": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  },
+  {
+   "status": 200,
+   "url": "http://127.0.0.1:9000/ruoyi/lqg/doc/9000001001/merged/external/50e016269b9e.pdf",
+   "ct": "application/pdf"
+  }
+ ],
+ "jsErrors": [
+  "console.error: Failed to load resource: net::ERR_CONNECTION_CLOSED",
+  "console.error: Failed to load resource: net::ERR_CONNECTION_CLOSED",
+  "console.error: Failed to load resource: net::ERR_CONNECTION_CLOSED",
+  "console.error: Failed to load resource: net::ERR_CONNECTION_CLOSED"
+ ]
+}

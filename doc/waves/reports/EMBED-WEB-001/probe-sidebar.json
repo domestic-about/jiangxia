@@ -1,0 +1,70 @@
+[
+  {
+    "text": "类器官样本管理",
+    "href": "/"
+  },
+  {
+    "text": "首页",
+    "href": "/index"
+  },
+  {
+    "text": "首页",
+    "href": null
+  },
+  {
+    "text": "字典管理",
+    "href": "/system/dict"
+  },
+  {
+    "text": "字典管理",
+    "href": null
+  },
+  {
+    "text": "参数设置",
+    "href": "/system/config"
+  },
+  {
+    "text": "参数设置",
+    "href": null
+  },
+  {
+    "text": "样本总表",
+    "href": "/sample"
+  },
+  {
+    "text": "样本总表",
+    "href": null
+  },
+  {
+    "text": "石蜡包埋",
+    "href": "/embed"
+  },
+  {
+    "text": "石蜡包埋",
+    "href": null
+  },
+  {
+    "text": "内部人员授权",
+    "href": "/auth/staff"
+  },
+  {
+    "text": "内部人员授权",
+    "href": null
+  },
+  {
+    "text": "来源单位与组别",
+    "href": "/auth/unit"
+  },
+  {
+    "text": "来源单位与组别",
+    "href": null
+  },
+  {
+    "text": "外部用户",
+    "href": "/auth/extuser"
+  },
+  {
+    "text": "外部用户",
+    "href": null
+  }
+]

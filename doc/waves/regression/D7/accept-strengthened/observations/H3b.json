@@ -1,0 +1,57 @@
+{
+ "hotspot": "H3b",
+ "green": true,
+ "ran_at": "2026-09-28T03:47:07.376Z",
+ "results": [
+  {
+   "name": "H3b:内部人员 mock 登录 H5(9204)",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/"
+  },
+  {
+   "name": "H3b:抓到 pages 接口的 images（原图 url / previewUrl 都在里面）",
+   "ok": true,
+   "detail": "{\"n\":2}"
+  },
+  {
+   "name": "H3b:真 DOM 缩略图数 == 可取到链接的图片数",
+   "ok": true,
+   "detail": "{\"thumbs\":2,\"images\":2}"
+  },
+  {
+   "name": "H3b:点缩略图 → H5 打开层出现（对应真机 wx.previewImage）",
+   "ok": true,
+   "detail": "[\"http://127.0.0.1:9002/lqg/2026/09/28/ed8dde8b08fc4652bfc9b96d1ea6af39.png\",\"http://127.0.0.1:9002/lqg/2026/09/28/9d56c59fdafe4120b27399896776e5df.png\"]"
+  },
+  {
+   "name": "H3b:★ 打开层拿到的 src == 原图 url",
+   "ok": true,
+   "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/28/ed8dde8b08fc4652bfc9b96d1ea6af39.png\",\"http://127.0.0.1:9002/lqg/2026/09/28/9d56c59fdafe4120b27399896776e5df.png\"],\"want\":\"http://127.0.0.1:9002/lqg/2026/09/28/ed8dde8b08fc4652bfc9b96d1ea6af39.png\"}"
+  },
+  {
+   "name": "H3b:★ 打开层拿到的 src ≠ previewUrl（看的是原图不是预览图）",
+   "ok": true,
+   "detail": "{\"opened\":[\"http://127.0.0.1:9002/lqg/2026/09/28/ed8dde8b08fc4652bfc9b96d1ea6af39.png\",\"http://127.0.0.1:9002/lqg/2026/09/28/9d56c59fdafe4120b27399896776e5df.png\"],\"preview\":\"http://127.0.0.1:9002/lqg/2026/09/28/dc665b4809c94a97abe5e9ccdfa9e290.jpg\"}"
+  }
+ ],
+ "observed": {
+  "pages_api_images": [
+   {
+    "url": "http://127.0.0.1:9002/lqg/2026/09/28/ed8dde8b08fc4652bfc9b96d1ea6af39.png",
+    "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/28/dc665b4809c94a97abe5e9ccdfa9e290.jpg"
+   },
+   {
+    "url": "http://127.0.0.1:9002/lqg/2026/09/28/9d56c59fdafe4120b27399896776e5df.png",
+    "previewUrl": "http://127.0.0.1:9002/lqg/2026/09/28/2b50e46eb0d545e894a7828bad413fe0.jpg"
+   }
+  ],
+  "thumb_click_expected": {
+   "original_url": "http://127.0.0.1:9002/lqg/2026/09/28/ed8dde8b08fc4652bfc9b96d1ea6af39.png",
+   "preview_url": "http://127.0.0.1:9002/lqg/2026/09/28/dc665b4809c94a97abe5e9ccdfa9e290.jpg"
+  },
+  "thumb_click_opened_src": [
+   "http://127.0.0.1:9002/lqg/2026/09/28/ed8dde8b08fc4652bfc9b96d1ea6af39.png",
+   "http://127.0.0.1:9002/lqg/2026/09/28/9d56c59fdafe4120b27399896776e5df.png"
+  ]
+ }
+}

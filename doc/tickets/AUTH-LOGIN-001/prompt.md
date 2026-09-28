@@ -55,14 +55,16 @@ accept:
       identity 取自请求参数或 user_type 字段而不是角色 → staff（user_type=sys_user、角色 102）与 extA 至少一个判错。
       手机号掩码没做（原样返回 13800000099）→ 第 1 段红。
       两侧不同源：/mp/me 走登录链路，计数走直连库的 SQL JOIN。
-  - name: "mock 登录护栏：prod 打开 mock 必须拒绝启动（契约测试逐字节未改）；prod 配置文件里不出现这个开关；缺 clientid 的登录请求被拒"
+  - name: "mock 登录护栏：prod 打开 mock 必须拒绝启动（契约测试逐字节未改）；prod 配置文件里不出现这个开关；缺 clientid 的登录请求被拒；真 jar 不声明 profile 直接起必须拒绝启动（CR-20260923-09）"
     form: STATE
     run: |-
       cmp doc/verify/fixtures/java/MockLoginGuardContractTest.java code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/test/java/org/dromara/lqg/auth/guard/MockLoginGuardContractTest.java &&
       (cd code/RuoYi-Vue-Plus && mvn -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest=MockLoginGuardContractTest -Dsurefire.failIfNoSpecifiedTests=true) &&
       ! grep -rn 'mock-login' code/RuoYi-Vue-Plus/ruoyi-admin/src/main/resources/application-prod.yml &&
       grep -rn 'MockLoginGuard.check' code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src/main/java | grep -v '/guard/MockLoginGuard.java' | grep -q . &&
-      test "$(curl -s -X POST "$(sed -n 's/^LQG_API_BASE=//p' doc/verify/verify.env)/auth/login" -H 'Content-Type: application/json' -d '{"grantType":"xcx","tenantId":"000000","xcxCode":"mock:extA","phoneCode":"mock:13800000011"}' | jq -r '.data.access_token // "rejected"')" = "rejected"
+      test "$(curl -s -X POST "$(sed -n 's/^LQG_API_BASE=//p' "${LQG_VERIFY_ENV_FILE:-doc/verify/verify.env}")/auth/login" -H 'Content-Type: application/json' -d '{"grantType":"xcx","tenantId":"000000","xcxCode":"mock:extA","phoneCode":"mock:13800000011"}' | jq -r '.data.access_token // "rejected"')" = "rejected" &&
+      ! env -u SPRING_PROFILES_ACTIVE LQG_DB_PORT=1 LQG_REDIS_PORT=1 java -jar code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar --server.port=0 >/tmp/lqg-noprofile.log 2>&1 &&
+      grep -q '没有声明 spring.profiles.active' /tmp/lqg-noprofile.log
     counterfeit: |-
       护栏只判 profile 等于 "prod" 的精确小写串 → 契约测试里的 "PROD" 与多 profile 用例红。
       没声明 profile 时默认放行 mock（把「没配」当成开发环境）→ noActiveProfileIsTreatedAsUnsafe 红——生产漏配 profile 是真实事故。
@@ -70,6 +72,7 @@ accept:
       护栏类写了但启动时没人调用它（装饰品）→ 第 4 段 grep 为空红。
       把 mock-login: false 显式写进 prod 配置「以示安全」→ 第 3 段红：这个键出现在 prod 文件里，就离被人改成 true 只差一次手滑。
       不带 clientId 也能登录成功 → 第 5 段拿到 token 红。
+      第 4 段只 grep 源码，Javadoc 里写一句 MockLoginGuard#check 就能满足（grep 的 . 匹配 #），所以第 6、7 段补行为断言（CR-20260923-09）：真 jar 不声明 profile 直接起，必须在连库之前拒绝启动（退出码非 0），且日志里是启动护栏的原话「没有声明 spring.profiles.active」。jar 里又写回缺省 profile（最可能的回退，打包时资源过滤填成 dev）→ 进程按 dev 起来去连库，LQG_DB_PORT=1 / LQG_REDIS_PORT=1 让它连不上任何真库与缓存、自己失败退出——退出码照样非 0，日志里却没有那句话，第 7 段红；这两个变量是护栏失效时的保险，保证不会对着 LQG_DB_* 指向的库跑 Flyway。env -u SPRING_PROFILES_ACTIVE 防的是跑验收的 shell 里恰好带着这个变量。后端 jar 是旧包（修复前打的）时同样红，先重新打包。
 ---
 
 # AUTH-LOGIN-001 · 小程序登录后端：微信登录 + 手机号 → 绑定或自动建外部账号；身份判定；mock 登录仅限开发测试
@@ -119,6 +122,7 @@ accept:
 - `org.dromara.lqg.auth.guard.MockLoginGuard#check(String[] activeProfiles, boolean mockEnabled)`，启动时用真实 profiles 与配置值调用。
 - 把 `doc/verify/fixtures/java/MockLoginGuardContractTest.java` **逐字节**拷到 `src/test/java/org/dromara/lqg/auth/guard/`（accept 用 `cmp` 校验没被改过）。
 - `application-prod.yml` 不出现 `mock-login` 这个键（缺省 false）。
+- jar 里不带缺省 profile：没声明 `spring.profiles.active` 就在连库、跑 Flyway 之前拒绝启动，stderr 打「启动护栏：拒绝启动（profile=[]）…没有声明 spring.profiles.active…」（CR-20260923-09：以前 jar 内缺省 dev，漏配 profile 就带着 mock 登录起来）。护栏是修复组加在 `ruoyi-common-web` 的 `StartupSafetyGuard`（EnvironmentPostProcessor），不在本票实现范围；本票 accept 3 最后两段从外面用真 jar 验它。本机开发照旧 `--spring.profiles.active=dev`。
 
 ## 3 边界（明确不做）
 
@@ -136,3 +140,5 @@ accept:
 4. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 5. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 6. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-23 按 CR-20260923-09 更新：accept 3 在源码 grep 之外补行为断言——真 jar 不声明 profile 直接起必须拒绝启动（退出码非 0 且日志里有「没有声明 spring.profiles.active」，LQG_DB_PORT=1 / LQG_REDIS_PORT=1 兜底不碰真库）；§2.4 记下启动护栏。

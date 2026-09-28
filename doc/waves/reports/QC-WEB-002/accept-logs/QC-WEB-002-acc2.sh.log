@@ -1,0 +1,8 @@
+# QC-WEB-002 accept[2] 前端构建是本次产物；两个页签已接入编辑页；评分选项文字照模板原文、没有质量等级结论
+# LQG_VERIFY_ENV_FILE=(未设)
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

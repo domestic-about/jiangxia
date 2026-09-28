@@ -1,0 +1,9 @@
+# EMBED-MODEL-001 accept[3] 读出来的形状：染色是数组、marker 成组、内部编号读时带出；外部送样带着核验状态与送检单号、待核验置顶；软删的石蜡块不出现
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true
+true
+true
+true
+true

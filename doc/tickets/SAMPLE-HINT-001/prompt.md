@@ -39,18 +39,18 @@ accept:
       没有包埋记录的行 hint 为 null → 1002 那段红（前端会 undefined.blockCount）。
       把外部提交还没核验的送样也数成一块 → 1002 变成 [1,false,[]] 红（seed 里 2006 就是为这条埋的）。
       两侧不同源：一侧是接口逐行返回的块数求和，一侧是直连库的 count。
-  - name: "没有在样本表上偷加冗余字段；工作台提示组件已接入总表；一页只发一次聚合查询"
+  - name: "没有在样本表上偷加冗余字段；工作台提示组件已接入样本表（两页共用的列表）；一页只发一次聚合查询"
     form: DDL
     run: |-
       python3 doc/verify/ddl_vs_ssot.py --table t_lqg_sample --require-public create_dept,create_by,create_time,update_by,update_time,del_flag &&
       grep -q 'HintBadges' code/plus-ui/src/views/lqg/sample/index.vue && test -f code/plus-ui/src/views/lqg/sample/HintBadges.vue &&
       (cd code/RuoYi-Vue-Plus && mvn -q -pl ruoyi-modules/ruoyi-lqg -am test -Dtest='SampleHint*Test' -Dsurefire.failIfNoSpecifiedTests=true)
     counterfeit: |-
-      为了列表快，在 t_lqg_sample 上加了 block_count / has_section 并在保存石蜡块时回写 → ddl_vs_ssot 报「库里有、SSOT 没有」红。
+      为了列表快，在 t_lqg_sample 上加了 block_count / has_section 并在保存石蜡块时回写 → ddl_vs_ssot 报「库里有、SSOT 没有」红。（CR-20260924-10 给 t_lqg_sample 加的 `passage` 已同步进 SSOT，迁移 V202609281000；这一段对它照样逐列比。）
       单测里要有一条：传 20 个样本 id 只触发 1 次查询（用 Mapper spy 或 SQL 计数）——逐行查的实现过不了。
 ---
 
-# SAMPLE-HINT-001 · 样本总表的切片染色提示：读时计算，工作台一列、小程序表格页一列
+# SAMPLE-HINT-001 · 样本表的切片染色提示：读时计算，工作台一列（样本记录信息表、类器官收样记录两页都有）、小程序表格页一列
 
 ## §0 状态自检（实施前必过，不过就 STOP 报 Kevin）
 
@@ -72,7 +72,9 @@ accept:
 
 - `SampleHintService.hintsOf(Collection<Long> sampleIds)` → `Map<Long, HintVo{blockCount, sectioned, stains}>`：一条 GROUP BY 查询（`del_flag='0' AND verify_status='valid'`）；`stains` = 各块 `stain_types` 拆开后的并集去掉 NONE，按字典顺序。
 - `/lqg/sample/list`、`/mp/int/sample/list` 的每行挂 `hint`（没有包埋记录的也要有：`{blockCount:0, sectioned:false, stains:[]}`）。
-- 工作台 `HintBadges.vue`：「石蜡块 N」「已切片」+ 染色缩写；悬停列出各石蜡块编号与切片时间（悬停时再查）；点击带 `sampleId` 跳石蜡包埋页。没有包埋记录显示「—」。
+- 工作台 `HintBadges.vue`：「已切片」或「未切片」+ 染色缩写；悬停列出各石蜡块编号与切片时间（悬停时再查）；点击带 `sampleId` 跳石蜡包埋页。没有包埋记录显示「—」。
+  CR-20260924-11 起块数不在这一列写：挪到样本两页的「石蜡包埋 / 冻存」一列（「蜡块 N」，仍取 `hint.blockCount`，同一个数），这里只写加工到哪一步；小程序表格页的「切片染色」列不变，仍写「石蜡块 N · 已切片 · 染色」。
+  CR-20260924-10 拆页后两页都有这一列，位置按「模板列 + 追加列」排在模板列与本页后置管理列（有无病理 / 备注）、提交人、组别之后（`views/lqg/sample/pages.ts`），不再夹在操作人与备注之间。
 - 小程序表格页「样本记录」「类器官收样」两个工作表的最后一列「切片染色」填上同样的徽标（SAMPLE-MP-002 已留好这一列）。
 
 ## 3 边界（明确不做）
@@ -87,3 +89,6 @@ accept:
 2. **accept 逐条 ✅ / ❌ + 关键输出**（贴命令输出，不贴「已通过」三个字）
 3. **遗留与 raise**：越出 `touches` 的改动、与 `doc/api-contract.md` 不一致的地方、没把握的口径
 4. 验证用的后端 / 前端长进程已关，或明示留给谁
+
+- 2026-09-24 按 CR-20260924-10 更新：「样本总表」改称样本表两页，§2 补提示列在两页里的位置；accept 2 名字同步（`HintBadges` 仍在 `views/lqg/sample/index.vue`，ddl_vs_ssot 随 SSOT 加 `passage` 同步），逐条核过不用改断言。
+- 2026-09-24 按 CR-20260924-11 更新：§2 工作台徽标改为「已切片 / 未切片」+ 染色，块数挪到样本两页的「石蜡包埋 / 冻存」一列（仍取 hint.blockCount）；accept 不动（acc2 的 HintBadges grep 仍成立）。

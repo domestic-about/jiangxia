@@ -1,0 +1,1160 @@
+{
+  "generated_at": "2026-09-23T09:47:28",
+  "workspace": "/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid",
+  "git": {
+    "branch": "task/D8",
+    "head": "e250f78922046c290d68104c7c6f386ae2b3987b",
+    "head_subject": "chore(qa): SYS-PROD-001 台账 +3（.env 断言冲突 / acc1 在生产跑不通 / 资源缺口）+ blocked 记账",
+    "integration": "ef248f9e8496be00eea917e461ac40323a8cb748",
+    "task_branches": [
+      "task/D1",
+      "task/D2",
+      "task/D3",
+      "task/D4",
+      "task/D5",
+      "task/D6",
+      "task/D7",
+      "task/D8"
+    ],
+    "commits_total": 142,
+    "worktree_clean": false
+  },
+  "state_file": "doc/waves/state.json",
+  "tickets": {
+    "total": 44,
+    "by_status": {
+      "done": 39,
+      "escalated": 2,
+      "pending": 2,
+      "blocked": 1
+    },
+    "by_phase": {
+      "D1": {
+        "status": "qa_passed",
+        "qa_rounds": 2,
+        "qa_seq": 2,
+        "tickets": [
+          "AUTH-GROUP-001",
+          "AUTH-LOGIN-001",
+          "AUTH-STAFF-001",
+          "SYS-BASE-001",
+          "SYS-MP-001",
+          "SYS-WEB-001"
+        ],
+        "ticket_statuses": {
+          "AUTH-GROUP-001": "done",
+          "AUTH-LOGIN-001": "done",
+          "AUTH-STAFF-001": "done",
+          "SYS-BASE-001": "done",
+          "SYS-MP-001": "done",
+          "SYS-WEB-001": "done"
+        }
+      },
+      "D2": {
+        "status": "qa_passed",
+        "qa_rounds": 2,
+        "qa_seq": 4,
+        "tickets": [
+          "AUTH-EXT-001",
+          "SAMPLE-MODEL-001",
+          "SAMPLE-MP-001",
+          "SAMPLE-MP-002",
+          "SAMPLE-VERIFY-001",
+          "SAMPLE-WEB-001"
+        ],
+        "ticket_statuses": {
+          "AUTH-EXT-001": "done",
+          "SAMPLE-MODEL-001": "done",
+          "SAMPLE-MP-001": "done",
+          "SAMPLE-MP-002": "done",
+          "SAMPLE-VERIFY-001": "done",
+          "SAMPLE-WEB-001": "done"
+        }
+      },
+      "D3": {
+        "status": "qa_passed",
+        "qa_rounds": 2,
+        "qa_seq": 2,
+        "tickets": [
+          "AUTH-EXT-002",
+          "EMBED-MODEL-001",
+          "EMBED-MP-001",
+          "EMBED-WEB-001",
+          "SAMPLE-EXPORT-001",
+          "SAMPLE-HINT-001"
+        ],
+        "ticket_statuses": {
+          "AUTH-EXT-002": "done",
+          "EMBED-MODEL-001": "done",
+          "EMBED-MP-001": "done",
+          "EMBED-WEB-001": "done",
+          "SAMPLE-EXPORT-001": "done",
+          "SAMPLE-HINT-001": "done"
+        }
+      },
+      "D4": {
+        "status": "qa_passed",
+        "qa_rounds": 1,
+        "qa_seq": 1,
+        "tickets": [
+          "CRYO-FLOW-001",
+          "CRYO-MODEL-001",
+          "CRYO-MP-001",
+          "CRYO-REMIND-001",
+          "CRYO-WEB-001"
+        ],
+        "ticket_statuses": {
+          "CRYO-FLOW-001": "done",
+          "CRYO-MODEL-001": "done",
+          "CRYO-MP-001": "done",
+          "CRYO-REMIND-001": "done",
+          "CRYO-WEB-001": "done"
+        }
+      },
+      "D5": {
+        "status": "qa_passed",
+        "qa_rounds": 2,
+        "qa_seq": 2,
+        "tickets": [
+          "OCR-IMPL-001",
+          "OCR-MP-001",
+          "OCR-SPIKE-001",
+          "SYS-STAGING-001"
+        ],
+        "ticket_statuses": {
+          "OCR-IMPL-001": "done",
+          "OCR-MP-001": "done",
+          "OCR-SPIKE-001": "escalated",
+          "SYS-STAGING-001": "done"
+        }
+      },
+      "D6": {
+        "status": "qa_passed",
+        "qa_rounds": 1,
+        "qa_seq": 1,
+        "tickets": [
+          "DOC-PDF-001",
+          "DOC-RENDER-001",
+          "QC-MODEL-001",
+          "QC-WEB-001",
+          "QC-WEB-002"
+        ],
+        "ticket_statuses": {
+          "DOC-PDF-001": "done",
+          "DOC-RENDER-001": "done",
+          "QC-MODEL-001": "done",
+          "QC-WEB-001": "done",
+          "QC-WEB-002": "done"
+        }
+      },
+      "D7": {
+        "status": "qa_passed",
+        "qa_rounds": 1,
+        "qa_seq": 1,
+        "tickets": [
+          "AUTH-EXT-003",
+          "DOC-MP-001",
+          "DOC-MP-002",
+          "DOC-PROOF-001",
+          "DOC-PUBLISH-001",
+          "SYS-ACCEPT-001",
+          "SYS-EXPORT-001",
+          "SYS-HOME-001"
+        ],
+        "ticket_statuses": {
+          "AUTH-EXT-003": "done",
+          "DOC-MP-001": "done",
+          "DOC-MP-002": "done",
+          "DOC-PROOF-001": "escalated",
+          "DOC-PUBLISH-001": "done",
+          "SYS-EXPORT-001": "done",
+          "SYS-HOME-001": "done",
+          "SYS-ACCEPT-001": "done"
+        }
+      },
+      "D8": {
+        "status": "pending",
+        "qa_rounds": 0,
+        "qa_seq": null,
+        "tickets": [
+          "SYS-BACKUP-001",
+          "SYS-MANUAL-001",
+          "SYS-PROD-001",
+          "SYS-RELEASE-001"
+        ],
+        "ticket_statuses": {
+          "SYS-BACKUP-001": "pending",
+          "SYS-MANUAL-001": "done",
+          "SYS-PROD-001": "blocked",
+          "SYS-RELEASE-001": "pending"
+        }
+      }
+    }
+  },
+  "qa": {
+    "merged_audits": [
+      {
+        "file": "doc/waves/qa/D1-r1-L01.json",
+        "phase": "D1",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 2,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D1-r1-L23.json",
+        "phase": "D1",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L2": "fail",
+          "L3": "pass"
+        },
+        "issues": 4,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D1-r1.json",
+        "phase": "D1",
+        "round": 1,
+        "verdict": "FAIL",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "fail",
+          "L3": "pass"
+        },
+        "issues": 6,
+        "merged_from": [
+          {
+            "file": "D1-r1-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D1-r1-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D1-r1-L23.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D1-r1-L23.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D1-r2-L01.json",
+        "phase": "D1",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 2,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D1-r2-L2.json",
+        "phase": "D1",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L2": "pass"
+        },
+        "issues": 4,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D1-r2-L3.json",
+        "phase": "D1",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 4,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D1-r2.json",
+        "phase": "D1",
+        "round": 2,
+        "verdict": "PASS",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "pass",
+          "L3": "pass"
+        },
+        "issues": 10,
+        "merged_from": [
+          {
+            "file": "D1-r2-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D1-r2-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D1-r2-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D1-r2-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D2-r1-L01.json",
+        "phase": "D2",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r1-L2.json",
+        "phase": "D2",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L2": "fail"
+        },
+        "issues": 5,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r1-L3.json",
+        "phase": "D2",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r1.json",
+        "phase": "D2",
+        "round": 1,
+        "verdict": "FAIL",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "fail",
+          "L3": "pass"
+        },
+        "issues": 11,
+        "merged_from": [
+          {
+            "file": "D2-r1-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D2-r1-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D2-r1-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D2-r1-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D2-r2-L01.json",
+        "phase": "D2",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 2,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r2-L2.json",
+        "phase": "D2",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L2": "fail"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r2-L3.json",
+        "phase": "D2",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r2.json",
+        "phase": "D2",
+        "round": 2,
+        "verdict": "FAIL",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "fail",
+          "L3": "pass"
+        },
+        "issues": 8,
+        "merged_from": [
+          {
+            "file": "D2-r2-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D2-r2-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D2-r2-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D2-r2-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D2-r3-L01.json",
+        "phase": "D2",
+        "round": 3,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "fail"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r3-L2.json",
+        "phase": "D2",
+        "round": 3,
+        "verdict": null,
+        "levels": {
+          "L2": "fail"
+        },
+        "issues": 2,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r3-L3.json",
+        "phase": "D2",
+        "round": 3,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r3.json",
+        "phase": "D2",
+        "round": 3,
+        "verdict": "FAIL",
+        "levels": {
+          "L0": "pass",
+          "L1": "fail",
+          "L2": "fail",
+          "L3": "pass"
+        },
+        "issues": 8,
+        "merged_from": [
+          {
+            "file": "D2-r3-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D2-r3-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D2-r3-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D2-r3-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D2-r4-L01.json",
+        "phase": "D2",
+        "round": 4,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r4-L2.json",
+        "phase": "D2",
+        "round": 4,
+        "verdict": null,
+        "levels": {
+          "L2": "pass"
+        },
+        "issues": 1,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r4-L3.json",
+        "phase": "D2",
+        "round": 4,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 2,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D2-r4.json",
+        "phase": "D2",
+        "round": 4,
+        "verdict": "PASS",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "pass",
+          "L3": "pass"
+        },
+        "issues": 6,
+        "merged_from": [
+          {
+            "file": "D2-r4-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D2-r4-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D2-r4-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D2-r4-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D3-r1-L01.json",
+        "phase": "D3",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 5,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D3-r1-L2.json",
+        "phase": "D3",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L2": "fail"
+        },
+        "issues": 2,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D3-r1-L3.json",
+        "phase": "D3",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 1,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D3-r1.json",
+        "phase": "D3",
+        "round": 1,
+        "verdict": "FAIL",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "fail",
+          "L3": "pass"
+        },
+        "issues": 8,
+        "merged_from": [
+          {
+            "file": "D3-r1-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D3-r1-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D3-r1-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D3-r1-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D3-r2-L01.json",
+        "phase": "D3",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 5,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D3-r2-L2.json",
+        "phase": "D3",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L2": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D3-r2-L3.json",
+        "phase": "D3",
+        "round": 2,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 1,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D3-r2.json",
+        "phase": "D3",
+        "round": 2,
+        "verdict": "PASS",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "pass",
+          "L3": "pass"
+        },
+        "issues": 9,
+        "merged_from": [
+          {
+            "file": "D3-r2-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D3-r2-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D3-r2-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D3-r2-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D4-r1-L01.json",
+        "phase": "D4",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D4-r1-L2.json",
+        "phase": "D4",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L2": "pass"
+        },
+        "issues": 4,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D4-r1-L3.json",
+        "phase": "D4",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 0,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D4-r1.json",
+        "phase": "D4",
+        "round": 1,
+        "verdict": "PASS",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "pass",
+          "L3": "pass"
+        },
+        "issues": 7,
+        "merged_from": [
+          {
+            "file": "D4-r1-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D4-r1-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D4-r1-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D4-r1-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D5-r1-L01.json",
+        "phase": "D5",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 2,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D5-r1-L2.json",
+        "phase": "D5",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L2": "fail"
+        },
+        "issues": 4,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D5-r1-L3.json",
+        "phase": "D5",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 3,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D5-r1.json",
+        "phase": "D5",
+        "round": 1,
+        "verdict": "PASS",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "pass",
+          "L3": "pass"
+        },
+        "issues": 9,
+        "merged_from": [
+          {
+            "file": "D5-r1-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D5-r1-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D5-r1-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D5-r1-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D6-r1-L01.json",
+        "phase": "D6",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 0,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D6-r1-L2.json",
+        "phase": "D6",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L2": "pass"
+        },
+        "issues": 7,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D6-r1-L3.json",
+        "phase": "D6",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 1,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D6-r1.json",
+        "phase": "D6",
+        "round": 1,
+        "verdict": "PASS",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "pass",
+          "L3": "pass"
+        },
+        "issues": 8,
+        "merged_from": [
+          {
+            "file": "D6-r1-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D6-r1-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D6-r1-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D6-r1-L3.json",
+            "levels": "L3"
+          }
+        ]
+      },
+      {
+        "file": "doc/waves/qa/D7-r1-L01.json",
+        "phase": "D7",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L0": "pass",
+          "L1": "pass"
+        },
+        "issues": 0,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D7-r1-L2.json",
+        "phase": "D7",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L2": "pass"
+        },
+        "issues": 6,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D7-r1-L3.json",
+        "phase": "D7",
+        "round": 1,
+        "verdict": null,
+        "levels": {
+          "L3": "pass"
+        },
+        "issues": 1,
+        "merged_from": null
+      },
+      {
+        "file": "doc/waves/qa/D7-r1.json",
+        "phase": "D7",
+        "round": 1,
+        "verdict": "PASS",
+        "levels": {
+          "L0": "pass",
+          "L1": "pass",
+          "L2": "pass",
+          "L3": "pass"
+        },
+        "issues": 7,
+        "merged_from": [
+          {
+            "file": "D7-r1-L01.json",
+            "levels": "L0"
+          },
+          {
+            "file": "D7-r1-L01.json",
+            "levels": "L1"
+          },
+          {
+            "file": "D7-r1-L2.json",
+            "levels": "L2"
+          },
+          {
+            "file": "D7-r1-L3.json",
+            "levels": "L3"
+          }
+        ]
+      }
+    ],
+    "audit_json_count": 47,
+    "report_dirs": 38,
+    "screenshots": 204,
+    "known_red": {
+      "doc/waves/regression/D5/known-red.txt": [
+        "# D5：已登记的「非产品缺陷造成的 accept 红」——通过 gate 时标 known-red（不拦门），逐条记 S3。",
+        "# 格式：TICKET|accN|issue|理由      每条必须挂真实 issue 号（gate-audit 会核对台账），不许无号登记。",
+        "# ★ 登记 = 「这条红的原因不是产品行为不符」，**不是**「这条已经修好了」——断言本身仍然红。",
+        "",
+        "SYS-STAGING-001|1|#191,#198|票面 URL 漏 &sort=recent（#191；补参后等价断言 [9000001008,9000001009] 已绿）+ buildCommit 戳落后本地 HEAD（#198：部署早于后续 doc-only 提交，jar 与 application-test.yml 与 HEAD 逐字节相同、**git diff 9f1b008..HEAD -- code/ 为空**（9f1b008=部署那次提交，此后只动过文档/工具），下次部署自然消解）。注意：gate 时（head=9f1b008）该段就已红，首版 known-red 只归因了 #191，属漏登，已补",
+        "SYS-STAGING-001|2|#192,#181|BSD sed 不支持 BRE \\? → HOST 恒空（#192）；本机 nc 被透明代理劫持、连 1.1.1.1:59999 都「可达」（#181）。三件套等价取证已落盘，其余 4/5 段全绿"
+      ]
+    }
+  },
+  "issues": {
+    "total": 313,
+    "by_severity": {
+      "S2": 123,
+      "S3": 177,
+      "S1": 9,
+      "S0": 4
+    },
+    "by_status": {
+      "decided": 18,
+      "open": 295
+    },
+    "s0_s1": [
+      {
+        "id": 35,
+        "severity": "S1",
+        "ticket": "SYS-WEB-001",
+        "status": "decided",
+        "type": "debt",
+        "title": "工作台在 pnpm dev 下任何菜单导航都渲染成空白页（构建产物不受影响）",
+        "disposition": "fixed"
+      },
+      {
+        "id": 83,
+        "severity": "S0",
+        "ticket": "SAMPLE-MP-001",
+        "status": "decided",
+        "type": "arch",
+        "title": "【S0】小程序首页四个入口都不带 mode=new → 填写页进只读错误页，首页送检主流程整条断",
+        "disposition": "fixed"
+      },
+      {
+        "id": 84,
+        "severity": "S0",
+        "ticket": "SAMPLE-MP-001",
+        "status": "decided",
+        "type": "debt",
+        "title": "【S0】withDefaults(defineProps…) 未赋 const props 却引用 props.x → 三个组件运行时 ReferenceError",
+        "disposition": "fixed"
+      },
+      {
+        "id": 85,
+        "severity": "S0",
+        "ticket": "SAMPLE-MP-002",
+        "status": "decided",
+        "type": "arch",
+        "title": "【S0】wd-datetime-picker 没有 visible 这个 prop，页面却传 :visible 且从不 open() → 日期面板永不渲染",
+        "disposition": "fixed"
+      },
+      {
+        "id": 86,
+        "severity": "S1",
+        "ticket": "SAMPLE-WEB-001",
+        "status": "decided",
+        "type": "debt",
+        "title": "【S1】useDict('sample_kind') 与库里真名 lqg_sample_kind 不符 → 「样本类别」下拉永远「无数据」",
+        "disposition": "fixed"
+      },
+      {
+        "id": 87,
+        "severity": "S1",
+        "ticket": "SAMPLE-VERIFY-001",
+        "status": "decided",
+        "type": "ux",
+        "title": "【S1】外部看不到无效原因：唯一带红条的 detail-ext 对「本人+editable」不可达",
+        "disposition": "fixed"
+      },
+      {
+        "id": 96,
+        "severity": "S1",
+        "ticket": "SAMPLE-WEB-001",
+        "status": "decided",
+        "type": "arch",
+        "title": "【S1】工作台「来源单位」筛选筛不出内部录的样本（会传染 D3 导出）",
+        "disposition": "fixed"
+      },
+      {
+        "id": 105,
+        "severity": "S1",
+        "ticket": "SAMPLE-MP-001",
+        "status": "decided",
+        "type": "arch",
+        "title": "【S1】SampleQueryService 顶层 .or() 未加括号 → sort=recent 与其它筛选串味，mine=true 失效",
+        "disposition": "fixed"
+      },
+      {
+        "id": 145,
+        "severity": "S0",
+        "ticket": "EMBED-WEB-001",
+        "status": "decided",
+        "type": "arch",
+        "title": "【S0】工作台核验抽屉「判为有效并保存」点不动：前端先 PUT /lqg/embed 被 400 拒，verify 端点一次都没发",
+        "disposition": "fixed"
+      },
+      {
+        "id": 180,
+        "severity": "S1",
+        "ticket": "OCR-SPIKE-001",
+        "status": "open",
+        "type": "escalated",
+        "title": "OCR-SPIKE-001 被挂起（escalated）",
+        "disposition": "escalated"
+      },
+      {
+        "id": 247,
+        "severity": "S1",
+        "ticket": "DOC-PROOF-001",
+        "status": "open",
+        "type": "escalated",
+        "title": "DOC-PROOF-001 被挂起（escalated）",
+        "disposition": "escalated"
+      },
+      {
+        "id": 279,
+        "severity": "S1",
+        "ticket": "DOC-MP-002",
+        "status": "decided",
+        "type": "arch",
+        "title": "★ S1：小程序文档下载把 API 鉴权头带到了 OSS 预签名直链上 → MinIO 400 多重认证 → H5 单份/合并下载 0/4 全失败",
+        "disposition": "fixed"
+      },
+      {
+        "id": 291,
+        "severity": "S1",
+        "ticket": "SYS-HOME-001",
+        "status": "decided",
+        "type": "arch",
+        "title": "★ S1：外部账号（小程序 token）可读 /lqg/home/recent —— 跨单位送检单号+单位名+核验状态；/todo 五数亦可读（升格 #270）",
+        "disposition": "fixed"
+      }
+    ],
+    "blocking_open": []
+  },
+  "code": {
+    "migrations": 23,
+    "lqg_tables": 15,
+    "endpoints": 99,
+    "unit_test_classes": 43,
+    "plusui_lqg_views": 24,
+    "miniapp_pages": 20
+  },
+  "deploy": {
+    "dev_compose": "code/deploy/dev/**",
+    "test_compose": "code/deploy/test/**",
+    "common": "code/deploy/common/**",
+    "test_env_url": "https://songjian.tianda.studio",
+    "test_env_ops_doc": "doc/waves/ops/tianda-test-env.md",
+    "prod_compose": "未创建（D8 SYS-PROD-001 的范围）"
+  },
+  "tools": [
+    "README-modeB.md",
+    "accept-run.py",
+    "classify-parallel.py",
+    "clean-orphan-accounts.sh",
+    "detach.sh",
+    "gate-audit.py",
+    "gate.sh",
+    "qa-up.sh",
+    "sync-manifest.py"
+  ],
+  "d8_external_blockers": {
+    "source": "doc/handover/d8-blockers.json",
+    "blocker_ids": [
+      "B1-oss-private-bucket",
+      "B2-prod-host",
+      "B3-client-entity",
+      "B4-real-accounts",
+      "B5-restore-drill",
+      "B6-miniapp-release"
+    ],
+    "not_blocked_work_available": [
+      "生产 compose / application-prod.yml / 部署手册 / 运维手册 / 护栏断言脚本（plan-D5-D8.md §7 的 fallback）",
+      "备份与全量导出脚本本体（逻辑可本地对 MinIO 验，生产断言挂起）",
+      "两份协议正文骨架 + env/.env.production + 发布清单（主体名称处留占位）",
+      "SYS-MANUAL-001 两份操作说明 + 截图 + PDF（纯本地，正在实现）"
+    ]
+  },
+  "handover_report": "doc/handover/交接与验收报告.md",
+  "_frozen_body_at": "4d15ab7（§0–§12）；D8 增量见报告 §13"
+}

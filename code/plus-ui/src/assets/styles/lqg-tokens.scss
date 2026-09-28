@@ -1,0 +1,124 @@
+// ============================================================================
+// lqg-tokens.scss —— 类器官样本管理 · 网页工作台设计 token（SYS-WEB-001）
+//
+// 权威：doc/design-options/design-authority.md §B（2026-09-21 CR-20260921-08 版）
+//   工作台与小程序共用同一组语义色；只做一套浅色主题；主色 #0E7C7B。
+// 硬约束：后续业务页**零颜色字面量**，一律 var(--lqg-*) / var(--el-color-primary*)。
+//
+// 本文件在 src/assets/styles/index.scss 里 @use，且在 element-plus/dist/index.css **之后**，
+// 保证 :root 上的覆盖生效。
+//
+// ⚠️ 主色两处必须同值：本文件的 --el-color-primary 系列，以及 src/settings.ts 的 theme。
+//    上游 App.vue 会调 handleThemeStyle(theme) 把同样的变量写成 documentElement 的**内联样式**，
+//    内联样式优先级高于本文件的 :root 定义 —— settings.ts 里写别的颜色，运行时就会变回去。
+//    light-N / dark-N 的取值口径与上游 utils/theme.ts 的 getLightColor / getDarkColor 一致
+//    （light-N = c + (255-c)*N/10 取整，dark-N = c*(1-N/10) 取整），这里是预先算好的静态值。
+// ============================================================================
+
+:root {
+  // ── 主色 ──────────────────────────────────────────────────────────────────
+  --lqg-primary: #0e7c7b; // 主按钮、选中态、内部身份条、链接
+  --lqg-primary-soft: #ddf0ee; // 选中底色、图标底、识别条底
+
+  // ── 底与文字 ──────────────────────────────────────────────────────────────
+  --lqg-bg: #f3f6f6; // 页面底
+  --lqg-card: #ffffff; // 卡片、表格
+  --lqg-ink: #16232b; // 主文字
+  --lqg-ink-2: #5a6b74; // 次文字
+  --lqg-ink-3: #93a1a8; // 弱文字与占位
+  --lqg-line: #e2e9ea; // 分隔线、边框
+
+  // ── 语义色（与字典值一一对应） ─────────────────────────────────────────────
+  --lqg-ext: #2b5f9e; // 「外部」徽标、外部身份条
+  --lqg-ext-soft: #e1ecf8;
+  --lqg-warn: #b7791f; // 待核验、草稿、「识别 · 请核对」小标
+  --lqg-warn-soft: #fcf1da;
+  --lqg-ok: #2f7d4f; // 有效、已完成
+  --lqg-ok-soft: #dff1e6;
+  --lqg-danger: #b3362b; // 无效、-80 超期、角标
+  --lqg-danger-soft: #fbe4e1;
+
+  // ── 编号类内容一律等宽（内部编号、送检单号、石蜡块编号、冻存样品名称、住院号） ──
+  --lqg-font-mono: Menlo, Consolas, monospace;
+
+  // ── Element Plus 主色系列 → #0E7C7B ──────────────────────────────────────
+  --el-color-primary: #0e7c7b;
+  --el-color-primary-light-1: #268988;
+  --el-color-primary-light-2: #3e9695;
+  --el-color-primary-light-3: #56a3a2;
+  --el-color-primary-light-4: #6eb0af;
+  --el-color-primary-light-5: #86bdbd;
+  --el-color-primary-light-6: #9ecaca;
+  --el-color-primary-light-7: #b6d7d7;
+  --el-color-primary-light-8: #cee4e4;
+  --el-color-primary-light-9: #e6f1f1;
+  --el-color-primary-dark-1: #0c6f6e;
+  --el-color-primary-dark-2: #0b6362;
+  --el-color-primary-dark-3: #095656;
+  --el-color-primary-dark-4: #084a49;
+  --el-color-primary-dark-5: #073e3d;
+  --el-color-primary-dark-6: #053131;
+  --el-color-primary-dark-7: #042524;
+  --el-color-primary-dark-8: #021818;
+  --el-color-primary-dark-9: #010c0c;
+
+  // ── Element Plus 四个语义色 → §B 的 ok / warn / danger（两端同一组语义色） ──
+  --el-color-success: var(--lqg-ok);
+  --el-color-warning: var(--lqg-warn);
+  --el-color-danger: var(--lqg-danger);
+  --el-color-error: var(--lqg-danger);
+
+  // ── 便捷别名：页面底 / 卡片底 / 边框直接吃 token，业务页不写色值 ─────────────
+  --el-bg-color-page: var(--lqg-bg);
+  --el-border-color-lighter: var(--lqg-line);
+}
+
+// ── 列表页筛选区（2026-09-28 飞书问题行）──────────────────────────────────────
+// ① 「筛选项文字不要换行」：标签一律单行。scoped 到三个 lqg 列表页的筛选表单，不动其它页的表单。
+// ② 「表格和顶部筛选项之间添加一点距离」：实测原间距 44px（1440/1280/1100/1024 四种宽度一致），
+//    这里再加 12px → 56px（.lqg-*__filter 的 margin-bottom 是这段间距的唯一来源）。
+//  ★ 选择器必须写成 `.el-form.lqg-*__filter`：element-ui.scss 里 `.el-form { margin-bottom: 4px }`
+//    与单类选择器同级、但**排在后面**，单写 `.lqg-sample__filter` 会被它压掉（实测计算值仍是 4px）。
+//  ★ 间距量法也要说清楚：筛选与表格之间还有一行工具栏（新增/导出，高 32px），
+//    「表格顶 − 筛选底」= 44px 里包含那 32px；真正要加的是**筛选表单自己的下边距**（原来 4px → 16px）。
+//  ★ 下边距不在这里改：真凶是各页面 **scoped** 的 `.lqg-*__filter { margin-bottom: 4px }`
+//    （带 data-v 属性、优先级更高，全局规则压不过）→ 已就地改成 16px。
+//    这里只留「标签不换行」这条防守（scoped 里没写，所以全局这条能生效）。
+.el-form.lqg-sample__filter .el-form-item__label,
+.el-form.lqg-embed__filter .el-form-item__label,
+.el-form.lqg-cryo__filter .el-form-item__label {
+  white-space: nowrap;
+}
+
+// ── 抽屉（编辑 / 核验 / 流水）统一样式 + H5 适配（2026-09-28 飞书问题行）────────
+// 症状（Kevin 原话）：「各个列表点击编辑后出现抽屉，抽屉里的样式有点乱……弹出的抽屉在 h5 上显示很乱」。
+// 根因 1：宽度是各组件里**写死的 700 / 720 / 780px**，H5（≈390px 宽）上必然超出屏幕。
+// 根因 2：标题/提示/表单项每个抽屉各写一套，字号与间距不一致。
+// 做法：窄屏一律占满宽度（用 !important 压过组件里 size="…px" 生成的行内 width）；
+//       标题与正文给统一字号/内边距；窄屏再收紧一档。
+@media (max-width: 768px) {
+  .el-drawer.rtl,
+  .el-drawer.ltr { width: 100% !important; }
+  .el-drawer.ttb,
+  .el-drawer.btt { height: 100% !important; }
+}
+
+.el-drawer__header {
+  margin-bottom: 12px;
+  padding: 16px 20px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lqg-ink);
+}
+
+.el-drawer__body {
+  padding: 12px 20px 20px;
+}
+
+@media (max-width: 768px) {
+  .el-drawer__header { margin-bottom: 8px; padding: 12px 14px 0; font-size: 15px; }
+  .el-drawer__body { padding: 10px 14px 16px; }
+  .el-drawer .el-form-item { margin-bottom: 14px; }
+  .el-drawer .el-form-item__label { font-size: 13px; }
+  .el-drawer .el-alert { padding: 8px 10px; }
+}

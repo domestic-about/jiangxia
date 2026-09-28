@@ -1,0 +1,195 @@
+# SYS-STAGING-001 · 测试环境（一台测试机上的全套：postgres + redis + minio + backend + nginx）
+#
+#   cd code/deploy/test && cp .env.example .env   # 填口令与域名；.env 不进 git（chmod 600）
+#   bash deploy.sh all                            # 本地构建产物 → 送上机 → 建镜像 → 起容器 → 等健康 → reseed
+#
+# 为什么不是「本地 build 再推镜像」：本机 docker 是 linux/aarch64，测试机是 x86_64
+#   → 本地镜像在测试机上是 `exec format error`（doc/waves/ops/tianda-test-env.md §4.5）。
+#   所以 backend 的 build 上下文是**测试机上**的 ./ruoyi-admin（jar 由 deploy.sh rsync 上去），
+#   镜像在服务器原生构建（amd64，只 COPY jar，秒级）。
+#
+# ★ 端口纪律（这台机器上还跑着 guzi 与 tianda 两个**别的项目**的容器，谁都不能碰）：
+#   宿主 80/443/888/8881 = 宝塔 nginx；23127 = 宝塔面板；8080 = gz-ruoyi-admin-staging；
+#   3306 = gz-mysql-staging；3307/6380 = tianda-mysql/tianda-redis；8081 = 某个 java；3000 = next-server。
+#   本项目一律用 15432 / 16379 / 19000 / 19001 / 8082 / 8083，且**全部只绑 127.0.0.1**
+#   （`0.0.0.0:` 一个都不许出现；accept 第 2 条就是查这个）。
+#
+# ★ 依赖的镜像在测试机上**已就位**（2026-09-22 实测）：postgres:16-alpine / redis:7-alpine /
+#   minio/minio:latest / eclipse-temurin:21-jre-jammy；nginx:1.27-alpine 由 deploy.sh 首次拉取。
+#   别改 tag —— 改了就等于让服务器去公网拉新镜像（这台机器在墙内，很慢）。
+name: lqg-test
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lqg-test-postgres
+    restart: unless-stopped
+    environment:
+      # 库名必须含 test：doc/verify/reseed.sh 的护栏（它 TRUNCATE，拒绝对不含 dev/test 的库名执行）
+      POSTGRES_DB: ${LQG_DB_NAME:-lqg_test}
+      POSTGRES_USER: ${LQG_DB_USER:-lqg}
+      POSTGRES_PASSWORD: ${LQG_DB_PASSWORD:?LQG_DB_PASSWORD 未设置——照 code/deploy/test/.env.example 建 .env}
+      # 中文排序/大小写按 C 排序，与 dev 一致，避免索引行为漂移
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      TZ: Asia/Shanghai
+    ports:
+      # 只绑环回：宿主 15432 → 容器 5432。5432 是这台机器上别人的暴露面，一个字节都不占。
+      - "127.0.0.1:${LQG_DB_PORT:-15432}:5432"
+    volumes:
+      - lqg-test-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LQG_DB_USER:-lqg} -d ${LQG_DB_NAME:-lqg_test}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    container_name: lqg-test-redis
+    restart: unless-stopped
+    # 必须设口令：若依的 Redisson 配了口令就发 AUTH，服务端没口令时 AUTH 直接报错 → 后端起不来
+    environment:
+      LQG_REDIS_PASSWORD: ${LQG_REDIS_PASSWORD:?LQG_REDIS_PASSWORD 未设置——照 .env.example 建 .env}
+    command:
+      - /bin/sh
+      - -c
+      - exec redis-server --requirepass "$$LQG_REDIS_PASSWORD" --save 60 1 --appendonly no
+    ports:
+      - "127.0.0.1:${LQG_REDIS_PORT:-16379}:6379"
+    volumes:
+      - lqg-test-redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$LQG_REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  minio:
+    image: minio/minio:latest
+    container_name: lqg-test-minio
+    restart: unless-stopped
+    # 与 dev 一样只起服务端，不在 compose 里建桶（桶由工作台「系统管理 → OSS 配置」决定，
+    # 测试数据里 doc/verify/seed/ 也没有依赖桶的断言）。
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${LQG_MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${LQG_MINIO_PASSWORD:?LQG_MINIO_PASSWORD 未设置——照 .env.example 建 .env}
+      MINIO_BUCKET: ${LQG_MINIO_BUCKET:-lqg-test}
+      MINIO_BROWSER: "on"
+    ports:
+      # 控制台 19001 只绑环回：要用就 ssh 隧道，不对公网开
+      - "127.0.0.1:${LQG_MINIO_PORT:-19000}:9000"
+      - "127.0.0.1:${LQG_MINIO_CONSOLE_PORT:-19001}:9001"
+    volumes:
+      - lqg-test-miniodata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    # 镜像在**测试机上原生构建**：jar 与架构无关，deploy.sh 把本地 mvn package 的 jar
+    # rsync 到 ./ruoyi-admin/target/ruoyi-admin.jar，构建上下文就是 ./ruoyi-admin（amd64 原生，秒级）。
+    # 多阶段那份（maven 构建 → JRE 运行）留给同架构的 amd64 CI：code/deploy/common/Dockerfile.backend
+    build:
+      context: ./ruoyi-admin
+      dockerfile: Dockerfile
+      args:
+        # 反 stale：/lqg/sys/ping 的 buildCommit 必须与本地 HEAD 对得上（accept 第 1 条）
+        BUILD_COMMIT: ${LQG_BUILD_COMMIT:?LQG_BUILD_COMMIT 未设置——deploy.sh 会写入 .env}
+    image: lqg-test-backend:${LQG_BUILD_COMMIT:?}
+    container_name: lqg-test-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+    environment:
+      # 票面 §2：backend 跑 --spring.profiles.active=test（下面 command 里再显式给一次）
+      SPRING_PROFILES_ACTIVE: test
+      BUILD_COMMIT: ${LQG_BUILD_COMMIT:?}
+      TZ: Asia/Shanghai
+      # 容器内走 compose 网络的服务名，不是宿主端口
+      LQG_DB_HOST: postgres
+      LQG_DB_PORT: "5432"
+      LQG_DB_NAME: ${LQG_DB_NAME:-lqg_test}
+      LQG_DB_USER: ${LQG_DB_USER:-lqg}
+      LQG_DB_PASSWORD: ${LQG_DB_PASSWORD:?}
+      LQG_REDIS_HOST: redis
+      LQG_REDIS_PORT: "6379"
+      LQG_REDIS_PASSWORD: ${LQG_REDIS_PASSWORD:?}
+      # 真实微信小程序凭据（甲方主体 appid 未提供 → 留空，体验版登录走 mock 调试入口）
+      LQG_WX_APPID: ${LQG_WX_APPID:-}
+      LQG_WX_SECRET: ${LQG_WX_SECRET:-}
+      # ── mock 登录开关（台账 #346）────────────────────────────────────────────
+      # application-test.yml 缺省 mock-login: true（ADR-0008 允许 test），甲方在拿到 appid
+      # 之前就靠它登进 seed 账号。但本环境**公网可达**，且实测 mock token 还能读写工作台业务数据
+      # （/lqg/sample/list 200、DELETE 200），所以这里留一个**一行开关**：
+      #   拿到 appid+secret 后 → `.env` 里 LQG_MOCK_LOGIN=false，再 deploy.sh up + reseed。
+      # 变量名走 Spring 宽松绑定：lqg.auth.mock-login ← LQG_AUTH_MOCK_LOGIN。
+      LQG_AUTH_MOCK_LOGIN: ${LQG_MOCK_LOGIN:-true}
+      # DOC-PDF-001：docx → PDF 的转换容器，走 compose 网络的服务名（**不发布宿主端口**）
+      LQG_GOTENBERG_URL: http://gotenberg:3000
+    ports:
+      # 后端只发布到宿主环回：宿主 nginx（宝塔）与 compose 的 nginx 都从这里进
+      - "127.0.0.1:${LQG_API_PORT:-8082}:8080"
+    volumes:
+      # 日志落宿主，排查不用进容器；后端 logback 写 ./logs（WORKDIR=/app）
+      - ./logs/backend:/app/logs
+    command: ["--spring.profiles.active=test"]
+    healthcheck:
+      # 基础镜像是 ubuntu jammy，没有 curl/wget；用 bash 的 /dev/tcp 探端口。
+      # 「应用真的能应答 HTTP」由 deploy.sh 在宿主上 curl /lqg/sys/ping 断言（那一步更严）。
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
+
+  gotenberg:
+    # DOC-PDF-001：docx → PDF（LibreOffice + 开源中文字体，见 ../common/gotenberg/）。
+    # ★ 只在内网暴露：**不发布任何宿主端口**。测试机上 3000 端口是别的项目的 next-server
+    #   （见本文件页首的端口纪律），这里一个字节都不占；backend 容器用服务名访问。
+    # ★ 镜像在测试机上构建（与 backend 同一思路）：构建上下文是仓库里的 common/gotenberg，
+    #   deploy.sh 需要把它一起 rsync 上机；gotenberg/gotenberg:8 基础镜像也必须在测试机上就位
+    #   （本机是 linux/aarch64、测试机是 x86_64，本地镜像搬不过去 —— 见页首注释）。
+    build:
+      context: ../common/gotenberg
+      dockerfile: Dockerfile
+    image: lqg-gotenberg:8
+    container_name: lqg-test-gotenberg
+    restart: unless-stopped
+    command:
+      - gotenberg
+      - --api-timeout=60s
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lqg-test-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # ★ 宿主 80/443 归宝塔，容器不许抢：只发布到 127.0.0.1:8083，宿主 nginx 反代进来
+      - "127.0.0.1:${LQG_WEB_PORT:-8083}:80"
+    volumes:
+      # 网页工作台静态产物（plus-ui 的 dist，由 deploy.sh rsync 到 /opt/lqg-test/www）
+      - ./www:/usr/share/nginx/html:ro
+      - ./nginx/workspace.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/proxy-headers.inc:/etc/nginx/conf.d/lqg-proxy-headers.inc:ro
+      - ./logs/nginx:/var/log/nginx
+
+volumes:
+  lqg-test-pgdata:
+  lqg-test-redisdata:
+  lqg-test-miniodata:

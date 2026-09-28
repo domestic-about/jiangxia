@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>org.dromara</groupId>
+        <artifactId>ruoyi-modules</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>ruoyi-lqg</artifactId>
+
+    <properties>
+        <!--
+          本模块要跑「不带 @Tag 的用例」：根 pom 在 pluginManagement 里给 surefire 配了
+          <groups>${profiles.active}</groups> / <excludedGroups>exclude</excludedGroups>，
+          而需求层给的契约测试 MockLoginGuardContractTest 没有 @Tag —— 不摘掉过滤器它会被静默跳过。
+          空串在 surefire 里等价于「没有分组过滤」。命令行 -Dgroups=... 仍可覆盖。
+        -->
+        <lqg.test.groups></lqg.test.groups>
+        <lqg.test.excludedGroups></lqg.test.excludedGroups>
+        <!--
+          契约测试是 ADR-0008 唯一的机器证据，默认值不能是「跳过」（根 pom 的缺省是 skipTests=true）。
+          ★ V31：这里只是**缺省值**。命令行 -DskipTests / -Dmaven.test.skip=true 照样生效（用户属性优先于
+          pom 属性）；原先 surefire 的 <configuration> 里又写死了一遍 <skipTests>false</skipTests>，
+          插件配置里的字面量会压过命令行，-DskipTests 在本模块形同虚设 —— 那一行已删。
+        -->
+        <skipTests>false</skipTests>
+    </properties>
+
+    <description>
+        类器官送检与样本管理系统业务模块（ADR-0001：全部业务代码只在这一个模块里，包根 org.dromara.lqg.&lt;域&gt;）
+    </description>
+
+    <dependencies>
+
+        <!-- 通用工具 -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-core</artifactId>
+        </dependency>
+
+        <!-- 接口文档 -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-doc</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus（持久层） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-mybatis</artifactId>
+        </dependency>
+
+        <!-- 权限注解 @SaCheckPermission / @SaCheckRole -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-security</artifactId>
+        </dependency>
+
+        <!-- Web 层（R / TableDataInfo / 异常处理） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-web</artifactId>
+        </dependency>
+
+        <!-- 多租户开关 TenantHelper.isEnable()（本项目关着，但取运行期值要它） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-tenant</artifactId>
+        </dependency>
+
+        <!-- 字段加解密（@EncryptField；ping 要报 encryptEnabled） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-encrypt</artifactId>
+        </dependency>
+
+        <!-- 系统模块（sys_user / sys_user_role / sys_client 的 mapper 与登录构建：
+             ruoyi-system 不依赖 ruoyi-lqg，方向单一不成环） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-system</artifactId>
+        </dependency>
+
+        <!-- 分布式锁（Redisson；并发首登按手机号加锁，见 WxUserBindService） -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-redis</artifactId>
+        </dependency>
+
+        <!--
+          OCR-IMPL-001：@RateLimiter 注解（org.dromara.common.ratelimiter.annotation.RateLimiter）
+          与它的切面。此前只有 ruoyi-admin 直接依赖它 —— ruoyi-lqg 的类路径上没有这个注解，
+          写了编不过。**必须显式声明**：依赖传递方向是 admin → lqg，不是 lqg → admin。
+          切面本身由 ruoyi-common-ratelimiter 的 AutoConfiguration.imports 注册（redis 已在上一行）。
+        -->
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-ratelimiter</artifactId>
+        </dependency>
+
+        <!-- 微信小程序 SDK（code2session 换 openid + 手机号快速验证换手机号） -->
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-miniapp</artifactId>
+            <version>4.7.0</version>
+        </dependency>
+
+        <!--
+          DOC-RENDER-001：Word 渲染（ADR-0005 的决策值字面就是「poi-tl 按 docx 模板渲染 Word」）。
+          本模块此前类路径上没有 POI，所以必须显式引入。
+
+          ★ 故意 exclude poi-tl 自带的 poi-ooxml 5.2.2，改钉 5.4.1 —— 与工作台导出 Excel 的
+            fastexcel 1.3.0 拉进来的那一份同版本，一个 jar 里只有一份 POI，不出现
+            「编译期 5.2.2 / 运行期 5.4.1」那种只在运行时才炸的组合。poi-tl 1.12.2 只用 XWPF 的
+            稳定 API（XWPFDocument / XWPFRun / 段落与表格遍历），对 5.4.1 二进制兼容；
+            DocxTemplateRenderTest 与 accept 都在真渲染里验证过。
+          ★ batik 是 poi-tl 为 SVG 图片拖进来的（约 10MB）；模板里只有位图，但
+            PictureRenderPolicy 在编译期就引用 SVGConvertor，不能 exclude。
+        -->
+        <dependency>
+            <groupId>com.deepoove</groupId>
+            <artifactId>poi-tl</artifactId>
+            <version>1.12.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.poi</groupId>
+                    <artifactId>poi-ooxml</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+
+        <!--
+          DOC-PDF-001：PDFBox（FLOW:F-DOC-01.step4 的决策值字面就是「PDFBox 按 150 DPI
+          把 PDF 每页渲染成 PNG」，ADR-0005 同）。本模块此前类路径上没有 PDF 库。
+          3.x 的 API 与 2.x 不同（org.apache.pdfbox.Loader.loadPDF），别按 2.x 的写法写。
+        -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.5</version>
+        </dependency>
+
+        <!-- 单元测试（MockLoginGuardContractTest 契约测试用；只引 JUnit，不引 Spring 上下文） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+          AUTH-GROUP-001：需求层给的 ExtChokepointContractTest（ADR-0004 咽喉的四条结构性不变量）
+          用 Spring 的 ClassPathScanningCandidateComponentProvider 扫包、用 RequestMapping /
+          RestController 注解判类型，所以本模块的**测试**类路径要有 spring-context / spring-web。
+          scope=test，版本交给上游的依赖管理（**不要**在这里写死版本，也不要重复声明 spring-web：
+          它已经由 ruoyi-common-web 传递进来，再声明一次会把版本降下来、把整个模块编挂）。
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <!--
+          ★ V31 / V22（独立验收 2026-09-23）：构建只靠后端目录自己。原先这里把
+          ../../../../doc/verify/fixtures/ 当资源目录拷 ocr-cases.json —— 只检出 code/RuoYi-Vue-Plus
+          （将来拆出来的后端仓库）时找不到它，单测红、jar 打不出来，多阶段 Dockerfile 也因此构建不了。
+          现在：
+            · ocr-cases.json 放在本模块 src/main/resources/（dev / test 的 StubOcrProvider 运行时要读，
+              所以是主资源；内容只有测试数据，prod 下桩类不存在、配成 stub 会被护栏拒绝启动）；
+            · 导出对账用的四份甲方 xlsx 模板原件放在 src/test/resources/export-templates/（只进测试 classpath，
+              不进 jar）；
+            · 与仓库里那两份原件（doc/verify/fixtures/ocr-cases.json、_input/templates/*.xlsx）逐字节一致，
+              由 FixtureCopiesSyncTest 在整仓检出时比对（只检出后端目录时这条比对跳过，不算失败）。
+        -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <!--
+              需求层给的契约测试 MockLoginGuardContractTest 没有 @Tag，而根 pom 的 surefire 配了
+              <groups>${profiles.active}</groups>（跑起来就是 groups=dev）——只跑带 @Tag("dev") 的用例，
+              于是这个类会被**静默跳过**：Surefire 一个用例不跑，构建照样 BUILD SUCCESS，
+              「护栏坏了」这条断言恒绿（accept 里最危险的假绿形态）。
+              契约测试**逐字节不许改**（accept 用 cmp 校验），所以过滤器只能在构建侧摘掉。
+              根 pom 把 surefire 放在 pluginManagement 里，模块这里覆盖**插件级**配置。
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <groups>${lqg.test.groups}</groups>
+                    <excludedGroups>${lqg.test.excludedGroups}</excludedGroups>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

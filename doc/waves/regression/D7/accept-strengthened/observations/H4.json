@@ -1,0 +1,88 @@
+{
+ "hotspot": "H4",
+ "green": true,
+ "ran_at": "2026-09-28T03:47:14.561Z",
+ "results": [
+  {
+   "name": "H4:工作台登录 lqgadmin",
+   "ok": true,
+   "detail": "http://127.0.0.1:8093/index"
+  },
+  {
+   "name": "H4:★ 真 DOM 渲染出的下载入口恰好 4 个",
+   "ok": true,
+   "detail": "{\"count\":4,\"labels\":[\"下载 Word\",\"下载 PDF\",\"下载合并 Word\",\"下载合并 PDF\"]}"
+  },
+  {
+   "name": "H4:★ 「下载 Word」→ 真请求 format=docx",
+   "ok": true,
+   "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/sample_qc/download?format=docx&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+  },
+  {
+   "name": "H4:★ 「下载 PDF」→ 真请求 format=pdf",
+   "ok": true,
+   "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/sample_qc/download?format=pdf&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+  },
+  {
+   "name": "H4:★ 「下载合并 Word」→ 真请求 format=docx + 合并件",
+   "ok": true,
+   "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/merged/download?format=docx&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+  },
+  {
+   "name": "H4:★ 「下载合并 PDF」→ 真请求 format=pdf + 合并件",
+   "ok": true,
+   "detail": "{\"url\":\"/dev-api/lqg/doc/9000001001/merged/download?format=pdf&audience=internal\",\"status\":200,\"method\":\"GET\"}"
+  },
+  {
+   "name": "H4:四个入口的文案恰好是 [Word, PDF, 合并 Word, 合并 PDF]",
+   "ok": true,
+   "detail": "{\"labels\":[\"下载 Word\",\"下载 PDF\",\"下载合并 Word\",\"下载合并 PDF\"],\"expectedLabels\":[\"下载 Word\",\"下载 PDF\",\"下载合并 Word\",\"下载合并 PDF\"]}"
+  }
+ ],
+ "observed": {
+  "dom_download_buttons": [
+   "下载 Word",
+   "下载 PDF",
+   "下载合并 Word",
+   "下载合并 PDF"
+  ],
+  "download_button_hits": [
+   {
+    "label": "下载 Word",
+    "found": true,
+    "requested": "/dev-api/lqg/doc/9000001001/sample_qc/download",
+    "query": "format=docx&audience=internal",
+    "format_ok": true,
+    "merged_ok": true,
+    "status": 200
+   },
+   {
+    "label": "下载 PDF",
+    "found": true,
+    "requested": "/dev-api/lqg/doc/9000001001/sample_qc/download",
+    "query": "format=pdf&audience=internal",
+    "format_ok": true,
+    "merged_ok": true,
+    "status": 200
+   },
+   {
+    "label": "下载合并 Word",
+    "found": true,
+    "requested": "/dev-api/lqg/doc/9000001001/merged/download",
+    "query": "format=docx&audience=internal",
+    "format_ok": true,
+    "merged_ok": true,
+    "status": 200
+   },
+   {
+    "label": "下载合并 PDF",
+    "found": true,
+    "requested": "/dev-api/lqg/doc/9000001001/merged/download",
+    "query": "format=pdf&audience=internal",
+    "format_ok": true,
+    "merged_ok": true,
+    "status": 200
+   }
+  ]
+ }
+}

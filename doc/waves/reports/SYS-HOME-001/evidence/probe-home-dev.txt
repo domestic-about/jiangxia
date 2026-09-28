@@ -1,0 +1,16 @@
+PASS  ① 登录落在 /index 且首页渲染出内容（不是白屏） — len=13540 url=/index
+PASS  ② 恰好五张待办卡片 — ["待核验样本","待核验石蜡包埋送样","-80 超期批次","待核验外部用户","文档渲染失败"]
+PASS  ③ 五个数字与接口/seed 一致（卡片接的是接口，不是写死的数） — 渲染=[2,1,2,2,0] 期望=[2,1,2,2,0]
+PASS  ④ 为 0 的那张卡片**仍在**（不隐藏）且带 is-zero（变灰） — {"title":"文档渲染失败","num":"0","zero":true,"visible":true}
+PASS  ⑤ 登录到首页整轮只请求了 1 次待办接口（卡片与角标同源） — /lqg/home/todo 请求数=1；/lqg/home/recent 请求数=1
+PASS  ⑥ 四个菜单角标与卡片同数（样本总表/石蜡包埋/冻存管理/人员与单位） — ["首页=(隐藏)","系统管理=(隐藏)","字典管理=(隐藏)","参数设置=(隐藏)","样本总表=2","石蜡包埋=1","人员与单位=2","内部人员授权=(隐藏)","来源单位与组别=(隐藏)","外部用户=(隐藏)","冻存管理=2"]
+PASS  ⑦ 角标里没有「0」（为 0 不显示角标） — 可见角标=["2","1","2","2"]
+PASS  ⑧ 最近提交表有内容、且不含软删的 SJ90000010 — 行数=9 含 SJ90000010=false
+PASS  ⑨ 点「待核验样本」卡片 → 样本总表且带上 verifyStatus=pending（页面真的套上了筛选） — url=/sample?verifyStatus=pending .app-main len=43743
+PASS  ⑩ dev 模式下从首页离开、连点四个菜单都不白屏（S1 不复发） — 石蜡包埋:ok(47367) 冻存管理:ok(53921) 外部用户:ok(21751) 首页:ok(13600)
+PASS  ⑪ 回到首页卡片仍是五个、数字不变，且角标与卡片仍是同一份（同源未分叉） — cards=[2,1,2,2,0] badges=[2,1,2,2] todoRequests=2
+PASS  ⑫ 全程无 console.error / pageerror
+PASS  ⑬ 另外四张卡片也都直达正确页面、带上筛选条件、页面渲染正常 — card1(url=/embed?verifyStatus=pending len=47412 含「待核验」=true) card2(url=/cryo?overdueOnly=true len=53975 含「超期」=true) card3(url=/auth/extuser?bindStatus=pending len=21751 含「待核验」=true) card4(url=/qc-console/doc-console len=5355 含「文档渲染状态」=true)
+
+== SYS-HOME-001 首页探针 13/13 通过（headless=true，EXPECT_SAMPLES=2）==
+SHOTS=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/reports/SYS-HOME-001/shots

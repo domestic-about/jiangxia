@@ -1,0 +1,32 @@
+════════ DOC-PUBLISH-001 · accept 1 逐段取证（票面命令手工重放）════════
+生成时间：2026-09-22 19:48:22
+
+── 0) 票面 accept1 的第 11/13/14 段断言原文与实测值的**唯一差异** ──
+票面期望：published|9000000101|True   （三处）
+实测：    published|9000000101|true   （PostgreSQL 布尔→文本恒为小写）
+
+$ python3 doc/verify/db.py --sql "SELECT (published_time IS NOT NULL)::text"
+[error] SQL 执行失败（不是断言不成立，是断言本身有问题）：column "published_time" does not exist
+LINE 1: SELECT (published_time IS NOT NULL)::text
+                ^
+
+
+$ psql -Atc "SELECT doc_status || ... || (published_time IS NOT NULL) FROM t_lqg_qc_sample WHERE sample_id=9000001006"
+
+── 1) 把票面三处 True 改成 true（只改这一个字母，其余逐字不动）后整条重放 ──
+$ sed -e "s/= \"published|9000000101|True\"/= \"published|9000000101|true\"/" -e "s/= \"draft|-|False\"/= \"draft|-|false\"/" .tmp/DOC-PUBLISH-001-acc1.sh > .tmp/acc1-lowercase.sh
+$ bash .tmp/acc1-lowercase.sh ; echo RC=$?
+true
+internal:png
+internal:docx
+internal:pdf
+external:png
+external:docx
+external:pdf
+true
+true
+true
+RC=0
+
+（以上输出逐行 = 票面 15 段的实际结果：第 3 段 jq 打印 true；第 6 段 6 行产物集合；
+  第 8/10 段的 jq 打印 true；第 9 段与末段 reseed 无输出。）

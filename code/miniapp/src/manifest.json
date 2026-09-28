@@ -1,0 +1,59 @@
+{
+  "name": "类器官送检",
+  "appid": "__UNI__LQG0001",
+  "description": "类器官送检与样本管理系统 · 小程序",
+  "versionName": "1.0.1",
+  "versionCode": "101",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "modules": {},
+    "distribute": {
+      "android": {
+        "permissions": []
+      },
+      "ios": {},
+      "sdkConfigs": {}
+    }
+  },
+  "quickapp": {},
+  "mp-weixin": {
+    "appid": "wxf7933ab70657e598",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true,
+      "postcss": true
+    },
+    "usingComponents": true,
+    "lazyCodeLoading": "requiredComponents",
+    "__usePrivacyCheck__": true
+  },
+  "mp-alipay": {
+    "usingComponents": true
+  },
+  "mp-baidu": {
+    "usingComponents": true
+  },
+  "mp-toutiao": {
+    "usingComponents": true
+  },
+  "uniStatistics": {
+    "enable": false
+  },
+  "vueVersion": "3",
+  "h5": {
+    "router": {
+      "base": "/",
+      "mode": "hash"
+    }
+  }
+}

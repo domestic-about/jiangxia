@@ -1,0 +1,12 @@
+PASS  登录后落在首页 /index 且首页有内容 — url=/index .app-main innerHTML length=13540
+PASS  ① 离开首页 → 内部人员授权「人员与单位」页正常渲染（回归点） — .app-main innerHTML length=11538 url=/auth/staff
+PASS  ① enter 过渡动画类仍在（animate.css fadeIn 挂上了新页根元素） — ["animate__animated","animate__fadeIn"]
+PASS  ② 侧边栏 → 外部用户（5130）正常渲染 — .app-main innerHTML length=21743 url=/auth/extuser
+PASS  ③ 侧边栏 → 字典管理正常渲染 — .app-main innerHTML length=42198 url=/system/dict
+PASS  ④ 侧边栏 → 参数设置正常渲染 — .app-main innerHTML length=39121 url=/system/config
+PASS  ⑤ 侧边栏 → 首页正常渲染 — .app-main innerHTML length=13600 url=/index
+PASS  ⑥ 再离开一次首页 → 来源单位与组别仍正常（不是只好了第一跳） — .app-main innerHTML length=19344 url=/auth/unit
+PASS  全程无 console.error / pageerror
+
+== SYS-WEB-001 菜单导航回归探针 9/9 通过（headless=true）==
+SHOTS=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/doc/waves/reports/SYS-HOME-001/shots/d1-regression

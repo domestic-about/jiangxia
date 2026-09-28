@@ -1,0 +1,56 @@
+# accept[2] 等价取证 ① ② ③ —— 在测试机 `118.178.109.11` 上执行
+# 命令：ssh root@118.178.109.11 'LQG_TEST_PUB_IP=118.178.109.11 bash /opt/lqg-test/remote/port-proof.sh'
+# 生成时间：2026-09-28 06:50:11 +0800
+
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+=== ① 发夹探针：从 box 打**自己的公网 IP** 118.178.109.11（2026-09-28 06:50:13）===
+--- 本项目：公网**不该**可达（只绑 127.0.0.1）---
+  118.178.109.11:15432  → unreachable
+  118.178.109.11:16379  → unreachable
+  118.178.109.11:19000  → unreachable
+  118.178.109.11:19001  → unreachable
+  118.178.109.11:8082   → unreachable
+  118.178.109.11:8083   → unreachable
+--- 阳性对照：这台机器上**确实公网可达**的既有端口（证明探针在区分，不是全都不可达）---
+  118.178.109.11:80     → reachable
+  118.178.109.11:443    → reachable
+  118.178.109.11:22     → reachable
+--- 阴性对照：绝不存在的端口（证明探针不会假报可达）---
+  1.1.1.1:59999  → unreachable
+  118.178.109.11:34567  → unreachable
+
+=== ② 同机环回对照：同样的端口走 127.0.0.1 **应该**可达（服务在跑，只是没对公网发布）===
+  127.0.0.1:15432  → reachable
+  127.0.0.1:16379  → reachable
+  127.0.0.1:19000  → reachable
+  127.0.0.1:8082   → reachable
+  127.0.0.1:8083   → reachable
+
+=== ③ ss -lntp：bind 地址（本项目的行一律 127.0.0.1，不是 0.0.0.0）===
+  State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess                                                                                                                                     
+  LISTEN 0      4096            127.0.0.1:15432      0.0.0.0:*    users:(("docker-proxy",pid=626167,fd=4))                                                                                                   
+  LISTEN 0      4096              0.0.0.0:3306       0.0.0.0:*    users:(("docker-proxy",pid=3945,fd=4))                                                                                                     
+  LISTEN 0      4096              0.0.0.0:8080       0.0.0.0:*    users:(("docker-proxy",pid=549485,fd=4))                                                                                                   
+  LISTEN 0      4096            127.0.0.1:8082       0.0.0.0:*    users:(("docker-proxy",pid=651186,fd=4))                                                                                                   
+  LISTEN 0      4096            127.0.0.1:8083       0.0.0.0:*    users:(("docker-proxy",pid=637245,fd=4))                                                                                                   
+  LISTEN 0      4096            127.0.0.1:19000      0.0.0.0:*    users:(("docker-proxy",pid=626151,fd=4))                                                                                                   
+  LISTEN 0      4096            127.0.0.1:19001      0.0.0.0:*    users:(("docker-proxy",pid=626139,fd=4))                                                                                                   
+  LISTEN 0      4096            127.0.0.1:16379      0.0.0.0:*    users:(("docker-proxy",pid=626126,fd=4))                                                                                                   
+  LISTEN 0      4096                 [::]:3306          [::]:*    users:(("docker-proxy",pid=3982,fd=4))                                                                                                     
+  LISTEN 0      4096                 [::]:8080          [::]:*    users:(("docker-proxy",pid=549491,fd=4))                                                                                                   
+
+=== ④ docker 端口映射（compose 的 HostIp 字段）===
+lqg-test-backend	127.0.0.1:8082->8080/tcp
+lqg-test-gotenberg	3000/tcp
+lqg-test-nginx	127.0.0.1:8083->80/tcp
+lqg-test-minio	127.0.0.1:19000->9000/tcp, 127.0.0.1:19001->9001/tcp
+lqg-test-postgres	127.0.0.1:15432->5432/tcp
+lqg-test-redis	127.0.0.1:16379->6379/tcp
+--- 别人的容器（只读，未碰）---
+gz-ruoyi-admin-staging	0.0.0.0:8080->8080/tcp, :::8080->8080/tcp
+tianda-redis	127.0.0.1:6380->6379/tcp
+tianda-mysql	33060/tcp, 127.0.0.1:3307->3306/tcp
+gz-redis-staging	6379/tcp
+gz-mysql-staging	0.0.0.0:3306->3306/tcp, :::3306->3306/tcp, 33060/tcp

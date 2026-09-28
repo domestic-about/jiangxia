@@ -1,0 +1,38 @@
+{
+  "phase": "D2",
+  "round": 1,
+  "auditor": "independent",
+  "levels": {
+    "L3": {
+      "status": "pass",
+      "evidence": "环境（本片自跑，不引用他人结论）：反 stale — `find code/RuoYi-Vue-Plus/ruoyi-modules/ruoyi-lqg/src -newer ruoyi-admin/target/ruoyi-admin.jar` = 0 行；jar mtime Sep 22 00:29:46；起前 `lsof -ti tcp:8081` 空，起后 PID 34097，`lsof -p 34097 | grep -c ruoyi-admin.jar` = 2（进程持该 jar），后端日志「启动成功」@ 00:55:42 晚于 jar mtime。跑断言前 `reseed.sh --yes` + `rm -f $TMPDIR/lqg-verify-token-*`。\n\n【1 越权】PASS。`api.sh --as extC GET /mp/ext/sample/9000001001` → `{\"code\":404,\"msg\":\"样本不存在\",\"data\":null}`；`--as extC --bizcode` → `404\t样本不存在`；`--as extE`（同组未核验）同两条输出逐字相同；响应体只含 code/msg/data，`grep -c 'donorName|hospitalNo|internalNo'` = 0、0（无任何样本字段）。对照 `--as extA GET /mp/ext/sample/9000001001` → `200\t操作成功`（端点可用，不是整段 404）。\n\n【2 外部 PUT 夹带 / 同组可看不可改 / 已有效改不了】PASS。基线 1001=`valid|T-hli01|external|2026-08-23`、1002=`pending||external|-`。(a) `--as extA PUT /mp/ext/sample/9000001002` body=legit 8 字段+夹带 internalNo/verifyStatus/submitSource/receiveDate → `{\"code\":200,\"msg\":\"操作成功\"}`；库内 `SELECT count(*) … WHERE id=9000001002 AND verify_status='pending' AND internal_no IS NULL AND submit_source='external' AND receive_date IS NULL` → 1/exit0，同时 `remark='L3夹带探针' AND has_pathology='Y'` → 1/exit0（请求确实走完写路径，夹带被忽略而非整体被拒）。(b) `--as extB PUT /mp/ext/sample/9000001001` 与 `/9000001002` → 均 `{\"code\":400,\"msg\":\"只能修改重提本人提交的样本（同组的样本可以看，但不能改）\"}`；复断 `id=9000001001 AND verify_status='valid' AND internal_no='T-hli01'` → 1/exit0。(c) `--as extA PUT /mp/ext/sample/9000001001`（自己的 valid）→ `{\"code\":400,\"msg\":\"样本当前状态不允许外部修改重提（只有待核验、无效的样本可以）\"}`，1001 不变。\n\n【3 内部经小程序 PUT】PASS。`--as staff PUT /mp/int/sample {\"id\":9000001002,…}` → `{\"code\":500,\"msg\":\"待核验与无效的样本只能在网页工作台核验或改判，小程序里不能改\"}`；`{\"id\":9000001003,…}` 同 msg。库内：1002 仍是 2a 留下的 `remark='L3夹带探针'`、`update_by=9000000111`（extA，不是 staff 的 9000000101）、`verify_status='pending'` → 1/exit0；1003 仍 `remark IS NULL AND update_by IS NULL AND verify_status='invalid'` → 1/exit0；反证 `remark LIKE 'L3内部改待核验%' OR LIKE 'L3内部改无效%'` → 0/exit0（payload 未落盘）。`--as staff PUT /mp/int/sample {\"id\":9000001001,\"remark\":\"L3内部改有效\"}` → `200`，1001 变 `valid|L3内部改有效|update_by=9000000101`；`SELECT count(*) FROM t_lqg_sample s JOIN sys_user u ON u.user_id=s.update_by WHERE s.id=9000001001 AND u.phonenumber='13800000001' AND s.remark='L3内部改有效'` → 1/exit0。\n\n【4 角色闸】PASS。`--as extA /lqg/sample/list`、`--as extA PUT /lqg/sample/9000001001/verify`、`--as extA /mp/int/sample/list`、`--as staff /mp/ext/sample/list`、`--as staff POST /mp/ext/organoid` → 五条全部 `403\t没有访问权限，请联系管理员授权`；对照 `--as extA /mp/ext/sample/list` → `200\t查询成功`、`--as staff /mp/int/sample/list` → `200\t查询成功`、`--as admin /lqg/sample/list` → `200\t查询成功`（证明 403 是权限分支而非端点不存在）。\n\n【5 核验状态机】PASS。1002 整行指纹 `H0 = SELECT md5(t::text) FROM t_lqg_sample t WHERE id=9000001002` = `e7e180cbd0a5748419e7fe7c2159e7c2`。`--as admin PUT /lqg/sample/9000001002/verify`：(a) `{\"action\":\"valid\",\"receiveDate\":\"2026-09-01\"}` → `{\"code\":500,\"msg\":\"判有效必须同时给收样日期与内部编号，缺少：内部编号\"}`；(b) `{\"action\":\"valid\",\"internalNo\":\"T-l3x\"}` → `…缺少：收样日期`；(c) `+internalNo:\"T-hli01\"` → `{\"code\":500,\"msg\":\"内部编号「T-hli01」已存在，请换一个\"}`；(d) `{\"action\":\"invalid\"}` → `{\"code\":500,\"msg\":\"判无效必须写原因\"}`。四条后 `H1` 重算 = 同一个 md5，**H0==H1 → 整行一字未变**；`internal_no='T-hli01'` 行数仍 1/exit0、1001 仍 `valid+T-hli01` → 1/exit0。软删重用：1010 为 `del_flag=1|internal_no=T-del99`；`PUT … {\"action\":\"valid\",\"receiveDate\":\"2026-09-01\",\"internalNo\":\"T-del99\"}` → `{\"code\":200,\"msg\":\"操作成功\"}`；1002 → `del_flag=0|T-del99|valid|2026-09-01|verify_by=9000000100`，1010 原行仍在；`count(*) WHERE internal_no='T-del99' AND del_flag='0'` → 1/exit0（部分唯一索引 `uk_sample_internal_no WHERE del_flag='0'` 成立）。\n\n【6 空数据新外部用户】PASS。`--as phone:newbie1:13800000099 POST /auth/login` → `200`；`GET /mp/me` → `{\"code\":200,…,\"identity\":\"external\",\"ext\":{\"unitId\":null,…,\"bindStatus\":\"unbound\"}}`；`GET /mp/ext/sample/list?pageSize=20`（外部历史编辑记录的数据源）→ `{\"total\":0,\"rows\":[],\"code\":200,\"msg\":\"查询成功\"}`；`GET /mp/ext/units` → `200`。库内该号样本数 0、ext_profile `unbound` 且 unit/group 全 NULL。浅 H5（`doc/waves/regression/D2/L3-mp-shallow.mjs`，17/17 PASS）：首页宫格 3 格、正文无「没能加载/重试」、历史编辑记录走空态「你填过的记录会出现在这里」而非 ErrorState，pageerror 0 / console.error 0。\n\n【7 板块 / 身份缺失 / 类器官夹带】PASS。(a) 浅 H5：外部（extA）「我的」正文不含「内部管理」且含「历史编辑记录」「单位与组别」；内部（staff）「我的」正文含「内部管理（查看 · 筛选 · 导出）」四入口、不含「单位与组别」。(b) Playwright 拦截 `**/mp/me` 把 identity 置 null → 首页 `.lqg-tile` = 0 格、正文只出兜底「没能确认你的身份，请重新登录后再试/去登录」；「我的」不渲染历史编辑记录/内部管理/单位与组别；identity 置 `\"INTERNAL\"`（契约外大小写）→ 首页 0 格（绝不默认内部）；pageerror 0。(c) `--as extC POST /mp/ext/organoid` body=legit 3 项+夹带 `internalNo=T-L3ORG, receiveDate=2026-01-02, verifyStatus=valid, submitSource=internal, isFixed=Y` → `{\"code\":200,\"msg\":\"操作成功\"}`；库内新行 `organoid|external|pending|internal_no 空|receive_date NULL|is_fixed NULL` → 1/exit0；行数 10→11；`internal_no='T-L3ORG'` → 0/exit0。\n\nharness（本片自测复现，非实现缺陷）：`python3 doc/verify/db.py --sql \"SELECT id FROM t_lqg_sample ORDER BY id LIMIT 3\"` 打印 3 行；同一句加 `--quiet` → **空输出 exit 0** → `OID=\"$(db.py --quiet --sql …)\"` 恒空。本片所有插值一律去掉 `--quiet`。本片 L3 = pass：无 S0/S1。"
+    }
+  },
+  "escalated_noted": [],
+  "issues": [
+    {
+      "severity": "S2",
+      "level": "L3",
+      "type": "debt",
+      "ticket": "AUTH-EXT-001 / SAMPLE-MP-001",
+      "title": "外部写端点对非法/缺字段的 body 回 500，响应体里回吐完整 SQL 与整行 DB 明细（含加密列密文、内部 user_id）",
+      "detail": "复现：① `bash doc/verify/api.sh --as extA PUT /mp/ext/sample/9000001002 '{\"sourceUnitId\":9000009001,…,\"hasPathology\":\"yes\",…}'`（字典 lqg_yes_no 只给 Y/N）→ `{\"code\":500,\"msg\":\"### Error updating database. Cause: org.postgresql.util.PSQLException: ERROR: value too long for type character(1) … SQL: UPDATE t_lqg_sample SET update_by=?,update_time=?,…\"}`；② 同端点省略 sourceUnitName（或 `--as extC POST /mp/ext/organoid` 省略它）→ msg 里连 `Detail: Failing row contains (9000001002, SJ90000002, tissue, external, 9000000111, pending, … donor_name/hospital_no 密文 …, 9000000111, …)` 一起返回。影响范围：任何**已登录外部账号**都能构造这两个外部写端点的请求，拿到表名/列名清单、加密列密文与内部 user_id（t_lqg_sample 的 schema 与内部主键）。小程序表单只送 Y/N 且全字段，工作台/老师主流程走不到，故不拦门；登记为 debt 待加 @Valid 白名单 + 全局异常不吐 SQL。"
+    },
+    {
+      "severity": "S3",
+      "level": "L3",
+      "type": "debt",
+      "ticket": "SAMPLE-VERIFY-001 / SAMPLE-MP-001",
+      "title": "同一模块里「客户端导致的拒绝」业务码不统一：400 与 500 混用",
+      "detail": "同一轮实测：`PUT /mp/ext/sample/{id}` 的归属拒绝（同组别人的）与状态拒绝（已有效）回 `code=400`；而 `/mp/int/sample` 待核验/无效样本修改拒绝、`PUT /lqg/sample/{id}/verify` 的「缺内部编号 / 缺收样日期 / 编号撞号 / 缺原因」四条全部回 `code=500`。四条的 msg 分支都精确命中，行为正确，仅业务码不规范（前端若按 400 区分子类会漏判）。"
+    },
+    {
+      "severity": "S2",
+      "level": "L3",
+      "type": "harness",
+      "ticket": "AUTH-EXT-001",
+      "title": "doc/verify/db.py --quiet 不打印任何行 → 插值句式恒拿到空值（AUTH-EXT-001 accept 3 因此假绿）",
+      "detail": "本片自测复现：`python3 doc/verify/db.py --sql \"SELECT id FROM t_lqg_sample ORDER BY id LIMIT 3\"` → 打印 9000001001/9000001002/9000001003 exit 0；同一句加 `--quiet` → **空输出 exit 0**。因此 `OID=\"$(db.py --quiet --sql \"SELECT id …\")\"` 类句式永远拿到空值，doc/tickets/ 里 10 张票中招。影响另一个 ticket 的实现路径判定（AUTH-EXT-001 accept 3 假绿），按规则 harness 的 S0/S1 自动压回 S2。未改 db.py 与 ticket 正文；本片所有插值改为去掉 --quiet 取真值。"
+    }
+  ]
+}

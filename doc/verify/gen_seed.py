@@ -196,7 +196,8 @@ sample(9000001007, "SJ90000007", "tissue", "external", 9000000115, "pending", 90
        hospital_no="ZY0000007", tissue_type="肝组织")
 sample(9000001008, "SJ90000008", "tissue", "internal", 9000000101, "valid", None, "本中心", ts(45), donor_name="测试供体辛", gender="female", age="45",
        hospital_no="ZY0000008", tissue_type="肝组织", receive_date=d(45), internal_no="T-hli05", process_time=ts(45), verify_time=ts(45), **recv)
-sample(9000001009, "SJ90000009", "organoid", "internal", 9000000101, "valid", 9000009002, "B 大学", ts(60), organoid_type="结直肠类器官",
+# 代数 passage（CR-20260924-10，类器官收样记录在「类器官类型」后加的一项）：唯一的类器官样本带上 P3，H5 / 工作台 / 导出里 T-oco01 都能看到带值的代数
+sample(9000001009, "SJ90000009", "organoid", "internal", 9000000101, "valid", 9000009002, "B 大学", ts(60), organoid_type="结直肠类器官", passage="P3",
        receive_date=d(60), internal_no="T-oco01", process_time=ts(60), has_viability_report="Y", operator_name="李工", verify_by=9000000101, verify_time=ts(60))
 sample(9000001010, "SJ90000010", "tissue", "external", 9000000111, "valid", 9000009001, "A 医院", today(3), donor_name="已删除供体", gender="male",
        tissue_type="肝组织", receive_date=d(10), internal_no="T-del99", del_flag="1")

@@ -1,0 +1,29 @@
+################ ext002-probes.sh ################
+PASS P1-staff打外部列表-403 — 403	没有访问权限，请联系管理员授权
+PASS P2-admin打外部单条-403 — 403	没有访问权限，请联系管理员授权
+PASS P3-staff打外部提交-403 — 403	没有访问权限，请联系管理员授权
+PASS P4-外部打内部lqg-403 — 403	没有访问权限，请联系管理员授权
+PASS P5-外部打mpint-未注册404（EMBED-MP-001 尚未落，与 AUTH-EXT-001 WARN-3 同源） — 404	No endpoint GET /mp/int/embed/list.
+PASS P6-verifyStatus=pending只出待核验 — ["9000002006"]
+PASS P7a-extA-onlyMine+pending — ["9000002006"]
+PASS P7b-extB-onlyMine+pending-空（2003 是实验室在他样本上建的） — []
+PASS P8a-extA看自己待核验送样 — ["pending",true,true]
+PASS P8b-extB看同组送样-不可改 — ["pending",false,false]
+PASS P9a-核验有效后详情里 editable=false — [["valid",true,false]]
+PASS P9b-已核验送样 PUT 被拒(400)且库内不变（seed 值=组织） — 400	送样当前是「valid」，外部不能修改重提（只有待核验、无效的可以） / 组织
+PASS P10a-extC改不可见记录被拒且库内不变 — 400	只能修改重提本人提交的送样（同组的可以看，但不能改） / 0
+PASS P11a-实验室录入的块外部只读 — 400	只能修改重提本人提交的送样（同组的可以看，但不能改） / 组织
+PASS P12a-换挂别人样本被拒且 sample_id 不变 — 400	只能挂本人送检过的样本 / 9000001002
+PASS P13-软删记录不在外部接口出现（404）— 1/404	石蜡包埋记录不存在
+PASS P13b-软删 2005 不在列表 — ["9000002001","9000002002","9000002003","9000002006"]
+PASS P14-单条 submitNo=所挂样本送检单号 — SJ90000002
+PASS P15a-开关开-待核验样本仍无编号、包埋VO也无该键 — [false,null]
+PASS P15b-开关开-外部包埋列表也不给内部编号（列表行按送检单号指代） — null
+PASS P15c-开关已还原 false — false
+PASS P16-没记录的样本 embeds=[] — [200,[]]
+PASS P17-不可见样本详情 404 — 404	样本不存在
+PASS P18a-不存在的样本被拒且未建记录 — 404	样本不存在 / 1
+PASS P19-夹带包埋人/操作人/工序时间/备注全不落库 — -|-|-|-|-
+PASS P19b-夹带的 marker 也没落库 — 0
+PROBE EXT002 PASS=26 FAIL=0
+---- probes RC=0 ----

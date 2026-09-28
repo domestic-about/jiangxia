@@ -1,18 +1,28 @@
 {
-  "_doc": "SAMPLE-MP-002 的验收用例。被测函数：organoidLayout(identity, verifyStatus, mine, mode) → { fields, editable }。类器官收样记录：内部七项（模板 B 的 7 列）；外部三项（来源单位、类器官类型、备注，Kevin 2026-09-17 晚定外部可填，CR-20260917-05），外部永远不渲染收样段。mode：new = 首页点表进来；edit = 历史编辑记录点一条进来；view = 内部管理表格页点一行进来（只读；只读页右上角「修改」会切到 mode=edit 重算，CR-20260918-07）。身份缺失、不认识：什么都不渲染。",
+  "_doc": "SAMPLE-MP-002 的验收用例。被测函数：organoidLayout(identity, verifyStatus, mine, mode) → { fields, editable }。类器官收样记录：内部八项（模板 B 的 7 列 + inserted 的「代数」）；外部四项（来源单位、类器官类型、备注，Kevin 2026-09-17 晚定外部可填，CR-20260917-05；+ inserted 的「代数」），外部永远不渲染收样段。inserted = 模板原件里没有、甲方后来要求加的字段，插在 after 字段后面（内外部都插），写明 source。mode：new = 首页点表进来；edit = 历史编辑记录点一条进来；view = 内部管理表格页点一行进来（只读；只读页右上角「修改」会切到 mode=edit 重算，CR-20260918-07）。身份缺失、不认识：什么都不渲染。",
   "externalFields": [
     "sourceUnitName",
     "organoidType",
+    "passage",
     "remark"
   ],
   "internalFields": [
     "sourceUnitName",
     "organoidType",
+    "passage",
     "receiveDate",
     "internalNo",
     "processTime",
     "hasViabilityReport",
     "operatorName"
+  ],
+  "inserted": [
+    {
+      "field": "passage",
+      "label": "代数",
+      "after": "organoidType",
+      "source": "甲方 2026-09-24 测试问题记录表第 18 行（CR-20260924-10）：「合作单位填类器官收样记录只有三项：来源单位、类器官类型、备注」合作单位和内部人员的都要再添加一项：代数"
+    }
   ],
   "cases": [
     {
@@ -25,6 +35,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "remark"
         ],
         "editable": true
@@ -40,6 +51,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "remark"
         ],
         "editable": true
@@ -55,6 +67,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "remark"
         ],
         "editable": false
@@ -70,6 +83,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "remark"
         ],
         "editable": false
@@ -85,6 +99,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "receiveDate",
           "internalNo",
           "processTime",
@@ -104,6 +119,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "receiveDate",
           "internalNo",
           "processTime",
@@ -123,6 +139,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "receiveDate",
           "internalNo",
           "processTime",
@@ -142,6 +159,7 @@
         "fields": [
           "sourceUnitName",
           "organoidType",
+          "passage",
           "receiveDate",
           "internalNo",
           "processTime",

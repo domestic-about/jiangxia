@@ -1,0 +1,28 @@
+# 线上测试环境的工作台 UI 判据（2026-09-28，飞书行9/行10）
+# 命令：LQG_UI_BASE=https://songjian.tianda.studio LQG_UI_USER=lqgadmin LQG_UI_PASSWORD=<强口令> node doc/waves/regression/staging-hardening/03-deployed-workbench-ui.mjs
+# 时间：2026-09-28 08:01:47 +0800
+# 产物：test 模式构建（VITE_APP_ENCRYPT=false）—— prod 模式会因后端不解密而登录 500，见台账 #351
+
+目标：https://songjian.tianda.studio（用户 lqgadmin）
+
+  ✓ 线上 前置：能登录进工作台（否则后面所有断言都不可信） — https://songjian.tianda.studio/index
+  ✓ 线上 行9①：侧边菜单角标不被截断 — {"上边被截":0}
+  ✓ 线上 行9③ /sample：筛选下边距 16px — 16px
+  ✓ 线上 行9② /sample：标签 nowrap — nowrap
+  ✓ 线上 行9② /sample：没有换行的标签 — []
+  ✓ 线上 行9③ /embed：筛选下边距 16px — 16px
+  ✓ 线上 行9② /embed：标签 nowrap — nowrap
+  ✓ 线上 行9② /embed：没有换行的标签 — []
+  ✓ 线上 行9③ /cryo：筛选下边距 16px — 16px
+  ✓ 线上 行9② /cryo：标签 nowrap — nowrap
+  ✓ 线上 行9② /cryo：没有换行的标签 — []
+  ✓ 线上 前置：能登录进工作台（否则后面所有断言都不可信） — https://songjian.tianda.studio/index
+  ✓ 线上 行10 @1440px：抽屉不超出右边界 — {"宽":780,"溢出":0,"内部横向溢出元素":0}
+  ✓ 线上 行10 @1440px：抽屉内部无横向溢出 — {"宽":780,"溢出":0,"内部横向溢出元素":0}
+  ✓ 线上 行10 @1440px：抽屉固定宽 780 — {"宽":780,"溢出":0,"内部横向溢出元素":0}
+  ✓ 线上 前置：能登录进工作台（否则后面所有断言都不可信） — https://songjian.tianda.studio/index
+  ✓ 线上 行10 @390px：抽屉不超出右边界 — {"宽":390,"溢出":0,"内部横向溢出元素":0}
+  ✓ 线上 行10 @390px：抽屉内部无横向溢出 — {"宽":390,"溢出":0,"内部横向溢出元素":0}
+  ✓ 线上 行10 @390px：抽屉满宽（=390） — {"宽":390,"溢出":0,"内部横向溢出元素":0}
+
+结果：PASS（失败 0 条）

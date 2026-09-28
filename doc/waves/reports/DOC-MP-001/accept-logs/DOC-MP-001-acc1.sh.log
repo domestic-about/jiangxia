@@ -1,0 +1,4 @@
+# DOC-MP-001 accept[1] 分组规则过 fixture：组内固定顺序、组间按最新完成时间倒序、两份起才有合并入口、混进来的 merged 行不算一份
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+true

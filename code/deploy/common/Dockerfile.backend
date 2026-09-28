@@ -1,0 +1,59 @@
+# syntax=docker/dockerfile:1
+#
+# 后端镜像 —— **多阶段：maven 构建 → JRE 21 运行**（SYS-STAGING-001 票面 §2 的字面要求）。
+#
+# 构建上下文 = code/RuoYi-Vue-Plus（Maven 聚合根，**不是**仓库根）：
+#   docker build -f code/deploy/common/Dockerfile.backend \
+#     --build-arg BUILD_COMMIT="$(git rev-parse --short=12 HEAD)" \
+#     -t lqg-backend:"$(git rev-parse --short=12 HEAD)" \
+#     code/RuoYi-Vue-Plus
+#
+# BUILD_COMMIT 的去向：构建参数 → 运行阶段的 ENV → SysPingController 的
+# @Value("${BUILD_COMMIT:...}") → GET /lqg/sys/ping 的 buildCommit。accept 第 1 条就断这个值
+# 与本地 HEAD 对得上（反 stale：远程环境看不到 jar 的 mtime，只能靠它）。
+#
+# ★★ 什么时候**不要**用这份文件：
+#   本项目的开发机是 linux/aarch64（Apple Silicon），测试机是 x86_64。在开发机上跑这份文件
+#   会产出 arm64 镜像，推到测试机上是 `exec format error`；用 --platform linux/amd64 走 qemu
+#   模拟 maven 全量构建慢到不可接受。所以测试机的部署走
+#   `ruoyi-admin/Dockerfile`（jar 与架构无关：本地 mvn package → rsync 上机 → 服务器原生建镜像，秒级）。
+#   详见 doc/waves/ops/tianda-test-env.md §4.5 与 code/deploy/common/README.md。
+#   这份多阶段文件留给**与运行机同架构**的场合：amd64 CI runner、x86 服务器直接构建。
+#
+# 注：`.mvn-settings.xml`（指向 maven.aliyun.com 镜像）在**仓库根**、不在本构建上下文里，
+#     所以这里用默认的 Maven Central。国内 CI 想加速，在下面 RUN 前把自己的 settings.xml
+#     COPY 进来并给 mvn 加 `-s`（参照 ops §4.5 路线 2）。
+
+# ── 阶段 1：maven 构建 ────────────────────────────────────────────────────────
+FROM maven:3.9-eclipse-temurin-21 AS build
+ARG BUILD_COMMIT=unknown
+ENV BUILD_COMMIT=${BUILD_COMMIT} \
+    MAVEN_OPTS="-Xmx1024m"
+WORKDIR /build
+# 先只拷 pom，让依赖层可缓存（改代码不用重下依赖）
+COPY pom.xml ./
+COPY ruoyi-admin/pom.xml ruoyi-admin/
+COPY ruoyi-common/pom.xml ruoyi-common/
+COPY ruoyi-extend/pom.xml ruoyi-extend/
+COPY ruoyi-modules/pom.xml ruoyi-modules/
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -q -pl ruoyi-admin -am -DskipTests dependency:go-offline || true
+# 再拷源码做真实构建（-DskipTests：单测是 CI 的 L0 门，不在镜像构建里跑）
+COPY . .
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -pl ruoyi-admin -am -DskipTests package \
+ && test -f ruoyi-admin/target/ruoyi-admin.jar
+
+# ── 阶段 2：JRE 21 运行 ──────────────────────────────────────────────────────
+# 宿主机 JDK 是 17（不是 21），后端只在容器里跑，所以固定 21 的 JRE 基础镜像
+FROM eclipse-temurin:21-jre-jammy
+ARG BUILD_COMMIT=unknown
+ENV BUILD_COMMIT=${BUILD_COMMIT} \
+    TZ=Asia/Shanghai \
+    LANG=C.UTF-8 \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+WORKDIR /app
+COPY --from=build /build/ruoyi-admin/target/ruoyi-admin.jar /app/app.jar
+EXPOSE 8080
+# profile 由运行侧给：--spring.profiles.active=test（compose 的 command，票面 §2）
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

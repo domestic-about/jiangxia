@@ -1,0 +1,8 @@
+# AUTH-EXT-003 accept[1] 外部文档清单钉死在 seed 上：同组可见、草稿不给、外部版没渲染成功的不给、异组按不存在返回；带 audience=internal 也拿不到内部版；链接里的对象键是外部版
+# 归一化 NF1
+# LQG_VERIFY_ENV_FILE=/Users/wkui/Project/profile/project/freelance/projects/jiangxia-organoid/.tmp/qa-env/8094/verify.env
+
+[FAIL] 集合不相等：多出 ['organoid_qc:done', 'sample_qc:done']，缺少 ['organoid_qc:failed', 'sample_qc:failed']
+sample_qc:done
+organoid_qc:done
+organoid_score:done

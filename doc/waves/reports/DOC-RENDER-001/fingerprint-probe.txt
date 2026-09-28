@@ -1,0 +1,17 @@
+# accept 2 的指纹探针（手工重放，逐段贴值）
+$ bash doc/verify/reseed.sh --yes
+  ✓ reseed
+S1 = external:99a3cd879ba7b1129eeddeda226a43cbfe80e94a280cdd9b7652675fd51cd478:2102332965567623169:2026-09-22 17:43:33,internal:bfffdb327a3dae0e58c9335fd529f1942298c03cbc94020d742c49809a7a0b73:2102332965357907969:2026-09-22 17:43:33,
+S2 = external:99a3cd879ba7b1129eeddeda226a43cbfe80e94a280cdd9b7652675fd51cd478:2102332965567623169:2026-09-22 17:43:33,internal:bfffdb327a3dae0e58c9335fd529f1942298c03cbc94020d742c49809a7a0b73:2102332965357907969:2026-09-22 17:43:33,
+S1 == S2 ? yes
+行数 = 2
+
+$ PUT /lqg/qc/9000001001/organoid-qc {"growthState":"指纹探针：已改"}
+{"code":200,"msg":"操作成功","data":null}
+S3 = external:99a3cd879ba7b1129eeddeda226a43cbfe80e94a280cdd9b7652675fd51cd478:2102332965567623169:2026-09-22 17:43:33,internal:7abdbcc60d0b21e90c994c432b3bb321462d68705d4b4a06bc2b5f5282707c41:2102332970659508226:2026-09-22 17:43:34,
+S1 != S3 ? yes
+
+# 1001 的 organoid_qc 名下有 seed 假图（sys_oss.service='seed'，URL=https://seed.invalid/...）
+渲染状态：
+{"status":"done","errorMsg":null,"ossId":"2102332970659508226"}
+（取不到图的处置：跳过该图 + 打 WARN，文档照出 done —— accept 2 要求此处 done）

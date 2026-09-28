@@ -1,0 +1,74 @@
+{
+ "hotspot": "H1b",
+ "green": false,
+ "ran_at": "2026-09-28T03:48:30.013Z",
+ "results": [
+  {
+   "name": "H1b:内部人员 mock 登录 H5(9204)",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/"
+  },
+  {
+   "name": "H1b:进入文档页签",
+   "ok": true,
+   "detail": "http://127.0.0.1:9204/#/pages/doc/index"
+  },
+  {
+   "name": "H1b:第一组卡片上有「下载」入口（渲染产物已就绪）",
+   "ok": true,
+   "detail": "3"
+  },
+  {
+   "name": "H1b:后端签发 OSS 预签名直链（code=200 + url 指向 127.0.0.1:9000）",
+   "ok": true,
+   "detail": "{\"api\":[\"http://127.0.0.1:9204/lqg-api/mp/int/doc/9000001001/sample_qc/download?format=docx\"],\"code\":200,\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8ec01ec48615.docx?X-Amz-Algorithm=AWS4-HMAC-SH\"}"
+  },
+  {
+   "name": "H1b:★ OSS 直链请求真的发出（真点一次单份下载）",
+   "ok": true,
+   "detail": "[\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8ec01ec48615.docx\"]"
+  },
+  {
+   "name": "H1b:★ OSS 直链请求头**没有 Authorization**（API 鉴权头不能塞到预签名直链上）",
+   "ok": false,
+   "detail": "{\"n\":1,\"authHeaders\":[\"Bearer eyJhbGciOiJIU\"]}"
+  },
+  {
+   "name": "H1b:★ OSS 响应码 = 200（MinIO 没判「multiple authentication types」）",
+   "ok": false,
+   "detail": "[{\"url\":\"http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8ec01ec48615.docx\",\"status\":400,\"ct\":\"application/xml\"}]"
+  },
+  {
+   "name": "H1b:页面没有进失败态（.db__hint 里没有「暂时下不了」）",
+   "ok": false,
+   "detail": "[\"暂时下不了，请稍后再试\"]"
+  }
+ ],
+ "observed": {
+  "backend_signed_url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8ec01ec48615.docx?X-Amz-…",
+  "oss_request_headers": [
+   {
+    "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8ec01ec48615.docx",
+    "header_keys": [
+     "sec-ch-ua-platform",
+     "authorization",
+     "referer",
+     "user-agent",
+     "sec-ch-ua",
+     "clientid",
+     "sec-ch-ua-mobile"
+    ],
+    "authorization": "(有！)",
+    "clientid": "22b2aecd0710671691ec1c07f2542b9d"
+   }
+  ],
+  "oss_response": [
+   {
+    "url": "http://127.0.0.1:9002/lqg/lqg/doc/9000001001/sample_qc/internal/8ec01ec48615.docx",
+    "status": 400,
+    "ct": "application/xml"
+   }
+  ],
+  "clientid_on_oss_request_count": 1
+ }
+}
