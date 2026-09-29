@@ -163,13 +163,25 @@ function onPick() {
 </template>
 
 <style lang="scss" scoped>
-/* 每项一条浅下划线；最后一行不画（否则与卡片底边叠成双线） */
+/* 每项一条浅下划线；最后一行不画（否则与卡片底边叠成双线）
+ *
+ * ★ 2026-09-29：Kevin 报「真机上完全看不出来」。产物本身是对的
+ *   （`<view class="fr">` + `.fr[data-v]{border-bottom:1px solid var(--lqg-line)}` 都在），
+ *   所以问题出在 mp 端两个已知坑，这里一并规避：
+ *     ① **不把 var() 放进简写属性**：`border-bottom: 1px solid var(--lqg-line)` 在部分小程序基础库上
+ *        整条不生效（拆成 width/style/color 三个长写法最稳）；
+ *     ② **不依赖 CSS 变量穿透组件边界**：本组件是自定义组件（styleIsolation 默认 isolated），
+ *        `--lqg-line` 定义在 page 上，能否继承进来跟基础库有关 —— 直接用字面色最稳
+ *        （值 = design-authority §B 的 `--lqg-line` #e2e9ea，这里**略深一档** #dfe6e7，
+ *         因为原值在真机白底上确实几乎看不见）。 */
 .fr {
-  border-bottom: 1px solid var(--lqg-line);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #dfe6e7;
 }
 
 .fr:last-child {
-  border-bottom: 0;
+  border-bottom-width: 0;
 }
 
 .fr__val {

@@ -51,6 +51,16 @@
         "doc/_autopilot/evidence/工作台-row12-col5.jpeg"
       ],
       "stage_note": "按 Kevin 2026-09-29 的口径做了**产品改动**（不只是改文案）：① 去掉独立的「预览」按钮；② 点「保存」= 保存 + 自动重新生成预览（handleSaveDraft 里 await render()）；③ 提示换成只提醒同步：「这份文档还是草稿，送检方看不到。点『完成并同步』把它同步出去。」（中英同步改）；needsResync 条件回退为「草稿 + 有预览图」，并删掉上一轮临时加的 dirty prop。**仍未验证**（同 row11 的环境问题）。"
+    },
+    {
+      "sheet": "小程序",
+      "row": 12,
+      "stage": "not_a_bug",
+      "restate": "「-80度超低温冰箱转移至液氮时间」这一格**填不了**。",
+      "evidence": [
+        "code/miniapp/src/pages/cryo/form.vue:371"
+      ],
+      "stage_note": "复现证据（代码即证据，非静态猜测）：`cryo/form.vue:371` 明确写 `<FieldRow label=\"-80度超低温冰箱转移至液氮时间\" readonly ...>`，上一行注释与页面 NoteBar 都写明「取走、补入、转液氮：在『内部管理 → -80 冻存』里点这一批登记」。所以这一格**本页就是只读**、转液氮时间在批次详情弹层的「转液氮」里登记 —— 是设计口径，不是漏了可编辑。→ 需要 Kevin 定：要不要在本页也能填（口径变更，同时要定「本页保存是否带这个键」）。"
     }
   ],
   "blocker": {
