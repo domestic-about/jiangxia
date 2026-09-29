@@ -54,6 +54,7 @@ const rows = await p.evaluate(() => {
     const r = el.getBoundingClientRect()
     return {
       i,
+      父: String(el.parentElement?.className || '') + '#' + i,
       最后一行: i === list.length - 1,
       下划线宽: cs.borderBottomWidth,
       下划线色: cs.borderBottomColor,
@@ -67,13 +68,28 @@ const rows = await p.evaluate(() => {
 check('① 核验页渲染出字段行', rows.length >= 4, `共 ${rows.length} 行`)
 if (rows.length === 0) { await b.close(); console.log('\n结果：FAIL（没渲染出字段行，后续判据无意义）'); process.exit(1) }
 
-const middle = rows.filter(r => !r.最后一行)
-const badLine = middle.filter(r => r.下划线样式 !== 'solid' || parseFloat(r.下划线宽) !== 1 || r.下划线色 !== LIGHT_LINE)
-check('② 非末行都有 1px 浅色下划线（--lqg-line #e2e9ea）', badLine.length === 0,
-  badLine.length ? JSON.stringify(badLine.slice(0, 3)) : `${middle.length} 行全部命中`)
-const last = rows.find(r => r.最后一行)
-check('③ 最后一行不画线（不与卡片底边叠双线）', !last || parseFloat(last.下划线宽) === 0,
-  last ? `末行 border=${last.下划线宽}` : '（只有一行）')
+// ★ 2026-09-29（Kevin 口径）：**每张卡片的最后一行**不画线，卡片内部每行都画。
+//   因此按「所属卡片」分组判：组内除最后一个外都要有线，组内最后一个必须没有线。
+//   （原来按整页判「非末行都要有线」，会把卡片交界那一行误判成缺陷。）
+const groups = new Map()
+for (const r of rows) {
+  const k = r.父 ?? '__root__'
+  if (!groups.has(k)) groups.set(k, [])
+  groups.get(k).push(r)
+}
+const badLine = []
+const badLast = []
+for (const [, list] of groups) {
+  list.forEach((r, i) => {
+    const has = r.下划线样式 === 'solid' && parseFloat(r.下划线宽) === 1 && r.下划线色 === LIGHT_LINE
+    if (i < list.length - 1 && !has) badLine.push(r)
+    if (i === list.length - 1 && parseFloat(r.下划线宽) !== 0) badLast.push(r)
+  })
+}
+check('② 卡片内部每行都有 1px 浅色下划线（--lqg-line #e2e9ea）', badLine.length === 0,
+  badLine.length ? JSON.stringify(badLine.slice(0, 3)) : `${groups.size} 组、组内非末行全部命中`)
+check('③ 每张卡片的最后一行不画线（不与卡片底边叠双线）', badLast.length === 0,
+  badLast.length ? JSON.stringify(badLast.slice(0, 3)) : `${groups.size} 组的末行都无线`)
 
 const lefts = [...new Set(rows.map(r => r.标签左).filter(v => v !== null))]
 const rights = [...new Set(rows.map(r => r.取值右).filter(v => v !== null))]

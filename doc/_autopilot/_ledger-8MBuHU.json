@@ -24,8 +24,8 @@
       "evidence": [
         "doc/_autopilot/evidence/小程序-row7-col5.jpeg"
       ],
-      "stage_note": "① 表单下划线：FieldRow 已加（本轮之前那次已落，产物已带）；② 拍照识别无摄像头/点击无反应：**未修**，需先确认是权限还是调用方式",
-      "question": "手机点「拍照识别」时，微信是否弹过「允许使用摄像头」的授权？如果弹过但被拒，需在微信设置里重新授权；如果从没弹过，就是代码调用方式的问题（我改 uni 的选图 API）。",
+      "stage_note": "① 下划线口径已确认（Kevin：最后一行不需要）→ 实现本来就是「卡片内每行有线、卡片末行无线」，所以**改的是判据**：14-form-row-underline.mjs 从「整页非末行」改成「按卡片分组」；遗留：取值右边界差 14px（带 › 的弹面板行）仍是真缺陷，未修。② 拍照：Kevin 确认**从没弹过**摄像头授权 → 判定为微信「用户隐私保护指引」未声明（2023-09 起，涉及摄像头/相册的 API 不声明就不弹授权、直接 fail，errno 112）。已做：OcrBar 把隐私类失败单独提示「需在小程序后台声明用户隐私保护指引（摄像头/相册）」，其余失败也露出真实 errMsg。**待 Kevin 做**：小程序后台 → 设置 → 服务内容声明 → 用户隐私保护指引，声明摄像头/相册。",
+      "question": "（已答）从没弹过授权 → 按隐私指引未声明处理",
       "fallback": "按「调用方式」先查：把 uni.chooseImage 换成 wx.chooseMedia 并显式 sourceType=[camera]/[album]，同时把失败原因打到 toast 上（便于下次一眼看出是授权被拒还是域名/接口失败）。"
     },
     {
@@ -39,7 +39,7 @@
         "doc/_autopilot/evidence/工作台-row11-col6.jpeg",
         "doc/waves/regression/staging-hardening/16-drawer-style.mjs"
       ],
-      "stage_note": "已改 SampleDrawer.vue：header 标题 18px/600 + 下边距 18px + 底线；lastmod 12px/ink-3/下边距 14px；footer 改 space-between + row-gap 12px（更多与保存分开）+ 底部上边线；窄屏 drawerSize=100%、el-col 强制满宽、表单项间距 14px。**未验证**：本地工作台登录 500（后端 Redis 连接池失效），DOM 判据 16-drawer-style.mjs 跑不起来。"
+      "stage_note": "已改 SampleDrawer.vue（4 条全部）。**仍未验证**：本地 8091 后端登录 500（redisson 连接池对着已重启的 Redis）；期间我用 qa-up 起新环境，它把后端起在 **8092** 并把 8093/9202 关掉了，所以 DOM 判据要等环境重整后再跑（判据 16-drawer-style.mjs 已写好）。"
     },
     {
       "sheet": "网页工作台",
@@ -50,13 +50,13 @@
       "evidence": [
         "doc/_autopilot/evidence/工作台-row12-col5.jpeg"
       ],
-      "stage_note": "needsResync 由「draft && done」改成「draft && done && dirty」，编辑器把 currentTabDirty 传下来（PreviewPane 新增 dirty prop）。**未验证**：同 row11 的本地环境问题。",
-      "question": "确认口径：「已经改过、回到草稿，预览还是上一版」这条提示，是否只应在**当前页签有未保存改动**时出现？我的实现是「保存/完成并同步之后就不再显示，改了又会出现」。"
+      "stage_note": "按 Kevin 2026-09-29 的口径做了**产品改动**（不只是改文案）：① 去掉独立的「预览」按钮；② 点「保存」= 保存 + 自动重新生成预览（handleSaveDraft 里 await render()）；③ 提示换成只提醒同步：「这份文档还是草稿，送检方看不到。点『完成并同步』把它同步出去。」（中英同步改）；needsResync 条件回退为「草稿 + 有预览图」，并删掉上一轮临时加的 dirty prop。**仍未验证**（同 row11 的环境问题）。"
     }
   ],
   "blocker": {
     "at": "2026-09-29",
-    "what": "本地验证环境不可用：8091 后端仍在跑，但登录 /auth/login 报 500（org.redisson.client.WriteRedisConnectionException，连接池对着已重启过的 Redis）。端口探活是 200，所以是连接池而非进程问题，需要重启后端进程。",
-    "impact": "工作台 row11/row12 的 DOM 对抗判据（16-drawer-style.mjs / 待写 17）跑不了，两条只能停在 fixed_local，不能标 verified。"
+    "what": "本地验证环境在重整：原 8091 后端登录 500（redisson WriteRedisConnectionException，连接池对着已重启的 Redis）；我用 `qa-up.sh --no-web --no-mp` 重启，它把后端起在 **8092**、并把工作台 8093 / 小程序 H5 9202 关停了（后台任务 pid 47475 仍在打 jar）。",
+    "impact": "工作台 row11/row12 与小程序下划线的 DOM 对抗判据都跑不了 → 三条只能停在 fixed_local；判据脚本本身已写好并语法自检通过（14 已按卡片分组、16 新增抽屉 4 条）。",
+    "next": "等 qa-up 起来后：LQG_UI_BASE/LQG_WEB_BASE 指到 8092/8093（并把 9202 一起拉起），依次跑 14-form-row-underline.mjs、16-drawer-style.mjs，再起干净 QA 过④门。"
   }
 }

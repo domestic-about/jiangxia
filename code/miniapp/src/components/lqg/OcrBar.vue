@@ -127,6 +127,15 @@ async function start(sourceType: 'camera' | 'album') {
       const reason = String((e as { message?: string })?.message ?? '')
       if (reason.includes('not in domain list')) {
         uni.showToast({ title: '上传域名未在微信后台配置，请联系管理员', icon: 'none', duration: 3000 })
+      } else if (/privacy|隐私|112/i.test(reason)) {
+        // ★ 2026-09-29（Kevin：真机点拍照「从没弹过」授权）：微信自 2023-09 起，涉及摄像头/相册的 API
+        //   必须先在小程序后台配置《用户隐私保护指引》并声明对应权限，否则**不会弹授权**、
+        //   直接 fail（errno 112 / api scope is not declared in the privacy agreement）。
+        //   这条提示把方向指给管理员，而不是让用户看到「没识别出来」猜。
+        uni.showToast({ title: '需在小程序后台声明用户隐私保护指引（摄像头/相册）', icon: 'none', duration: 4000 })
+      } else if (reason) {
+        // 其余失败把**真实 errMsg** 露出来（原来一律「没识别出来」，原因全被盖住）
+        uni.showToast({ title: reason.slice(0, 60), icon: 'none', duration: 4000 })
       }
     state.value = 'failed'
   }

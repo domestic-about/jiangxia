@@ -101,7 +101,6 @@
             :sample-id="sampleId"
             :doc-kind="currentTab.docKind"
             :doc-status="docStatusOf(currentTab)"
-            :dirty="currentTabDirty"
             :initial-audience="initialAudience"
             @busy="(value: boolean) => (previewing = value)"
           />
@@ -114,9 +113,6 @@
           {{ t('lqg.qc.editor.saveDraft') }}
         </el-button>
         <!-- ★ 两个按钮在 DOC-PUBLISH-001 点亮（QC-WEB-001 里是写死置灰的占位） -->
-        <el-button :loading="previewing" :disabled="!bundle" @click="handlePreview">
-          {{ t('lqg.qc.editor.preview') }}
-        </el-button>
         <el-button
           :type="currentPublished ? 'default' : 'success'"
           :loading="publishing"
@@ -445,6 +441,13 @@ const setTabDirty = (tab: TabName, value: boolean) => {
 };
 
 /** 保存草稿：只保存**当前页签**（各页签的 save() 自己发各自的 PUT，见 api/lqg/qc/index.ts） */
+/**
+ * 保存草稿（**保存后自动重新生成预览**）。
+ *
+ * ★ 2026-09-29（Kevin 工作台 row12 的口径）：去掉独立的「预览」按钮 —— 点保存就是
+ *   「保存 + 重出预览图」一步，用户不必再记得点两下；右栏预览图随保存自动刷新。
+ *   `render()` 内部自己轮询到 done/failed，这里的 loading 由面板的 `@busy` 驱动。
+ */
 const handleSaveDraft = async () => {
   const tab = activeTabRef.value;
   if (!tab) return;
@@ -452,6 +455,7 @@ const handleSaveDraft = async () => {
   try {
     await tab.save();
     await reload();
+    await previewPaneRef.value?.render();
   } finally {
     saving.value = false;
   }

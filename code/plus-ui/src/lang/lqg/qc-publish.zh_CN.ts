@@ -33,7 +33,7 @@ export default {
     downloadMergedPdf: '下载合并 PDF',
     mergedNotForScore: '评分表没有独立的合并件：合并件是「已完成的几份」按固定顺序拼起来的',
     mergedUnavailable: '合并件还没法下载：',
-    needsResync: '这份文档已经改过、回到了草稿；预览图还是上一版。重新「完成并同步」后送检方才看得到。',
+    needsResync: '这份文档还是草稿，送检方看不到。点「完成并同步」把它同步出去。',
 
     // 完成并同步 / 撤回
     publishDone: '已同步给送检方',

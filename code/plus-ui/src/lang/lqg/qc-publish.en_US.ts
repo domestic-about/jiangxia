@@ -24,7 +24,7 @@ export default {
     downloadMergedPdf: 'Download merged PDF',
     mergedNotForScore: 'The score sheet has no standalone merged file: merged = the completed sheets in a fixed order',
     mergedUnavailable: 'Merged file is not available yet: ',
-    needsResync: 'This document was edited and went back to draft; the preview is still the previous version. Complete & sync again so the submitter can see it.',
+    needsResync: 'This document is still a draft and the submitter cannot see it. Click Complete & sync to publish it.',
 
     publishDone: 'Synced to the submitter',
     publishFailed: 'Complete & sync failed: ',

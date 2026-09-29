@@ -165,11 +165,6 @@ const props = defineProps<{
   docStatus?: string;
   /** 进页时先看哪一版（从首页异常清单点进来时是出问题的那一版；默认内部版） */
   initialAudience?: DocAudience;
-  /**
-   * 当前页签有没有未保存的改动（编辑器传 `currentTabDirty`）。
-   * 决定「这份文档已经改过…请重新完成并同步」这条提示是否成立 —— 见 `needsResync`。
-   */
-  dirty?: boolean;
 }>();
 
 /** `changed` = 面板里发生了会影响文档的事（渲染完成等）；`busy` = 正在渲染（父组件据此转按钮） */
@@ -212,18 +207,13 @@ const mergedSkipped = computed(() => props.docKind === 'organoid_score');
 
 /** 「这份文档此刻该不该显示已完成」：状态机回草稿后要提示用户重新同步 */
 /**
- * 「这份文档已经改过、回到了草稿；预览图还是上一版」——**必须三件事同时成立**：
- *   ① 文档还在草稿态；② 已经有一版预览图；③ **当前页签有未保存的改动**（dirty）。
+ * 「这份文档还在草稿，送检方看不到」的提醒 —— 条件：文档在草稿态 + 已经有一版预览图。
  *
- * ★ 2026-09-29 修（Kevin 工作台 row12）：原来只有 ①+② —— 于是「保存并预览之后」这条提示
- *   **一直挂着**，而文案在说「预览图还是上一版」，属误导（预览明明就是当前的）。
- *   编辑器本来就有 per-tab 脏标记（`dirtyTabs`），接上它以后：改完没保存 → 提示出现（此时预览确实旧）；
- *   保存/预览之后 → dirty 置回 false → 提示消失（Kevin 要的）。
- *   `dirty` 缺省 false：没接线时**不再**无条件弹这条提示（宁可少提示，不要误导）。
+ * ★ 2026-09-29（Kevin 工作台 row12）改的是**文案**而不是条件：
+ *   原文案断言「预览图还是上一版」——但保存后预览就是当前版，属误导。
+ *   现在的口径（Kevin 定）：保存即自动重出预览，这条只**提醒去同步**，不再对预览版本下判断。
  */
-const needsResync = computed(
-  () => props.docStatus === 'draft' && status.value === 'done' && props.dirty === true
-);
+const needsResync = computed(() => props.docStatus === 'draft' && status.value === 'done');
 
 /**
  * 读一次页面图。
