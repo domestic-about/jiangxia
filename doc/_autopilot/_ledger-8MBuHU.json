@@ -1,0 +1,62 @@
+{
+  "sheet": {
+    "url": "https://ncn59pmtdck5.feishu.cn/sheets/MTY3sEbKDhgqnxthuYHcwm08nMg",
+    "tabs": {
+      "小程序": "3654e3",
+      "网页工作台": "8MBuHU"
+    }
+  },
+  "created_at": "2026-09-29T14:41:12",
+  "columns": {
+    "问题描述": "C",
+    "问题截图": "D",
+    "需求截图": "E",
+    "解决方式": "H(AI 唯一可写列)",
+    "备注": "I"
+  },
+  "entries": [
+    {
+      "sheet": "小程序",
+      "row": 7,
+      "seq": "",
+      "stage": "fixing",
+      "restate": "【复述卡·小程序 row7】两个诉求：\n① 各种表单「还是一整块白屏」——**具体证据**：截图是 `样本记录信息表` 页（不是核验页），字段行之间**没有任何分隔线**，整张卡片是连续白块；性别三态（男/女/未知）换行成两行。\n② 拍照识别/从相册「点击还是没有任何反应」；点「拍照识别」**没有摄像头**打开，直接显示「没识别出来，请手动填写」。\n图像里出现、文字里没有的：截图带 **vConsole**（说明是体验版/真机调试）；按钮文案是「拍照识别」「从相册」；提示语「识别结果仅作预填，请核对后提交」；底部单按钮「提交」。",
+      "evidence": [
+        "doc/_autopilot/evidence/小程序-row7-col5.jpeg"
+      ],
+      "stage_note": "① 表单下划线：FieldRow 已加（本轮之前那次已落，产物已带）；② 拍照识别无摄像头/点击无反应：**未修**，需先确认是权限还是调用方式",
+      "question": "手机点「拍照识别」时，微信是否弹过「允许使用摄像头」的授权？如果弹过但被拒，需在微信设置里重新授权；如果从没弹过，就是代码调用方式的问题（我改 uni 的选图 API）。",
+      "fallback": "按「调用方式」先查：把 uni.chooseImage 换成 wx.chooseMedia 并显式 sourceType=[camera]/[album]，同时把失败原因打到 toast 上（便于下次一眼看出是授权被拒还是域名/接口失败）。"
+    },
+    {
+      "sheet": "网页工作台",
+      "row": 11,
+      "seq": "",
+      "stage": "fixed_local",
+      "restate": "【复述卡·工作台 row11】抽屉「编辑样本」样式调整，4 条：\n① 「更多 ▾」**紧贴**「保存」按钮（截图右下：更多在最上、保存/取消在下一行，挤在一起）。\n② 标题「编辑样本」与**底部**距离要加大、标题要更明显（截图里标题与下方「最后修改」几乎贴住）。\n③ 「最后修改：李工 · 2026-09-29 14:22:38」**样式与标题同款**且紧贴标题，应更小、更弱。\n④ **H5 太挤**：需求截图是 iPhone 12 Pro（390×844），抽屉里两列表单被压扁，值被截断（「哈喽你」「感觉你」「刚回」「说明」），应**一行只显示一个表单项**。\n图像里出现、文字里没有的：抽屉顶部有「最后修改」时间戳 + 分组标题「送检信息」「收样信息」；底部按钮组顺序是 更多 / 保存 / 取消。",
+      "evidence": [
+        "doc/_autopilot/evidence/工作台-row11-col5.jpeg",
+        "doc/_autopilot/evidence/工作台-row11-col6.jpeg",
+        "doc/waves/regression/staging-hardening/16-drawer-style.mjs"
+      ],
+      "stage_note": "已改 SampleDrawer.vue：header 标题 18px/600 + 下边距 18px + 底线；lastmod 12px/ink-3/下边距 14px；footer 改 space-between + row-gap 12px（更多与保存分开）+ 底部上边线；窄屏 drawerSize=100%、el-col 强制满宽、表单项间距 14px。**未验证**：本地工作台登录 500（后端 Redis 连接池失效），DOM 判据 16-drawer-style.mjs 跑不起来。"
+    },
+    {
+      "sheet": "网页工作台",
+      "row": 12,
+      "seq": "",
+      "stage": "fixed_local",
+      "restate": "【复述卡·工作台 row12】「这个提示有点奇怪，我已经保存并预览了，还是一直出现这个提示，有点误导」。\n图像给出确切文案与位置：质控文档页**右侧预览区**顶部的橙色提示——「这份文档已经改过、回到了草稿；预览图还是上一版。重新『完成并同步』后送检方才看得到。」（⚠️ 带图标）\n图像里出现、文字里没有的：页面是「质控文档 · 感觉你干嘛」，左侧有「样本质控表 / 类器官质控表 / 类器官质量评分表」三个页签，顶栏显示样本基本信息（A 医院 / 哈哈你好呀 / male / 2026-09-29 …）。",
+      "evidence": [
+        "doc/_autopilot/evidence/工作台-row12-col5.jpeg"
+      ],
+      "stage_note": "needsResync 由「draft && done」改成「draft && done && dirty」，编辑器把 currentTabDirty 传下来（PreviewPane 新增 dirty prop）。**未验证**：同 row11 的本地环境问题。",
+      "question": "确认口径：「已经改过、回到草稿，预览还是上一版」这条提示，是否只应在**当前页签有未保存改动**时出现？我的实现是「保存/完成并同步之后就不再显示，改了又会出现」。"
+    }
+  ],
+  "blocker": {
+    "at": "2026-09-29",
+    "what": "本地验证环境不可用：8091 后端仍在跑，但登录 /auth/login 报 500（org.redisson.client.WriteRedisConnectionException，连接池对着已重启过的 Redis）。端口探活是 200，所以是连接池而非进程问题，需要重启后端进程。",
+    "impact": "工作台 row11/row12 的 DOM 对抗判据（16-drawer-style.mjs / 待写 17）跑不了，两条只能停在 fixed_local，不能标 verified。"
+  }
+}

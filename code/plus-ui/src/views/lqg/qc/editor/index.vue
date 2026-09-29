@@ -101,6 +101,7 @@
             :sample-id="sampleId"
             :doc-kind="currentTab.docKind"
             :doc-status="docStatusOf(currentTab)"
+            :dirty="currentTabDirty"
             :initial-audience="initialAudience"
             @busy="(value: boolean) => (previewing = value)"
           />

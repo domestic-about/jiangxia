@@ -1,6 +1,17 @@
 <template>
   <div class="lqg-sample-drawer">
-    <el-drawer v-model="visible" :title="title" size="720px" append-to-body :close-on-click-modal="true" @closed="handleClosed">
+    <!-- ★ 2026-09-29（Kevin row11）：`:size` 走 `drawerSize` —— 窄屏（H5/手机）占满，桌面仍是 720px；
+         `class` 给一个唯一钩子，头部样式写在下面**非 scoped** 块里（append-to-body 会把抽屉挪到 body，
+         scoped 选择器命不中 .el-drawer__header）。 -->
+    <el-drawer
+      v-model="visible"
+      :title="title"
+      :size="drawerSize"
+      class="lqg-sample-drawer-el"
+      append-to-body
+      :close-on-click-modal="true"
+      @closed="handleClosed"
+    >
       <div v-if="loading" class="lqg-sample-drawer__loading">{{ t('lqg.sample.loading') }}</div>
 
       <template v-else>
@@ -254,6 +265,20 @@ const mode = ref<Mode>('create');
  *   所以这里默认 false，真正兜底在后端：SampleVerifyService 会拒并回原因 —— 见完工报告「遗留」。
  */
 const hasChildren = ref(false);
+
+// ★ 2026-09-29（Kevin row11-④）：H5/窄屏下抽屉占满、表单一行一个。
+//   用 **视口判定**而不是只靠 CSS：el-drawer 的宽度是 `size` prop 写进行内样式的，
+//   CSS 覆盖要 !important；而且「一行一个表单项」是版式决策，跟着视口走更直白。
+const narrow = ref(false);
+const syncNarrow = () => {
+  narrow.value = typeof window !== 'undefined' && window.innerWidth <= 768;
+};
+const drawerSize = computed(() => (narrow.value ? '100%' : '720px'));
+onMounted(() => {
+  syncNarrow();
+  window.addEventListener('resize', syncNarrow);
+});
+onBeforeUnmount(() => window.removeEventListener('resize', syncNarrow));
 
 const formRef = ref<ElFormInstance>();
 const receiveRef = ref<ElFormInstance>();
@@ -594,6 +619,39 @@ defineExpose({ openAdd, open });
   .lqg-sample-drawer__actions {
     display: inline-flex;
     gap: 8px;
+  }
+}
+</style>
+
+<!-- 非 scoped：抽屉头部由 Element Plus 渲染在 .lqg-sample-drawer 之外（append-to-body），
+     scoped 命中不了，所以按唯一 class 命中。 -->
+<style lang="scss">
+.lqg-sample-drawer-el {
+  /* row11-②：标题更明显、与内容拉开距离 */
+  .el-drawer__header {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--lqg-line);
+  }
+  .el-drawer__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--lqg-ink);
+  }
+  /* 底部操作区与内容之间也拉一条线，避免「更多」看起来贴着表单 */
+  .el-drawer__footer {
+    padding-top: 12px;
+    border-top: 1px solid var(--lqg-line);
+  }
+}
+/* row11-④：窄屏一行一个表单项（el-col 的 span 是行内样式，这里必须覆盖宽度） */
+@media (max-width: 768px) {
+  .lqg-sample-drawer-el .el-col {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+  .lqg-sample-drawer-el .el-form-item {
+    margin-bottom: 14px;
   }
 }
 </style>
