@@ -274,11 +274,17 @@ const project = new ci.Project({
   ignores: ['node_modules/**/*'],
 })
 
-// ★ 2026-09-30 CI 连续两次「Detected unsettled top-level await … ci.upload」、Node 以退出码 13 结束：
-//   miniprogram-ci 2.1.x 把编译放到子进程里做（summer-compiler forkProcess），等它的这段时间主进程这边
-//   可能一个活动句柄都没有 → 事件循环清空，Node 认为 await 永远等不到、直接退出（不是微信拒绝，也没有报错）。
-//   会不会碰上看时机（同一套脚本 20:18 成功过）。上传 / 出二维码期间挂一个空定时器把进程撑住，结束后清掉。
-const keepAlive = setInterval(() => {}, 1000)
+// ★ 2026-09-30 看门狗：miniprogram-ci 2.1.x 把编译放进子进程（summer-compiler forkProcess，峰值约 2.5–3 GB）。
+//   子进程被内核 OOM 杀掉时（测试机上发生过，dmesg: Out of memory: Killed process … MainThread），
+//   ci.upload / ci.preview 的 promise **既不成功也不失败**：没有活动句柄时 Node 以退出码 13 退出
+//   （Detected unsettled top-level await），有句柄时就永远挂着。
+//   这个定时器同时做两件事：撑住事件循环；超过 10 分钟还没结束就明确报错退出，不让 CI 干等。
+//   （根治是别在内存紧的机器上编译 —— 见 code/deploy/test/wx-egress-proxy.mjs。）
+const WATCHDOG_MS = Number(process.env.LQG_MP_UPLOAD_TIMEOUT_MS || 10 * 60 * 1000)
+const watchdog = setTimeout(() => {
+  console.error(`\n[upload:mp] ✗ ${Math.round(WATCHDOG_MS / 60000)} 分钟还没结束，判为卡死（多半是编译子进程被 OOM 杀了：看 dmesg | grep -i 'killed process'）`)
+  process.exit(14)
+}, WATCHDOG_MS)
 
 console.log(`[upload:mp] 上传版本 ${version}（robot ${ROBOT}）…`)
 await ci.upload({
@@ -306,4 +312,4 @@ if (!IS_PROD) {
   console.log('[upload:mp] 二维码**不要提交进仓库**（已经落在 dist/，git 忽略了 code/miniapp/dist）')
 }
 
-clearInterval(keepAlive)
+clearTimeout(watchdog)

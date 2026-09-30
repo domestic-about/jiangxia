@@ -339,6 +339,38 @@ phase_miniapp() {
     "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" \
     || die "小程序产物里有『自定义组件死键』—— 小程序里点了没反应（H5 反而正常）；修法见上面的清单"
 
+  # ★ 2026-09-30 起缺省走「本机编译上传 + 测试机固定 IP 出口」（tunnel）：
+  #   在测试机上编译会被 OOM 杀（miniprogram-ci 编译子进程约 2.5–3 GB，测试机和别的项目合用、可用常年 3 GB 出头），
+  #   而 miniprogram-ci 被杀后 promise 不结束 —— CI 上表现为退出码 13 或一直挂着。
+  #   现在编译在本机 / CI 的 macOS runner 上做，只把发给微信的 https 请求经 `ssh -W` 从测试机转出去
+  #   （code/deploy/test/wx-egress-proxy.mjs），微信看到的仍是白名单里的测试机 IP；测试机上不装不改任何东西。
+  #   旧路子（同步到测试机、测试机上编译上传）保留：LQG_MP_UPLOAD_VIA=server。
+  if [ "${LQG_MP_UPLOAD_VIA:-tunnel}" = "tunnel" ]; then
+    local port="${LQG_WX_PROXY_PORT:-18899}" proxy_pid ver_args=() rc
+    say "⑧ 上传：本机编译，经 ${LQG_TEST_HOST} 的固定 IP 发给微信（代理 127.0.0.1:${port}）"
+    node "${HERE}/wx-egress-proxy.mjs" --ssh "root@${LQG_TEST_HOST}" --port "${port}" &
+    proxy_pid=$!
+    sleep 1
+    kill -0 "${proxy_pid}" 2>/dev/null || die "出口代理没起来（端口 ${port} 被占？可设 LQG_WX_PROXY_PORT）"
+    [ -n "${LQG_MINIPROGRAM_VERSION:-}" ] && ver_args=(--version="${LQG_MINIPROGRAM_VERSION}")
+    set +e
+    ( cd "${ROOT}/code/miniapp" && \
+      HTTPS_PROXY="http://127.0.0.1:${port}" https_proxy="http://127.0.0.1:${port}" \
+      HTTP_PROXY="http://127.0.0.1:${port}" http_proxy="http://127.0.0.1:${port}" NO_PROXY="" no_proxy="" \
+      LQG_WX_APPID="${LQG_WX_APPID}" LQG_WX_PRIVATE_KEY="${LQG_MINIPROGRAM_KEY}" LQG_BUILD_COMMIT="${BUILD_COMMIT}" \
+      node scripts/upload-mp.mjs --mode="${mode}" --skip-build "${ver_args[@]+"${ver_args[@]}"}" ) 2>&1 \
+      | grep -vE '^\s*\[object Object\]'
+    rc="${PIPESTATUS[0]}"
+    set -e
+    kill "${proxy_pid}" 2>/dev/null; wait "${proxy_pid}" 2>/dev/null || true
+    if [ "${rc}" != "0" ]; then
+      die "小程序上传失败（退出码 ${rc}）。invalid ip = 测试机 IP 不在微信上传白名单；-10008 = 密钥与 appid 不匹配"
+    fi
+    say "  ✓ 上传成功；体验版二维码在本机 code/miniapp/dist/（**不要提交进仓库**）"
+    say "  ⚠ 上传成功后还要在「微信公众平台 → 版本管理」把该版本**设为体验版**并添加体验成员"
+    return 0
+  fi
+
   say "⑧ 同步物料 → ${LQG_TEST_HOST}:${mpd}"
   "${SSH[@]}" "install -d '${mpd}/dist/build'"
   # openrsync（macOS 自带）在「文件 + 带尾斜杠目录」混在一条命令里会摊平，所以逐条来

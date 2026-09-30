@@ -6,8 +6,10 @@
 #   1. **构建必须在 macOS 上**（栈包 gotchas §6.5：不同 OS 产物不同，Linux 构建的包真机上组件渲染为空）
 #      → 本工作流跑在 GitHub 的 **macOS runner** 上（公开仓库免费）。
 #   2. **上传必须从固定 IP 发**（微信「小程序代码上传 IP 白名单」；GitHub runner 出口 IP 每次都变）
-#      → 构建完不在 runner 上传，而是走现成的 `deploy.sh miniapp`：产物 rsync 到测试机，
-#        由测试机（固定 IP，已在白名单）执行 miniprogram-ci 上传。与本机手动跑是同一条路。
+#      → `deploy.sh miniapp`：在 runner 上编译 + 上传，发给微信的 https 请求经本地小代理
+#        （code/deploy/test/wx-egress-proxy.mjs）走 ssh 从测试机转出去，微信看到的是测试机的固定 IP。
+#      ★ 2026-09-30 起不再把编译放到测试机上：miniprogram-ci 编译子进程约 2.5–3 GB，测试机和别的项目合用、
+#        内存不够，被 OOM 杀掉后 ci.upload 既不成功也不失败（退出码 13 / 一直挂着）。
 #
 # 需要的 Secret（前三个与 deploy-staging 共用）：
 #   LQG_TEST_ENV / LQG_TEST_SSH_KEY / LQG_TEST_HOST
@@ -25,6 +27,7 @@ on:
       - 'code/miniapp/**'
       - '!code/miniapp/**/*.md'
       - 'code/deploy/test/deploy.sh'
+      - 'code/deploy/test/wx-egress-proxy.mjs'
       - 'code/deploy/test/remote/04-miniapp-upload.sh'
       - 'doc/waves/tools/check-mp-component-events.py'
       - '.github/workflows/miniapp-staging.yml'
@@ -94,7 +97,7 @@ jobs:
       - name: 装小程序依赖
         run: cd code/miniapp && pnpm install --frozen-lockfile
 
-      - name: 构建（macOS）→ 同步到测试机 → 测试机固定 IP 上传
+      - name: 构建并上传（macOS 编译，经测试机固定 IP 出口）
         env:
           # CI 没有 tianda-admin profile；本步只走 SSH、不动云资源（与 deploy-staging 同一个声明）
           LQG_SKIP_ACCOUNT_GATE: '1'
@@ -107,6 +110,6 @@ jobs:
             echo "### 小程序体验版（staging）"
             echo ""
             echo "- 提交：\`${GITHUB_SHA:0:12}\`（版本描述里带这个提交号，微信后台「版本管理」可对上）"
-            echo "- 构建：macOS runner；上传：测试机固定 IP（ci 机器人 2）"
+            echo "- 构建与编译：macOS runner；上传出口：测试机固定 IP（ci 机器人 2）"
             echo "- 体验版没自动换成这一版时：微信公众平台 → 版本管理 → 设为体验版"
           } >> "$GITHUB_STEP_SUMMARY"

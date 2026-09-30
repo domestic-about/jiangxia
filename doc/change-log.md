@@ -40,6 +40,12 @@
   - **工作台菜单角标**（row19）：待核验外部用户的数字从父菜单「人员与单位」挪到子菜单「外部用户」；父菜单收起时只给小红点（读 el-menu 的 openedMenus），展开后红点消失；
     角标整体小一号（18px/12px → 15px/10px）。
 - **判据**：`doc/waves/regression/staging-hardening/19-feishu-0930b.mjs`（本机全过）；17、18 两份回归照旧全过
+- **顺带（部署）**：推送后小程序自动上传连续失败 —— 测试机上 miniprogram-ci 编译子进程（约 2.5–3 GB）被内核 OOM 杀掉
+  （dmesg 21:33 / 21:43 / 21:49 / 22:05 四条），而 ci.upload 被杀后不报错、只挂着（退出码 13 或一直不结束）。
+  测试机 7.4 GB 与其它项目合用，不去动它 → `deploy.sh miniapp` 缺省改为「本机 / CI 的 macOS runner 编译上传，
+  发给微信的 https 请求经 `code/deploy/test/wx-egress-proxy.mjs` 走 ssh 从测试机转出」（测试机 sshd 关了端口转发，
+  所以用 ssh 跑一行 node 中继；测试机上不装不改任何东西）。旧路子 `LQG_MP_UPLOAD_VIA=server` 保留。
+  `upload-mp.mjs` 加 10 分钟看门狗：再卡住就明确报错退出（退出码 14），不让 CI 干等。
 - **决策**：✅ 接受（甲方在测试表中提出）
 
 ## CR-20260930-12: Kevin 真机验收——小程序下划线的真根因、菜单调整、小程序内部人员可编辑质控文档、部署提速且不再清空测试数据
