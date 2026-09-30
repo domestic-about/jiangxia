@@ -2,13 +2,16 @@
 # SYS-STAGING-001 · 测试环境一键部署（本地跑；产物送上机 + 在服务器上原生构建镜像 + 起容器 + 灌 seed）
 #
 #   cd code/deploy/test
-#   bash deploy.sh all          # 全部：产物 → 上传 → 起容器 → 宿主 nginx/证书 → reseed → 自检
+#   bash deploy.sh all          # 日常部署：产物 → 上传 → 起容器（Flyway 迁移）→ 宿主 nginx/证书 → 自检
+#                               #   ★ 2026-09-30 起**不再 reseed、不再端口取证**（见下方 main 里的说明）
+#   bash deploy.sh bootstrap    # 新机器 / 要把测试数据恢复成初始样子时：all + reseed + 端口取证
 #   bash deploy.sh artifacts    # 只在本机构建产物（后端 jar + plus-ui dist）
 #   bash deploy.sh upload       # 只上传（rsync）
 #   bash deploy.sh up           # 只在服务器上：建镜像 + 起容器 + 等健康（分离执行）
 #   bash deploy.sh nginx        # 只在服务器上：宿主宝塔 nginx 站点 + Let's Encrypt 证书 + 反代
 #   bash deploy.sh prove-ports  # accept[2] 等价取证：发夹探针+安全组+ss -lntp（本机 nc 不可用）
 #   bash deploy.sh reseed       # 只在服务器上：把 doc/verify/seed 灌进 lqg_test
+#                               #   ★ 会 TRUNCATE 全部业务表、删掉微信绑定的用户 —— 甲方在测试站录的数据全没
 #   bash deploy.sh miniapp      # 小程序体验版：本机构建 → 同步 → 在服务器上传（固定 IP）
 #                               #   ★ 不在 all 里：它依赖微信侧 IP 白名单（外部前提），失败不该带崩部署
 #   bash deploy.sh verify       # 从本机打 https://<域名>/lqg/sys/ping 与工作台首页
@@ -155,8 +158,10 @@ phase_artifacts() {
   say "  ✓ ruoyi-admin.jar ($(du -h "${ROOT}/code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar" | cut -f1))"
 
   say "② 网页工作台 dist（test 模式：VITE_APP_ENCRYPT=false + VITE_APP_BASE_API=/prod-api）"
-  ( cd "${ROOT}/code/plus-ui" && pnpm build:test ) || die "pnpm build:test 失败"
+  ( cd "${ROOT}/code/plus-ui" && rm -rf dist && pnpm build:test ) || die "pnpm build:test 失败"
   [ -f "${ROOT}/code/plus-ui/dist/index.html" ] || die "没有产出 plus-ui/dist/index.html"
+  # 同一次 deploy.sh 进程里刚按 test 模式建好的 → phase_upload 不必再建一遍（原来每次部署前端建两遍，约 60s）
+  WEB_DIST_FRESH=1
   say "  ✓ plus-ui dist ($(du -sh "${ROOT}/code/plus-ui/dist" | cut -f1))"
 }
 
@@ -182,9 +187,15 @@ phase_upload() {
   #   `rm -rf dist && pnpm build:prod` 把它覆盖成 prod 模式 —— 之后谁再跑一次 deploy.sh，就会把
   #   这份 prod 产物发上测试机，登录当场坏掉（且现象是后端 500，很难一眼看出是前端模式问题）。
   #   所以这里**自己重建**，不信任 dist/ 的现状：部署产物与部署动作绑定，谁都改不歪。
-  say "③ 重建工作台产物（test 模式：VITE_APP_ENCRYPT=false，与 test profile 的后端匹配）"
-  ( cd "${ROOT}/code/plus-ui" && rm -rf dist && pnpm build:test >/dev/null 2>&1 ) \
-    || die "工作台 build:test 失败——先手动跑：cd code/plus-ui && pnpm build:test"
+  #   ★ 2026-09-30：`all` 里 phase_artifacts 刚在**同一个进程**里按 test 模式建过（WEB_DIST_FRESH=1），
+  #     那一份就是本次产物，不再重建；单独跑 `deploy.sh upload` 时照旧重建。
+  if [ "${WEB_DIST_FRESH:-0}" = "1" ]; then
+    say "③ 工作台产物是本次 artifacts 阶段刚按 test 模式建的 → 直接上传"
+  else
+    say "③ 重建工作台产物（test 模式：VITE_APP_ENCRYPT=false，与 test profile 的后端匹配）"
+    ( cd "${ROOT}/code/plus-ui" && rm -rf dist && pnpm build:test >/dev/null 2>&1 ) \
+      || die "工作台 build:test 失败——先手动跑：cd code/plus-ui && pnpm build:test"
+  fi
   [ -f "${ROOT}/code/plus-ui/dist/index.html" ] || die "build:test 跑完却没有 dist/index.html"
 
   # 工作台静态产物（--delete：旧 chunk 不许留在站根）
@@ -366,6 +377,20 @@ main() {
   ssh_ok
   case "${cmd}" in
     all)
+      # ★ 2026-09-30（Kevin：「每次提交 github action 部署都需要很久」）：日常部署去掉两步 ——
+      #   · reseed：它 TRUNCATE 全部 t_lqg_* 表并删掉 wx_ 用户，等于**每推一次就把甲方在测试站录的数据清空**、
+      #     合作单位还得重新绑定。表结构变更由后端启动时的 Flyway 迁移负责，与 reseed 无关。
+      #     要恢复初始测试数据：`deploy.sh reseed`，或 GitHub 上手动跑工作流并勾选 reseed。
+      #   · prove-ports：SYS-STAGING-001 的一次性验收取证（报告写在本机 doc/waves/reports/ 下，
+      #     在 CI 的 runner 上写完就随 runner 销毁），每次部署重跑没有意义，约 60s。
+      #   新机器首次部署用 `bootstrap`（= 以前的 all）。
+      phase_artifacts
+      phase_upload
+      phase_up
+      phase_nginx
+      phase_verify
+      ;;
+    bootstrap)
       phase_artifacts
       phase_upload
       phase_up
@@ -387,7 +412,7 @@ main() {
     prove-ports) phase_prove_ports ;;
     status)    phase_status ;;
     down)      phase_down ;;
-    *) die "用法：bash deploy.sh {all|artifacts|upload|up|nginx|reseed|verify|miniapp|prove-ports|status|down}" ;;
+    *) die "用法：bash deploy.sh {all|bootstrap|artifacts|upload|up|nginx|reseed|verify|miniapp|prove-ports|status|down}" ;;
   esac
   say "完成：${cmd}"
 }

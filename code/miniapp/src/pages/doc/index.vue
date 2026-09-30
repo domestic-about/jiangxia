@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { DocListRow } from '@/api/doc'
 import { fetchExtDocList, fetchIntDocList } from '@/api/doc'
 import DocGroupCard from '@/components/lqg/DocGroupCard.vue'
+import { goPage } from '@/router/config'
 import EmptyState from '@/components/lqg/EmptyState.vue'
 import ErrorState from '@/components/lqg/ErrorState.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
@@ -151,6 +152,16 @@ onShow(async () => {
 
 <template>
   <view class="doc">
+    <!-- ★ 2026-09-30 甲方要求：小程序里也能编辑质控文档（只给内部人员）——入口在这里，
+         下面每个样本卡片上也有「编辑」。外部人员看不到这张卡。 -->
+    <view v-if="identity === 'internal'" class="lqg-card doc__edit" @click="goPage('/pages/qc/list')">
+      <view class="doc__edit-main">
+        <text class="doc__edit-t">填写 / 编辑质控文档</text>
+        <text class="doc__edit-d">三份表都能填：文字、图片、附件、评分，保存后完成并同步</text>
+      </view>
+      <text class="doc__edit-arrow">›</text>
+    </view>
+
     <!-- 顶部筛选（UI:mp.doc.list）：一张卡片两行 —— 行首小标签「时间」「类型」把两组分开；
          每一行都不换行，390 宽放不下就这一行自己横向滑动（Kevin 2026-09-24 本机验收） -->
     <view class="lqg-card doc__panel">
@@ -202,7 +213,7 @@ onShow(async () => {
     <LoadingState v-if="loading" />
     <ErrorState v-else-if="failed" text="没能加载文档清单" @retry="load" />
     <template v-else-if="groups.length">
-      <DocGroupCard v-for="group in groups" :key="group.sampleId" :group="group" />
+      <DocGroupCard v-for="group in groups" :key="group.sampleId" :group="group" :editable="identity === 'internal'" />
     </template>
     <!-- 空状态：甲方口径逐字（UI:mp.doc.list / ticket §2） -->
     <EmptyState v-else state="empty" text="结果出具后会显示在这里" />
@@ -210,6 +221,39 @@ onShow(async () => {
 </template>
 
 <style lang="scss" scoped>
+.doc__edit {
+  margin: 0 var(--lqg-gutter) var(--lqg-sp-5);
+  display: flex;
+  align-items: center;
+  gap: var(--lqg-sp-4);
+  background: var(--lqg-primary-soft);
+}
+
+.doc__edit-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lqg-sp-1);
+}
+
+.doc__edit-t {
+  font-size: var(--lqg-fs-title);
+  font-weight: var(--lqg-fw-semibold);
+  color: var(--lqg-primary);
+}
+
+.doc__edit-d {
+  font-size: var(--lqg-fs-xs);
+  color: var(--lqg-ink-2);
+}
+
+.doc__edit-arrow {
+  flex: none;
+  font-size: var(--lqg-fs-lg);
+  color: var(--lqg-primary);
+}
+
 .doc {
   padding: var(--lqg-sp-4) 0 calc(var(--lqg-sp-7) + env(safe-area-inset-bottom));
 }

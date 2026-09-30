@@ -147,6 +147,28 @@
       "style": {
         "navigationBarTitleText": "核验"
       }
+    },
+    {
+      "path": "pages/qc/edit",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "编辑质控文档"
+      }
+    },
+    {
+      "path": "pages/qc/list",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "填写质控文档",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/qc/preview",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "预览"
+      }
     }
   ],
   "subPackages": [],

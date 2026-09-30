@@ -1,9 +1,7 @@
 <script setup lang="ts">
 // 附件列表（UI:mp.doc.preview 下部 / FLOW:F-DOC-02.step2）· DOC-MP-002。
 //
-// 点开 → `uni.downloadFile` 到临时目录 → **图片**走 `uni.previewImage`、
-// **文档**（pdf / doc / xls / ppt）走 `uni.openDocument({showMenu: true})`
-// —— 微信内置查看器，右上角菜单可以保存 / 用其他应用打开
+// 点开的逻辑在 utils/openRemoteFile.ts（编辑质控文档页的附件列表共用）：图片全屏看、文档走微信内置查看器
 // （小程序**没有**「存到手机文件夹」的接口，票面 §0 平台限制那一条要写进确认单）。
 //
 // ★ 附件 url 与页面图一样是 10 分钟签名链接：每次点开都重新下载，不缓存路径。
@@ -12,7 +10,8 @@
 // ★ 内外部身份都拿得到 attachments（含细胞活率测定附件；外部那条在独立验收 V24 补齐）→ 传空数组时整段不渲染。
 // ★ 视觉按方向 A：`.lqg-card--flush` 里一行一个附件，零色值字面量。
 import type { DocAttachmentRow } from '@/api/doc'
-import { fileSizeText, isImageFile, openDocumentType } from '@/pages/doc/download'
+import { fileSizeText } from '@/pages/doc/download'
+import { openRemoteFile } from '@/utils/openRemoteFile'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
@@ -28,72 +27,14 @@ const usable = computed(() => props.attachments.filter(item => !!String(item?.ur
 /** 正在下载的那一个（按 url 认；同一时刻只允许一个） */
 const busyUrl = ref('')
 
-function downloadToTemp(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const api = (uni as any).downloadFile
-    if (typeof api !== 'function') {
-      resolve('')
-      return
-    }
-    api({
-      url,
-      success: (res: any) => resolve(String(res?.tempFilePath ?? '')),
-      fail: () => reject(new Error('downloadFile 失败')),
-    })
-  })
-}
-
-function openDoc(filePath: string, fileName: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const api = (uni as any).openDocument
-    if (typeof api !== 'function') {
-      resolve()
-      return
-    }
-    api({
-      filePath,
-      fileType: openDocumentType(fileName),
-      // 右上角菜单（保存 / 用其他应用打开）——与 DownloadBar 的「打开」同一个口径
-      showMenu: true,
-      success: () => resolve(),
-      fail: () => reject(new Error('openDocument 失败')),
-    })
-  })
-}
-
-/** H5 / 没有这两个平台能力的端：如实退化成浏览器打开，打不开就提示 */
-function openInBrowser(url: string) {
-  // #ifdef H5
-  window.open(url, '_blank')
-  // #endif
-  // #ifndef H5
-  uni.showToast({ title: '这个附件暂时打不开，请稍后再试', icon: 'none' })
-  // #endif
-}
-
 async function open(item: DocAttachmentRow) {
   const url = String(item?.url ?? '')
-  const fileName = String(item?.fileName ?? '')
   if (!url || busyUrl.value) {
-    return
-  }
-  // 图片附件：直接全屏看图（不下载）
-  if (isImageFile(fileName)) {
-    uni.previewImage({ urls: [url], current: 0 })
     return
   }
   busyUrl.value = url
   try {
-    const filePath = await downloadToTemp(url)
-    if (!filePath) {
-      openInBrowser(url)
-      return
-    }
-    await openDoc(filePath, fileName)
-  }
-  catch {
-    // 不把平台错误的原文显示出来（微信的错误码对用户没有意义）
-    uni.showToast({ title: '这个附件暂时打不开，请稍后再试', icon: 'none' })
+    await openRemoteFile(url, String(item?.fileName ?? ''))
   }
   finally {
     busyUrl.value = ''

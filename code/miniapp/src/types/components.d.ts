@@ -36,6 +36,8 @@ declare module 'vue' {
     OcrBar: typeof import('./../components/lqg/OcrBar.vue')['default']
     PageImageViewer: typeof import('./../components/lqg/PageImageViewer.vue')['default']
     PlaceholderPage: typeof import('./../components/ui/PlaceholderPage.vue')['default']
+    QcAttachmentList: typeof import('./../components/lqg/QcAttachmentList.vue')['default']
+    QcImageSlot: typeof import('./../components/lqg/QcImageSlot.vue')['default']
     ReasonSheet: typeof import('./../components/lqg/ReasonSheet.vue')['default']
     SampleCard: typeof import('./../components/lqg/SampleCard.vue')['default']
     SamplePicker: typeof import('./../components/lqg/SamplePicker.vue')['default']

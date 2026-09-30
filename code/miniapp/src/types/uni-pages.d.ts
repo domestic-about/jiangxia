@@ -18,6 +18,9 @@ type _LocationUrl =
   "/pages/me/index" |
   "/pages/me/unit-group" |
   "/pages/organoid/form" |
+  "/pages/qc/edit" |
+  "/pages/qc/list" |
+  "/pages/qc/preview" |
   "/pages/sample/detail-ext" |
   "/pages/sample/form" |
   "/pages/verify/embed" |

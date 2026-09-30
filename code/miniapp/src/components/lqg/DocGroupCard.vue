@@ -22,7 +22,13 @@ import { ref } from 'vue'
 // ★ 只用 `.lqg-*` 范式类与 token，零色值字面量（落地规范 §8 红线）。
 const props = defineProps<{
   group: DocGroup
+  /** 内部人员才传 true：卡片右上角出「编辑」 */
+  editable?: boolean
 }>()
+
+function openEdit() {
+  goPage(`/pages/qc/edit?sampleId=${props.group.sampleId}`)
+}
 
 /** 下载弹层（每张卡一个） */
 const sheet = ref<{ open: (t: { sampleId: string | number, docKind: string, no?: string, title?: string }) => void } | null>(null)
@@ -55,6 +61,8 @@ function openDownload(docKind: string) {
       <!-- 组标题是编号（内部编号 / 送检单号）：等宽字体（独立验收 G17） -->
       <text class="gcd__title lqg-mono">{{ group.title }}</text>
       <text v-if="group.subtitle" class="gcd__sub">{{ group.subtitle }}</text>
+      <!-- 内部人员：编辑这个样本的三份质控表（2026-09-30 甲方要求小程序也能编辑） -->
+      <text v-if="editable" class="gcd__edit" @click.stop="openEdit">编辑</text>
     </view>
 
     <view
@@ -105,6 +113,12 @@ function openDownload(docKind: string) {
 .gcd__sub {
   font-size: var(--lqg-fs-sm);
   color: var(--lqg-ink-3);
+}
+
+.gcd__edit {
+  margin-left: auto;
+  font-size: var(--lqg-fs-sm);
+  color: var(--lqg-primary);
 }
 
 .gcd__row {

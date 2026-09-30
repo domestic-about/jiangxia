@@ -26,13 +26,33 @@
 #
 # 另外：`deploy.sh` 的远端长操作（docker build / 首次 Flyway）是**分离执行 + 短命令轮询**，
 # 所以这个 job 不需要长连接保活；超时给 40 分钟（冷缓存 maven 首次下载约 3–8 分钟）。
+#
+# ── 2026-09-30 提速（Kevin：「每次提交部署都需要很久」；09-28 那次 11.8 分钟里 maven 冷拉就占 5.6 分钟）──
+#   · maven 本地仓恢复缓存，但 key = 所有 pom.xml + maven-settings.xml 的哈希：settings 一变就是新 key，
+#     不会再把「另一套仓库 id 下载的半拉子仓」带进来（09-28 缓存投毒的根因）；actions/cache 只在 job 成功时保存。
+#   · 日常部署不再 reseed（它会清空甲方在测试站录的数据）、不再端口取证（一次性验收取证）；
+#     要恢复初始测试数据：Actions → deploy-staging → Run workflow，勾 reseed。
+#   · 前端只建一遍（deploy.sh 里 artifacts 建完，upload 不再重建）。
+#   · 只有工作台 / 后端 / 部署相关文件变了才部署：纯文档、台账（watchdog.log 每次都在变）、
+#     小程序（小程序不走 CI，见第 2 条）的提交不再触发一次十几分钟的部署。
 
 name: deploy-staging
 
 on:
   push:
     branches: [staging]
-  workflow_dispatch: {} # 也可以手动点一下重跑
+    paths:
+      - 'code/**'
+      - '!code/miniapp/**'
+      - '!code/**/*.md'
+      - '.github/workflows/deploy-staging.yml'
+      - '.github/maven-settings.xml'
+  workflow_dispatch: # 也可以手动点一下重跑
+    inputs:
+      reseed:
+        description: '部署后把测试数据恢复成初始样子（会清空测试站上的全部业务数据与微信绑定，慎选）'
+        type: boolean
+        default: false
 
 # 同一个分支上的部署串行化：后一次排队等前一次跑完，不并发改同一台测试机
 concurrency:
@@ -108,14 +128,19 @@ jobs:
       - name: 预建 maven 本地仓目录（deploy.sh 用工作区内的 .m2repo/.buildhome，冷跑时由 maven 填充）
         run: mkdir -p .m2repo .buildhome
 
-      - name: 清空 maven 本地仓（**故意不缓存它**）
-        # 一开始给 .m2repo 加了 actions/cache，结果把上一次失败留下的「半拉子本地仓」带进下一次：
-        # maven 看到 `_remote.repositories` 里的仓库 id 与本次不一致（public vs central）就重新校验，
-        # 校验失败即报 `(absent)` —— 看起来像「仓库里没这个件」，其实是缓存投毒。
-        # 这里每次冷拉（3–5 分钟），换来的是**每次构建都可复现**。
-        run: rm -rf .m2repo && mkdir -p .m2repo .buildhome
+      - name: maven 本地仓缓存
+        # 09-28 第一版缓存出过「投毒」：把上一次失败留下的半拉子本地仓带进下一次，而那次的仓库 id
+        # 与这次不同（public vs central）→ maven 重新校验失败报 `(absent)`。当时的处理是干脆不缓存，
+        # 代价是每次冷拉 5 分多钟。现在这样防住它：
+        #   ① key 里带 maven-settings.xml 的哈希 —— 换仓库配置就是全新的缓存，不会混用两套仓库 id；
+        #   ② actions/cache 只在 job **成功**时保存 —— 失败那次的半拉子仓不会被存下来；
+        #   ③ 不设 restore-keys —— 依赖一变（pom 变）就冷拉一次，不拿「差不多」的旧仓凑合。
+        uses: actions/cache@v4
+        with:
+          path: .m2repo
+          key: m2-${{ runner.os }}-${{ hashFiles('code/RuoYi-Vue-Plus/**/pom.xml', '.github/maven-settings.xml') }}
 
-      - name: 部署（产物 → 上传 → 起容器 → 宿主 nginx → 灌 seed → 自检 → 端口取证）
+      - name: 部署（产物 → 上传 → 起容器与 Flyway 迁移 → 宿主 nginx → 自检）
         env:
           # CI 里没有 tianda-admin profile；这一步会取到空 AccountId 直接 STOP。
           # 目标机器来自 repo secret、只走 SSH、不碰云资源 → 显式声明跳过（deploy.sh 里有对应分支）。
@@ -127,6 +152,12 @@ jobs:
           #   相对路径在那里就不存在了（首次这么写，maven 40 秒即失败）。
           LQG_MVN_SETTINGS: ${{ github.workspace }}/.github/maven-settings.xml
         run: bash code/deploy/test/deploy.sh all
+
+      - name: 恢复初始测试数据（仅手动运行且勾选 reseed 时）
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.reseed }}
+        env:
+          LQG_SKIP_ACCOUNT_GATE: '1'
+        run: bash code/deploy/test/deploy.sh reseed
 
       - name: 部署后冒烟：测试环境身份与隔离
         run: |

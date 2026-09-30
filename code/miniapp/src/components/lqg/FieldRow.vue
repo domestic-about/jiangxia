@@ -22,6 +22,18 @@ import WdTextarea from 'wot-design-uni/components/wd-textarea/wd-textarea.vue'
 // ★ `const props =` 不能省（D2 r1 L2 S0-2）：只写 `withDefaults(defineProps…)` 时编译器
 //   不生成运行时 `props` 变量，下面 `display` 引用 `props.modelValue` 会抛 ReferenceError
 //   → readonly 分支一个字段值都渲染不出来。
+// ★ 2026-09-30（Kevin 真机：「所有表格填写还是没有下划线」）—— 真正的根因在这里，不是 09-29 以为的 var()：
+//   小程序里每个自定义组件外面都包着一层**宿主节点**（<field-row>），于是 `.fr` 永远是宿主里唯一的子节点，
+//   `.fr:last-child { border-bottom-width: 0 }` 对**每一行**都成立 → 所有行的下划线都被去掉了。
+//   H5 没有宿主节点，`.fr` 之间是真兄弟，所以 H5 上一直是好的。
+//   virtualHost：不生成宿主节点，`.fr` 直接成为卡片的子节点 —— `:last-child` 这才只命中卡片最后一行。
+//   （父级没有往 FieldRow 上传 class / style，关掉宿主节点不丢东西。）
+defineOptions({
+  options: {
+    virtualHost: true,
+  },
+})
+
 const props = withDefaults(defineProps<{
   label: string
   /** v-model 的值（按钮组 / 日期也走同一份字符串值） */
@@ -101,6 +113,12 @@ function labelWidth(text: string): number {
 }
 const stacked = computed(() => props.control !== 'seg' && labelWidth(props.label) > LONG_LABEL_WIDTH)
 
+/**
+ * 按钮组那一行：标签区按标签自身宽度收窄，把地方让给按钮。
+ * wd-cell 默认左右各占一半，三态按钮（男 / 女 / 未知）挤不下、「未知」被折到第二行（2026-09-30 真机截图）。
+ */
+const segTitleWidth = computed(() => (props.control === 'seg' ? `${Math.ceil(labelWidth(props.label)) + 1}em` : ''))
+
 function onPick() {
   if (props.readonly) {
     return
@@ -119,6 +137,7 @@ function onPick() {
   <wd-cell
     v-if="readonly || control === 'seg'"
     :title="label"
+    :title-width="segTitleWidth"
     :required="required" marker-side="after"
     :vertical="stacked"
     value-align="right"
