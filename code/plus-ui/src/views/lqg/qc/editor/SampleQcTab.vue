@@ -43,59 +43,69 @@
         </el-form-item>
       </div>
 
-      <el-form-item :label="t('lqg.qc.tab.clinicalDiagnosis')">
-        <el-input v-model="form.clinicalDiagnosis" type="textarea" :rows="3" :disabled="readonly" />
-      </el-form-item>
+      <!-- 临床诊断 / 既往治疗 与 收样描述 并排（飞书 2026-09-30 工作台行18①：左栏信息密度集中些） -->
+      <div class="lqg-sample-qc__two">
+        <el-form-item :label="t('lqg.qc.tab.clinicalDiagnosis')">
+          <el-input v-model="form.clinicalDiagnosis" type="textarea" :rows="3" :disabled="readonly" />
+        </el-form-item>
 
-      <el-form-item :label="t('lqg.qc.tab.receiveDesc')">
-        <el-input v-model="form.receiveDesc" type="textarea" :rows="2" :disabled="readonly" />
-      </el-form-item>
+        <el-form-item :label="t('lqg.qc.tab.receiveDesc')">
+          <el-input v-model="form.receiveDesc" type="textarea" :rows="3" :disabled="readonly" />
+        </el-form-item>
+      </div>
 
       <!-- ③ 三个图片位 + 情况描述（按模板顺序：收样原始 / 样本观察 / 样本预处理）。
+           图片在左、情况描述在右同一排（飞书 2026-09-30 工作台行18②）；左栏窄了自动折成上下两行。
            ★ 三个位显式各写一遍（不抽 v-for）：位名与文案一一对应，改模板时不会串位。 -->
       <section class="lqg-sample-qc__slot">
         <div class="lqg-sample-qc__slot-title">{{ t('lqg.qc.tab.origTitle') }}</div>
-        <ImageSlotUploader
-          :sample-id="sampleId"
-          :doc-type="docType"
-          slot="orig"
-          :images="slotImages('orig')"
-          :disabled="readonly"
-          @changed="emit('changed')"
-        />
-        <el-form-item :label="t('lqg.qc.tab.descLabel')" class="lqg-sample-qc__desc">
-          <el-input v-model="form.origDesc" type="textarea" :rows="2" :disabled="readonly" />
-        </el-form-item>
+        <div class="lqg-sample-qc__slot-body">
+          <ImageSlotUploader
+            :sample-id="sampleId"
+            :doc-type="docType"
+            slot="orig"
+            :images="slotImages('orig')"
+            :disabled="readonly"
+            @changed="emit('changed')"
+          />
+          <el-form-item :label="t('lqg.qc.tab.descLabel')" class="lqg-sample-qc__desc">
+            <el-input v-model="form.origDesc" type="textarea" :rows="4" :disabled="readonly" />
+          </el-form-item>
+        </div>
       </section>
 
       <section class="lqg-sample-qc__slot">
         <div class="lqg-sample-qc__slot-title">{{ t('lqg.qc.tab.observeTitle') }}</div>
-        <ImageSlotUploader
-          :sample-id="sampleId"
-          :doc-type="docType"
-          slot="observe"
-          :images="slotImages('observe')"
-          :disabled="readonly"
-          @changed="emit('changed')"
-        />
-        <el-form-item :label="t('lqg.qc.tab.descLabel')" class="lqg-sample-qc__desc">
-          <el-input v-model="form.observeDesc" type="textarea" :rows="2" :disabled="readonly" />
-        </el-form-item>
+        <div class="lqg-sample-qc__slot-body">
+          <ImageSlotUploader
+            :sample-id="sampleId"
+            :doc-type="docType"
+            slot="observe"
+            :images="slotImages('observe')"
+            :disabled="readonly"
+            @changed="emit('changed')"
+          />
+          <el-form-item :label="t('lqg.qc.tab.descLabel')" class="lqg-sample-qc__desc">
+            <el-input v-model="form.observeDesc" type="textarea" :rows="4" :disabled="readonly" />
+          </el-form-item>
+        </div>
       </section>
 
       <section class="lqg-sample-qc__slot">
         <div class="lqg-sample-qc__slot-title">{{ t('lqg.qc.tab.pretreatTitle') }}</div>
-        <ImageSlotUploader
-          :sample-id="sampleId"
-          :doc-type="docType"
-          slot="pretreat"
-          :images="slotImages('pretreat')"
-          :disabled="readonly"
-          @changed="emit('changed')"
-        />
-        <el-form-item :label="t('lqg.qc.tab.descLabel')" class="lqg-sample-qc__desc">
-          <el-input v-model="form.pretreatDesc" type="textarea" :rows="2" :disabled="readonly" />
-        </el-form-item>
+        <div class="lqg-sample-qc__slot-body">
+          <ImageSlotUploader
+            :sample-id="sampleId"
+            :doc-type="docType"
+            slot="pretreat"
+            :images="slotImages('pretreat')"
+            :disabled="readonly"
+            @changed="emit('changed')"
+          />
+          <el-form-item :label="t('lqg.qc.tab.descLabel')" class="lqg-sample-qc__desc">
+            <el-input v-model="form.pretreatDesc" type="textarea" :rows="4" :disabled="readonly" />
+          </el-form-item>
+        </div>
       </section>
 
       <!-- ④ 通用附件（可多个；与上面的细胞活率测定附件是两回事） -->
@@ -296,8 +306,20 @@ defineExpose({ save, isDirty: () => dirty.value, syncFromDoc });
     font-weight: 600;
     color: var(--lqg-ink);
   }
+  .lqg-sample-qc__slot-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0 16px;
+    // 图片位最多 3 张 96px + 2 个 8px 间距 = 304px：宽度按满 3 张留，加图时右边的描述不跟着跳
+    > :first-child {
+      flex: 0 0 304px;
+      margin-bottom: 12px;
+    }
+  }
   .lqg-sample-qc__desc {
-    margin-top: 8px;
+    flex: 1 1 240px;
+    min-width: 0;
   }
   :deep(.el-form-item) {
     margin-bottom: 12px;

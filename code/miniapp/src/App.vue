@@ -23,4 +23,22 @@ text,
 scroll-view {
   box-sizing: border-box;
 }
+
+/* FieldRow（components/lqg/FieldRow.vue）传给 wot 组件的 custom-*-class。
+ * ★ 必须写在全局：wot 组件是 addGlobalClass + styleIsolation:shared，只吃得到全局样式，
+ *   FieldRow 自己的 scoped 样式够不到 wot 组件内部的节点。
+ * - lqg-fr-nowrap：表单项标题一律单行（飞书 2026-09-30 小程序行21）；标签区宽度由 FieldRow 按字数给足
+ * - lqg-fr-ta：多行文本（备注 / 情况描述…）文字靠右、最少约两行高（行19、20：和别的表单项一样值在右） */
+.lqg-fr-nowrap {
+  white-space: nowrap;
+}
+
+.lqg-fr-ta {
+  text-align: right;
+  min-height: 44px;
+}
+
+.lqg-fr-ta--left {
+  text-align: left;
+}
 </style>

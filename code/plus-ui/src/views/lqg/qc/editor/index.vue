@@ -87,8 +87,6 @@
         </div>
 
         <div class="lqg-qc-editor__right">
-          <div class="lqg-qc-editor__pane-title">{{ t('lqg.qc.editor.previewTitle') }}</div>
-
           <!-- ★ 预览面板（UI:admin.doc.preview / FLOW:F-QC-01.step5，DOC-PUBLISH-001）：
                内外部版切换、逐页页面图、四个下载入口、渲染中 / 失败 + 重新生成。
                ★ **单个实例**（不是 v-for 里每页签一个）：`v-for` 里的 ref 会变成数组，
@@ -102,6 +100,7 @@
             :doc-kind="currentTab.docKind"
             :doc-status="docStatusOf(currentTab)"
             :initial-audience="initialAudience"
+            :title="t('lqg.qc.editor.previewTitle')"
             @busy="(value: boolean) => (previewing = value)"
           />
         </div>
@@ -614,12 +613,6 @@ onBeforeRouteLeave(async (to, from, next) => {
     padding: 10px;
     border-radius: 6px;
     background: var(--lqg-bg);
-  }
-  .lqg-qc-editor__pane-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--lqg-ink);
-    margin-bottom: 8px;
   }
   .lqg-qc-editor__reason {
     margin-top: 4px;

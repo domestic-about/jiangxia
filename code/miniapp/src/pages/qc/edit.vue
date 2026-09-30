@@ -409,20 +409,26 @@ onLoad((query) => {
         </view>
 
         <view class="lqg-gl">收样原始情况 · 图片</view>
-        <view class="qce__group qce__slot">
-          <QcImageSlot :sample-id="sampleId" doc-type="sample-qc" slot-key="orig" :images="bundle.sampleQc?.images?.orig || []" @changed="load()" />
+        <view class="qce__group">
+          <view class="qce__imgs">
+            <QcImageSlot :sample-id="sampleId" doc-type="sample-qc" slot-key="orig" :images="bundle.sampleQc?.images?.orig || []" @changed="load()" />
+          </view>
           <FieldRow label="情况描述" control="textarea" :model-value="sampleForm.origDesc" @update:model-value="(v: string) => sampleForm.origDesc = v" />
         </view>
 
         <view class="lqg-gl">样本观察情况 · 图片</view>
-        <view class="qce__group qce__slot">
-          <QcImageSlot :sample-id="sampleId" doc-type="sample-qc" slot-key="observe" :images="bundle.sampleQc?.images?.observe || []" @changed="load()" />
+        <view class="qce__group">
+          <view class="qce__imgs">
+            <QcImageSlot :sample-id="sampleId" doc-type="sample-qc" slot-key="observe" :images="bundle.sampleQc?.images?.observe || []" @changed="load()" />
+          </view>
           <FieldRow label="情况描述" control="textarea" :model-value="sampleForm.observeDesc" @update:model-value="(v: string) => sampleForm.observeDesc = v" />
         </view>
 
         <view class="lqg-gl">样本预处理情况 · 图片</view>
-        <view class="qce__group qce__slot">
-          <QcImageSlot :sample-id="sampleId" doc-type="sample-qc" slot-key="pretreat" :images="bundle.sampleQc?.images?.pretreat || []" @changed="load()" />
+        <view class="qce__group">
+          <view class="qce__imgs">
+            <QcImageSlot :sample-id="sampleId" doc-type="sample-qc" slot-key="pretreat" :images="bundle.sampleQc?.images?.pretreat || []" @changed="load()" />
+          </view>
           <FieldRow label="情况描述" control="textarea" :model-value="sampleForm.pretreatDesc" @update:model-value="(v: string) => sampleForm.pretreatDesc = v" />
         </view>
 
@@ -582,6 +588,15 @@ onLoad((query) => {
   display: flex;
   flex-direction: column;
   gap: var(--lqg-sp-4);
+}
+
+/* 图片 + 情况描述同一张卡片（飞书 2026-09-30 小程序行20）：图片一行小缩略图，下面「情况描述」
+ * 就是普通的表单项（标签在左、文字在右），不再用 .qce__slot 的内边距把它整块缩进去 */
+.qce__imgs {
+  padding: var(--lqg-sp-4) var(--lqg-sp-5);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #dfe6e7;
 }
 
 /* 活率报告那一行：与 FieldRow 同一个左右排版与下划线 */

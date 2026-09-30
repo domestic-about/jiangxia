@@ -18,8 +18,9 @@
     <el-sub-menu v-else ref="subMenu" :index="resolvePath(item.path)" teleported>
       <template v-if="item.meta" #title>
         <svg-icon :icon-class="item.meta ? item.meta.icon : ''" />
-        <!-- 父菜单的角标（人员与单位 = 待核验外部用户）：同样读 lqgTodo store，0 不显示 -->
-        <el-badge :value="badgeOf(item)" :max="99" :hidden="badgeOf(item) <= 0" class="lqg-menu-badge">
+        <!-- 父菜单不挂数字（飞书 2026-09-30 工作台行19①：数字挂在具体的子菜单上，如「外部用户」）；
+             只在**收起**时给一个小红点，提示「里面有待办，展开看」；展开后红点消失，数字在子菜单上。 -->
+        <el-badge is-dot :hidden="!parentDot" class="lqg-menu-badge lqg-menu-badge--dot">
           <span class="menu-title" :title="hasTitle(item.meta?.title)">{{ item.meta?.title }}</span>
         </el-badge>
       </template>
@@ -115,8 +116,8 @@ const hasTitle = (title: string | undefined): string => {
 //    有人核验了一条样本，就会出现「角标 3、进去卡片 2」——老师会怀疑系统。
 //    （accept 2 最后两段断的就是这条：Sidebar 里必须出现 lqgTodo，且不许出现接口路径。）
 //
-// ★ 角标的落点：样本记录信息表 / 类器官收样记录（CR-20260924-10 拆页后按页分开）/ 石蜡包埋 /
-//    冻存管理 / 人员与单位（父菜单）。
+// ★ 角标的落点：样本记录信息表 / 类器官送样记录（CR-20260924-10 拆页后按页分开）/ 石蜡包埋 /
+//    冻存管理 / 人员与单位 → 外部用户（子菜单；父菜单收起时只给小红点）。
 //    映射写在 store 的 badgeOf() 里，这里只做「取数」与「为 0 不显示」。
 // ============================================================================
 const lqgTodoStore = useLqgTodoStore();
@@ -129,6 +130,15 @@ const badgeOf = (target: any): number => {
   const resolved = resolvePath(target.path, target.query);
   return lqgTodoStore.badgeOf(typeof resolved === 'string' ? resolved : resolved?.path);
 };
+
+// 父菜单（el-sub-menu）的小红点：子菜单里有角标、且这个父菜单当前是收起的。
+// ★ 展开与否读 el-menu 自己 provide 的 rootMenu.openedMenus（Element Plus 内部就是用它决定展开），
+//   不另记一份状态 —— 否则点开/收起、unique-opened 自动收起别的菜单时会对不上。
+const rootMenu = inject<{ openedMenus?: string[] } | null>('rootMenu', null);
+const childBadgeTotal = computed(() =>
+  (props.item.children || []).filter((child) => !child.hidden).reduce((sum, child) => sum + badgeOf(child), 0)
+);
+const parentDot = computed(() => childBadgeTotal.value > 0 && !(rootMenu?.openedMenus || []).includes(resolvePath(props.item.path)));
 
 // 侧边栏挂载时补一次（若首页已经拉过就什么都不做 —— 不重复请求）
 onMounted(() => {
@@ -143,12 +153,25 @@ onMounted(() => {
   align-items: center;
   max-width: 100%;
 
+  /* 飞书 2026-09-30 工作台行19②：角标小一号（Element Plus 默认 18px 高 / 12px 字 → 15px / 10px） */
+  --el-badge-size: 15px;
+  --el-badge-font-size: 10px;
+  --el-badge-padding: 4px;
+
   :deep(.el-badge__content) {
     /* 独立验收（2026-09-28 飞书问题行「左侧菜单角标上部有一点点截断」）：
        实测角标被 .el-menu-item（为做省略号而 overflow:hidden）裁掉上边 2px。
        原来是 top:10px + el-badge 自带的 translateY(-50%)；抬到 12px 后上边完整落在菜单项内。 */
     top: 12px;
     right: 2px;
+  }
+
+  // 父菜单收起时的小红点：贴在文字右上角
+  &.lqg-menu-badge--dot :deep(.el-badge__content.is-dot) {
+    top: 12px;
+    right: 0;
+    width: 7px;
+    height: 7px;
   }
 }
 </style>

@@ -1,6 +1,14 @@
 <template>
   <div class="lqg-preview-pane">
-    <!-- ═══ 头部：版本切换 + 刷新 ═══ -->
+    <!-- ═══ 头部：标题（左）+ 刷新（右，与标题同一行；飞书 2026-09-30 工作台行18③） ═══ -->
+    <div class="lqg-preview-pane__head">
+      <span class="lqg-preview-pane__title">{{ title }}</span>
+      <el-button link type="primary" size="small" :loading="busy" @click="loadPages">
+        {{ t('lqg.qc.preview.refresh') }}
+      </el-button>
+    </div>
+
+    <!-- ═══ 版本切换 ═══ -->
     <div class="lqg-preview-pane__bar">
       <el-radio-group v-model="audience" size="small" :disabled="busy" @change="handleAudienceChange">
         <el-radio-button label="internal">{{ t('lqg.qc.preview.audienceInternal') }}</el-radio-button>
@@ -18,12 +26,6 @@
       :title="t('lqg.qc.preview.needsResync')"
       class="lqg-preview-pane__alert"
     />
-
-    <div class="lqg-preview-pane__bar">
-      <el-button link type="primary" size="small" :loading="busy" @click="loadPages">
-        {{ t('lqg.qc.preview.refresh') }}
-      </el-button>
-    </div>
 
     <!-- ═══ 设置改过（内部编号开关 / 模板升级）：先给旧的一版，后台按新设置重出，出好了自动换 ═══ -->
     <div v-if="!busy && status === 'done' && outdated" class="lqg-preview-pane__outdated">
@@ -165,6 +167,8 @@ const props = defineProps<{
   docStatus?: string;
   /** 进页时先看哪一版（从首页异常清单点进来时是出问题的那一版；默认内部版） */
   initialAudience?: DocAudience;
+  /** 面板标题（「预览」）：和「刷新」放同一行，刷新靠右 */
+  title?: string;
 }>();
 
 /** `changed` = 面板里发生了会影响文档的事（渲染完成等）；`busy` = 正在渲染（父组件据此转按钮） */
@@ -398,6 +402,17 @@ watch(
 
 <style scoped lang="scss">
 .lqg-preview-pane {
+  .lqg-preview-pane__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .lqg-preview-pane__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--lqg-ink);
+  }
   .lqg-preview-pane__bar {
     display: flex;
     align-items: center;

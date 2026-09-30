@@ -114,10 +114,20 @@ function labelWidth(text: string): number {
 const stacked = computed(() => props.control !== 'seg' && labelWidth(props.label) > LONG_LABEL_WIDTH)
 
 /**
- * 按钮组那一行：标签区按标签自身宽度收窄，把地方让给按钮。
- * wd-cell 默认左右各占一半，三态按钮（男 / 女 / 未知）挤不下、「未知」被折到第二行（2026-09-30 真机截图）。
+ * 左右排时标签区的宽度：**按标签自身宽度给足**（汉字数 + 必填星号 + 1 个字的余量），标签一律单行。
+ *
+ * ★ 2026-09-30 飞书「小程序」第 21 行「所有表单项的标题都不要换行」：wd-input 的标签区默认只占 33%
+ *   （约 6 个半汉字），「类器官来源类型」（7 个字）第 7 个字掉到第二行；wd-cell 默认左右各一半也会折。
+ *   现在所有左右排的行（输入、选择、按钮组、备注）都按这个宽度给标签区，值区拿剩下的；
+ *   超过 10 个字宽的标签走上面的「上下排」，不在这里挤。
+ * 按钮组那一行原来就是这么收窄的（三态按钮「男 / 女 / 未知」挤不下，2026-09-30 真机截图），现在统一。
  */
-const segTitleWidth = computed(() => (props.control === 'seg' ? `${Math.ceil(labelWidth(props.label)) + 1}em` : ''))
+const titleWidth = computed(() => {
+  if (stacked.value) {
+    return ''
+  }
+  return `${Math.ceil(labelWidth(props.label) + (props.required ? 1 : 0)) + 1}em`
+})
 
 function onPick() {
   if (props.readonly) {
@@ -137,7 +147,8 @@ function onPick() {
   <wd-cell
     v-if="readonly || control === 'seg'"
     :title="label"
-    :title-width="segTitleWidth"
+    :title-width="titleWidth"
+    custom-title-class="lqg-fr-nowrap"
     :required="required" marker-side="after"
     :vertical="stacked"
     value-align="right"
@@ -153,6 +164,8 @@ function onPick() {
   <wd-cell
     v-else-if="isPicker"
     :title="label"
+    :title-width="titleWidth"
+    custom-title-class="lqg-fr-nowrap"
     :required="required" marker-side="after"
     :vertical="stacked"
     clickable
@@ -171,21 +184,60 @@ function onPick() {
     </template>
   </wd-cell>
 
-  <!-- 多行备注 -->
+  <!-- 多行（备注 / 情况描述…）：和其它项一样**标签在左、文字在右并靠右**，高度随内容长（最少约两行）。
+       ★ 2026-09-30 飞书「小程序」第 19、20 行：原来是上下排 + 固定高的大文本框，一格占掉半屏、文字靠左，
+         和别的表单项不统一。wd-textarea 自带 label（左右排），auto-height 让它跟着内容长。
+       标签超长（上下排）时仍然标签一行、文本框在下一行。
+       （wd-textarea 不认 custom-label-class，标签单行全靠 label-width 按字数给足。） -->
+  <wd-textarea
+    v-else-if="control === 'textarea' && !stacked"
+    :label="label"
+    :label-width="titleWidth"
+    custom-textarea-class="lqg-fr-ta"
+    :required="required" marker-side="after"
+    :model-value="modelValue"
+    :placeholder="placeholderText"
+    :maxlength="maxlength > 0 ? maxlength : 500"
+    auto-height
+    no-border
+    @update:model-value="(v: string) => emit('update:modelValue', v)"
+  />
   <wd-cell v-else-if="control === 'textarea'" :title="label" :required="required" marker-side="after" vertical>
     <wd-textarea
       :model-value="modelValue"
       :placeholder="placeholderText"
       :maxlength="maxlength > 0 ? maxlength : 500"
+      custom-textarea-class="lqg-fr-ta lqg-fr-ta--left"
+      auto-height
       no-border
       @update:model-value="(v: string) => emit('update:modelValue', v)"
     />
+  </wd-cell>
+
+  <!-- 文本 / 数字，标签超长：标签一行，输入框在下一行靠右 -->
+  <wd-cell v-else-if="stacked" :title="label" :required="required" marker-side="after" vertical>
+    <wd-input
+      :type="control === 'digit' ? 'digit' : 'text'"
+      align-right
+      no-border
+      :placeholder="placeholderText"
+      :maxlength="maxlength > 0 ? maxlength : -1"
+      :custom-input-class="mono ? 'lqg-mono' : ''"
+      :model-value="modelValue"
+      @update:model-value="(v: string) => emit('update:modelValue', v)"
+    >
+      <template v-if="ocrMark" #suffix>
+        <text class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
+      </template>
+    </wd-input>
   </wd-cell>
 
   <!-- 文本 / 数字：原地输入 -->
   <wd-input
     v-else
     :label="label"
+    :label-width="titleWidth"
+    custom-label-class="lqg-fr-nowrap"
     :type="control === 'digit' ? 'digit' : 'text'"
     align-right
     :required="required" marker-side="after"

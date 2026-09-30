@@ -172,11 +172,12 @@ onLoad(() => {
         <text>改完单位或组别会回到「待核验」，重新核验通过后才能与同组同事互看样本。</text>
       </view>
 
+      <!-- 底部两个按钮放一排、「保存」在右（飞书 2026-09-30 小程序行22；原来上下叠两行，第二个按钮还压住了页面内容） -->
       <view class="profile__bar lqg-bar">
+        <button class="profile__btn" @click="goHome">返回首页</button>
         <button class="profile__btn profile__btn--p" :disabled="saving" @click="submit">
           {{ saving ? '提交中…' : '保存' }}
         </button>
-        <button class="profile__btn" @click="goHome">返回首页</button>
       </view>
       <view class="lqg-bar-spacer" />
     </template>
@@ -247,6 +248,7 @@ onLoad(() => {
 }
 
 .profile__bar {
+  display: flex;
   gap: var(--lqg-sp-4);
 }
 
@@ -263,6 +265,7 @@ onLoad(() => {
 }
 
 .profile__btn--p {
+  flex: 1.3;
   background: var(--lqg-primary);
   color: var(--lqg-on-primary);
   border: none;

@@ -114,15 +114,17 @@ function remove(img: QcImage) {
 </template>
 
 <style lang="scss" scoped>
+/* 缩略图固定 72px 一格、一行排开（飞书 2026-09-30 小程序行20：原来三等分，一张「添加图片」就占掉 1/3 屏宽、一大块空白） */
 .qis__grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--lqg-sp-3);
 }
 
 .qis__cell {
   position: relative;
-  aspect-ratio: 1 / 1;
+  width: 72px;
+  height: 72px;
   border-radius: var(--lqg-radius-ctl);
   overflow: hidden;
   background: var(--lqg-bg);
@@ -164,7 +166,7 @@ function remove(img: QcImage) {
 }
 
 .qis__plus {
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
   color: var(--lqg-primary);
 }

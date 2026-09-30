@@ -88,7 +88,7 @@ export const useLqgTodoStore = defineStore('lqgTodo', () => {
    *   /sample-organoid  类器官收样记录  → pendingOrganoid    红色数字按页分开；路径取自 views/lqg/sample/pages.ts）
    *   /embed        石蜡包埋        → pendingEmbeds
    *   /cryo         冻存管理        → cryoOverdue
-   *   /auth         人员与单位      → pendingExtUsers
+   *   /auth/extuser 外部用户（人员与单位下的子菜单）→ pendingExtUsers
    *   其它          没有角标        → 0
    * </pre>
    *
@@ -113,7 +113,8 @@ export const useLqgTodoStore = defineStore('lqgTodo', () => {
     if (raw.endsWith('/cryo')) {
       return Number(todo.value.cryoOverdue) || 0;
     }
-    if (raw.endsWith('/auth')) {
+    // 待核验外部用户挂在「人员与单位 → 外部用户」子菜单上（飞书 2026-09-30 工作台行19①；原来挂在父菜单 /auth）
+    if (raw.endsWith('/auth/extuser')) {
       return Number(todo.value.pendingExtUsers) || 0;
     }
     return 0;
