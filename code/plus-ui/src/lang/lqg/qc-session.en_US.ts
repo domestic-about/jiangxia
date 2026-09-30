@@ -11,7 +11,7 @@ export default {
     switchGo: 'Discard and switch',
     switchStay: 'Stay on {from}',
     guideTitle: 'Pick a sample first',
-    guideDesc: 'QC documents are edited per sample: open one of the tables below and click "QC documents" on the row you want.',
+    guideDesc: 'QC documents are edited per sample: click "Open" in the QC documents list, or click "QC documents" on a row in either sample table.',
     guideGo: 'Go to {name}'
   }
 };

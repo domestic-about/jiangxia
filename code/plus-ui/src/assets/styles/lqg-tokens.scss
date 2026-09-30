@@ -86,7 +86,8 @@
 //    这里只留「标签不换行」这条防守（scoped 里没写，所以全局这条能生效）。
 .el-form.lqg-sample__filter .el-form-item__label,
 .el-form.lqg-embed__filter .el-form-item__label,
-.el-form.lqg-cryo__filter .el-form-item__label {
+.el-form.lqg-cryo__filter .el-form-item__label,
+.el-form.lqg-qclist__filter .el-form-item__label {
   white-space: nowrap;
 }
 
@@ -113,6 +114,39 @@
 
 .el-drawer__body {
   padding: 12px 20px 20px;
+}
+
+// ── 2026-09-30：「编辑样本」抽屉那套版式（飞书工作台 row11）推广到工作台全部业务抽屉 / 弹窗 ──
+// row10 当时留了「抽屉内部逐个的排版细化」没做完；row16 又报「新增冻存批次」里「暂存-80度超低温冰箱」
+// 的「箱」字掉到下一行。统一做法（抽屉挂 .lqg-drawer-el、弹窗挂 .lqg-dialog-el，只作用于 lqg 业务页）：
+//   ① 标题 18px/600、与内容之间一条分隔线并拉开距离；底部按钮区上方一条分隔线；
+//   ② 表单标签一律单行（各表单的 label-width 已按本表最长标签放宽，见各组件）；
+//   ③ 窄屏（H5）一行一个表单项。
+.lqg-drawer-el {
+  .el-drawer__header {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--lqg-line);
+  }
+  .el-drawer__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--lqg-ink);
+  }
+  .el-drawer__footer {
+    padding-top: 12px;
+    border-top: 1px solid var(--lqg-line);
+  }
+}
+.lqg-drawer-el .el-form-item__label,
+.lqg-dialog-el .el-form-item__label {
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  .lqg-drawer-el .el-col {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
 }
 
 @media (max-width: 768px) {

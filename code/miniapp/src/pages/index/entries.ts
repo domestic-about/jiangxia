@@ -88,7 +88,7 @@ export const INTERNAL_ADMIN_NOTE = '核验、冻存登记在小程序和网页�
 /** 入口 key → 该表的全称（宫格与内部管理板块共用） */
 export const ENTRY_TITLE: Record<EntryKey, string> = {
   sample: '样本记录信息表',
-  organoid: '类器官收样记录',
+  organoid: '类器官送样记录',
   embed: '石蜡包埋送样记录',
   cryo: '-80 冻存记录',
 }
@@ -101,7 +101,7 @@ export const ENTRY_TITLE: Record<EntryKey, string> = {
  */
 export const ENTRY_SHORT: Record<EntryKey, string> = {
   sample: '样本记录',
-  organoid: '类器官收样',
+  organoid: '类器官送样',
   embed: '石蜡包埋',
   cryo: '-80 冻存',
 }

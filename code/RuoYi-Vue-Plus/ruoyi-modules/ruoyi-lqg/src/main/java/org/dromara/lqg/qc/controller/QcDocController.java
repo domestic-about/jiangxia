@@ -3,13 +3,17 @@ package org.dromara.lqg.qc.controller;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
+import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.lqg.qc.domain.bo.DocAttachmentBo;
 import org.dromara.lqg.qc.domain.bo.DocImageBo;
 import org.dromara.lqg.qc.domain.bo.DocImageSortBo;
+import org.dromara.lqg.qc.domain.bo.QcDocListQueryBo;
 import org.dromara.lqg.qc.domain.bo.QcOrganoidSaveBo;
 import org.dromara.lqg.qc.domain.bo.QcSampleSaveBo;
 import org.dromara.lqg.qc.domain.bo.QcScoreSaveBo;
 import org.dromara.lqg.qc.domain.vo.QcDocBundleVo;
+import org.dromara.lqg.qc.domain.vo.QcDocListVo;
+import org.dromara.lqg.qc.service.QcDocListService;
 import org.dromara.lqg.qc.service.QcDocService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 三份质控文档的内部读写（doc/api-contract.md 的 QC / DOC 一节）。
  *
  * <pre>
+ * GET    /lqg/qc/list                                   「质控文档」板块列表：有效样本 + 三份状态（飞书工作台第 17 行）
  * GET    /lqg/qc/{sampleId}                             三份文档 + 图片 + 附件 + 样本只读字段（首次访问建三份空草稿）
  * PUT    /lqg/qc/{sampleId}/sample-qc                   保存样本质控表
  * PUT    /lqg/qc/{sampleId}/organoid-qc                 保存类器官质控表
@@ -61,6 +66,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class QcDocController {
 
     private final QcDocService qcDocService;
+    private final QcDocListService qcDocListService;
+
+    /**
+     * 「质控文档」板块列表：已核验有效的样本 + 三份质控表各自的状态，可按关键字 / 类别 / 进度 / 收样日期筛选。
+     */
+    @SaCheckPermission("lqg:qc:query")
+    @GetMapping("/list")
+    public TableDataInfo<QcDocListVo> list(QcDocListQueryBo query) {
+        return qcDocListService.list(query);
+    }
 
     /**
      * 三份文档（含图片位与附件）+ 样本主档只读字段；首次访问就地建三份空草稿。

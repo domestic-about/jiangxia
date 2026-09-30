@@ -1,6 +1,6 @@
 <template>
   <div class="lqg-embed-drawer">
-    <el-drawer v-model="visible" :title="title" size="780px" append-to-body :close-on-click-modal="true" @closed="handleClosed">
+    <el-drawer v-model="visible" :title="title" size="780px" class="lqg-drawer-el" append-to-body :close-on-click-modal="true" @closed="handleClosed">
       <div v-if="loading" class="lqg-embed-drawer__loading">{{ t('lqg.embed.loading') }}</div>
 
       <template v-else>
@@ -27,7 +27,7 @@
 
         <!-- ① 包埋信息 -->
         <div class="lqg-embed-drawer__section">{{ t('lqg.embed.drawer.sectionEmbed') }}</div>
-        <el-form ref="formRef" :model="form" :rules="rules" label-width="130px">
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="180px">
           <el-row :gutter="12">
             <el-col :span="24">
               <el-form-item :label="t('lqg.embed.drawer.sample')" prop="sampleId">
@@ -84,7 +84,7 @@
 
         <!-- ② 工序时间（七个，全部可空 —— 这是一张会被反复打开补填的表） -->
         <div class="lqg-embed-drawer__section">{{ t('lqg.embed.drawer.sectionProcess') }}</div>
-        <el-form label-width="130px">
+        <el-form label-width="180px">
           <el-row :gutter="12">
             <el-col v-for="field in processFields" :key="field" :span="12">
               <el-form-item :label="t('lqg.embed.drawer.' + field)">
@@ -102,7 +102,7 @@
 
         <!-- ③ 染色与 marker -->
         <div class="lqg-embed-drawer__section">{{ t('lqg.embed.drawer.sectionStain') }}</div>
-        <el-form label-width="130px">
+        <el-form label-width="180px">
           <el-row :gutter="12">
             <el-col :span="24">
               <el-form-item :label="t('lqg.embed.drawer.stain')">
@@ -154,7 +154,7 @@
 
         <!-- ④ 操作人与备注 -->
         <div class="lqg-embed-drawer__section">{{ t('lqg.embed.drawer.sectionOther') }}</div>
-        <el-form label-width="130px">
+        <el-form label-width="180px">
           <el-row :gutter="12">
             <el-col :span="12">
               <el-form-item :label="t('lqg.embed.drawer.operatorName')">
@@ -194,7 +194,7 @@
     </el-drawer>
 
     <!-- 判无效的原因（外部看得到这句话） -->
-    <el-dialog v-model="invalidDialog.visible" :title="t('lqg.embed.drawer.invalidReasonTitle')" width="460px" append-to-body>
+    <el-dialog v-model="invalidDialog.visible" :title="t('lqg.embed.drawer.invalidReasonTitle')" width="460px" class="lqg-dialog-el" append-to-body>
       <!-- FIX V02b：判为无效不收实验室补填的那 13 项 —— 抽屉里改过的，这里明说不会保存（不静默丢） -->
       <el-alert
         v-if="invalidDialog.dropped.length"
@@ -641,59 +641,60 @@ defineExpose({ openAdd, open });
 </script>
 
 <style scoped lang="scss">
-.lqg-embed-drawer {
-  .lqg-embed-drawer__section {
-    margin: 8px 0 12px;
-    padding-left: 8px;
-    font-weight: 600;
-    color: var(--lqg-ink);
-    border-left: 3px solid var(--lqg-primary);
-  }
-  .lqg-embed-drawer__lastmod {
-    margin-bottom: 8px;
-    font-size: 12px;
-    color: var(--lqg-ink-2);
-  }
-  .lqg-embed-drawer__control {
-    width: 100%;
-  }
-  .lqg-embed-drawer__mono {
-    font-family: var(--lqg-font-mono);
-  }
-  .lqg-embed-drawer__mono-input :deep(.el-input__inner) {
-    font-family: var(--lqg-font-mono);
-  }
-  .lqg-embed-drawer__muted,
-  .lqg-embed-drawer__hint {
-    color: var(--lqg-ink-3);
-    font-size: 12px;
-  }
-  .lqg-embed-drawer__loading {
-    padding: 24px 0;
-    color: var(--lqg-ink-3);
-  }
-  .lqg-embed-drawer__stack,
-  .lqg-embed-drawer__markers {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
-  .lqg-embed-drawer__marker-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .lqg-embed-drawer__marker-name {
-    width: 180px;
-  }
-  .lqg-embed-drawer__footer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+/* ★ 2026-09-30：原来整块嵌在 `.lqg-embed-drawer { … }` 里 —— 抽屉 append-to-body 被挪到 <body> 下，
+   .lqg-embed-drawer 不再是抽屉内容的祖先，嵌套选择器一条都命不中。
+   scoped 的 data-v 属性仍在插槽内容上，所以去掉外层包裹、直接写类名即可。 */
+.lqg-embed-drawer__section {
+  margin: 8px 0 12px;
+  padding-left: 8px;
+  font-weight: 600;
+  color: var(--lqg-ink);
+  border-left: 3px solid var(--lqg-primary);
+}
+.lqg-embed-drawer__lastmod {
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--lqg-ink-3);
+}
+.lqg-embed-drawer__control {
+  width: 100%;
+}
+.lqg-embed-drawer__mono {
+  font-family: var(--lqg-font-mono);
+}
+.lqg-embed-drawer__mono-input :deep(.el-input__inner) {
+  font-family: var(--lqg-font-mono);
+}
+.lqg-embed-drawer__muted,
+.lqg-embed-drawer__hint {
+  color: var(--lqg-ink-3);
+  font-size: 12px;
+}
+.lqg-embed-drawer__loading {
+  padding: 24px 0;
+  color: var(--lqg-ink-3);
+}
+.lqg-embed-drawer__stack,
+.lqg-embed-drawer__markers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.lqg-embed-drawer__marker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lqg-embed-drawer__marker-name {
+  width: 180px;
+}
+.lqg-embed-drawer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

@@ -5,7 +5,7 @@
     size="1000px"
     direction="rtl"
     append-to-body
-    class="lqg-issues"
+    class="lqg-issues lqg-drawer-el"
     @update:model-value="(v: boolean) => emit('update:modelValue', v)"
   >
     <div class="lqg-issues__sub">{{ t('lqg.home.issues.subtitle') }}</div>

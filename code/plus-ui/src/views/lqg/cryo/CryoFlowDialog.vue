@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" :title="title" width="520px" append-to-body :close-on-click-modal="true">
+  <el-dialog v-model="visible" :title="title" width="520px" class="lqg-dialog-el" append-to-body :close-on-click-modal="true">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="112px">
       <!-- ★ 登记类型不可改（CR-20260917-04）：新增时是选定的类型，修改时是原来的类型 -->
       <el-form-item :label="t('lqg.cryo.flow.colType')">

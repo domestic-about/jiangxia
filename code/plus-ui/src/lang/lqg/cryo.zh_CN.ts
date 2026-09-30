@@ -157,7 +157,7 @@ export default {
     freezeTimeRequired: '冻存时间必填',
     initQty: '冻存数量/支',
     /** ★ 初始支数可改（CR-20260917-04）；改了同样逐笔校验，任一步 < 0 → 后端 400 */
-    initQtyTip: '这是「初始」支数（导出「冻存数量/支」用的就是它）；改小到透支会被后端拒绝，剩余只在流水里变。',
+    initQtyTip: '这是冻存时的初始支数（导出的「冻存数量/支」就是它）。取用、补入记在流水里，这里不跟着变；改得比已取走的还少时保存不了。',
     initQtyRequired: '冻存数量必须是正整数',
     density: '冻存密度',
     densityPlaceholder: '如 2e5',

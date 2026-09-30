@@ -5,11 +5,11 @@ import PlaceholderPage from '@/components/ui/PlaceholderPage.vue'
 // 正文内容归属 DOC-MP-001。
 definePage({
   style: {
-    navigationBarTitleText: '文档',
+    navigationBarTitleText: '质控文档',
   },
 })
 </script>
 
 <template>
-  <PlaceholderPage title="文档" owner="DOC-MP-001" desc="文档页签：本张只放空状态，内容在 DOC-MP-001。" />
+  <PlaceholderPage title="质控文档" owner="DOC-MP-001" desc="文档页签：本张只放空状态，内容在 DOC-MP-001。" />
 </template>

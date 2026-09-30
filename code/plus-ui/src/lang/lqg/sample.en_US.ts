@@ -11,8 +11,8 @@ export default {
       subtitle: 'One row per tissue sample; its paraffin blocks and cryo batches are in the "Paraffin / Cryo" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
     },
     organoid: {
-      title: 'Organoid receipts',
-      subtitle: 'One row per organoid receipt; its paraffin blocks and cryo batches are in the "Paraffin / Cryo" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
+      title: 'Organoid submissions',
+      subtitle: 'One row per organoid submission; its paraffin blocks and cryo batches are in the "Paraffin / Cryo" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
     }
   },
   search: 'Search',
@@ -48,13 +48,13 @@ export default {
 
   toolbar: {
     addTissue: 'New sample record',
-    addOrganoid: 'New organoid receipt',
+    addOrganoid: 'New organoid submission',
     exportTissue: 'Export sample records',
-    exportOrganoid: 'Export organoid receipts',
+    exportOrganoid: 'Export organoid submissions',
     exportTissueFile: 'Sample records',
-    exportOrganoidFile: 'Organoid receipts',
+    exportOrganoidFile: 'Organoid submissions',
     exportTissueDone: 'Sample records exported (current filter)',
-    exportOrganoidDone: 'Organoid receipts exported (current filter)',
+    exportOrganoidDone: 'Organoid submissions exported (current filter)',
     exportEmpty: 'No sample matches the current filter; no file was generated',
     refresh: 'Refresh'
   },
@@ -155,7 +155,7 @@ export default {
 
   drawer: {
     addTissue: 'New sample record',
-    addOrganoid: 'New organoid receipt',
+    addOrganoid: 'New organoid submission',
     edit: 'Edit sample',
     verify: 'Verify sample',
     view: 'Sample detail',
@@ -218,7 +218,7 @@ export default {
   },
 
   verifyHintOrganoid:
-    'Organoid receipt submitted outside: the submission part verifies source unit, organoid type, passage and remark; the receiving part fills receive date, internal no., process time, viability report and operator.',
+    'Organoid submission from outside: the submission part verifies source unit, organoid type, passage and remark; the receiving part fills receive date, internal no., process time, viability report and operator.',
   verifyHintTissue: 'Tissue sample submitted outside: receive date and internal no. are required, and the internal no. is unique.',
   allSamples: 'All samples',
   loading: 'Loading…'

@@ -80,7 +80,7 @@ describe('exportFileName(sheet, at)', () => {
   it('服务端拿不到名字时的本地兜底：<工作表名>-<yyyyMMddHHmmss>.xlsx', () => {
     const at = new Date(2026, 8, 18, 10, 20, 30) // 2026-09-18 10:20:30（本地时区）
     expect(exportFileName('tissue', at)).toBe('样本记录信息表-20260918102030.xlsx')
-    expect(exportFileName('organoid', at)).toBe('类器官收样记录-20260918102030.xlsx')
+    expect(exportFileName('organoid', at)).toBe('类器官送样记录-20260918102030.xlsx')
     expect(exportFileName('embed', at)).toBe('石蜡包埋送样记录-20260918102030.xlsx')
     expect(exportFileName('cryo', at)).toBe('-80冻存-20260918102030.xlsx')
   })

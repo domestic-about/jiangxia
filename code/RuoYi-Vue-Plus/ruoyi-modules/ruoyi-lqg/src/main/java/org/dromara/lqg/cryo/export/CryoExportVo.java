@@ -2,6 +2,7 @@ package org.dromara.lqg.cryo.export;
 
 import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
 import cn.idev.excel.annotation.ExcelProperty;
+import org.dromara.lqg.sys.export.NumericTextConverter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -64,7 +65,7 @@ public class CryoExportVo implements Serializable {
      * {@code <v>8.0</v>}，甲方拿 openpyxl 之类的工具读回来就是 {@code 8.0} ——
      * 「对纸质记录」要的是 {@code 8}。
      */
-    @ExcelProperty(value = "冻存数量/支", index = 2)
+    @ExcelProperty(value = "冻存数量/支", index = 2, converter = NumericTextConverter.class)
     @Schema(description = "冻存数量/支 = 初始支数（不是剩余）")
     private String initQty;
 
@@ -100,7 +101,7 @@ public class CryoExportVo implements Serializable {
      *
      * <p>同样是文本型（见 {@link #initQty} 的说明）；取空是 {@code "0"}，不是空格子。
      */
-    @ExcelProperty(value = "当前剩余/支", index = 10)
+    @ExcelProperty(value = "当前剩余/支", index = 10, converter = NumericTextConverter.class)
     @Schema(description = "当前剩余支数（读时算：初始 + 未删流水累计）")
     private String remainingQty;
 

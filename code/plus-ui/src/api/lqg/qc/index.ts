@@ -213,11 +213,7 @@ export function removeDocImage(sampleId: string | number, docType: QcDocType, id
  * 重排一个图片位内的顺序。
  * ★ 请求体是 `{ids:[该位全部 id]}`（issue #210）——按目标顺序给全量，缺一张后端就 400。
  */
-export function sortDocImages(
-  sampleId: string | number,
-  docType: QcDocType,
-  ids: (string | number)[]
-): AxiosPromise<void> {
+export function sortDocImages(sampleId: string | number, docType: QcDocType, ids: (string | number)[]): AxiosPromise<void> {
   return request({
     url: `/lqg/qc/${sampleId}/${docType}/image/sort`,
     method: 'put',
@@ -239,11 +235,7 @@ export function addDocAttachment(
 }
 
 /** 软删一个通用附件（同样只解绑，不删 OSS 对象） */
-export function removeDocAttachment(
-  sampleId: string | number,
-  docType: QcDocType,
-  id: string | number
-): AxiosPromise<void> {
+export function removeDocAttachment(sampleId: string | number, docType: QcDocType, id: string | number): AxiosPromise<void> {
   return request({
     url: `/lqg/qc/${sampleId}/${docType}/attachment/${id}`,
     method: 'delete'
@@ -262,4 +254,48 @@ export interface OssUploadVO {
   ossId: string;
   url: string;
   fileName: string;
+}
+
+// ── 「质控文档」板块列表（CR-20260930-11，飞书「网页工作台」第 17 行）──────────────
+// GET /lqg/qc/list：已核验有效的样本 + 三份质控表各自的状态；权限 lqg:qc:query（与编辑页同一串）。
+
+/** 一份质控表的状态：null = 还没打开过；draft = 草稿；published = 已完成并同步 */
+export type QcDocStatus = 'draft' | 'published' | null;
+
+/** 列表筛选 */
+export interface QcDocListQuery extends PageQuery {
+  /** 内部编号 / 来源单位 / 送检单号，模糊匹配 */
+  keyword?: string;
+  /** tissue（样本记录信息表）/ organoid（类器官送样记录） */
+  sampleKind?: string;
+  /** none（未开始）/ doing（填写中）/ done（三份都已完成） */
+  progress?: string;
+  /** 收样日期 yyyy-MM-dd（含当天） */
+  receiveBegin?: string;
+  receiveEnd?: string;
+}
+
+/** 列表一行 = 一个样本 */
+export interface QcDocListVO {
+  sampleId: string | number;
+  internalNo?: string;
+  sampleKind: 'tissue' | 'organoid';
+  sourceUnitName?: string;
+  typeName?: string;
+  receiveDate?: string;
+  sampleQcStatus: QcDocStatus;
+  organoidQcStatus: QcDocStatus;
+  scoreStatus: QcDocStatus;
+  publishedCount: number;
+  progress: 'none' | 'doing' | 'done';
+  totalScore?: number;
+  lastUpdateTime?: string;
+}
+
+export function listQcDocs(query: QcDocListQuery): AxiosPromise<QcDocListVO[]> {
+  return request({
+    url: '/lqg/qc/list',
+    method: 'get',
+    params: query
+  });
 }

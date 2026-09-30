@@ -109,8 +109,8 @@ describe('页签短名', () => {
   /** 工作表 / 核验页签的 key → 入口 key（样本那张表工作表里叫 tissue，入口里叫 sample） */
   const entryKeyOf = (key: string) => (key === 'tissue' ? 'sample' : key) as keyof typeof ENTRY_SHORT
 
-  it('四个短名：样本记录 / 类器官收样 / 石蜡包埋 / -80 冻存（顺序 = 模板顺序）', () => {
-    expect(ENTRY_KEYS.map(key => ENTRY_SHORT[key])).toEqual(['样本记录', '类器官收样', '石蜡包埋', '-80 冻存'])
+  it('四个短名：样本记录 / 类器官送样 / 石蜡包埋 / -80 冻存（顺序 = 模板顺序）', () => {
+    expect(ENTRY_KEYS.map(key => ENTRY_SHORT[key])).toEqual(['样本记录', '类器官送样', '石蜡包埋', '-80 冻存'])
   })
 
   it('表格页切换条的短名与全称都取自 entries.ts（不另写一份）', () => {

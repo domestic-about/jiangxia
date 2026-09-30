@@ -15,7 +15,7 @@ export interface EntryPresentation {
 
 export const ENTRY_PRESENTATION: Record<EntryKey, EntryPresentation> = {
   sample: { icon: 'sample', title: '样本记录信息表', desc: '组织样本送检与收样' },
-  organoid: { icon: 'organoid', title: '类器官收样记录', desc: '收到的类器官' },
+  organoid: { icon: 'organoid', title: '类器官送样记录', desc: '送检的类器官' },
   embed: { icon: 'embed', title: '石蜡包埋送样记录', desc: '包埋、切片、染色' },
   cryo: { icon: 'cryo', title: '-80 冻存记录', desc: '冻存批次' },
 }

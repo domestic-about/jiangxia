@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" :title="title" size="700px" append-to-body :close-on-click-modal="true" @closed="handleClosed">
+  <el-drawer v-model="visible" :title="title" size="700px" class="lqg-drawer-el" append-to-body :close-on-click-modal="true" @closed="handleClosed">
     <div v-if="loading" class="lqg-cryo-drawer__muted">{{ t('lqg.cryo.loading') }}</div>
 
     <template v-else>
@@ -14,7 +14,7 @@
            模板没有的「代数」放在最后。「选择样本」是挂样本用的，放在最前。
            ★ 一个 el-form 包全部字段：以前「存放位置」那一段是第二个没挂 rules 的 el-form，
              液氮储存位置的必填校验根本没跑（只靠后端 400 兜底）。 -->
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="150px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="170px">
         <div class="lqg-cryo-drawer__section">{{ t('lqg.cryo.drawer.sectionBatch') }}</div>
         <el-row :gutter="12">
           <el-col :span="24">
@@ -64,7 +64,7 @@
               <div class="lqg-cryo-drawer__stack">
                 <el-input-number v-model="form.initQty" :min="1" :precision="0" :step="1" controls-position="right" class="lqg-cryo-drawer__control" />
                 <!-- ★ 初始支数可改（CR-20260917-04）；改小到透支后端会 400 并把差额说清楚 -->
-                <span class="lqg-cryo-drawer__muted">{{ t('lqg.cryo.drawer.initQtyTip') }}</span>
+                <span class="lqg-cryo-drawer__tip">{{ t('lqg.cryo.drawer.initQtyTip') }}</span>
               </div>
             </el-form-item>
           </el-col>
@@ -350,6 +350,13 @@ defineExpose({ openAdd, open });
 }
 .lqg-cryo-drawer__muted {
   font-size: 12px;
+  color: var(--lqg-ink-3);
+}
+/* 「冻存数量/支」下面那句说明：表单内容区的行高是 32px，原来每折一行就空出一大截（飞书工作台 row16 截图），
+   这里按正文行高排，读起来是一段话 */
+.lqg-cryo-drawer__tip {
+  font-size: 12px;
+  line-height: 18px;
   color: var(--lqg-ink-3);
 }
 </style>

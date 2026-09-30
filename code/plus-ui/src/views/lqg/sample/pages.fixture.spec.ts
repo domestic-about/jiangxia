@@ -97,7 +97,7 @@ describe('类别 → 页面（首页卡片 / 最近提交 / 菜单角标 / 质�
     expect(samplePageOf('tissue').path).toBe('/sample');
     expect(samplePageOf('organoid').path).toBe('/sample-organoid');
     expect(zhLabel(samplePageOf('tissue').titleKey)).toBe('样本记录信息表');
-    expect(zhLabel(samplePageOf('organoid').titleKey)).toBe('类器官收样记录');
+    expect(zhLabel(samplePageOf('organoid').titleKey)).toBe('类器官送样记录');
   });
 
   it('不认识的类别按组织样本（老链接 /sample 本来就落在样本记录信息表）', () => {

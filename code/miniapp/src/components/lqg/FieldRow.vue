@@ -81,6 +81,26 @@ const isPicker = computed(() => props.control === 'date' || props.control === 'd
 
 const placeholderText = computed(() => props.placeholder || (isPicker.value ? '请选择' : '请填写'))
 
+/**
+ * 标签太长时「上下排」：标签独占一行，值（和 ›）在下一行靠右。
+ *
+ * ★ 2026-09-30 飞书「小程序」第 13 行：「琼脂糖包埋样本送样时间」左右排时最后一个「间」字单独掉到第二行，
+ *   「-80度超低温冰箱转移至液氮时间」也被折成两行。左右排时标签区只有约 10 个汉字宽，
+ *   而值一旦选好（`2026-09-29 14:22`）也要占住右边，两边都不能挤 —— 所以超过这个宽度就换成上下排。
+ * 宽度按「汉字 = 1、ASCII = 0.55」估（`-80` 这类比汉字窄），阈值 10：
+ *   琼脂糖包埋样本时间（9）照旧左右排；琼脂糖包埋样本送样时间（11）、-80…液氮时间（≈14.7）上下排。
+ * 按钮组（seg）不参与：它右边的按钮本身就窄，「暂存-80度超低温冰箱」左右排放得下。
+ */
+const LONG_LABEL_WIDTH = 10
+function labelWidth(text: string): number {
+  let width = 0
+  for (const ch of text) {
+    width += ch.charCodeAt(0) < 128 ? 0.55 : 1
+  }
+  return width
+}
+const stacked = computed(() => props.control !== 'seg' && labelWidth(props.label) > LONG_LABEL_WIDTH)
+
 function onPick() {
   if (props.readonly) {
     return
@@ -100,6 +120,7 @@ function onPick() {
     v-if="readonly || control === 'seg'"
     :title="label"
     :required="required" marker-side="after"
+    :vertical="stacked"
     value-align="right"
   >
     <view class="fr__val">
@@ -114,6 +135,7 @@ function onPick() {
     v-else-if="isPicker"
     :title="label"
     :required="required" marker-side="after"
+    :vertical="stacked"
     clickable
     value-align="right"
     @click="onPick"

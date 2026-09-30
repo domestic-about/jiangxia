@@ -1,9 +1,9 @@
 package org.dromara.lqg.cryo.export;
 
+import org.dromara.lqg.sys.export.LqgExcel;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.lqg.cryo.batch.domain.bo.CryoQueryBo;
 import org.dromara.lqg.cryo.batch.domain.vo.CryoBatchVo;
 import org.dromara.lqg.cryo.batch.service.CryoQueryService;
@@ -76,7 +76,7 @@ public class CryoExportService {
             query == null ? null : query.getCryoName(),
             query == null ? null : query.getLocation(),
             query == null ? null : query.getOverdueOnly());
-        ExcelUtil.exportExcel(rows, SHEET_NAME, CryoExportVo.class, response);
+        LqgExcel.export(rows, SHEET_NAME, CryoExportVo.class, response);
     }
 
     /**

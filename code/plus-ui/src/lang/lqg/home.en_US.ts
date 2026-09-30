@@ -19,10 +19,10 @@ export default {
       go: 'Verify in sample records →'
     },
     pendingOrganoid: {
-      title: 'Organoid receipts to verify',
-      hint: 'Organoid receipts submitted by partner units',
-      zero: 'No organoid receipt waiting for verification',
-      go: 'Verify in organoid receipts →'
+      title: 'Organoid submissions to verify',
+      hint: 'Organoid submissions submitted by partner units',
+      zero: 'No organoid submission waiting for verification',
+      go: 'Verify in organoid submissions →'
     },
     pendingEmbeds: {
       title: 'Paraffin embeds to verify',

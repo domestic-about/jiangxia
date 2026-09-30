@@ -33,7 +33,7 @@
       "path": "pages/doc/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "文档"
+        "navigationBarTitleText": "质控文档"
       }
     },
     {
@@ -47,7 +47,7 @@
       "path": "pages/docs/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "文档"
+        "navigationBarTitleText": "质控文档"
       }
     },
     {
@@ -110,7 +110,7 @@
       "path": "pages/organoid/form",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "类器官收样记录"
+        "navigationBarTitleText": "类器官送样记录"
       }
     },
     {
@@ -165,7 +165,7 @@
       },
       {
         "pagePath": "pages/doc/index",
-        "text": "文档",
+        "text": "质控文档",
         "iconPath": "static/tabbar/docs.png",
         "selectedIconPath": "static/tabbar/docsHL.png"
       },

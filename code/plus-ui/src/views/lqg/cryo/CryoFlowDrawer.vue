@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" :title="t('lqg.cryo.flow.title')" size="720px" append-to-body :close-on-click-modal="true">
+  <el-drawer v-model="visible" :title="t('lqg.cryo.flow.title')" size="720px" class="lqg-drawer-el" append-to-body :close-on-click-modal="true">
     <div v-if="batch" class="lqg-cryo-flow__head">
       <div class="lqg-cryo-flow__name">
         <span class="lqg-cryo-flow__mono">{{ batch.cryoName || '—' }}</span>

@@ -80,6 +80,7 @@
 
 | 方法 路径 | 说明 |
 |---|---|
+| `GET /lqg/qc/list` | 「质控文档」板块列表（CR-20260930-11）：已核验有效的样本 + 三份质控表各自的 `sampleQcStatus / organoidQcStatus / scoreStatus`（`null` = 没打开过 / `draft` / `published`）、`publishedCount`、`progress`（`none / doing / done`）、`totalScore`、`lastUpdateTime`。筛选 `keyword / sampleKind / progress / receiveBegin / receiveEnd`，分页 `pageNum / pageSize`；权限 `lqg:qc:query` |
 | `GET /lqg/qc/{sampleId}` | 三份文档 + 图片 + 附件 + 从样本主档带出的只读字段；首次访问建三份空草稿。图片的 `url / previewUrl`、附件的 `url` 按这一行 `sys_oss.service` 对应的存储配置给：**私有桶是 10 分钟签名链接**，公有桶原样给 `sys_oss.url`；签不出来（配置缺失）照旧给原值并记日志（CR-20260924-11，修掉私有桶下原样给 `sys_oss.url`、缩略图 / 放大图 / 附件全部 403）。别缓存这些地址：工作台在取回满 5 分钟后，于缩略图加载失败、点图放大、打开附件之前重取一次 |
 | `PUT /lqg/qc/{sampleId}/sample-qc`、`/organoid-qc`、`/score` | 保存草稿；score 只收四个 level，分值由后端回填 |
 | `POST/DELETE /lqg/qc/{sampleId}/{docType}/image`、`…/attachment` | `{slot, ossId}` / `{ossId, fileName}` |

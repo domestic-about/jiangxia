@@ -1,10 +1,10 @@
 package org.dromara.lqg.embed.export;
 
+import org.dromara.lqg.sys.export.LqgExcel;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.utils.StringUtils;
-import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.lqg.embed.domain.bo.EmbedQueryBo;
 import org.dromara.lqg.embed.domain.vo.EmbedMarkerVo;
 import org.dromara.lqg.embed.domain.vo.EmbedVo;
@@ -85,7 +85,7 @@ public class EmbedExportService {
         log.info("导出石蜡包埋送样记录：{} 行（筛选 internalNo={} verifyStatus={} stain={}）",
             rows.size(), query == null ? null : query.getInternalNo(),
             query == null ? null : query.getVerifyStatus(), query == null ? null : query.getStain());
-        ExcelUtil.exportExcel(rows, SHEET_NAME, EmbedExportVo.class, response);
+        LqgExcel.export(rows, SHEET_NAME, EmbedExportVo.class, response);
     }
 
     /**

@@ -1,10 +1,10 @@
 package org.dromara.lqg.sample.export;
 
+import org.dromara.lqg.sys.export.LqgExcel;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.utils.StringUtils;
-import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.lqg.sample.domain.bo.SampleQueryBo;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
 import org.dromara.lqg.sample.service.SampleQueryService;
@@ -70,7 +70,7 @@ public class SampleExportService {
     /**
      * organoid 工作表 / 下载文件名。
      */
-    public static final String ORGANOID_SHEET_NAME = "类器官收样记录";
+    public static final String ORGANOID_SHEET_NAME = "类器官送样记录";
 
     /**
      * 样本类别（{@code t_lqg_sample.sample_kind}，字典 {@code lqg_sample_kind}）。
@@ -129,7 +129,7 @@ public class SampleExportService {
         log.info("导出样本记录信息表：{} 行（sample_kind=tissue，筛选 sourceUnitId={} verifyStatus={}）",
             rows.size(), query == null ? null : query.getSourceUnitId(),
             query == null ? null : query.getVerifyStatus());
-        ExcelUtil.exportExcel(rows, TISSUE_SHEET_NAME, SampleTissueExportVo.class, response);
+        LqgExcel.export(rows, TISSUE_SHEET_NAME, SampleTissueExportVo.class, response);
     }
 
     /**
@@ -137,10 +137,10 @@ public class SampleExportService {
      */
     public void exportOrganoid(SampleQueryBo query, HttpServletResponse response) {
         List<SampleOrganoidExportVo> rows = organoidRowsOf(query);
-        log.info("导出类器官收样记录：{} 行（sample_kind=organoid，筛选 sourceUnitId={} verifyStatus={}）",
+        log.info("导出类器官送样记录：{} 行（sample_kind=organoid，筛选 sourceUnitId={} verifyStatus={}）",
             rows.size(), query == null ? null : query.getSourceUnitId(),
             query == null ? null : query.getVerifyStatus());
-        ExcelUtil.exportExcel(rows, ORGANOID_SHEET_NAME, SampleOrganoidExportVo.class, response);
+        LqgExcel.export(rows, ORGANOID_SHEET_NAME, SampleOrganoidExportVo.class, response);
     }
 
     /**

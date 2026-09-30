@@ -82,7 +82,7 @@ public class SampleVo implements Serializable {
     @Schema(description = "类器官类型")
     private String organoidType;
 
-    @Schema(description = "代数（类器官收样记录才有，形如 P3；组织样本为空）")
+    @Schema(description = "代数（类器官送样记录才有，形如 P3；组织样本为空）")
     private String passage;
 
     @Schema(description = "有无病理 Y / N")

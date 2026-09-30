@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" :title="t('lqg.cryo.toLn2.title')" width="480px" append-to-body :close-on-click-modal="true">
+  <el-dialog v-model="visible" :title="t('lqg.cryo.toLn2.title')" width="480px" class="lqg-dialog-el" append-to-body :close-on-click-modal="true">
     <el-alert type="info" :closable="false" show-icon class="mb8" :title="t('lqg.cryo.toLn2.tip')" />
     <el-form ref="formRef" :model="form" :rules="rules" label-width="130px">
       <el-form-item :label="t('lqg.cryo.toLn2.time')" prop="toLn2Time">

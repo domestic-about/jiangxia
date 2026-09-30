@@ -58,7 +58,7 @@ import {
 //   - 身份缺失什么都不渲染。
 definePage({
   style: {
-    navigationBarTitleText: '类器官收样记录',
+    navigationBarTitleText: '类器官送样记录',
   },
 })
 
@@ -399,7 +399,7 @@ async function submit() {
   <view class="org">
     <LoadingState v-if="loading" />
 
-    <ErrorState v-else-if="failed" text="没能加载这条类器官收样记录" @retry="load" />
+    <ErrorState v-else-if="failed" text="没能加载这条类器官送样记录" @retry="load" />
 
     <view v-else-if="specs.length === 0" class="lqg-state">
       <text class="lqg-state__text">没能确认你的身份，请重新登录后再试</text>

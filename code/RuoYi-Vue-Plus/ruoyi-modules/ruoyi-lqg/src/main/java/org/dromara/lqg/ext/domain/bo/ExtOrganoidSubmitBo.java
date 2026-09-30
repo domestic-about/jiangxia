@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @author AUTH-EXT-001
  */
 @Data
-@Schema(description = "外部类器官收样送检入参")
+@Schema(description = "外部类器官送样入参")
 public class ExtOrganoidSubmitBo implements Serializable {
 
     @Serial

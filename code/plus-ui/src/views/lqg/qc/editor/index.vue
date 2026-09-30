@@ -17,7 +17,7 @@
         <span class="lqg-qc-editor__mono">{{ sample.internalNo || '—' }}</span>
         <span class="lqg-qc-editor__sub">{{ t('lqg.qc.editor.readonlyHint', { name: samplePageName }) }}</span>
         <el-button link type="primary" class="lqg-qc-editor__back" @click="goBack">
-          {{ t('lqg.qc.editor.back', { name: samplePageName }) }}
+          {{ t('lqg.qc.editor.back', { name: backPageName }) }}
         </el-button>
       </div>
       <div class="lqg-qc-editor__summary">
@@ -362,8 +362,11 @@ const confirmSwitch = async (): Promise<boolean> => {
   }
 };
 
-/** 没选样本时的引导：两张样本表（路径与名字取 views/lqg/sample/pages.ts，不另写字面量） */
-const guidePages = SAMPLE_KINDS.map((kind) => samplePageOf(kind));
+/** 「质控文档」板块列表页（CR-20260930-11：菜单 5530，从那里进来的 `?from=qc-docs`） */
+const QC_DOCS_PAGE = { path: '/qc-docs', titleKey: 'lqg.qc.list.title' };
+
+/** 没选样本时的引导：质控文档列表 + 两张样本表（样本表的路径与名字取 views/lqg/sample/pages.ts，不另写字面量） */
+const guidePages = [QC_DOCS_PAGE, ...SAMPLE_KINDS.map((kind) => samplePageOf(kind))];
 
 /** 当前页签的这份文档此刻是不是「已完成」（页脚按钮 / 提示按它变） */
 const currentPublished = computed(() => bundle.value !== null && docStatusOf(currentTab.value) === 'published');
@@ -464,9 +467,12 @@ const handleSaveDraft = async () => {
 // ★ 返回按样本类别回对应的那一页（CR-20260924-10：样本总表拆成样本记录信息表 / 类器官收样记录）
 const samplePage = computed(() => samplePageOf(sample.value.sampleKind));
 const samplePageName = computed(() => t(samplePage.value.titleKey));
+// 从「质控文档」列表进来的（`?from=qc-docs`）返回列表；其余照旧回样本所在那张表
+const backPage = computed(() => (route.query.from === 'qc-docs' ? QC_DOCS_PAGE : samplePage.value));
+const backPageName = computed(() => t(backPage.value.titleKey));
 
 const goBack = () => {
-  router.push({ path: samplePage.value.path });
+  router.push({ path: backPage.value.path });
 };
 
 // ── 未保存改动提示 ───────────────────────────────────────────────────────────

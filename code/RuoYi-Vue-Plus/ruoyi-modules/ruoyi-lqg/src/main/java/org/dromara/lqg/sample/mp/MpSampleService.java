@@ -191,7 +191,7 @@ public class MpSampleService {
             }
         }
         if (!hit.isEmpty()) {
-            throw new ServiceException((organoid ? "类器官收样记录" : "组织样本") + "没有这些字段，不能修改："
+            throw new ServiceException((organoid ? "类器官送样记录" : "组织样本") + "没有这些字段，不能修改："
                 + String.join("、", hit), 400);
         }
     }

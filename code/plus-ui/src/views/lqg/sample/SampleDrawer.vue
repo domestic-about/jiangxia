@@ -7,7 +7,7 @@
       v-model="visible"
       :title="title"
       :size="drawerSize"
-      class="lqg-sample-drawer-el"
+      class="lqg-sample-drawer-el lqg-drawer-el"
       append-to-body
       :close-on-click-modal="true"
       @closed="handleClosed"
@@ -212,7 +212,7 @@
     </el-drawer>
 
     <!-- 判无效的原因（外部看得到这句话） -->
-    <el-dialog v-model="invalidDialog.visible" :title="t('lqg.sample.drawer.invalidReasonTitle')" width="460px" append-to-body>
+    <el-dialog v-model="invalidDialog.visible" :title="t('lqg.sample.drawer.invalidReasonTitle')" width="460px" class="lqg-dialog-el" append-to-body>
       <el-form ref="invalidRef" :model="invalidDialog" :rules="invalidRules" label-width="90px">
         <el-form-item :label="t('lqg.sample.field.invalidReason')" prop="reason">
           <el-input
@@ -578,80 +578,50 @@ defineExpose({ openAdd, open });
 </script>
 
 <style scoped lang="scss">
-.lqg-sample-drawer {
-  .lqg-sample-drawer__section {
-    margin: 8px 0 12px;
-    padding-left: 8px;
-    font-weight: 600;
-    color: var(--lqg-ink);
-    border-left: 3px solid var(--lqg-primary);
-  }
-  .lqg-sample-drawer__lastmod {
-    margin-bottom: 8px;
-    font-size: 12px;
-    color: var(--lqg-ink-2);
-  }
-  .lqg-sample-drawer__control {
-    width: 100%;
-  }
-  .lqg-sample-drawer__mono {
-    font-family: var(--lqg-font-mono);
-  }
-  .lqg-sample-drawer__loading {
-    padding: 24px 0;
-    color: var(--lqg-ink-3);
-  }
-  .lqg-sample-drawer__footer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .lqg-sample-drawer__more {
-    margin-right: auto;
-  }
-  .lqg-sample-drawer__hint {
-    margin-right: auto;
-    font-size: 12px;
-    color: var(--lqg-warn);
-  }
-  .lqg-sample-drawer__actions {
-    display: inline-flex;
-    gap: 8px;
-  }
+/* ★ 2026-09-30：原来整块嵌在 `.lqg-sample-drawer { … }` 里 —— 抽屉 append-to-body 被挪到 <body> 下，
+   .lqg-sample-drawer 不再是抽屉内容的祖先，嵌套选择器一条都命不中（「最后修改」字号、底部按钮区排布都没生效）。
+   scoped 的 data-v 属性仍在插槽内容上，所以去掉外层包裹、直接写类名即可。 */
+.lqg-sample-drawer__section {
+  margin: 8px 0 12px;
+  padding-left: 8px;
+  font-weight: 600;
+  color: var(--lqg-ink);
+  border-left: 3px solid var(--lqg-primary);
+}
+.lqg-sample-drawer__lastmod {
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--lqg-ink-3);
+}
+.lqg-sample-drawer__control {
+  width: 100%;
+}
+.lqg-sample-drawer__mono {
+  font-family: var(--lqg-font-mono);
+}
+.lqg-sample-drawer__loading {
+  padding: 24px 0;
+  color: var(--lqg-ink-3);
+}
+.lqg-sample-drawer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lqg-sample-drawer__more {
+  margin-right: auto;
+}
+.lqg-sample-drawer__hint {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--lqg-warn);
+}
+.lqg-sample-drawer__actions {
+  display: inline-flex;
+  gap: 8px;
 }
 </style>
-
-<!-- 非 scoped：抽屉头部由 Element Plus 渲染在 .lqg-sample-drawer 之外（append-to-body），
-     scoped 命中不了，所以按唯一 class 命中。 -->
-<style lang="scss">
-.lqg-sample-drawer-el {
-  /* row11-②：标题更明显、与内容拉开距离 */
-  .el-drawer__header {
-    margin-bottom: 18px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--lqg-line);
-  }
-  .el-drawer__title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--lqg-ink);
-  }
-  /* 底部操作区与内容之间也拉一条线，避免「更多」看起来贴着表单 */
-  .el-drawer__footer {
-    padding-top: 12px;
-    border-top: 1px solid var(--lqg-line);
-  }
-}
-/* row11-④：窄屏一行一个表单项（el-col 的 span 是行内样式，这里必须覆盖宽度） */
-@media (max-width: 768px) {
-  .lqg-sample-drawer-el .el-col {
-    max-width: 100%;
-    flex: 0 0 100%;
-  }
-  .lqg-sample-drawer-el .el-form-item {
-    margin-bottom: 14px;
-  }
-}
-</style>
+<!-- 抽屉头部 / 底部 / 窄屏一行一个 的样式已提到全局 .lqg-drawer-el（assets/styles/lqg-tokens.scss），
+     工作台所有业务抽屉共用；这里只保留 .lqg-sample-drawer-el 这个钩子（判据 16-drawer-style.mjs 按它找抽屉）。 -->

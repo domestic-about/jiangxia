@@ -2,6 +2,7 @@ package org.dromara.lqg.sample.export;
 
 import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
 import cn.idev.excel.annotation.ExcelProperty;
+import org.dromara.lqg.sys.export.NumericTextConverter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -59,7 +60,7 @@ public class SampleTissueExportVo implements Serializable {
     @Schema(description = "中文：男 / 女 / 未知")
     private String gender;
 
-    @ExcelProperty(value = "年龄", index = 3)
+    @ExcelProperty(value = "年龄", index = 3, converter = NumericTextConverter.class)
     @Schema(description = "文本：56 / 3月龄（模板没限定单位）")
     private String age;
 

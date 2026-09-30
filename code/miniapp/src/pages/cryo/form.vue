@@ -303,7 +303,7 @@ async function submit() {
           mono
           :readonly="!editable"
           :model-value="form.sampleLabel"
-          placeholder="请选择已核验有效的样本"
+          placeholder="选有效样本"
           @pick="openSamplePicker"
         />
 

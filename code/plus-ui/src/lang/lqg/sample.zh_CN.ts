@@ -19,8 +19,8 @@ export default {
       subtitle: '一行是一个组织样本；它做出的石蜡块、冻存批次看「石蜡包埋 / 冻存」一列，点数字直接过去。合作单位送来待核验的浅黄色标出，点「核验」处理。'
     },
     organoid: {
-      title: '类器官收样记录',
-      subtitle: '一行是一条类器官收样；它做出的石蜡块、冻存批次看「石蜡包埋 / 冻存」一列，点数字直接过去。合作单位送来待核验的浅黄色标出，点「核验」处理。'
+      title: '类器官送样记录',
+      subtitle: '一行是一条类器官送样；它做出的石蜡块、冻存批次看「石蜡包埋 / 冻存」一列，点数字直接过去。合作单位送来待核验的浅黄色标出，点「核验」处理。'
     }
   },
   search: '搜索',
@@ -57,13 +57,13 @@ export default {
   // ── 工具栏 ────────────────────────────────────────────────────────────────
   toolbar: {
     addTissue: '新增样本记录',
-    addOrganoid: '新增类器官收样',
+    addOrganoid: '新增类器官送样',
     exportTissue: '导出样本记录信息表',
-    exportOrganoid: '导出类器官收样记录',
+    exportOrganoid: '导出类器官送样记录',
     exportTissueFile: '样本记录信息表',
-    exportOrganoidFile: '类器官收样记录',
+    exportOrganoidFile: '类器官送样记录',
     exportTissueDone: '样本记录信息表已导出（当前筛选结果）',
-    exportOrganoidDone: '类器官收样记录已导出（当前筛选结果）',
+    exportOrganoidDone: '类器官送样记录已导出（当前筛选结果）',
     exportEmpty: '当前筛选没有样本，未生成文件',
     refresh: '刷新'
   },
@@ -171,7 +171,7 @@ export default {
   // ── 抽屉：录入 / 编辑 / 核验（UI:admin.sample.edit） ────────────────────────
   drawer: {
     addTissue: '新增样本记录',
-    addOrganoid: '新增类器官收样',
+    addOrganoid: '新增类器官送样',
     edit: '编辑样本',
     verify: '核验样本',
     view: '样本详情',
@@ -235,7 +235,7 @@ export default {
   },
 
   // ── 主体（核验的是外部送来的：组织样本走送检 + 收样，类器官按 CR-20260917-05 切字段） ──
-  verifyHintOrganoid: '外部送来的类器官收样：送检段只核来源单位、类器官类型、代数、备注；收样段填收样日期、内部编号、处理时间、细胞活率报告、操作人。',
+  verifyHintOrganoid: '外部送来的类器官送样：送检段只核来源单位、类器官类型、代数、备注；收样段填收样日期、内部编号、处理时间、细胞活率报告、操作人。',
   verifyHintTissue: '外部送来的组织样本：收样日期与内部编号必填，内部编号全库唯一。',
   allSamples: '全部样本',
   loading: '加载中…'

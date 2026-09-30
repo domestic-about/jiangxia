@@ -33,7 +33,7 @@ import java.io.Serializable;
  */
 @Data
 @ExcelIgnoreUnannotated
-@Schema(description = "类器官收样记录导出视图（模板 7 列逐字同序 + 在「类器官类型」后插入「代数」）")
+@Schema(description = "类器官送样记录导出视图（模板 7 列逐字同序 + 在「类器官类型」后插入「代数」）")
 public class SampleOrganoidExportVo implements Serializable {
 
     @Serial

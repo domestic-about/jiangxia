@@ -84,7 +84,7 @@ export default {
     // 提示与文案
     saved: '草稿已保存',
     loadFailed: '质控文档加载失败',
-    missingSampleId: '地址里缺少 sampleId：请从样本记录信息表或类器官收样记录的「质控文档」进入',
+    missingSampleId: '地址里缺少 sampleId：请从样本记录信息表或类器官送样记录的「质控文档」进入，或从「质控文档」列表进入',
     unsavedTitle: '有未保存的改动',
     unsavedMessage: '这一页还有没保存的改动，离开就会丢掉。确定离开吗？',
     unsavedLeave: '离开',

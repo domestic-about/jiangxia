@@ -70,7 +70,7 @@ class MpExportContractTest {
             Map.of(
                 "cryo", "-80冻存",
                 "embed", "石蜡包埋送样记录",
-                "organoid", "类器官收样记录",
+                "organoid", "类器官送样记录",
                 "tissue", "样本记录信息表"),
             actual);
     }
@@ -140,7 +140,7 @@ class MpExportContractTest {
     void fileNameUsesSheetNameAndTimestamp() throws Exception {
         Date at = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2026-09-18 10:20:30");
         assertEquals("样本记录信息表-20260918102030.xlsx", SysExportService.fileNameOf(ExcelSheet.TISSUE, at));
-        assertEquals("类器官收样记录-20260918102030.xlsx", SysExportService.fileNameOf(ExcelSheet.ORGANOID, at));
+        assertEquals("类器官送样记录-20260918102030.xlsx", SysExportService.fileNameOf(ExcelSheet.ORGANOID, at));
         assertEquals("石蜡包埋送样记录-20260918102030.xlsx", SysExportService.fileNameOf(ExcelSheet.EMBED, at));
         assertEquals("-80冻存-20260918102030.xlsx", SysExportService.fileNameOf(ExcelSheet.CRYO, at));
         assertEquals(SysExportService.FILE_TIME_PATTERN, "yyyyMMddHHmmss");

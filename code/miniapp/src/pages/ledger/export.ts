@@ -119,7 +119,7 @@ export function authHeader(): Record<string, string> {
 export function exportFileName(sheet: ExportSheet, at: Date = new Date()): string {
   const base: Record<ExportSheet, string> = {
     tissue: '样本记录信息表',
-    organoid: '类器官收样记录',
+    organoid: '类器官送样记录',
     embed: '石蜡包埋送样记录',
     cryo: '-80冻存',
   }

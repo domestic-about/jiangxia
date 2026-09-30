@@ -198,7 +198,7 @@ const sampleSource: HistorySource = {
 // ★ 点行：外部本人且可改 → 类器官填写页 edit，其余 → 类器官填写页 view（这一档没有单独的外部详情页）；
 //   内部 → edit（外部送来还没核验的由纯函数算成只读，页面上连「修改」都不出现）。
 const organoidSource: HistorySource = {
-  emptyText: '你填过的类器官收样记录会出现在这里',
+  emptyText: '你填过的类器官送样记录会出现在这里',
 
   fetch(identity, onlyMine, pageNum, pageSize) {
     if (identity === 'internal') {

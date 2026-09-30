@@ -25,7 +25,7 @@ import { normalizeIdentity } from '@/types/identity'
 //   `DOC_TAB_NAME`（构建期），页面里用 `DOC_SECTION_NAME` 出板块标题，导航栏标题运行时也取配置。
 definePage({
   style: {
-    navigationBarTitleText: '文档',
+    navigationBarTitleText: '质控文档',
   },
 })
 
@@ -45,7 +45,8 @@ const customEnd = ref('')
  * 文档类型：不限 / 三种已完成文档（merged 不是「一份文档」，不进筛选条）。
  *
  * ★ 筛选条上用**短名**（Kevin 2026-09-24 本机验收：「全部类型」那一行尽量别换行）——
- *   去掉「表」字、评分表只留「质量评分」，一眼仍能对上是哪份；卡片里、预览页顶上照旧是全称（`DOC_KIND_LABEL`）。
+ *   去掉「表」字，一眼仍能对上是哪份；卡片里、预览页顶上照旧是全称（`DOC_KIND_LABEL`）。
+ *   ★ 评分表写全称「类器官质量评分」（飞书「小程序」第 14 行，2026-09-30）——这一行放不下时左右滑动。
  *   两组的第一项都叫「全部」，靠行首的「时间」「类型」小标签区分。
  */
 const kind = ref('')
@@ -53,7 +54,7 @@ const KIND_FILTERS = [
   { value: '', label: '全部' },
   { value: 'sample_qc', label: '样本质控' },
   { value: 'organoid_qc', label: '类器官质控' },
-  { value: 'organoid_score', label: '质量评分' },
+  { value: 'organoid_score', label: '类器官质量评分' },
 ]
 const RANGES: Array<{ value: RangeKey, label: string }> = [
   { value: 'all', label: '全部' },

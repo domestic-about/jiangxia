@@ -76,7 +76,7 @@ const isInternal = computed(() => normalizeIdentity(store.identity) === 'interna
 const kind = computed<SampleKind>(() => kindOf(detail.value as { sampleKind?: unknown } | null))
 const status = computed(() => String(detail.value?.verifyStatus ?? ''))
 const isPendingNow = computed(() => status.value === 'pending')
-const kindTitle = computed(() => (kind.value === 'organoid' ? '类器官收样记录' : '样本记录信息表'))
+const kindTitle = computed(() => (kind.value === 'organoid' ? '类器官送样记录' : '样本记录信息表'))
 const submitKeys = computed(() => SUBMIT_FIELDS[kind.value])
 const receiveKeys = computed(() => RECEIVE_FIELDS[kind.value])
 const changed = computed(() => submitChanges(kind.value, original.value, form.value))

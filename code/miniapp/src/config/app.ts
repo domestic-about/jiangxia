@@ -1,6 +1,8 @@
-// 小程序里「配置化」的几句文案（REQ-DOC-010 是 clarify：页签名与板块名甲方还没定）。
+// 小程序里「配置化」的几句文案（REQ-DOC-010 是 clarify）。
+// ★ 2026-09-30 定名（飞书「小程序」第 11 行 + 「网页工作台」第 17 行）：底部页签与工作台菜单统一叫「质控文档」，
+//   页内板块标题用三份表的总称「类器官样本质量控制记录表」。
 //
 // ★ 为什么单独一个文件：改名**不发版**——页签文字在 pages.config.ts 里引它（构建期），
 //   页面内的板块标题在运行时引它；只有一处字面量，改一处两边都跟着变。
-export const DOC_TAB_NAME = '文档'
-export const DOC_SECTION_NAME = '质控文档'
+export const DOC_TAB_NAME = '质控文档'
+export const DOC_SECTION_NAME = '类器官样本质量控制记录表'
