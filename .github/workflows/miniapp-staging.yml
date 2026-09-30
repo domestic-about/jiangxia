@@ -1,0 +1,112 @@
+# 小程序体验版自动上传（staging 分支 = 测试环境体验版）
+#
+# 口径（Kevin 2026-09-30：「提交 staging 分支能自动上传体验版」）：push 到 staging、且小程序相关文件有变更 → 自动构建并上传。
+#
+# 这里的两条硬约束，就是以前只能手动传的原因（交接文档 doc/handover/小程序体验版与自动部署-20260928.md 方案 D）：
+#   1. **构建必须在 macOS 上**（栈包 gotchas §6.5：不同 OS 产物不同，Linux 构建的包真机上组件渲染为空）
+#      → 本工作流跑在 GitHub 的 **macOS runner** 上（公开仓库免费）。
+#   2. **上传必须从固定 IP 发**（微信「小程序代码上传 IP 白名单」；GitHub runner 出口 IP 每次都变）
+#      → 构建完不在 runner 上传，而是走现成的 `deploy.sh miniapp`：产物 rsync 到测试机，
+#        由测试机（固定 IP，已在白名单）执行 miniprogram-ci 上传。与本机手动跑是同一条路。
+#
+# 需要的 Secret（前三个与 deploy-staging 共用）：
+#   LQG_TEST_ENV / LQG_TEST_SSH_KEY / LQG_TEST_HOST
+#   LQG_WX_PRIVATE_KEY   ← 小程序代码上传密钥 private.<appid>.key 的**全文**（仓库里永远没有它）
+#
+# 体验版：上传用 ci 机器人 2（upload-mp.mjs 的 test 缺省）。微信后台把「机器人 2 的版本」设成体验版一次之后，
+# 它后续上传的版本会接着作为体验版；若某次没跟上，到「微信公众平台 → 版本管理」点一下「设为体验版」。
+
+name: miniapp-staging
+
+on:
+  push:
+    branches: [staging]
+    paths:
+      - 'code/miniapp/**'
+      - '!code/miniapp/**/*.md'
+      - 'code/deploy/test/deploy.sh'
+      - 'code/deploy/test/remote/04-miniapp-upload.sh'
+      - 'doc/waves/tools/check-mp-component-events.py'
+      - '.github/workflows/miniapp-staging.yml'
+  workflow_dispatch: {}
+
+# 同一时刻只传一个；连着推两次时，后一次排队等前一次（不并发抢同一个机器人）
+concurrency:
+  group: miniapp-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: 构建并上传小程序体验版
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 写部署用 .env 与上传密钥（来自 Secrets）
+        # 走 env 传值（不插值进脚本正文）：.env 注释里有反引号，插值会被 bash 当命令替换 —— deploy-staging 踩过
+        env:
+          LQG_TEST_ENV_CONTENT: ${{ secrets.LQG_TEST_ENV }}
+          LQG_WX_PRIVATE_KEY_CONTENT: ${{ secrets.LQG_WX_PRIVATE_KEY }}
+        run: |
+          umask 077
+          [ -n "$LQG_WX_PRIVATE_KEY_CONTENT" ] || { echo "::error::缺 Secret LQG_WX_PRIVATE_KEY（小程序代码上传密钥全文）"; exit 1; }
+          KEY="$RUNNER_TEMP/private.wx.key"
+          printf '%s\n' "$LQG_WX_PRIVATE_KEY_CONTENT" > "$KEY"
+          # .env 里的 LQG_MINIPROGRAM_KEY 是开发机上的路径，这里换成 runner 上的那份（其余原样）
+          printf '%s\n' "$LQG_TEST_ENV_CONTENT" | grep -v '^LQG_MINIPROGRAM_KEY=' > code/deploy/test/.env
+          echo "LQG_MINIPROGRAM_KEY=$KEY" >> code/deploy/test/.env
+          chmod 600 code/deploy/test/.env "$KEY"
+          for k in LQG_TEST_HOST LQG_WX_APPID; do
+            grep -q "^${k}=." code/deploy/test/.env || { echo "::error::LQG_TEST_ENV 里缺 ${k}"; exit 1; }
+          done
+          echo "✓ .env 与上传密钥已就位（内容不打印）"
+
+      - name: 装 CI 专用 SSH 私钥
+        env:
+          LQG_TEST_SSH_KEY_CONTENT: ${{ secrets.LQG_TEST_SSH_KEY }}
+          LQG_TEST_HOST_VALUE: ${{ secrets.LQG_TEST_HOST }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$LQG_TEST_SSH_KEY_CONTENT" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$LQG_TEST_HOST_VALUE" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "root@$LQG_TEST_HOST_VALUE" 'echo "✓ SSH 通：$(hostname)"'
+
+      - name: 装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 装 Node（带 pnpm store 缓存）
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: code/miniapp/pnpm-lock.yaml
+
+      - name: 装小程序依赖
+        run: cd code/miniapp && pnpm install --frozen-lockfile
+
+      - name: 构建（macOS）→ 同步到测试机 → 测试机固定 IP 上传
+        env:
+          # CI 没有 tianda-admin profile；本步只走 SSH、不动云资源（与 deploy-staging 同一个声明）
+          LQG_SKIP_ACCOUNT_GATE: '1'
+        run: bash code/deploy/test/deploy.sh miniapp
+
+      - name: 小结
+        if: always()
+        run: |
+          {
+            echo "### 小程序体验版（staging）"
+            echo ""
+            echo "- 提交：\`${GITHUB_SHA:0:12}\`（版本描述里带这个提交号，微信后台「版本管理」可对上）"
+            echo "- 构建：macOS runner；上传：测试机固定 IP（ci 机器人 2）"
+            echo "- 体验版没自动换成这一版时：微信公众平台 → 版本管理 → 设为体验版"
+          } >> "$GITHUB_STEP_SUMMARY"

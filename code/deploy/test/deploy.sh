@@ -317,7 +317,8 @@ phase_status() {
 #   · 微信要求上传来源 IP 在「开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」里；
 #     开发机常年跑在代理后面（TUN 模式，`curl --noproxy '*'` 与直连拿到的是同一个代理出口 IP），
 #     那个 IP 不稳定、也不该长期占据白名单 → 上传挪到固定公网 IP 的测试机上。
-#   · 但**构建必须留在本机**（gotchas §6.5：不同 OS 产物不同，体验版真机上会渲染空）。
+#   · 但**构建必须在 macOS 上**（gotchas §6.5：不同 OS 产物不同，体验版真机上会渲染空）——
+#     本机，或 GitHub 的 macOS runner（2026-09-30 起 push staging 由 .github/workflows/miniapp-staging.yml 自动跑本阶段）。
 #   · 所以流程是：本机 `--build-only`（构建 + 配置守卫 + 产物守卫，两道都过）→ 同步物料 →
 #     服务器上 `--skip-build`（守卫再跑一遍）→ miniprogram-ci 上传 + 生成体验版二维码。
 # 前置：.env 里配 LQG_WX_APPID 与 LQG_MINIPROGRAM_KEY（本机绝对路径；密钥绝不进仓库）。

@@ -15,7 +15,8 @@
 #      LQG_TEST_SSH_KEY        ← CI 专用 SSH 私钥（公钥已加到测试机 root 的 authorized_keys）
 #      LQG_TEST_HOST           ← 测试机 IP（118.178.109.11）
 #
-# 2. **小程序上传**（`deploy.sh miniapp`）**故意不放进 CI**：
+# 2. **小程序上传**（`deploy.sh miniapp`）**不在本工作流里**（2026-09-30 起由 miniapp-staging.yml 自动做：
+#    macOS runner 构建 → 测试机固定 IP 上传；下面是为什么不能在这里用 Linux runner 直接传）：
 #    微信要求上传来源 IP 在「开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」里，
 #    而 GitHub 托管 runner 的出口 IP 每次都不同（官方只公布 IP 段、不给固定 IP）→ 白名单根本没法配。
 #    所以小程序仍由**固定 IP 的机器**发：本机或测试机，命令 `bash code/deploy/test/deploy.sh miniapp`。
@@ -173,5 +174,5 @@ jobs:
             echo "- 分支：\`${GITHUB_REF_NAME}\`　提交：\`${GITHUB_SHA:0:12}\`"
             echo "- 站点：https://songjian.tianda.studio"
             echo "- 提交号自查：\`GET /lqg/sys/ping\` 的 \`buildCommit\` 应等于上面的提交号"
-            echo "- ★ 小程序体验版**不在这一步**：白名单要求固定 IP，请在本机跑 \`bash code/deploy/test/deploy.sh miniapp\`"
+            echo "- 小程序体验版由另一个工作流 miniapp-staging 自动上传（小程序文件有变更时）"
           } >> "$GITHUB_STEP_SUMMARY"
