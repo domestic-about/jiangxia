@@ -45,3 +45,6 @@ code/RuoYi-Vue-Plus/logs/
 code/RuoYi-Vue-Plus/ruoyi-admin/logs/
 *.flattened-pom.xml
 logs/
+# 执行看门狗的运行日志（doc/waves/ops/watchdog.sh 每分钟写一次，本机专用；doc/waves/ops/.gitignore 里也有）
+# ★ 它曾在 c222a6b 被误提交，.gitignore 对已跟踪的文件不生效 —— 所以同时做了 git rm --cached
+doc/waves/ops/watchdog*.log
