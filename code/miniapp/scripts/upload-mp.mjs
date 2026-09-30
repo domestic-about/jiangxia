@@ -274,6 +274,12 @@ const project = new ci.Project({
   ignores: ['node_modules/**/*'],
 })
 
+// ★ 2026-09-30 CI 连续两次「Detected unsettled top-level await … ci.upload」、Node 以退出码 13 结束：
+//   miniprogram-ci 2.1.x 把编译放到子进程里做（summer-compiler forkProcess），等它的这段时间主进程这边
+//   可能一个活动句柄都没有 → 事件循环清空，Node 认为 await 永远等不到、直接退出（不是微信拒绝，也没有报错）。
+//   会不会碰上看时机（同一套脚本 20:18 成功过）。上传 / 出二维码期间挂一个空定时器把进程撑住，结束后清掉。
+const keepAlive = setInterval(() => {}, 1000)
+
 console.log(`[upload:mp] 上传版本 ${version}（robot ${ROBOT}）…`)
 await ci.upload({
   project,
@@ -299,3 +305,5 @@ if (!IS_PROD) {
   console.log(`[upload:mp] ✓ 二维码：${qr}`)
   console.log('[upload:mp] 二维码**不要提交进仓库**（已经落在 dist/，git 忽略了 code/miniapp/dist）')
 }
+
+clearInterval(keepAlive)
