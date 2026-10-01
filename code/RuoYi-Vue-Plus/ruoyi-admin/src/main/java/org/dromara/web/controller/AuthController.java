@@ -107,7 +107,8 @@ public class AuthController {
         Long userId = LoginHelper.getUserId();
         scheduledExecutorService.schedule(() -> {
             SseMessageDto dto = new SseMessageDto();
-            dto.setMessage(DateUtils.getTodayHour(new Date()) + "好，欢迎登录 RuoYi-Vue-Plus 后台管理系统");
+            // 飞书 2026-10-01 工作台行20：右上角「通知公告」里的欢迎语不再出现上游框架名
+            dto.setMessage(DateUtils.getTodayHour(new Date()) + "好，欢迎登录类器官样本管理系统");
             dto.setUserIds(List.of(userId));
             SseMessageUtils.publishMessage(dto);
         }, 5, TimeUnit.SECONDS);

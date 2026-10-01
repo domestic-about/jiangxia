@@ -121,7 +121,7 @@ const patient = m.locator('.qce__group').first().locator('input').first()
 await patient.fill(stamp); await wait(m, 400)
 check('③ 改了字段后页签显示「未保存」', (await tabStatus())[0] === '未保存', JSON.stringify(await tabStatus()))
 const saveResp = m.waitForResponse(r => r.url().includes('/sample-qc') && r.request().method() === 'PUT', { timeout: 15000 }).catch(() => null)
-await m.locator('.qce__btn--p').click()
+await m.locator('.qce__btn--save').click()
 const sr = await saveResp
 await wait(m, 2500)
 check('③ 保存请求成功', !!sr && (await sr.json()).code === 200)
@@ -177,12 +177,12 @@ for (let k = 0; k < nScore; k++) {
 }
 const pageTotal = (await m.locator('.qce__total-v').textContent()).trim()
 check('④ 四项都选了出合计', nScore === 4 && /^\d+$/.test(pageTotal), `合计 ${pageTotal}`)
-await m.locator('.qce__btn--p').click(); await wait(m, 3000)
+await m.locator('.qce__btn--save').click(); await wait(m, 3000)
 check('④ 保存后评分页签是「草稿」', (await tabStatus())[2] === '草稿', JSON.stringify(await tabStatus()))
 
 // ⑦ 完成并同步 → 撤回（样本质控表）
 await m.locator('.qce__tab').nth(0).click(); await wait(m, 600)
-await m.locator('.qce__btn--s').nth(1).click(); await confirmModal(); await wait(m, 3500)
+await m.locator('.qce__btn--publish').click(); await confirmModal(); await wait(m, 3500)
 check('⑦ 完成并同步后是「已完成」', (await tabStatus())[0] === '已完成', JSON.stringify(await tabStatus()))
 // ② 已完成的文档出现在「质控文档」页签后，卡片右上角有「编辑」（要等后台把内部版渲染完才会列出来）
 const editUrl = m.url()
@@ -198,11 +198,11 @@ if (edits) {
 } else {
   await m.goto(editUrl, { waitUntil: 'networkidle' }); await wait(m, 3000)
 }
-await m.locator('.qce__btn--s').nth(1).click(); await confirmModal(); await wait(m, 3000)
+await m.locator('.qce__btn--publish').click(); await confirmModal(); await wait(m, 3000)
 check('⑦ 撤回后回到「草稿」', (await tabStatus())[0] === '草稿', JSON.stringify(await tabStatus()))
 
 // ⑧ 预览
-await m.locator('.qce__btn--s').nth(0).click()
+await m.locator('.qce__preview').click()
 let pagesShown = 0
 for (let k = 0; k < 30; k++) {
   await wait(m, 2000)

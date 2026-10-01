@@ -33,6 +33,17 @@ scroll-view {
   white-space: nowrap;
 }
 
+/* 长标签收一档字号（FieldRow 的 titleClass；wd-input 的字号在内层 label-inner 上，要一起盖） */
+.lqg-fr-sm,
+.lqg-fr-sm .wd-input__label-inner {
+  font-size: 14px;
+}
+
+.lqg-fr-xs,
+.lqg-fr-xs .wd-input__label-inner {
+  font-size: 13px;
+}
+
 .lqg-fr-ta {
   text-align: right;
   min-height: 44px;

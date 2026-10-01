@@ -238,9 +238,10 @@ function bodyOf(type: QcDocType): Record<string, unknown> {
   return Object.fromEntries(Object.entries(scoreForm).map(([k, v]) => [k, v || null]))
 }
 
-async function save() {
+/** 保存当前页签；返回是否成功（「保存并同步」要据此决定继续不继续）。`quiet` = 不弹「已保存」 */
+async function save(quiet = false): Promise<boolean> {
   if (saving.value || !sampleId.value) {
-    return
+    return false
   }
   const tab = activeTab.value
   saving.value = true
@@ -250,22 +251,32 @@ async function save() {
     await load()
     // 与工作台一致：保存即重新出一版预览（异步，不等它）
     renderQcDoc(sampleId.value, tab.kind).catch(() => {})
-    uni.showToast({
-      title: statusOf(tab.type) === 'published' ? '已保存' : '已保存草稿',
-      icon: 'none',
-    })
+    if (!quiet) {
+      uni.showToast({
+        title: statusOf(tab.type) === 'published' ? '已保存' : '已保存草稿',
+        icon: 'none',
+      })
+    }
+    return true
   }
   catch {
     // request 已弹过后端给的原因
+    return false
   }
   finally {
     saving.value = false
   }
 }
 
+/** 「预览 ›」能不能点：有没保存的改动（预览的是保存后的内容）、正在保存 / 同步时不能 */
+const canPreview = computed(() => !currentDirty.value && !saving.value && !publishing.value)
+
 function preview() {
   if (currentDirty.value) {
     uni.showToast({ title: '先点「保存」，预览的是保存后的内容', icon: 'none' })
+    return
+  }
+  if (!canPreview.value) {
     return
   }
   const tab = activeTab.value
@@ -277,21 +288,28 @@ function togglePublish() {
   if (publishing.value || !sampleId.value) {
     return
   }
-  if (currentDirty.value) {
-    uni.showToast({ title: '先把这一页的改动保存，再完成并同步', icon: 'none' })
-    return
-  }
   const tab = activeTab.value
   const published = currentPublished.value
+  // 撤回会按服务器的内容重载表单 —— 有没保存的改动时先让人保存，免得改动被冲掉
+  if (published && currentDirty.value) {
+    uni.showToast({ title: '先把这一页的改动保存，再撤回', icon: 'none' })
+    return
+  }
+  const saveFirst = !published && currentDirty.value
   uni.showModal({
-    title: published ? '撤回' : '完成并同步',
+    title: published ? '撤回' : saveFirst ? '保存并同步' : '完成并同步',
     content: published
       ? '确定撤回吗？撤回后送检方立刻看不到这份文档。'
-      : '确定「完成并同步」这份文档吗？完成后送检方就能看到它。',
+      : saveFirst
+        ? '先保存这一页的改动，再「完成并同步」。完成后送检方就能看到它。'
+        : '确定「完成并同步」这份文档吗？完成后送检方就能看到它。',
     // ★ 微信 showModal 的按钮文字最多 4 个字（超了直接报错不弹）
     confirmText: published ? '撤回' : '确定同步',
     success: async (res) => {
       if (!res.confirm) {
+        return
+      }
+      if (saveFirst && !(await save(true))) {
         return
       }
       publishing.value = true
@@ -401,9 +419,7 @@ onLoad((query) => {
               <text v-if="hasViability" class="qce__link qce__link--danger" @click="removeViability">移除</text>
             </view>
           </view>
-        </view>
-
-        <view class="qce__group">
+          <!-- 飞书 2026-10-01 小程序行23①：与上面几项同一张卡片 -->
           <FieldRow label="临床诊断 / 既往治疗" control="textarea" :model-value="sampleForm.clinicalDiagnosis" @update:model-value="(v: string) => sampleForm.clinicalDiagnosis = v" />
           <FieldRow label="收样描述" control="textarea" :model-value="sampleForm.receiveDesc" @update:model-value="(v: string) => sampleForm.receiveDesc = v" />
         </view>
@@ -493,16 +509,36 @@ onLoad((query) => {
       <view class="lqg-bar-spacer qce__spacer" />
     </template>
 
+    <!-- 飞书 2026-10-01 小程序行23②：「完成并同步」是这一页的终点动作 → 最显眼、放右边；「保存」次要、放左边；
+         「预览」降为提示行右侧的文字按钮，有没保存的改动 / 正在保存或同步时变灰（点了说明原因）。
+         有改动时右边按钮叫「保存并同步」：先保存再同步，不用先点保存。已同步的文档右边是「撤回」（次要样式）。 -->
     <view v-if="!loading && !failed && bundle && isInternal" class="lqg-bar qce__bar">
-      <text class="qce__bar-hint">
-        {{ currentDirty ? '有改动还没保存' : currentPublished ? '已同步给送检方 · 修改后需重新同步' : '草稿：「完成并同步」之后送检方才看得到' }}
-      </text>
+      <view class="qce__bar-row">
+        <text class="qce__bar-hint">
+          {{ currentDirty ? '有改动还没保存' : currentPublished ? '已同步给送检方 · 修改后需重新同步' : '草稿：「完成并同步」之后送检方才看得到' }}
+        </text>
+        <text class="qce__preview" :class="{ 'qce__preview--off': !canPreview }" @click="preview">预览 ›</text>
+      </view>
       <view class="qce__btns">
-        <button class="qce__btn qce__btn--s" :disabled="publishing" @click="preview">预览</button>
-        <button class="qce__btn qce__btn--s" :disabled="publishing || currentDirty" @click="togglePublish">
-          {{ currentPublished ? '撤回' : '完成并同步' }}
+        <button class="qce__btn qce__btn--s qce__btn--save" :disabled="saving || publishing" @click="save()">
+          {{ saving && !publishing ? '保存中…' : '保存' }}
         </button>
-        <button class="qce__btn qce__btn--p" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+        <button
+          v-if="currentPublished"
+          class="qce__btn qce__btn--s qce__btn--publish"
+          :disabled="publishing || saving"
+          @click="togglePublish"
+        >
+          撤回
+        </button>
+        <button
+          v-else
+          class="qce__btn qce__btn--p qce__btn--publish"
+          :disabled="publishing || saving"
+          @click="togglePublish"
+        >
+          {{ publishing ? '同步中…' : currentDirty ? '保存并同步' : '完成并同步' }}
+        </button>
       </view>
     </view>
 
@@ -719,7 +755,27 @@ onLoad((query) => {
   gap: var(--lqg-sp-3);
 }
 
+.qce__bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lqg-sp-4);
+}
+
+.qce__preview {
+  flex: none;
+  font-size: var(--lqg-fs-sm);
+  font-weight: var(--lqg-fw-semibold);
+  color: var(--lqg-primary);
+}
+
+.qce__preview--off {
+  color: var(--lqg-ink-3);
+}
+
 .qce__bar-hint {
+  flex: 1;
+  min-width: 0;
   font-size: var(--lqg-fs-xs);
   color: var(--lqg-ink-3);
 }
@@ -749,9 +805,11 @@ onLoad((query) => {
   background: var(--lqg-primary-soft);
 }
 
+/* 主按钮（完成并同步）：更宽、带品牌投影 —— 这一页最显眼的动作 */
 .qce__btn--p {
-  flex: 1.3;
+  flex: 1.8;
   color: var(--lqg-on-primary);
   background: var(--lqg-primary);
+  box-shadow: var(--lqg-shadow-brand);
 }
 </style>

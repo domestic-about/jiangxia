@@ -324,7 +324,7 @@ async function submit() {
           :maxlength="100"
           :readonly="!editable"
           :model-value="form.cryoName"
-          placeholder="选样本后自动填「内部编号-」"
+          placeholder="选样本后自动填"
           @update:model-value="(v: string) => form.cryoName = v"
         />
 
@@ -376,7 +376,7 @@ async function submit() {
           :maxlength="100"
           :readonly="!editable"
           :model-value="form.ln2Location"
-          :placeholder="needLn2Location ? '必填，例如 1号罐-1架-A2' : '转液氮时填，例如 1号罐-1架-A2'"
+          :placeholder="needLn2Location ? '必填，如 1号罐-1架' : '转液氮时填'"
           @update:model-value="(v: string) => form.ln2Location = v"
         />
 
@@ -389,7 +389,7 @@ async function submit() {
           @update:model-value="(v: string) => form.remark = v"
         />
 
-        <wd-cell v-if="editable" title="代数" required>
+        <wd-cell v-if="editable" title="代数" required marker-side="after">
           <view class="cryo__passage">
             <text class="cryo__passage-p">P</text>
             <input

@@ -94,16 +94,18 @@ const isPicker = computed(() => props.control === 'date' || props.control === 'd
 const placeholderText = computed(() => props.placeholder || (isPicker.value ? '请选择' : '请填写'))
 
 /**
- * 标签太长时「上下排」：标签独占一行，值（和 ›）在下一行靠右。
+ * 长标签：**仍和值同一行**，标签字号收一档（飞书 2026-10-01 小程序行24）。
  *
- * ★ 2026-09-30 飞书「小程序」第 13 行：「琼脂糖包埋样本送样时间」左右排时最后一个「间」字单独掉到第二行，
- *   「-80度超低温冰箱转移至液氮时间」也被折成两行。左右排时标签区只有约 10 个汉字宽，
- *   而值一旦选好（`2026-09-29 14:22`）也要占住右边，两边都不能挤 —— 所以超过这个宽度就换成上下排。
- * 宽度按「汉字 = 1、ASCII = 0.55」估（`-80` 这类比汉字窄），阈值 10：
- *   琼脂糖包埋样本时间（9）照旧左右排；琼脂糖包埋样本送样时间（11）、-80…液氮时间（≈14.7）上下排。
- * 按钮组（seg）不参与：它右边的按钮本身就窄，「暂存-80度超低温冰箱」左右排放得下。
+ * 演变：09-30 第 13 行「琼脂糖包埋样本送样时间」左右排时最后一个字掉到第二行 → 当时改成「上下排」（标签独占一行、
+ *   值在下一行）；10-01 第 24 行甲方又指出上下排也算「标题和右侧文字换行了」，要求长标题也不换行。
+ * 现在：宽度按「汉字 = 1、ASCII = 0.55」估，
+ *   ≤ 10 个字宽：15px（正常）；≤ 12.5：14px（如「琼脂糖包埋样本送样时间」11）；更长：13px（「-80度超低温冰箱转移至液氮时间」≈14.7）。
+ *   标签区按「字宽 × 字号」给足、单行不折；值区拿剩下的，长标签那一行的值允许在「日期 / 时间」之间折成两行（只在空格处折），
+ *   保证整段时间都看得见。
+ * 只有多行文本（textarea）遇到长标签还上下排：wd-textarea 的标签不认自定义 class、没法缩字号（目前也没有这种字段）。
  */
 const LONG_LABEL_WIDTH = 10
+const BASE_FS = 15
 function labelWidth(text: string): number {
   let width = 0
   for (const ch of text) {
@@ -111,22 +113,27 @@ function labelWidth(text: string): number {
   }
   return width
 }
-const stacked = computed(() => props.control !== 'seg' && labelWidth(props.label) > LONG_LABEL_WIDTH)
+const labelW = computed(() => labelWidth(props.label))
+const labelFs = computed(() => (labelW.value <= LONG_LABEL_WIDTH ? BASE_FS : labelW.value <= 12.5 ? 14 : 13))
+const isLong = computed(() => labelFs.value < BASE_FS)
+/** 传给 wot 组件的标题 class（全局样式见 App.vue：lqg-fr-nowrap / lqg-fr-sm / lqg-fr-xs） */
+const titleClass = computed(() => `lqg-fr-nowrap${labelFs.value === 14 ? ' lqg-fr-sm' : labelFs.value === 13 ? ' lqg-fr-xs' : ''}`)
+const stacked = computed(() => props.control === 'textarea' && isLong.value)
 
 /**
- * 左右排时标签区的宽度：**按标签自身宽度给足**（汉字数 + 必填星号 + 1 个字的余量），标签一律单行。
+ * 左右排时标签区的宽度：**按标签自身宽度给足**（字宽 + 必填星号 + 余量）× 字号，标签一律单行。
  *
  * ★ 2026-09-30 飞书「小程序」第 21 行「所有表单项的标题都不要换行」：wd-input 的标签区默认只占 33%
  *   （约 6 个半汉字），「类器官来源类型」（7 个字）第 7 个字掉到第二行；wd-cell 默认左右各一半也会折。
- *   现在所有左右排的行（输入、选择、按钮组、备注）都按这个宽度给标签区，值区拿剩下的；
- *   超过 10 个字宽的标签走上面的「上下排」，不在这里挤。
- * 按钮组那一行原来就是这么收窄的（三态按钮「男 / 女 / 未知」挤不下，2026-09-30 真机截图），现在统一。
+ *   现在所有左右排的行（输入、选择、按钮组、备注）都按这个宽度给标签区，值区拿剩下的。
+ *   余量：正常标签 1 个字；长标签只留 0.6 个字（把地方让给右边的值）。
  */
 const titleWidth = computed(() => {
   if (stacked.value) {
     return ''
   }
-  return `${Math.ceil(labelWidth(props.label) + (props.required ? 1 : 0)) + 1}em`
+  const em = labelW.value + (props.required ? 1 : 0) + (isLong.value ? 0.6 : 1)
+  return `${Math.ceil(em * labelFs.value)}px`
 })
 
 function onPick() {
@@ -148,9 +155,8 @@ function onPick() {
     v-if="readonly || control === 'seg'"
     :title="label"
     :title-width="titleWidth"
-    custom-title-class="lqg-fr-nowrap"
+    :custom-title-class="titleClass"
     :required="required" marker-side="after"
-    :vertical="stacked"
     value-align="right"
   >
     <view class="fr__val">
@@ -165,16 +171,15 @@ function onPick() {
     v-else-if="isPicker"
     :title="label"
     :title-width="titleWidth"
-    custom-title-class="lqg-fr-nowrap"
+    :custom-title-class="titleClass"
     :required="required" marker-side="after"
-    :vertical="stacked"
     clickable
     value-align="right"
     @click="onPick"
   >
     <view class="fr__val">
       <text v-if="ocrMark" class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
-      <text v-if="display" class="fr__text fr__text--one" :class="{ 'lqg-mono': mono }">{{ display }}</text>
+      <text v-if="display" class="fr__text" :class="{ 'lqg-mono': mono, 'fr__text--one': !isLong, 'fr__text--wrap': isLong }">{{ display }}</text>
       <text v-else class="fr__ph">{{ placeholderText }}</text>
     </view>
     <template #right-icon>
@@ -194,6 +199,7 @@ function onPick() {
     :label="label"
     :label-width="titleWidth"
     custom-textarea-class="lqg-fr-ta"
+    disable-default-padding
     :required="required" marker-side="after"
     :model-value="modelValue"
     :placeholder="placeholderText"
@@ -208,28 +214,11 @@ function onPick() {
       :placeholder="placeholderText"
       :maxlength="maxlength > 0 ? maxlength : 500"
       custom-textarea-class="lqg-fr-ta lqg-fr-ta--left"
+      disable-default-padding
       auto-height
       no-border
       @update:model-value="(v: string) => emit('update:modelValue', v)"
     />
-  </wd-cell>
-
-  <!-- 文本 / 数字，标签超长：标签一行，输入框在下一行靠右 -->
-  <wd-cell v-else-if="stacked" :title="label" :required="required" marker-side="after" vertical>
-    <wd-input
-      :type="control === 'digit' ? 'digit' : 'text'"
-      align-right
-      no-border
-      :placeholder="placeholderText"
-      :maxlength="maxlength > 0 ? maxlength : -1"
-      :custom-input-class="mono ? 'lqg-mono' : ''"
-      :model-value="modelValue"
-      @update:model-value="(v: string) => emit('update:modelValue', v)"
-    >
-      <template v-if="ocrMark" #suffix>
-        <text class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
-      </template>
-    </wd-input>
   </wd-cell>
 
   <!-- 文本 / 数字：原地输入 -->
@@ -237,7 +226,7 @@ function onPick() {
     v-else
     :label="label"
     :label-width="titleWidth"
-    custom-label-class="lqg-fr-nowrap"
+    :custom-label-class="titleClass"
     :type="control === 'digit' ? 'digit' : 'text'"
     align-right
     :required="required" marker-side="after"
@@ -293,6 +282,13 @@ function onPick() {
 
 .fr__text--one {
   white-space: nowrap;
+}
+
+/* 长标签那一行的值：只在空格处折（「2026-09-29 / 14:22」），字号与收小后的标签一致 */
+.fr__text--wrap {
+  font-size: 14px;
+  text-align: right;
+  word-break: keep-all;
 }
 
 .fr__ph {
