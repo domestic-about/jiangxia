@@ -77,8 +77,8 @@ export interface CryoFormValue {
   frozenBy: string
   remark: string
   /**
-   * -80度超低温冰箱转移至液氮时间（`yyyy-MM-dd`）：**只显示、不提交**。
-   * 登记转液氮走批次详情弹层的「转液氮」，本页保存不带这个键 = 不动它。
+   * -80度超低温冰箱转移至液氮时间（`yyyy-MM-dd`）：新增 / 修改时可直接选（飞书 2026-10-03 小程序行12，与工作台抽屉一致）；
+   * 空串 = 还没转液氮。批次详情弹层的「转液氮」仍可登记，两条路写的是同一列。
    */
   toLn2Time: string
 }
@@ -140,7 +140,7 @@ export function toCryoFormValue(detail: Partial<CryoBatchRow> | null | undefined
  * ★ `initQty` 是**冻存数量 = 初始支数**，修改模式下**可改**（CR-20260917-04）；
  *   改小到让某一步剩余为负时后端 400，前端把提示原样显示、**不自己算**。
  * ★ **不带 `remainingQty`**（后端入参里没有这个键，剩余永远读时算 —— ADR-0010）。
- * ★ **不带 `toLn2Time`**：转液氮在批次详情弹层的「转液氮」里登记（本页只显示它，patch 语义下不传 = 不动）。
+ * ★ **带 `toLn2Time`**（飞书 2026-10-03 小程序行12）：新增时直接选；修改时原样带回 = 不变。空串发 `null` = 没转液氮。
  */
 export function cryoPayload(form: CryoFormValue): Record<string, unknown> {
   return {
@@ -152,6 +152,7 @@ export function cryoPayload(form: CryoFormValue): Record<string, unknown> {
     density: form.density.trim(),
     inMinus80: form.inMinus80,
     ln2Location: form.ln2Location.trim(),
+    toLn2Time: form.toLn2Time || null,
     frozenBy: form.frozenBy.trim(),
     remark: form.remark.trim(),
   }
@@ -179,6 +180,10 @@ export function cryoFormProblem(form: CryoFormValue): string {
   }
   if (!form.freezeTime) {
     return '请选择冻存时间'
+  }
+  // 转液氮不得早于冻存（后端 CryoBalanceChecker.requireLn2NotBeforeFreeze 同一条）
+  if (form.toLn2Time && form.toLn2Time < form.freezeTime) {
+    return `转移至液氮时间不能早于冻存时间 ${form.freezeTime}`
   }
   if (!/^\d+$/.test(form.initQty) || Number(form.initQty) <= 0) {
     return '冻存数量必须是正整数'

@@ -62,6 +62,8 @@ const saving = ref(false)
 const detail = ref<Partial<CryoBatchRow> | null>(null)
 const form = ref<CryoFormValue>(emptyCryoForm())
 const pickerValue = ref<number>(Date.now())
+/** 日期面板这次给哪一格选：冻存时间 / 转移至液氮时间（两格共用一个面板） */
+const pickerField = ref<'freezeTime' | 'toLn2Time'>('freezeTime')
 const pickerRef = ref<{ open: () => void } | null>(null)
 const samplePickerRef = ref<{ open: () => void } | null>(null)
 
@@ -194,11 +196,13 @@ function toMs(value: string): number {
   return Number.isNaN(ms) ? Date.now() : ms
 }
 
-function openDatePicker() {
+function openDatePicker(field: 'freezeTime' | 'toLn2Time') {
   if (!editable.value) {
     return
   }
-  pickerValue.value = toMs(form.value.freezeTime)
+  pickerField.value = field
+  // 转液氮时间还没填时，面板从冻存时间那天起（不早于冻存时间），冻存时间也没填就从今天起
+  pickerValue.value = toMs(form.value[field] || (field === 'toLn2Time' ? form.value.freezeTime : ''))
   pickerRef.value?.open()
 }
 
@@ -214,7 +218,7 @@ function onPicked(event: { value: number | string }) {
   if (Number.isNaN(ms)) {
     return
   }
-  form.value.freezeTime = formatMs(ms)
+  form.value[pickerField.value] = formatMs(ms)
 }
 
 /** 代数：输入框只收 1~3 位数字，拼回 `P3` */
@@ -290,7 +294,7 @@ async function submit() {
 
       <text v-if="lastModified" class="cryo__meta">{{ lastModified }}</text>
 
-      <NoteBar v-if="mode !== 'new'" text="取走、补入、转液氮：在「内部管理 → -80 冻存」里点这一批登记" />
+      <NoteBar v-if="mode !== 'new'" text="取走、补入：在「内部管理 → -80 冻存」里点这一批登记" />
 
       <!-- 字段先后照甲方 -80 冻存模板（2026-09-24「请参照我发你的模板，理解先后顺序」）：
            冻存时间、冻存样品、冻存数量/支、冻存密度、暂存-80、冻存人、转移至液氮时间、液氮储存位置、备注；
@@ -314,7 +318,7 @@ async function submit() {
           :readonly="!editable"
           :model-value="form.freezeTime"
           placeholder="请选择日期"
-          @pick="openDatePicker"
+          @pick="openDatePicker('freezeTime')"
         />
 
         <FieldRow
@@ -367,8 +371,16 @@ async function submit() {
           @update:model-value="(v: string) => form.frozenBy = v"
         />
 
-        <!-- 只显示：转液氮在批次详情弹层的「转液氮」里登记（本页保存不带这个键 = 不动它） -->
-        <FieldRow label="-80度超低温冰箱转移至液氮时间" readonly :model-value="form.toLn2Time" />
+        <!-- 飞书 2026-10-03 小程序行12：新增 / 修改时可直接选（与工作台抽屉一致）；没转液氮就留空。
+             批次详情弹层的「转液氮」仍可登记，写的是同一列。 -->
+        <FieldRow
+          label="-80度超低温冰箱转移至液氮时间"
+          control="date"
+          :readonly="!editable"
+          :model-value="form.toLn2Time"
+          placeholder="未转液氮不填"
+          @pick="openDatePicker('toLn2Time')"
+        />
 
         <FieldRow
           label="液氮储存位置"

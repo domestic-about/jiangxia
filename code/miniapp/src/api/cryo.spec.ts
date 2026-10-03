@@ -11,6 +11,7 @@ import {
   cryoLedgerCell,
   cryoLedgerSub,
   cryoLedgerTone,
+  cryoPayload,
   cryoPlaceText,
   cryoQtyText,
   cryoTabText,
@@ -175,12 +176,17 @@ describe('cryoFormProblem：只管「填没填、格式对不对」', () => {
     expect(cryoFormProblem({ ...valid(), inMinus80: 'Y', ln2Location: '' })).toBe('')
   })
 
-  it('已登记转液氮的批次不能把液氮位置清掉（转移时间只显示、不提交）', () => {
-    const moved = toCryoFormValue({ inMinus80: 'Y', toLn2Time: '2026-08-25', ln2Location: null })
-    expect(moved.toLn2Time).toBe('2026-08-25')
+  it('已登记转液氮的批次不能把液氮位置清掉', () => {
+    const moved = toCryoFormValue({ inMinus80: 'Y', toLn2Time: '2026-09-25', ln2Location: null })
+    expect(moved.toLn2Time).toBe('2026-09-25')
     expect(moved.ln2Location).toBe('')
-    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-08-25', ln2Location: '' })).toContain('液氮储存位置')
-    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-08-25', ln2Location: '2号罐' })).toBe('')
+    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-09-25', ln2Location: '' })).toContain('液氮储存位置')
+    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-09-25', ln2Location: '2号罐' })).toBe('')
+  })
+
+  it('转移至液氮时间不得早于冻存时间（同一天可以；与后端同一条）', () => {
+    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-09-01', ln2Location: '2号罐' })).toContain('不能早于冻存时间 2026-09-02')
+    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-09-02', ln2Location: '2号罐' })).toBe('')
   })
 
   it('★ 不管支数够不够（「会让某一步为负」只有后端能判，前端不写第二份）', () => {
@@ -228,5 +234,21 @@ describe('取用登记行的纯文案', () => {
     expect(isEdited({ edited: true })).toBe(true)
     expect(editedText({ edited: true, updateByName: '李工' })).toBe('已改 · 李工')
     expect(editedText({ edited: false, updateByName: '李工' })).toBe('')
+  })
+})
+
+describe('cryoPayload：转移至液氮时间随表单提交（飞书 2026-10-03 小程序行12）', () => {
+  it('选了就带上 yyyy-MM-dd', () => {
+    const f = { ...emptyCryoForm(), toLn2Time: '2026-10-03' }
+    expect(cryoPayload(f).toLn2Time).toBe('2026-10-03')
+  })
+
+  it('没选 = null（还没转液氮），不发空串', () => {
+    expect(cryoPayload(emptyCryoForm())).toHaveProperty('toLn2Time', null)
+  })
+
+  it('修改时原样带回已登记的时间 = 不变', () => {
+    const f = toCryoFormValue({ toLn2Time: '2026-09-25 00:00:00', ln2Location: '2号罐' })
+    expect(cryoPayload(f).toLn2Time).toBe('2026-09-25')
   })
 })
