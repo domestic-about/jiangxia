@@ -18,9 +18,9 @@ export default {
     growthDesc: '类器官生长情况',
     plannedDrugScreen: '预计筛药',
     feedbackTime: '反馈时间',
-    timePlaceholder: 'yyyy-MM-dd，也可直接手输文字',
+    timePlaceholder: '选日期，或直接输入文字',
     pickDate: '选日期',
-    timeHint: '选日期会填 yyyy-MM-dd；也可以直接手输文字（如「约第 5 天」）'
+    timeHint: '可以选日期，也可以直接输入文字（如「约第 5 天」）'
   },
 
   // ── 类器官质量评分表页签（editor/ScoreTab.vue）─────────────────────────────
@@ -33,9 +33,9 @@ export default {
     points: '{n} 分',
     total: '合计',
     totalPending: '四项都选了才出合计',
-    immediateHint: '页面上的分值与合计是即时反馈；保存只提交四个档位，落库分值由后端按字典回填。',
-    persisted: '已落库（后端回填）：{items}，合计 {total}',
-    persistedEmpty: '已落库（后端回填）：合计 —（还有项没选）',
+    immediateHint: '选好档位后分值与合计会立即显示；保存后以系统按评分标准算出的分值为准。',
+    persisted: '已保存的分值：{items}，合计 {total}',
+    persistedEmpty: '已保存的分值：合计 —（还有项没选）',
     // 四个变量名（sys_dict_type.dict_name 的原文）；选项文字与分值来自字典，不在这里写
     preCulture: '培养前样本评分',
     cultureDays: '培养天数',

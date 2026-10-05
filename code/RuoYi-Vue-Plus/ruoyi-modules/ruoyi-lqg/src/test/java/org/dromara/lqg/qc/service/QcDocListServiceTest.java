@@ -86,4 +86,36 @@ class QcDocListServiceTest {
         assertEquals(QcDocListService.PROGRESS_DONE, vo.getProgress());
         assertEquals(3, vo.getPublishedCount());
     }
+
+    @Test
+    @DisplayName("⑦ 编辑页打开时建的空草稿、从没保存过（update_time = create_time）→ 仍算未填写，不计最近修改（UX WEB-02）")
+    void openedButNeverSaved() {
+        Date created = new Date(1_000_000L);
+        QcSampleDoc s = new QcSampleDoc();
+        s.setDocStatus("draft");
+        s.setCreateTime(created);
+        s.setUpdateTime(created);
+        QcOrganoidDoc o = new QcOrganoidDoc();
+        o.setDocStatus("draft");
+        o.setCreateTime(created);
+        o.setUpdateTime(new Date(created.getTime() + 300));
+        QcScoreDoc sc = new QcScoreDoc();
+        sc.setDocStatus("draft");
+        sc.setCreateTime(created);
+        sc.setUpdateTime(created);
+        QcDocListVo vo = QcDocListService.toVo(sample("tissue"), s, o, sc);
+        assertEquals(QcDocListService.PROGRESS_NONE, vo.getProgress());
+        assertNull(vo.getSampleQcStatus());
+        assertNull(vo.getOrganoidQcStatus());
+        assertNull(vo.getScoreStatus());
+        assertNull(vo.getLastUpdateTime());
+
+        // 真保存过一次（晚于建行 1 秒以上）→ 草稿、进行中、最近修改 = 保存时间
+        Date saved = new Date(created.getTime() + 60_000L);
+        s.setUpdateTime(saved);
+        QcDocListVo vo2 = QcDocListService.toVo(sample("tissue"), s, o, sc);
+        assertEquals("draft", vo2.getSampleQcStatus());
+        assertEquals(QcDocListService.PROGRESS_DOING, vo2.getProgress());
+        assertEquals(saved, vo2.getLastUpdateTime());
+    }
 }

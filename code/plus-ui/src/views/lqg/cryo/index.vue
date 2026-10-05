@@ -53,7 +53,8 @@
       </el-tabs>
 
       <!-- 筛选区（UI:admin.cryo.list）：内部编号、冻存样品、位置、只看超期、冻存时间区间 -->
-      <el-form ref="queryRef" :model="queryParams" label-width="86px" class="lqg-cryo__filter">
+      <el-form ref="queryRef" :model="queryParams" label-width="86px" class="lqg-cryo__filter" @submit.prevent @keyup.enter="handleQuery">
+        <!-- 筛选框里按回车 = 点「搜索」（工作台 UX 测试 WEB-23；与质控文档列表一致） -->
         <el-row :gutter="12">
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.cryo.filter.internalNo')" prop="internalNo">
@@ -136,8 +137,9 @@
         :data="rows"
         border
         :row-class-name="rowClassName"
-        :empty-text="t('lqg.cryo.empty')"
+       
       >
+        <template #empty><TableEmpty :error="loadError" :text="t('lqg.cryo.empty')" @retry="getList" /></template>
         <el-table-column :label="t('lqg.cryo.col.freezeTime')" prop="freezeTime" width="150" align="center" fixed="left">
           <template #default="scope">
             <div class="lqg-cryo__cell">
@@ -146,7 +148,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.cryoName')" prop="cryoName" min-width="210" :show-overflow-tooltip="true">
+        <el-table-column :label="t('lqg.cryo.col.cryoName')" prop="cryoName" width="260" :show-overflow-tooltip="true" fixed="left">
           <template #default="scope">
             <span class="lqg-cryo__mono">{{ scope.row.cryoName || '—' }}</span>
           </template>
@@ -276,6 +278,7 @@ import CryoFlowDrawer from './CryoFlowDrawer.vue';
 import CryoToLn2Dialog from './CryoToLn2Dialog.vue';
 import type { FlowKind } from './flow';
 import { useI18n } from 'vue-i18n';
+import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
 
 /**
  * 工作台「-80 冻存管理」（UI:admin.cryo.list）。
@@ -358,8 +361,12 @@ const onLocationChange = (value: string | null) => {
   handleQuery();
 };
 
+// 最近一次取数失败了没有：失败时表格空白处说「没加载出来」而不是「没有数据」（工作台 UX 测试 WEB-06）
+const loadError = ref(false);
+
 const getList = async () => {
   loading.value = true;
+  loadError.value = false;
   try {
     queryParams.freezeTimeBegin = freezeTimeRange.value?.[0] ?? null;
     queryParams.freezeTimeEnd = freezeTimeRange.value?.[1] ?? null;
@@ -377,6 +384,11 @@ const getList = async () => {
       tabCounts.ln2 = counts.ln2 ?? 0;
       tabCounts.emptied = counts.emptied ?? 0;
     }
+  } catch {
+    // 请求层已经弹过报错；这里把表格清空并标记失败
+    loadError.value = true;
+    rows.value = [];
+    total.value = 0;
   } finally {
     loading.value = false;
   }

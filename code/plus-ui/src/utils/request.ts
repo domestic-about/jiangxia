@@ -166,12 +166,13 @@ service.interceptors.response.use(
   },
   (error: any) => {
     let { message } = error;
+    // 报错说人话（工作台 UX 测试 WEB-15：原来是「后端接口连接异常」「系统接口500异常」）
     if (message == 'Network Error') {
-      message = '后端接口连接异常';
+      message = '连不上服务器，请检查网络后重试';
     } else if (message.includes('timeout')) {
-      message = '系统接口请求超时';
+      message = '服务器响应超时，请稍后重试';
     } else if (message.includes('Request failed with status code')) {
-      message = '系统接口' + message.substr(message.length - 3) + '异常';
+      message = '服务器出错了（' + message.substr(message.length - 3) + '），请稍后重试；一直这样请联系管理员';
     }
     ElMessage({ message: message, type: 'error', duration: 5 * 1000 });
     return Promise.reject(error);

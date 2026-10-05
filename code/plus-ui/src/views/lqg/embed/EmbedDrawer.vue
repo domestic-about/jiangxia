@@ -1,6 +1,6 @@
 <template>
   <div class="lqg-embed-drawer">
-    <el-drawer v-model="visible" :title="title" size="780px" class="lqg-drawer-el" append-to-body :close-on-click-modal="true" @closed="handleClosed">
+    <el-drawer v-model="visible" :title="title" size="780px" class="lqg-drawer-el" append-to-body :close-on-click-modal="false" :before-close="closeGuard.beforeClose" @closed="handleClosed">
       <div v-if="loading" class="lqg-embed-drawer__loading">{{ t('lqg.embed.loading') }}</div>
 
       <template v-else>
@@ -188,7 +188,7 @@
           <el-button v-else type="primary" :loading="submitting" @click="submitSave">
             {{ t('lqg.embed.drawer.save') }}
           </el-button>
-          <el-button @click="visible = false">{{ t('lqg.embed.drawer.cancel') }}</el-button>
+          <el-button @click="closeGuard.requestClose(() => (visible = false))">{{ t('lqg.embed.drawer.cancel') }}</el-button>
         </div>
       </template>
     </el-drawer>
@@ -242,6 +242,7 @@ import { STAIN_ORDER, hasOtherStain, stainProblem, toggleStain } from './stain';
 import { fillText, invalidFill, labChanges } from './verifyFill';
 import type { FillLabKey } from './verifyFill';
 import { useI18n } from 'vue-i18n';
+import { useCloseGuard } from '@/utils/lqgCloseGuard';
 
 const emit = defineEmits<{ (e: 'saved'): void }>();
 
@@ -362,6 +363,9 @@ const invalidRules: ElFormRules = {
  *                     下拉里先放好这一项并选中、带出收样 / 处理时间，仍可改选别的样本。
  *                     调用方只传已核验有效的样本（下拉本来就只列有效样本）。
  */
+// 有改动时按 ESC / 点 × / 点「取消」先问一句；点遮罩不再关（工作台 UX 测试 WEB-04）
+const closeGuard = useCloseGuard(() => form.value, () => visible.value && !loading.value);
+
 const openAdd = (presetSample?: SampleVO | null) => {
   mode.value = 'create';
   form.value = emptyForm();

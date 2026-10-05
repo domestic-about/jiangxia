@@ -82,7 +82,7 @@
     </el-card>
 
     <!-- 核验弹窗：通过（自填的须选「新建」或「归并」）/ 驳回（原因必填） -->
-    <el-dialog v-model="dialog.visible" :title="t('lqg.auth.extuser.dialogTitle')" width="560px" append-to-body :close-on-click-modal="true">
+    <el-dialog v-model="dialog.visible" :title="t('lqg.auth.extuser.dialogTitle')" width="560px" append-to-body :close-on-click-modal="false">
       <el-form label-width="110px">
         <el-form-item :label="t('lqg.auth.extuser.dialogUser')">
           <span>{{ dialog.row?.name }} · <span class="lqg-mono">{{ dialog.row?.phone }}</span></span>
@@ -120,7 +120,7 @@
                 }) }}
               </span>
             </el-form-item>
-            <template v-else>
+            <template v-else-if="dialog.form.selfInputMode === 'merge'">
               <el-form-item :label="t('lqg.auth.extuser.mergeUnit')">
                 <el-select v-model="dialog.form.unitId" style="width: 100%" @change="handleMergeUnitChange">
                   <el-option v-for="u in selectableUnits" :key="u.unitId" :label="u.unitName" :value="u.unitId" />
@@ -221,8 +221,8 @@ const dialog = reactive<{
   submitting: boolean;
   row: ExtUserVO | null;
   form: {
-    action: 'approve' | 'reject';
-    selfInputMode: 'create' | 'merge';
+    action: '' | 'approve' | 'reject';
+    selfInputMode: '' | 'create' | 'merge';
     unitId?: string | number | null;
     groupId?: string | number | null;
     reason?: string;
@@ -254,10 +254,12 @@ const handleMergeUnitChange = async (unitId: string | number) => {
 
 const handleVerify = async (row: ExtUserVO) => {
   dialog.row = row;
-  // 已核验的进来默认「改归组」：approve + 预选当前单位 / 组别
+  // 已核验的进来默认「改归组」：approve + 预选当前单位 / 组别。
+  // 待核验的**不预选**（工作台 UX 测试 WEB-03：原来默认「通过 + 新建单位」，点一下确定就不可逆地通过、还建出重复单位）
+  const verified = row.bindStatus === 'verified';
   dialog.form = {
-    action: 'approve',
-    selfInputMode: 'create',
+    action: verified ? 'approve' : '',
+    selfInputMode: '',
     unitId: row.unitId ?? null,
     groupId: row.groupId ?? null,
     reason: ''
@@ -273,6 +275,14 @@ const submitVerify = async () => {
     return;
   }
   const form = dialog.form;
+  if (!form.action) {
+    proxy?.$modal.msgWarning(t('lqg.ux.extVerify.pickAction'));
+    return;
+  }
+  if (form.action === 'approve' && dialog.row.selfInput && !form.selfInputMode) {
+    proxy?.$modal.msgWarning(t('lqg.ux.extVerify.pickMode'));
+    return;
+  }
   const payload: Record<string, unknown> = { action: form.action };
   if (form.action === 'reject') {
     if (!form.reason || !String(form.reason).trim()) {
@@ -298,6 +308,24 @@ const submitVerify = async () => {
     if (form.unitId && form.groupId) {
       payload.unitId = form.unitId;
       payload.groupId = form.groupId;
+    }
+  }
+  // 通过待核验的人是不可逆的（还可能新建单位 / 组别）：写清楚后果再确认一次
+  if (form.action === 'approve' && dialog.row.bindStatus !== 'verified') {
+    const createLine =
+      dialog.row.selfInput && form.selfInputMode === 'create'
+        ? t('lqg.ux.extVerify.confirmCreate', {
+            unit: dialog.row.unitNameInput || dialog.row.unitName || '—',
+            group: dialog.row.groupNameInput || dialog.row.groupName || '—'
+          })
+        : '';
+    try {
+      await ElMessageBox.confirm(t('lqg.ux.extVerify.confirmApprove', { name: dialog.row.name || '' }) + createLine, t('lqg.ux.extVerify.confirmTitle'), {
+        confirmButtonText: t('lqg.auth.extuser.approve'),
+        type: 'warning'
+      });
+    } catch {
+      return;
     }
   }
   dialog.submitting = true;

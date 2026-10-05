@@ -1,6 +1,6 @@
 // 2026-10-03 飞书问题（小程序行12）的机器判据：
 //   小程序 H5（内部身份，390 宽）—— -80 冻存记录填写页
-//     M12a 新增：「-80度超低温冰箱转移至液氮时间」是可点的日期格（有 ›、不是只读的「—」），占位「未转液氮不填」
+//     M12a 新增：「-80度超低温冰箱转移至液氮时间」是可点的日期格（有 ›、不是只读的「—」），占位「选填」
 //     M12b 新增：选了冻存时间与转液氮时间、填了液氮位置后提交 —— 发给后端的请求体里带 toLn2Time，库里这一批的 to_ln2_time 就是选的那天
 //     M12c 不选转液氮时间提交 —— 请求体 toLn2Time 为 null，库里为空（还在 -80）
 //     M12d 修改模式：这一格显示已登记的日期且可点；顶部提示不再说「转液氮在别处登记」
@@ -110,7 +110,7 @@ try {
   await open(`pages/cryo/form?mode=new&sampleId=${SAMPLE_ID}`)
   const fresh = await rowOf('-80度超低温冰箱转移至液氮时间')
   check('M12a 新增页：转液氮时间是可点的日期格', !!fresh?.picker, JSON.stringify(fresh))
-  check('M12a 新增页：占位「未转液氮不填」', fresh?.placeholder === '未转液氮不填', JSON.stringify(fresh))
+  check('M12a 新增页：占位「选填」', fresh?.placeholder === '选填', JSON.stringify(fresh))
 
   // M12b
   const today = sql("select to_char(current_date, 'YYYY-MM-DD')")

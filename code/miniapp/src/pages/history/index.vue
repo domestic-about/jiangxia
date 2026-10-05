@@ -5,7 +5,7 @@ import ErrorState from '@/components/lqg/ErrorState.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import SampleCard from '@/components/lqg/SampleCard.vue'
 import type { EntryKey } from '@/pages/index/entries'
-import { ENTRY_SHORT, entriesFor } from '@/pages/index/entries'
+import { ENTRY_KEYS, ENTRY_SHORT, entriesFor } from '@/pages/index/entries'
 import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { pagingFooterText, usePagedList } from '@/utils/paging'
@@ -32,6 +32,14 @@ definePage({
 
 const store = useUserStore()
 const active = ref<EntryKey>('sample')
+
+// 表单提交成功后带 `?tab=` 过来（UX 测试 MP-05：提交冻存后落在「样本记录」页签，看不到刚提交的那条）
+onLoad((options) => {
+  const tab = String(options?.tab ?? '')
+  if ((ENTRY_KEYS as readonly string[]).includes(tab)) {
+    active.value = tab as EntryKey
+  }
+})
 const onlyMine = ref(false)
 
 const identity = computed(() => store.identity)
@@ -141,8 +149,20 @@ function start() {
   load()
 }
 
+// 离开过再回来（从填写页保存后退回、从详情页返回）才重新取数；首屏仍由 start 只取一次
+let hidden = false
+onHide(() => {
+  hidden = true
+})
 onMounted(start)
-onShow(start)
+onShow(() => {
+  if (hidden) {
+    hidden = false
+    load()
+    return
+  }
+  start()
+})
 
 // 滑到底取下一页（取完、正在取、第一页没成功时 loadMore 自己什么都不做）
 onReachBottom(() => {

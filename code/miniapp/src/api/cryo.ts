@@ -17,6 +17,7 @@
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
 import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
+import { wasEdited } from '@/utils/edited'
 
 // ── 行 / 详情形状 ────────────────────────────────────────────────────────────
 
@@ -321,6 +322,14 @@ export function cryoLedgerSub(row: LedgerRow): string {
   return cryoQtyText(r, true)
 }
 
+/** 超期的说法：0 天 =「今天到期」（UX 测试 MP-18：原来写「已超 0 天」），没给天数 =「已超期」 */
+export function overdueLabel(days: number | null | undefined): string {
+  if (days === null || days === undefined) {
+    return '已超期'
+  }
+  return Number(days) <= 0 ? '今天到期' : `已超 ${days} 天`
+}
+
 /** 剩余 / 初始那一句；`withOverdue` = 是否带上「已超 N 天」 */
 export function cryoQtyText(row: Partial<CryoBatchRow>, withOverdue = false): string {
   const r = row as CryoBatchRow
@@ -330,8 +339,7 @@ export function cryoQtyText(row: Partial<CryoBatchRow>, withOverdue = false): st
   if (!withOverdue || r.overdue !== true) {
     return head
   }
-  const days = r.overdueDays === null || r.overdueDays === undefined ? '' : String(r.overdueDays)
-  return days === '' ? `${head} · 已超期` : `${head} · 已超 ${days} 天`
+  return `${head} · ${overdueLabel(r.overdueDays)}`
 }
 
 /**
@@ -413,9 +421,9 @@ export function cryoHistoryDate(row: Partial<CryoBatchRow>): string {
   return dayOf(row.updateTime) || dayOf(row.createTime)
 }
 
-/** 「新增 / 修改」：看 `updateTime` 空不空（空 = 从没改过，SAMPLE-MP-001 坑 1） */
+/** 「新增 / 修改」：更新时间晚于创建时间才算改过（utils/edited.ts，UX 测试 MP-08） */
 export function cryoHistoryAction(row: Partial<CryoBatchRow>): string {
-  return row.updateTime ? '修改' : '新增'
+  return wasEdited(row) ? '修改' : '新增'
 }
 
 /**

@@ -18,7 +18,8 @@ const setting: DefaultSettings = {
   /**
    * 是否系统布局配置
    */
-  showSettings: true,
+  // 「布局设置」是若依上游给开发者调主题的，实验室用不上（工作台 UX 测试 WEB-16）
+  showSettings: false,
 
   /**
    * 是否显示顶部导航

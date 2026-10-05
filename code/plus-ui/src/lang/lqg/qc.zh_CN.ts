@@ -68,7 +68,7 @@ export default {
     previewPlaceholder: '保存草稿后点「预览」',
     previewPlaceholderSub: '点「预览」生成页面图；左侧与将要下载的 Word / PDF 同源',
     renderFailed: '这份文档渲染失败了',
-    renderNoReason: '（后端没给原因）',
+    renderNoReason: '（没有具体原因）',
     regenerate: '重新生成',
     renderPending: '正在生成…',
     renderDone: '已生成 {pages} 页',

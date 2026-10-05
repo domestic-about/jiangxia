@@ -28,3 +28,25 @@ export function goPage(path: string): void {
     },
   })
 }
+
+/**
+ * 表单提交成功后的去处（UX 测试 MP-01 / MP-02：提交后返回，回到的还是填满的表单，再点一次就重复建一条）：
+ *   · 上一页就是目标页（从历史编辑记录点一行进来改的）→ 直接退回去，目标页 onShow 自己刷新；
+ *   · 否则把当前表单页**替换**成目标页（redirectTo），表单不留在页面栈里，返回键回不到它。
+ */
+export function finishTo(path: string): void {
+  if (!path) {
+    return
+  }
+  if (isTabPage(path)) {
+    uni.switchTab({ url: path })
+    return
+  }
+  const pages = getCurrentPages()
+  const prev = pages.length > 1 ? pages[pages.length - 2] : null
+  if (prev && prev.route === path.split('?')[0].replace(/^\//, '')) {
+    uni.navigateBack()
+    return
+  }
+  uni.redirectTo({ url: path })
+}

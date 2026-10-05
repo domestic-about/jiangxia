@@ -1,14 +1,14 @@
   ✓ 前置：内部身份登录
-  ✓ M12a 新增页：转液氮时间是可点的日期格 — {"picker":true,"value":"","placeholder":"未转液氮不填"}
-  ✓ M12a 新增页：占位「未转液氮不填」 — {"picker":true,"value":"","placeholder":"未转液氮不填"}
+  ✓ M12a 新增页：转液氮时间是可点的日期格 — {"picker":true,"value":"","placeholder":"选填"}
+  ✓ M12a 新增页：占位「选填」 — {"picker":true,"value":"","placeholder":"选填"}
   ✓ M12b 提交成功 — {"code":200,"msg":"操作成功"}
-  ✓ M12b 请求体带 toLn2Time（= 选的那天） — {"sampleId":"9000001001","cryoName":"R21-ln2","passage":"P2","freezeTime":"2026-10-03","initQty":3,"density":"","inMinus80":"Y","ln2Location":"9号罐-R21","toLn2Time":"2026-10-03","frozenBy":"李工","remark":""}
-  ✓ M12b 库里 to_ln2_time / 液氮位置落盘 — 2026-10-03|9号罐-R21
+  ✓ M12b 请求体带 toLn2Time（= 选的那天） — {"sampleId":"9000001001","cryoName":"R21-ln2","passage":"P2","freezeTime":"2026-10-06","initQty":3,"density":"","inMinus80":"Y","ln2Location":"9号罐-R21","toLn2Time":"2026-10-06","frozenBy":"李工","remark":""}
+  ✓ M12b 库里 to_ln2_time / 液氮位置落盘 — 2026-10-06|9号罐-R21
   ✓ M12c 不选也能提交 — {"code":200,"msg":"操作成功"}
-  ✓ M12c 请求体 toLn2Time = null — {"sampleId":"9000001001","cryoName":"R21-m80","passage":"P2","freezeTime":"2026-10-03","initQty":3,"density":"","inMinus80":"Y","ln2Location":"","toLn2Time":null,"frozenBy":"李工","remark":""}
+  ✓ M12c 请求体 toLn2Time = null — {"sampleId":"9000001001","cryoName":"R21-m80","passage":"P2","freezeTime":"2026-10-06","initQty":3,"density":"","inMinus80":"Y","ln2Location":"","toLn2Time":null,"frozenBy":"李工","remark":""}
   ✓ M12c 库里 to_ln2_time 为空 — 空
-  ✓ M12d 修改页：显示已登记的日期且可点 — {"picker":true,"value":"2026-10-03","placeholder":""}
+  ✓ M12d 修改页：显示已登记的日期且可点 — {"picker":true,"value":"2026-10-06","placeholder":""}
   ✓ M12d 修改页提示只说「取走、补入」去别处登记，不再带「转液氮」 — 取走、补入：在「内部管理 → -80 冻存」里点这一批登记
-  ✓ M12e 只读页：这一格只读（没有 ›） — {"picker":false,"value":"2026-10-03","placeholder":""}
+  ✓ M12e 只读页：这一格只读（没有 ›） — {"picker":false,"value":"2026-10-06","placeholder":""}
 
 ✓ 全部通过

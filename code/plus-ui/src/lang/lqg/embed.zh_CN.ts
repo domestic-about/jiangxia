@@ -22,7 +22,7 @@ export default {
     paraffinBlockNo: '石蜡块编号',
     paraffinBlockNoPlaceholder: '石蜡块编号（模糊）',
     internalNo: '样本编号',
-    internalNoPlaceholder: '内部编号（等值）',
+    internalNoPlaceholder: '内部编号（完整）',
     stain: '染色',
     sectionTimeRange: '切片时间',
     sectionTimeBegin: '切片时间起',

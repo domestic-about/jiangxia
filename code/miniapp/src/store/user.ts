@@ -15,7 +15,12 @@ export const useUserStore = defineStore('lqg-user', () => {
   const error = ref('')
 
   const identity = computed<unknown>(() => me.value?.identity)
-  const name = computed<string>(() => me.value?.name || '')
+  // 首次登录时后端用「wx_手机号」占位当昵称：当成没填（UX 测试 MP-06：首页问候露出完整手机号、
+  // 「单位与组别」的姓名框被它占住、看不到「请填写真实姓名」）
+  const name = computed<string>(() => {
+    const raw = me.value?.name || ''
+    return /^wx_\d+$/.test(raw) ? '' : raw
+  })
   const phoneMasked = computed<string>(() => me.value?.phoneMasked || '')
   const ext = computed(() => me.value?.ext || null)
 

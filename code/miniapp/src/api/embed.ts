@@ -16,6 +16,7 @@ import type { EmbedMarker, EmbedRow, SampleRow } from '@/api/sample'
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
 import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
+import { wasEdited } from '@/utils/edited'
 
 // ── 行 / 详情形状 ────────────────────────────────────────────────────────────
 
@@ -504,7 +505,7 @@ export function embedHistoryDate(row: Partial<EmbedDetail>): string {
   return dayOf(row.updateTime) || dayOf(row.createTime)
 }
 
-/** 「新增 / 修改」：看 `updateTime` 空不空（空 = 新增，SAMPLE-MP-001 坑 1） */
+/** 「新增 / 修改」：更新时间晚于创建时间才算改过（utils/edited.ts，UX 测试 MP-08） */
 export function embedHistoryAction(row: Partial<EmbedDetail>): string {
-  return row.updateTime ? '修改' : '新增'
+  return wasEdited(row) ? '修改' : '新增'
 }

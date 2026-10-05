@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" :title="title" width="520px" class="lqg-dialog-el" append-to-body :close-on-click-modal="true">
+  <el-dialog v-model="visible" :title="title" width="520px" class="lqg-dialog-el" append-to-body :close-on-click-modal="false" @opened="formRef?.clearValidate()">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="112px">
       <!-- ★ 登记类型不可改（CR-20260917-04）：新增时是选定的类型，修改时是原来的类型 -->
       <el-form-item :label="t('lqg.cryo.flow.colType')">
@@ -7,9 +7,19 @@
         <span v-if="editing" class="lqg-cryo-flow-dialog__muted">{{ t('lqg.cryo.flow.flowTypeLocked') }}</span>
       </el-form-item>
 
-      <el-form-item :label="qtyLabel" prop="qty">
+      <!-- 支数：规则（正整数 / 不超过剩余 / 调整量不为 0）在 rules 里，错误显示在这一格下面（工作台 UX 测试 WEB-10：原来只在顶部一闪） -->
+      <el-form-item :label="qtyLabel" prop="qty" class="is-required">
         <div class="lqg-cryo-flow-dialog__stack">
-          <el-input-number v-model="form.qty" :precision="0" :step="1" controls-position="right" class="lqg-cryo-flow-dialog__control" />
+          <el-input-number
+            v-model="form.qty"
+            :precision="0"
+            :step="1"
+            :min="kind === 'adjust' ? -Infinity : 1"
+            controls-position="right"
+            class="lqg-cryo-flow-dialog__control"
+          />
+          <!-- 调整量的说明放在框下面（WEB-09：原来塞在标签里，112px 宽被截成「]正可负、不为 0)」） -->
+          <span v-if="kind === 'adjust'" class="lqg-cryo-flow-dialog__muted">{{ t('lqg.cryo.flow.qtyAdjustHint') }}</span>
           <!-- 剩余提示走接口读时算的 remainingQty，前端不自己累加流水 -->
           <span v-if="!editing && kind !== 'adjust'" class="lqg-cryo-flow-dialog__muted">
             {{ t('lqg.cryo.flow.balanceTipCurrent', { qty: remainingLabel }) }}
@@ -115,7 +125,19 @@ const remainingLabel = computed(() => (remaining.value === null ? '—' : String
 
 /** 支数必填（取走 / 补入 / 调整三档的判据都在 flow.ts 的 qtyProblem 里） */
 const rules = computed<ElFormRules>(() => ({
-  qty: [{ required: true, message: t('lqg.cryo.flow.' + (qtyProblem(kind.value, null) ?? 'qtyTakeRequired')), trigger: 'change' }],
+  qty: [
+    {
+      validator: (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
+        const problem = qtyProblem(kind.value, form.qty, editing.value ? null : remaining.value);
+        if (problem) {
+          callback(new Error(t('lqg.cryo.flow.' + problem, { qty: remainingLabel.value })));
+          return;
+        }
+        callback();
+      },
+      trigger: 'change'
+    }
+  ],
   purpose:
     kind.value === 'adjust'
       ? [{ required: true, message: t('lqg.cryo.flow.purposeRequired'), trigger: 'blur' }]
@@ -136,6 +158,8 @@ const openCreate = (next: FlowKind, batch: CryoBatchVO, presetPurpose?: string |
   form.operatorName = null;
   form.flowTime = null;
   visible.value = true;
+  // 上一次（可能是别的类型）留下的红字清掉（WEB-10：先开「盘点调整」再开「补入」，一打开就是红字）
+  nextTick(() => formRef.value?.clearValidate());
 };
 
 /**
@@ -156,12 +180,14 @@ const openEdit = (batch: CryoBatchVO, flow: CryoFlowVO, nowRemaining?: number | 
   form.operatorName = flow?.operatorName ?? null;
   form.flowTime = flow?.flowTime ?? null;
   visible.value = true;
+  nextTick(() => formRef.value?.clearValidate());
 };
 
 const submit = async () => {
-  const problem = qtyProblem(kind.value, form.qty, editing.value ? null : remaining.value);
-  if (problem) {
-    proxy?.$modal.msgWarning(t('lqg.cryo.flow.' + problem, { qty: remainingLabel.value }));
+  // 支数与用途的错误都显示在各自那一格下面（rules），这里只等校验结果
+  try {
+    await formRef.value?.validate();
+  } catch {
     return;
   }
   const reasonProblem = purposeProblem(kind.value, form.purpose);

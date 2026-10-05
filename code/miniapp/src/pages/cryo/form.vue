@@ -19,11 +19,12 @@ import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import SamplePicker from '@/components/lqg/SamplePicker.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
-import { goPage } from '@/router/config'
+import { finishTo } from '@/router/config'
 import { useUserStore } from '@/store/user'
 // ★ 一律显式 import wd-* 的 .vue（SAMPLE-MP-001 坑 6：只靠 easycom 会静默丢掉该模块的 .js 产物）
 import WdCell from 'wot-design-uni/components/wd-cell/wd-cell.vue'
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
+import { useLeaveGuard } from '@/utils/leaveGuard'
 
 // -80 冻存记录 · 填写页（UI:mp.cryo.form）· CRYO-MP-001。
 //
@@ -82,6 +83,8 @@ onLoad((options) => {
 const isInternal = computed(() => store.identity === 'internal')
 /** 可写 = 新增 / 修改两种模式（只读模式一律不可写，改的话先点右上角「修改」） */
 const editable = computed(() => isInternal.value && mode.value !== 'view')
+// 有没保存的改动时按返回先问一句（UX 测试 MP-04）：加载完、可写时记基线
+const leave = useLeaveGuard(() => form.value, () => !loading.value && !failed.value && editable.value)
 /** 只读页右上角「修改」：内部人员对冻存记录都能改，不限本人录的（CR-20260918-07） */
 const showEditEntry = computed(() => isInternal.value && mode.value === 'view')
 
@@ -251,6 +254,8 @@ async function submit() {
     return
   }
   saving.value = true
+  // 成功后按钮一直禁用到离开本页（UX 测试 MP-01：原来 finally 先复位，600ms 空窗里连点会重复建一条）
+  let done = false
   try {
     if (mode.value === 'new') {
       await createIntCryo(cryoPayload(form.value))
@@ -263,7 +268,9 @@ async function submit() {
     }
     // ★ 被拒时（例如冻存数量改小到某一步剩余为负）后端回 400，request 层已经把后端原话
     //   toast 出来了，这里不再自己拼一句判据 —— 前端不写第二份「剩余不为负」。
-    setTimeout(() => goPage('/pages/history/index'), 600)
+    done = true
+    leave.release()
+    setTimeout(() => finishTo('/pages/history/index?tab=cryo'), 600)
   }
   catch (e) {
     if (e instanceof Error && e.message) {
@@ -271,7 +278,9 @@ async function submit() {
     }
   }
   finally {
-    saving.value = false
+    if (!done) {
+      saving.value = false
+    }
   }
 }
 </script>
@@ -281,6 +290,11 @@ async function submit() {
     <LoadingState v-if="loading" />
 
     <ErrorState v-else-if="failed" text="没能加载这条冻存记录" @retry="load" />
+
+    <!-- 外部身份是确认了的，只是这张表不对外（UX 测试 MP-16：原来也说「没能确认你的身份」，把人引去反复登录） -->
+    <view v-else-if="store.identity === 'external'" class="lqg-state">
+      <text class="lqg-state__text">-80 冻存记录只给中心内部人员开放</text>
+    </view>
 
     <view v-else-if="!isInternal" class="lqg-state">
       <text class="lqg-state__text">没能确认你的身份，请重新登录后再试</text>
@@ -378,7 +392,7 @@ async function submit() {
           control="date"
           :readonly="!editable"
           :model-value="form.toLn2Time"
-          placeholder="未转液氮不填"
+          placeholder="选填"
           @pick="openDatePicker('toLn2Time')"
         />
 
@@ -488,7 +502,8 @@ async function submit() {
 .cryo__passage-in {
   width: 96px;
   height: 32px;
-  text-align: right;
+  /* 数字紧跟在「P」后面（UX 测试 MP-13：原来右对齐，「P」和数字之间空出一大段，像两个控件） */
+  text-align: left;
   font-size: var(--lqg-fs-body);
   color: var(--lqg-ink);
 }

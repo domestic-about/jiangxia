@@ -55,12 +55,7 @@
             <el-tab-pane label="修改密码" name="resetPwd">
               <resetPwd />
             </el-tab-pane>
-            <el-tab-pane label="第三方应用" name="thirdParty">
-              <thirdParty :auths="state.auths" />
-            </el-tab-pane>
-            <el-tab-pane label="在线设备" name="onlineDevice">
-              <onlineDevice :devices="state.devices" />
-            </el-tab-pane>
+            <!-- 「第三方应用」（绑定 Gitee / Github …）「在线设备」是若依上游的页签，实验室用不上，去掉（工作台 UX 测试 WEB-16） -->
           </el-tabs>
         </el-card>
       </el-col>
@@ -116,7 +111,5 @@ const getOnlines = async () => {
 
 onMounted(() => {
   getUser();
-  getAuths();
-  getOnlines();
 });
 </script>

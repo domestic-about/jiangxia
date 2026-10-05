@@ -312,6 +312,8 @@ onReachBottom(() => {
 
 <template>
   <view class="ledger-page">
+    <!-- 外部身份（深链进来）只给一句话，不画页签 / 筛选 / 列数（UX 测试 MP-16：原来整套内部结构先画出来，下面才写不开放） -->
+    <template v-if="!isExternal">
     <!-- ① 工作表切换条：只列注册表里已注册的两张（没注册的不显示） -->
     <view class="lqg-sheets">
       <text
@@ -350,6 +352,7 @@ onReachBottom(() => {
     </view>
 
     <view class="lqg-count">共 {{ total }} 条 · 左右滑动看全部 {{ (cols?.columns.length ?? 0) + 1 }} 列</view>
+    </template>
 
     <LoadingState v-if="loading" />
 

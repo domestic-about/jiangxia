@@ -90,7 +90,12 @@ function remove(index: number) {
 
 .mkr__row {
   padding: var(--lqg-sp-4);
-  background: var(--lqg-inset);
+  /* 白底 + 细边（UX 测试 MP-15：原来行底是 inset 灰，未选中的按钮块也是 inset 灰，三个选项看着就是三段字）。
+     边框拆成三个长写法：var() 放进简写在部分基础库上整条不生效（FieldRow 同一坑） */
+  background: var(--lqg-card);
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--lqg-line);
   border-radius: var(--lqg-radius-ctl);
 }
 
@@ -135,6 +140,9 @@ function remove(index: number) {
 }
 
 .mkr__add {
+  /* 点击区约 44 高（UX 测试 MP-09：原来只有 18 高） */
+  align-self: flex-start;
+  padding: var(--lqg-sp-5) 0;
   font-size: var(--lqg-fs-body);
   color: var(--lqg-primary);
 }

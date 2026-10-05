@@ -52,4 +52,21 @@ scroll-view {
 .lqg-fr-ta--left {
   text-align: left;
 }
+
+/* FieldRow 的 wd-cell（lqg-fr-cell）：值区可以收窄，超长的值在里面省略 / 折行，不把整格撑出屏幕、不挤掉「›」
+   （UX 测试 MP-11）。wot 的右侧容器默认 min-width:auto，会被长值撑开。 */
+.lqg-fr-cell .wd-cell__right,
+.lqg-fr-cell .wd-cell__body,
+.lqg-fr-cell .wd-cell__value {
+  min-width: 0;
+}
+
+/* 页签文字一律不折行（Kevin 2026-09-24 本机验收）：页签用短名（entries.ts#ENTRY_SHORT），万一窄屏放不下就省略号收尾，
+   不折成两行、也不把切换条撑出屏幕。原来直接改在 style/components.scss 里，那份必须与设计权威逐字一致 → 挪到这里。 */
+.lqg-sheets__item {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 </style>

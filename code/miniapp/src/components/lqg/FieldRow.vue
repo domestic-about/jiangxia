@@ -153,6 +153,7 @@ function onPick() {
   <!-- 只读 / 按钮组：一个普通 cell，值在右 -->
   <wd-cell
     v-if="readonly || control === 'seg'"
+    custom-class="lqg-fr-cell"
     :title="label"
     :title-width="titleWidth"
     :custom-title-class="titleClass"
@@ -169,6 +170,7 @@ function onPick() {
   <!-- 日期 / 时间 / 选择：只读格子，右侧 ›，点一下弹面板（不可打字） -->
   <wd-cell
     v-else-if="isPicker"
+    custom-class="lqg-fr-cell"
     :title="label"
     :title-width="titleWidth"
     :custom-title-class="titleClass"
@@ -180,7 +182,7 @@ function onPick() {
     <view class="fr__val">
       <text v-if="ocrMark" class="lqg-tag lqg-tag--ocr fr__mark">识别 · 请核对</text>
       <text v-if="display" class="fr__text" :class="{ 'lqg-mono': mono, 'fr__text--one': !isLong, 'fr__text--wrap': isLong }">{{ display }}</text>
-      <text v-else class="fr__ph">{{ placeholderText }}</text>
+      <text v-else class="fr__ph" :class="{ 'fr__ph--sm': isLong }">{{ placeholderText }}</text>
     </view>
     <template #right-icon>
       <view class="fr__arrow">
@@ -281,7 +283,15 @@ function onPick() {
 }
 
 .fr__text--one {
+  min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 只读的编号类长串（住院号等）没有空格可折：允许任意处断行，不顶出卡片（UX 测试 MP-11） */
+.fr__text.lqg-mono {
+  word-break: break-all;
 }
 
 /* 长标签那一行的值：只在空格处折（「2026-09-29 / 14:22」），字号与收小后的标签一致 */
@@ -292,8 +302,17 @@ function onPick() {
 }
 
 .fr__ph {
+  min-width: 0;
+  overflow: hidden;
   font-size: var(--lqg-fs-title);
   color: var(--lqg-ink-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 长标签那一行的占位与值同字号（UX 测试 MP-03：占位 15px 在长标签旁折行、掉单字） */
+.fr__ph--sm {
+  font-size: 14px;
 }
 
 .fr__mark {

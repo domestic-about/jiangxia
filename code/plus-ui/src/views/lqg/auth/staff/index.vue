@@ -53,7 +53,7 @@
 
     <!-- 按手机号授权（点蒙层可关：main.ts 已把 ElDialog 的 closeOnClickModal 默认改为 false，
          这里显式写 true 是有意的 —— accept 与 UI:admin.auth.staff 都要求「点蒙层可关」） -->
-    <el-dialog v-model="grant.visible" :title="t('lqg.auth.staff.dialogTitle')" width="520px" append-to-body :close-on-click-modal="true">
+    <el-dialog v-model="grant.visible" :title="t('lqg.auth.staff.dialogTitle')" width="520px" append-to-body :close-on-click-modal="false">
       <el-form ref="grantFormRef" :model="grant.form" :rules="grant.rules" label-width="120px">
         <el-form-item :label="t('lqg.auth.staff.phone')" prop="phone">
           <el-input v-model="grant.form.phone" :placeholder="t('lqg.auth.staff.phonePlaceholder')" maxlength="11" clearable @blur="handleCheckPhone" />
@@ -82,7 +82,7 @@
     </el-dialog>
 
     <!-- 改角色 -->
-    <el-dialog v-model="roleDialog.visible" :title="t('lqg.auth.staff.roleDialogTitle')" width="420px" append-to-body :close-on-click-modal="true">
+    <el-dialog v-model="roleDialog.visible" :title="t('lqg.auth.staff.roleDialogTitle')" width="420px" append-to-body :close-on-click-modal="false">
       <el-form label-width="100px">
         <el-form-item :label="t('lqg.auth.staff.colName')">
           <span>{{ roleDialog.name }}</span>
@@ -103,7 +103,7 @@
     </el-dialog>
 
     <!-- 重置密码 -->
-    <el-dialog v-model="pwdDialog.visible" :title="t('lqg.auth.staff.pwdDialogTitle')" width="420px" append-to-body :close-on-click-modal="true">
+    <el-dialog v-model="pwdDialog.visible" :title="t('lqg.auth.staff.pwdDialogTitle')" width="420px" append-to-body :close-on-click-modal="false">
       <el-form ref="pwdFormRef" :model="pwdDialog.form" :rules="pwdDialog.rules" label-width="100px">
         <el-form-item :label="t('lqg.auth.staff.colName')">
           <span>{{ pwdDialog.name }}</span>

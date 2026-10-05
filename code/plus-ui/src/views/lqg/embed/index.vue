@@ -24,7 +24,8 @@
 
       <!-- 筛选区（UI:admin.embed.list）：核验状态 / 来源 / 石蜡块编号 / 内部编号 / 染色 / 切片时间区间。
            ★ 核验状态、来源排最前（2026-09-24 本机验收「外部送来的记录好找」）：合作单位送来的在这里核验 -->
-      <el-form ref="queryRef" :model="queryParams" label-width="86px" class="lqg-embed__filter">
+      <el-form ref="queryRef" :model="queryParams" label-width="86px" class="lqg-embed__filter" @submit.prevent @keyup.enter="handleQuery">
+        <!-- 筛选框里按回车 = 点「搜索」（工作台 UX 测试 WEB-23；与质控文档列表一致） -->
         <el-row :gutter="12">
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.embed.filter.verifyStatus')" prop="verifyStatus">
@@ -122,8 +123,9 @@
         :data="rows"
         border
         :row-class-name="rowClassName"
-        :empty-text="t('lqg.embed.empty')"
+       
       >
+        <template #empty><TableEmpty :error="loadError" :text="t('lqg.embed.empty')" @retry="getList" /></template>
         <el-table-column :label="t('lqg.embed.col.submitSource')" prop="submitSource" width="90" align="center">
           <template #default="scope">
             <dict-tag :options="lqg_submit_source" :value="scope.row.submitSource" />
@@ -134,7 +136,7 @@
             <dict-tag :options="lqg_verify_status" :value="scope.row.verifyStatus" />
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.paraffinBlockNo')" prop="paraffinBlockNo" width="130" :show-overflow-tooltip="true">
+        <el-table-column :label="t('lqg.embed.col.paraffinBlockNo')" prop="paraffinBlockNo" width="130" :show-overflow-tooltip="true" fixed="left">
           <template #default="scope">
             <span v-if="scope.row.paraffinBlockNo" class="lqg-embed__mono">{{ scope.row.paraffinBlockNo }}</span>
             <span v-else class="lqg-embed__pending">{{ t('lqg.embed.badge.pendingBlockNo') }}</span>
@@ -261,6 +263,7 @@ import {
 import { useScopeSample } from '@/views/lqg/sample/useScopeSample';
 import EmbedDrawer from './EmbedDrawer.vue';
 import { useI18n } from 'vue-i18n';
+import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
@@ -295,8 +298,12 @@ const queryParams = reactive<EmbedQuery>({
   submitSource: null
 });
 
+// 最近一次取数失败了没有：失败时表格空白处说「没加载出来」而不是「没有数据」（工作台 UX 测试 WEB-06）
+const loadError = ref(false);
+
 const getList = async () => {
   loading.value = true;
+  loadError.value = false;
   try {
     // 切片时间区间两端都含（后端 ge / le），区间清掉时两个参数一起清掉
     queryParams.sectionTimeBegin = sectionTimeRange.value?.[0] ?? null;
@@ -304,6 +311,11 @@ const getList = async () => {
     const res = await listEmbeds(queryParams);
     rows.value = (res.rows ?? []) as EmbedVO[];
     total.value = res.total ?? 0;
+  } catch {
+    // 请求层已经弹过报错；这里把表格清空并标记失败
+    loadError.value = true;
+    rows.value = [];
+    total.value = 0;
   } finally {
     loading.value = false;
   }

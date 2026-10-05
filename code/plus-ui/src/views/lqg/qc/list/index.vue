@@ -60,7 +60,8 @@
         </el-row>
       </el-form>
 
-      <el-table v-loading="loading" :data="rows" border :empty-text="t('lqg.qc.list.empty')" @row-dblclick="openQc">
+      <el-table v-loading="loading" :data="rows" border @row-dblclick="openQc">
+        <template #empty><TableEmpty :error="loadError" :text="t('lqg.qc.list.empty')" @retry="getList" /></template>
         <el-table-column :label="t('lqg.qc.list.col.internalNo')" prop="internalNo" min-width="110" :show-overflow-tooltip="true">
           <template #default="scope">
             <el-link type="primary" underline="never" class="lqg-qclist__mono" @click="openQc(scope.row)">
@@ -118,6 +119,7 @@
 import { listQcDocs } from '@/api/lqg/qc';
 import type { QcDocListQuery, QcDocListVO, QcDocStatus } from '@/api/lqg/qc';
 import { useI18n } from 'vue-i18n';
+import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
 
 // 「质控文档」板块（CR-20260930-11，飞书「网页工作台」第 17 行，甲方 2026-09-30 确认）：
 // 三份质控表单独成一个板块 —— 一行一个已核验有效的样本，三列是三份表各自的状态，
@@ -148,13 +150,22 @@ const queryParams = reactive<QcDocListQuery>({
 
 const statusTagType = (status: QcDocStatus) => (status === 'published' ? 'success' : status === 'draft' ? 'warning' : 'info');
 
+// 最近一次取数失败了没有：失败时表格空白处说「没加载出来」而不是「没有数据」（工作台 UX 测试 WEB-06）
+const loadError = ref(false);
+
 const getList = async () => {
   loading.value = true;
+  loadError.value = false;
   try {
     const [receiveBegin, receiveEnd] = receiveRange.value ?? [];
     const res: any = await listQcDocs({ ...queryParams, receiveBegin, receiveEnd });
     rows.value = (res.rows ?? []) as QcDocListVO[];
     total.value = res.total ?? 0;
+  } catch {
+    // 请求层已经弹过报错；这里把表格清空并标记失败
+    loadError.value = true;
+    rows.value = [];
+    total.value = 0;
   } finally {
     loading.value = false;
   }

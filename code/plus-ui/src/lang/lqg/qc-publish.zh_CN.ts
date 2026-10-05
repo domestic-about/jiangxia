@@ -21,7 +21,7 @@ export default {
     refresh: '刷新',
     rendering: '正在生成页面图…',
     failedTitle: '这份文档渲染失败了',
-    noReason: '（后端没给原因）',
+    noReason: '（没有具体原因）',
     regenerate: '重新生成',
     notGenerated: '这份文档还没生成过页面图',
     preview: '预览',

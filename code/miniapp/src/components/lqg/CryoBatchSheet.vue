@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { CryoBatchRow } from '@/api/cryo'
-import { cryoLedgerCell, cryoPlaceText, cryoQtyText, fetchIntCryoDetail } from '@/api/cryo'
+import { cryoLedgerCell, cryoPlaceText, cryoQtyText, fetchIntCryoDetail, overdueLabel } from '@/api/cryo'
 import CryoFlowForm from '@/components/lqg/CryoFlowForm.vue'
 import CryoLn2Form from '@/components/lqg/CryoLn2Form.vue'
 import ErrorState from '@/components/lqg/ErrorState.vue'
@@ -83,8 +83,7 @@ const overdueText = computed(() => {
   if (row.value?.overdue !== true) {
     return ''
   }
-  const days = row.value.overdueDays
-  return days === null || days === undefined ? '已超期' : `已超 ${days} 天`
+  return overdueLabel(row.value.overdueDays)
 })
 
 /** 已取空（后端行上的 `emptied`，与表格「已取空」页签同一判据） */
@@ -354,6 +353,9 @@ defineExpose({ open })
 
 .cbs__edit {
   flex: none;
+  /* 点击区扩到约 44 高（UX 测试 MP-09：原来只有字那么大，30×21）；负外边距抵掉，版式不动 */
+  padding: var(--lqg-sp-5) var(--lqg-sp-4);
+  margin: calc(-1 * var(--lqg-sp-5)) calc(-1 * var(--lqg-sp-4));
   font-size: var(--lqg-fs-title);
   font-weight: var(--lqg-fw-semibold);
   color: var(--lqg-primary);
@@ -503,10 +505,14 @@ defineExpose({ open })
 
 .cbs__row-acts {
   display: flex;
-  gap: var(--lqg-sp-5);
+  /* 「改」「删」之间拉开，删除不会误点成修改（UX 测试 MP-09）；= 两边各扩出的点击区之和，两块点击区相接不重叠 */
+  gap: calc(2 * var(--lqg-sp-6));
 }
 
 .cbs__row-act {
+  /* 点击区扩到约 44×44（原来 12×17）；负外边距抵掉，行高不变 */
+  padding: var(--lqg-sp-5) var(--lqg-sp-6);
+  margin: calc(-1 * var(--lqg-sp-5)) calc(-1 * var(--lqg-sp-6));
   font-size: var(--lqg-fs-sm);
   font-weight: var(--lqg-fw-semibold);
   color: var(--lqg-primary);

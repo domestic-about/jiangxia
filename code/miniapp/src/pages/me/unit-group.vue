@@ -4,7 +4,7 @@ import UnitGroupPicker from '@/components/biz/UnitGroupPicker.vue'
 import LoadState from '@/components/ui/LoadState.vue'
 import type { ProfileUpdatePayload, SelectorUnit } from '@/api/unit-group'
 import { fetchUnits, saveProfile } from '@/api/unit-group'
-import { HOME_PAGE, goPage } from '@/router/config'
+import { HOME_PAGE, finishTo } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { bindStatusText, bindStatusTone, normalizeBindStatus, unitDisplay } from '@/utils/ext-profile'
 
@@ -95,12 +95,15 @@ async function submit() {
   }
 
   saving.value = true
+  // 成功后按钮一直禁用到离开本页（UX 测试 MP-01：原来 finally 先复位，600ms 空窗里连点会重复建一条）
+  let done = false
   try {
     await saveProfile(payload)
     // 保存成功 = 回到待核验：重新拉 /mp/me，让「我的」页与这里都显示新状态
     await store.loadMe()
     uni.showToast({ title: '已提交，等待核验', icon: 'none' })
-    setTimeout(() => goPage('/pages/me/index'), 600)
+    done = true
+    setTimeout(() => finishTo('/pages/me/index'), 600)
   }
   catch (e) {
     // 请求层已经按业务码 toast 过后端给的 msg（例如「组别不属于该单位」）
@@ -109,7 +112,9 @@ async function submit() {
     }
   }
   finally {
-    saving.value = false
+    if (!done) {
+      saving.value = false
+    }
   }
 }
 

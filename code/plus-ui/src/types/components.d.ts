@@ -95,6 +95,7 @@ declare module 'vue' {
     SizeSelect: typeof import('./../components/SizeSelect/index.vue')['default']
     SubmitVerify: typeof import('./../components/Process/submitVerify.vue')['default']
     SvgIcon: typeof import('./../components/SvgIcon/index.vue')['default']
+    TableEmpty: typeof import('./../components/lqg/TableEmpty/index.vue')['default']
     TopNav: typeof import('./../components/TopNav/index.vue')['default']
     UserSelect: typeof import('./../components/UserSelect/index.vue')['default']
   }

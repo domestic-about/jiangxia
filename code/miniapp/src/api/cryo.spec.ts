@@ -118,9 +118,9 @@ describe('cryoQtyText / 冻结格小字', () => {
     expect(cryoQtyText(row({ remainingQty: 6, initQty: 8 }))).toBe('剩 6 / 初始 8 支')
     expect(cryoQtyText(row({ remainingQty: 6, initQty: 8, overdue: true, overdueDays: 6 }), true))
       .toBe('剩 6 / 初始 8 支 · 已超 6 天')
-    // 阈值当天 = 已超 0 天（`overdueDays: 0` 也是合法值，不许被当成「没有」）
+    // 阈值当天 =「今天到期」（UX 测试 MP-18：原来写「已超 0 天」）；`overdueDays: 0` 也是合法值，不许被当成「没有」（那会变成「已超期」）
     expect(cryoQtyText(row({ remainingQty: 2, initQty: 2, overdue: true, overdueDays: 0 }), true))
-      .toBe('剩 2 / 初始 2 支 · 已超 0 天')
+      .toBe('剩 2 / 初始 2 支 · 今天到期')
   })
 
   it('未超期不追加那一段；剩余为 0 照实写 0（不是空）', () => {

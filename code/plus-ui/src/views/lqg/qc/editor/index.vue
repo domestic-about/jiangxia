@@ -108,19 +108,26 @@
 
       <!-- ═══ 页脚按钮 ═══ -->
       <div class="lqg-qc-editor__footer">
-        <el-button type="primary" :loading="saving" :disabled="!bundle || !canEdit" @click="handleSaveDraft">
-          {{ t('lqg.qc.editor.saveDraft') }}
+        <!-- 底部按钮与小程序同一套（CR-20261001-14 定的口径，Kevin 2026-10-06 定工作台对齐）：
+             提示在左；「保存」次要；右边主按钮 =「完成并同步」，有改动时 =「保存并同步」（先保存再同步，不用先点保存）；
+             已同步的文档右边是「撤回」（次要样式）。 -->
+        <span class="lqg-qc-editor__footer-hint">{{ footerHint }}</span>
+        <el-button :loading="saving && !publishing" :disabled="!bundle || !canEdit || publishing" @click="handleSaveDraft">
+          {{ t('lqg.ux.qcFooter.save') }}
         </el-button>
-        <!-- ★ 两个按钮在 DOC-PUBLISH-001 点亮（QC-WEB-001 里是写死置灰的占位） -->
+        <el-button v-if="currentPublished" :loading="publishing" :disabled="!bundle || !canEdit || saving" @click="handlePublish">
+          {{ t('lqg.qc.preview.unpublish') }}
+        </el-button>
         <el-button
-          :type="currentPublished ? 'default' : 'success'"
+          v-else
+          type="primary"
+          class="lqg-qc-editor__footer-main"
           :loading="publishing"
-          :disabled="!bundle || !canEdit || currentTabDirty"
+          :disabled="!bundle || !canEdit || saving"
           @click="handlePublish"
         >
-          {{ currentPublished ? t('lqg.qc.preview.unpublish') : t('lqg.qc.editor.publish') }}
+          {{ currentTabDirty ? t('lqg.ux.qcFooter.saveAndPublish') : t('lqg.ux.qcFooter.publish') }}
         </el-button>
-        <span class="lqg-qc-editor__footer-hint">{{ footerHint }}</span>
       </div>
     </el-card>
   </div>
@@ -140,6 +147,7 @@ import type { DocAudience } from '@/api/lqg/doc';
 import { useTagsViewStore } from '@/store/modules/tagsView';
 import type { RouteLocationNormalizedLoaded } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { qcEmptyItems } from './completeness';
 
 // ============================================================================
 // 质控文档编辑页（QC-WEB-001 / UI:admin.qc.editor，方案 A：独立整页，左编辑右预览）
@@ -222,10 +230,15 @@ const sample = computed(() => bundle.value?.sample ?? ({} as QcDocBundleVO['samp
 /** 编辑权走 `lqg:qc:edit`（101/102 都有）；没有就整页只读（后端也会 403） */
 const canEdit = computed(() => proxy?.$auth?.hasPermi?.('lqg:qc:edit') ?? true);
 
+// 性别按字典显示中文（工作台 UX 测试 WEB-12：原来直接显示 male / female）
+const { lqg_gender } = toRefs<any>(proxy?.useDict('lqg_gender'));
+const genderText = (value?: string | null) =>
+  !value ? '—' : ((lqg_gender.value as Array<{ value: string; label: string }> | undefined)?.find((d) => d.value === value)?.label ?? value);
+
 const summaryItems = computed(() => [
   { label: t('lqg.qc.editor.sourceUnit'), value: sample.value.sourceUnitName || '—' },
   { label: t('lqg.qc.editor.donorName'), value: sample.value.donorName || '—' },
-  { label: t('lqg.qc.editor.gender'), value: sample.value.gender || '—' },
+  { label: t('lqg.qc.editor.gender'), value: genderText(sample.value.gender) },
   { label: t('lqg.qc.editor.receiveDate'), value: sample.value.receiveDate || '—' },
   { label: t('lqg.qc.editor.processTime'), value: sample.value.processTime || '—' },
   { label: t('lqg.qc.editor.operatorName'), value: sample.value.operatorName || '—' },
@@ -375,7 +388,11 @@ const currentTabDirty = computed(() => dirtyTabs[activeTab.value]);
 
 /** 页脚提示：已完成 → 「已同步给送检方 · 修改后需重新同步」；否则还是原来的说明 */
 const footerHint = computed(() =>
-  currentPublished.value ? t('lqg.qc.preview.syncedFooter') : t('lqg.qc.editor.footerHint')
+  currentTabDirty.value
+    ? t('lqg.ux.qcFooter.dirtyHint')
+    : currentPublished.value
+      ? t('lqg.qc.preview.syncedFooter')
+      : t('lqg.qc.editor.footerHint')
 );
 
 /**
@@ -404,11 +421,23 @@ const handlePublish = async () => {
   if (!sampleId.value) return;
   const docType = docTypeOf(currentTab.value);
   const published = currentPublished.value;
+  // 撤回会按服务器的内容重载表单 —— 有没保存的改动时先让人保存（与小程序同一句）
+  if (published && currentTabDirty.value) {
+    proxy?.$modal.msgWarning(t('lqg.ux.qcFooter.saveBeforeUnpublish'));
+    return;
+  }
+  // 「保存并同步」：先保存这一页（按钮名已说明会保存），再按服务器上的最新内容检查、确认、同步
+  if (!published && currentTabDirty.value) {
+    if (!(await saveCurrentTab())) return;
+  }
+  // 同步前列出还空着的项：不拦，只提示（Kevin 2026-10-06）
+  const empties = published ? [] : qcEmptyItems(docType, docOf(docType) as Record<string, unknown> | undefined);
+  const emptyLine = empties.length ? t('lqg.ux.qcFooter.emptyItems', { items: empties.join('、') }) : '';
   try {
     await ElMessageBox.confirm(
-      published ? t('lqg.qc.preview.unpublishConfirm') : t('lqg.qc.preview.publishConfirm'),
-      published ? t('lqg.qc.preview.unpublish') : t('lqg.qc.editor.publish'),
-      { confirmButtonText: published ? t('lqg.qc.preview.unpublish') : t('lqg.qc.editor.publish'), type: 'warning' }
+      published ? t('lqg.qc.preview.unpublishConfirm') : emptyLine + t('lqg.qc.preview.publishConfirm'),
+      published ? t('lqg.qc.preview.unpublish') : t('lqg.ux.qcFooter.publish'),
+      { confirmButtonText: published ? t('lqg.qc.preview.unpublish') : t('lqg.ux.qcFooter.publish'), type: 'warning' }
     );
   } catch {
     return;
@@ -434,6 +463,10 @@ const handlePublish = async () => {
   }
 };
 
+/** 某个页签对应的那份文档（服务器上的） */
+const docOf = (type: 'sample-qc' | 'organoid-qc' | 'score') =>
+  type === 'sample-qc' ? bundle.value?.sampleQc : type === 'organoid-qc' ? bundle.value?.organoidQc : bundle.value?.score;
+
 /** 页签名（连字符）→ docType（连字符，与后端路径段一致） */
 const docTypeOf = (tab: (typeof TABS)[number]): 'sample-qc' | 'organoid-qc' | 'score' => tab.name;
 
@@ -453,11 +486,35 @@ const setTabDirty = (tab: TabName, value: boolean) => {
 const handleSaveDraft = async () => {
   const tab = activeTabRef.value;
   if (!tab) return;
+  // 已同步的文档再保存 = 回到草稿、送检方暂时看不到（后端状态机如此）；与「撤回」同等后果，先问一句
+  //（工作台 UX 测试 WEB-01：原来不提示，顺手改个错字，合作单位那边的文档就没了）
+  if (currentPublished.value) {
+    try {
+      await ElMessageBox.confirm(t('lqg.ux.saveUnpublish.message'), t('lqg.ux.saveUnpublish.title'), {
+        confirmButtonText: t('lqg.ux.saveUnpublish.confirm'),
+        cancelButtonText: t('lqg.ux.closeGuard.stay'),
+        type: 'warning'
+      });
+    } catch {
+      return;
+    }
+  }
+  if (await saveCurrentTab()) {
+    await previewPaneRef.value?.render();
+  }
+};
+
+/** 保存当前页签并重取（「保存」与「保存并同步」共用）；失败返回 false（请求层已弹过原因） */
+const saveCurrentTab = async (): Promise<boolean> => {
+  const tab = activeTabRef.value;
+  if (!tab) return false;
   saving.value = true;
   try {
     await tab.save();
     await reload();
-    await previewPaneRef.value?.render();
+    return true;
+  } catch {
+    return false;
   } finally {
     saving.value = false;
   }
@@ -643,8 +700,13 @@ onBeforeRouteLeave(async (to, from, next) => {
     gap: 10px;
   }
   .lqg-qc-editor__footer-hint {
+    flex: 1;
     font-size: 12px;
     color: var(--lqg-ink-3);
+  }
+  // 主按钮更宽（与小程序「完成并同步」同一视觉层级）
+  .lqg-qc-editor__footer-main {
+    min-width: 160px;
   }
   .lqg-qc-editor__guide-desc {
     margin: 0 0 12px;

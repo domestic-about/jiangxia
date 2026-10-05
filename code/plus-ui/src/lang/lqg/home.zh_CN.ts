@@ -69,9 +69,10 @@ export default {
     external: '外部'
   },
 
+  // 与字典 lqg_verify_status、样本列表同一套叫法（工作台 UX 测试 WEB-21：原来首页叫「已核验 / 已驳回」）
   status: {
     pending: '待核验',
-    valid: '已核验',
-    invalid: '已驳回'
+    valid: '有效',
+    invalid: '无效'
   }
 };

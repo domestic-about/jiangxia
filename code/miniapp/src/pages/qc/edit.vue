@@ -15,6 +15,7 @@ import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
 import { pickErrorText, pickFile } from '@/utils/pickFiles'
 import { dateOrNull, QC_TABS, SCORE_ROWS, scoreSummary, statusTag, statusText, toScore } from './status'
+import { qcEmptyItems } from './completeness'
 
 // 小程序里编辑一个样本的三份质控文档（内部人员专用；甲方 2026-09-30 要求，能力对齐工作台质控文档编辑页）。
 //
@@ -93,6 +94,15 @@ function fill(type: QcDocType, values: Record<string, unknown>, force = false) {
     ;(form as Record<string, unknown>)[key] = value === null || value === undefined ? '' : value
   })
   snapshots[type] = snap(type)
+}
+
+/** 某个页签对应的那份文档（服务器上的） */
+function docOf(type: QcDocType) {
+  const b = bundle.value
+  if (!b) {
+    return undefined
+  }
+  return type === 'sample-qc' ? b.sampleQc : type === 'organoid-qc' ? b.organoidQc : b.score
 }
 
 function statusOf(type: QcDocType): string | undefined {
@@ -296,13 +306,16 @@ function togglePublish() {
     return
   }
   const saveFirst = !published && currentDirty.value
+  // 同步前列出还空着的项：不拦，只提示（Kevin 2026-10-06；按表单当前值 + 已传的图片算，含没保存的改动）
+  const empties = published ? [] : qcEmptyItems(tab.type, { ...FORMS[tab.type], images: (docOf(tab.type) as { images?: unknown } | undefined)?.images })
+  const emptyLine = empties.length ? `以下几项还空着：${empties.join('、')}。\n` : ''
   uni.showModal({
     title: published ? '撤回' : saveFirst ? '保存并同步' : '完成并同步',
     content: published
       ? '确定撤回吗？撤回后送检方立刻看不到这份文档。'
       : saveFirst
-        ? '先保存这一页的改动，再「完成并同步」。完成后送检方就能看到它。'
-        : '确定「完成并同步」这份文档吗？完成后送检方就能看到它。',
+        ? `${emptyLine}先保存这一页的改动，再「完成并同步」。完成后送检方就能看到它。`
+        : `${emptyLine}确定「完成并同步」这份文档吗？完成后送检方就能看到它。`,
     // ★ 微信 showModal 的按钮文字最多 4 个字（超了直接报错不弹）
     confirmText: published ? '撤回' : '确定同步',
     success: async (res) => {
@@ -346,15 +359,15 @@ watch(anyDirty, (dirty) => {
   // #endif
 })
 
-const summary = computed(() => {
+/** 页头摘要的几段；每段整体不折行（UX 测试 MP-19：「操作人 李工」在 375 宽掉了一个「工」） */
+const summary = computed<string[]>(() => {
   const s = bundle.value?.sample
   if (!s) {
-    return ''
+    return []
   }
   const kind = s.sampleKind === 'organoid' ? '类器官送样记录' : '样本记录信息表'
   return [s.sourceUnitName, kind, s.receiveDate ? `收样 ${s.receiveDate}` : '', s.operatorName ? `操作人 ${s.operatorName}` : '']
     .filter(Boolean)
-    .join(' · ')
 })
 
 function pickTab(type: QcDocType) {
@@ -386,7 +399,9 @@ onLoad((query) => {
       <!-- 页头：样本摘要（从样本主档带出，只读） -->
       <view class="lqg-card qce__head">
         <text class="qce__no lqg-mono">{{ bundle.sample?.internalNo || '—' }}</text>
-        <text class="qce__sum">{{ summary }}</text>
+        <view class="qce__sum">
+          <text v-for="(part, i) in summary" :key="i" class="qce__sum-part">{{ i ? ' · ' : '' }}{{ part }}</text>
+        </view>
       </view>
 
       <!-- 三个页签，各带状态 -->
@@ -568,8 +583,14 @@ onLoad((query) => {
 }
 
 .qce__sum {
+  display: flex;
+  flex-wrap: wrap;
   font-size: var(--lqg-fs-sm);
   color: var(--lqg-ink-3);
+}
+
+.qce__sum-part {
+  white-space: pre;
 }
 
 .qce__tabs {

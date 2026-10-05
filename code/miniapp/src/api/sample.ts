@@ -16,6 +16,7 @@
 //   不带 `mine` = 中心全员；开关打开才另带 `mine=true` 收窄到本人。
 import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
+import { wasEdited } from '@/utils/edited'
 
 /** 列表行（内部接口；外部接口少了 `internalNo`、多了 `donorNameMasked`） */
 export interface SampleRow {
@@ -230,9 +231,9 @@ export function isMine(row: Pick<SampleRow, 'mine'>): boolean {
   return row.mine === true
 }
 
-/** 「新增 / 修改」：看 `updateTime` 空不空（空 = 新增） */
-export function rowActionLabel(row: Pick<SampleRow, 'updateTime'>): string {
-  return row.updateTime ? '修改' : '新增'
+/** 「新增 / 修改」：更新时间晚于创建时间才算改过（utils/edited.ts，UX 测试 MP-08） */
+export function rowActionLabel(row: Pick<SampleRow, 'createTime' | 'updateTime'>): string {
+  return wasEdited(row) ? '修改' : '新增'
 }
 
 /** 内部「经手人」列：本人显示「我」，否则显示后端给的姓名 */

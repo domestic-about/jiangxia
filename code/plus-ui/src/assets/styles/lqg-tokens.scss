@@ -62,15 +62,46 @@
   --el-color-primary-dark-8: #021818;
   --el-color-primary-dark-9: #010c0c;
 
-  // ── Element Plus 四个语义色 → §B 的 ok / warn / danger（两端同一组语义色） ──
-  --el-color-success: var(--lqg-ok);
-  --el-color-warning: var(--lqg-warn);
-  --el-color-danger: var(--lqg-danger);
-  --el-color-error: var(--lqg-danger);
+  // ── Element Plus 四个语义色：见文件下方 `:root:root` 一段 ──
 
   // ── 便捷别名：页面底 / 卡片底 / 边框直接吃 token，业务页不写色值 ─────────────
   --el-bg-color-page: var(--lqg-bg);
   --el-border-color-lighter: var(--lqg-line);
+}
+
+// ── Element Plus 四个语义色 → §B 的 ok / warn / danger（两端同一组语义色） ─────────────
+// ★ 工作台 UX 测试 WEB-08：原来写在上面的 `:root` 里，但按需加载的 element-plus/theme-chalk/base.css
+//   排在本文件之后、同样是 `:root`，把它们盖回了 Element 默认的 #67c23a / #e6a23c / #f56c6c（测试站上也是）。
+//   这里用 `:root:root` 提高一级权重；light-N / dark-2 照主色的口径预先算好（不然悬停、浅底还是默认色）。
+:root:root {
+  --el-color-success: #2f7d4f;
+  --el-color-success-light-3: #6da484;
+  --el-color-success-light-5: #97bea7;
+  --el-color-success-light-7: #c1d8ca;
+  --el-color-success-light-8: #d5e5dc;
+  --el-color-success-light-9: #eaf2ed;
+  --el-color-success-dark-2: #26643f;
+  --el-color-warning: #b7791f;
+  --el-color-warning-light-3: #cda162;
+  --el-color-warning-light-5: #dbbc8f;
+  --el-color-warning-light-7: #e9d7bc;
+  --el-color-warning-light-8: #f1e4d2;
+  --el-color-warning-light-9: #f8f2e9;
+  --el-color-warning-dark-2: #926119;
+  --el-color-danger: #b3362b;
+  --el-color-danger-light-3: #ca726b;
+  --el-color-danger-light-5: #d99a95;
+  --el-color-danger-light-7: #e8c3bf;
+  --el-color-danger-light-8: #f0d7d5;
+  --el-color-danger-light-9: #f7ebea;
+  --el-color-danger-dark-2: #8f2b22;
+  --el-color-error: #b3362b;
+  --el-color-error-light-3: #ca726b;
+  --el-color-error-light-5: #d99a95;
+  --el-color-error-light-7: #e8c3bf;
+  --el-color-error-light-8: #f0d7d5;
+  --el-color-error-light-9: #f7ebea;
+  --el-color-error-dark-2: #8f2b22;
 }
 
 // ── 列表页筛选区（2026-09-28 飞书问题行）──────────────────────────────────────
@@ -89,6 +120,22 @@
 .el-form.lqg-cryo__filter .el-form-item__label,
 .el-form.lqg-qclist__filter .el-form-item__label {
   white-space: nowrap;
+}
+
+// ③ 工作台 UX 测试 WEB-11（1280 宽）：「搜索 / 重置」两个按钮被拆成上下两行；
+//    日期区间框太窄，占位「收样日期起 / 收样日期止」被截成「收样日期 - 收样日期」。
+.el-form.lqg-sample__filter .el-form-item__content,
+.el-form.lqg-embed__filter .el-form-item__content,
+.el-form.lqg-cryo__filter .el-form-item__content,
+.el-form.lqg-qclist__filter .el-form-item__content {
+  flex-wrap: nowrap;
+}
+
+.el-form.lqg-sample__filter .el-date-editor--daterange,
+.el-form.lqg-embed__filter .el-date-editor--daterange,
+.el-form.lqg-cryo__filter .el-date-editor--daterange,
+.el-form.lqg-qclist__filter .el-date-editor--daterange {
+  min-width: 260px;
 }
 
 // ── 抽屉（编辑 / 核验 / 流水）统一样式 + H5 适配（2026-09-28 飞书问题行）────────

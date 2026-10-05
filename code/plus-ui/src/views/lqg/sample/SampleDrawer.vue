@@ -9,7 +9,8 @@
       :size="drawerSize"
       class="lqg-sample-drawer-el lqg-drawer-el"
       append-to-body
-      :close-on-click-modal="true"
+      :close-on-click-modal="false"
+      :before-close="closeGuard.beforeClose"
       @closed="handleClosed"
     >
       <div v-if="loading" class="lqg-sample-drawer__loading">{{ t('lqg.sample.loading') }}</div>
@@ -53,14 +54,15 @@
             </el-col>
 
             <el-col :span="12">
-              <el-form-item :label="t('lqg.sample.field.sourceUnit')" prop="sourceUnitId">
+              <!-- 来源单位：选一个 / 下面填名称，二选一必填（后端同口径；工作台 UX 测试 WEB-07：原来不标星，错误只在右上角浮层里） -->
+              <el-form-item :label="t('lqg.sample.field.sourceUnit')" prop="sourceUnitId" class="is-required">
                 <el-select v-model="form.sourceUnitId" clearable filterable class="lqg-sample-drawer__control">
                   <el-option v-for="unit in units" :key="String(unit.unitId)" :label="unit.unitName" :value="unit.unitId" />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col v-if="!form.sourceUnitId" :span="12">
-              <el-form-item :label="t('lqg.sample.field.sourceUnitName')" prop="sourceUnitName">
+              <el-form-item :label="t('lqg.sample.field.sourceUnitName')" prop="sourceUnitName" class="is-required">
                 <el-input v-model="form.sourceUnitName" :placeholder="t('lqg.sample.field.sourceUnitPlaceholder')" maxlength="100" clearable />
               </el-form-item>
             </el-col>
@@ -205,7 +207,7 @@
             <template v-else>
               <el-button type="primary" :loading="submitting" @click="submitCreate">{{ t('lqg.sample.drawer.save') }}</el-button>
             </template>
-            <el-button @click="visible = false">{{ t('lqg.sample.drawer.cancel') }}</el-button>
+            <el-button @click="closeGuard.requestClose(() => (visible = false))">{{ t('lqg.sample.drawer.cancel') }}</el-button>
           </div>
         </div>
       </template>
@@ -240,6 +242,7 @@ import type { SourceUnitVO } from '@/api/lqg/auth/group';
 import type { SampleKind } from './pages';
 import { isPassageValue, normalizePassage } from './passage';
 import { useI18n } from 'vue-i18n';
+import { useCloseGuard } from '@/utils/lqgCloseGuard';
 
 const props = defineProps<{
   units: SourceUnitVO[];
@@ -368,7 +371,19 @@ const rules = computed<ElFormRules>(() => ({
   sampleKind: [{ required: true, message: t('lqg.sample.drawer.kindRequired'), trigger: 'change' }],
   tissueType: isTissue.value ? [{ required: true, message: t('lqg.sample.drawer.tissueRequired'), trigger: 'blur' }] : [],
   organoidType: isTissue.value ? [] : [{ required: true, message: t('lqg.sample.drawer.organoidRequired'), trigger: 'blur' }],
-  passage: isTissue.value ? [] : [{ validator: validatePassage, trigger: 'blur' }]
+  passage: isTissue.value ? [] : [{ validator: validatePassage, trigger: 'blur' }],
+  sourceUnitName: [
+    {
+      validator: (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
+        if (form.value.sourceUnitId || String(form.value.sourceUnitName ?? '').trim()) {
+          callback();
+          return;
+        }
+        callback(new Error(t('lqg.ux.sourceUnitRequired')));
+      },
+      trigger: 'blur'
+    }
+  ]
 }));
 
 const receiveRules = computed<ElFormRules>(() => ({
@@ -381,6 +396,9 @@ const invalidRules: ElFormRules = {
 };
 
 // ── 打开 ────────────────────────────────────────────────────────────────────
+// 有改动时按 ESC / 点 × / 点「取消」先问一句；点遮罩不再关（工作台 UX 测试 WEB-04）
+const closeGuard = useCloseGuard(() => form.value, () => visible.value && !loading.value);
+
 const openAdd = (kind?: string) => {
   form.value = emptyForm();
   form.value.sampleKind = (kind ?? props.kind) === 'organoid' ? 'organoid' : 'tissue';

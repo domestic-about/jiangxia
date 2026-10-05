@@ -82,6 +82,8 @@ export interface SampleColumn {
   align?: 'center';
   /** 超长省略 + 悬停看全文 */
   tooltip?: boolean;
+  /** 横向滚动时钉在左侧（工作台 UX 测试 WEB-05：22 列滚过去就不知道是哪条样本） */
+  fixed?: 'left';
 }
 
 const col = (key: string, cell: SampleCell, extra: Partial<SampleColumn> = {}): SampleColumn => ({
@@ -92,7 +94,7 @@ const col = (key: string, cell: SampleCell, extra: Partial<SampleColumn> = {}): 
 });
 
 /** 冻结列：内部编号（行的主键列，排在最前；它在模板里的位置由这里代表，与小程序表格页同一规则） */
-const FROZEN: SampleColumn = col('internalNo', 'mono', { width: 120, tooltip: true });
+const FROZEN: SampleColumn = col('internalNo', 'mono', { width: 130, tooltip: true, fixed: 'left' });
 
 /** 前置管理列：送检单号、来源（内 / 外部）、核验状态 */
 const LEAD: SampleColumn[] = [

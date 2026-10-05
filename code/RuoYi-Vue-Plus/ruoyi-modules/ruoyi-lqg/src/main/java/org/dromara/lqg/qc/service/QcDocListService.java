@@ -108,15 +108,17 @@ public class QcDocListService {
         vo.setSourceUnitName(sample.getSourceUnitName());
         vo.setTypeName("organoid".equals(sample.getSampleKind()) ? sample.getOrganoidType() : sample.getTissueType());
         vo.setReceiveDate(sample.getReceiveDate());
-        vo.setSampleQcStatus(sampleDoc == null ? null : sampleDoc.getDocStatus());
-        vo.setOrganoidQcStatus(organoidDoc == null ? null : organoidDoc.getDocStatus());
-        vo.setScoreStatus(scoreDoc == null ? null : scoreDoc.getDocStatus());
+        // ★ 编辑页打开时（GET bundle）就地建的空草稿、之后从没保存过 → 列表里仍算「未填写」
+        //   （工作台 UX 测试 WEB-02：谁点进去看一眼，三份就都变「草稿」、进度从「未开始」变「进行中」、最近修改变成刚才）
+        vo.setSampleQcStatus(sampleDoc == null ? null : listStatus(sampleDoc.getDocStatus(), sampleDoc.getCreateTime(), sampleDoc.getUpdateTime()));
+        vo.setOrganoidQcStatus(organoidDoc == null ? null : listStatus(organoidDoc.getDocStatus(), organoidDoc.getCreateTime(), organoidDoc.getUpdateTime()));
+        vo.setScoreStatus(scoreDoc == null ? null : listStatus(scoreDoc.getDocStatus(), scoreDoc.getCreateTime(), scoreDoc.getUpdateTime()));
         vo.setTotalScore(scoreDoc == null ? null : scoreDoc.getTotalScore());
-        // 没改过的行 update_time 是 null（编辑页首次打开时建的空草稿）→ 用建行时间
+        // 最近修改：只算真保存过的（打开就建、从没保存的空草稿不算）；seed 里 update_time 为空的行用建行时间
         vo.setLastUpdateTime(latest(
-            sampleDoc == null ? null : touchedAt(sampleDoc.getUpdateTime(), sampleDoc.getCreateTime()),
-            organoidDoc == null ? null : touchedAt(organoidDoc.getUpdateTime(), organoidDoc.getCreateTime()),
-            scoreDoc == null ? null : touchedAt(scoreDoc.getUpdateTime(), scoreDoc.getCreateTime())));
+            sampleDoc == null || neverSaved(sampleDoc.getCreateTime(), sampleDoc.getUpdateTime()) ? null : touchedAt(sampleDoc.getUpdateTime(), sampleDoc.getCreateTime()),
+            organoidDoc == null || neverSaved(organoidDoc.getCreateTime(), organoidDoc.getUpdateTime()) ? null : touchedAt(organoidDoc.getUpdateTime(), organoidDoc.getCreateTime()),
+            scoreDoc == null || neverSaved(scoreDoc.getCreateTime(), scoreDoc.getUpdateTime()) ? null : touchedAt(scoreDoc.getUpdateTime(), scoreDoc.getCreateTime())));
 
         String[] statuses = {vo.getSampleQcStatus(), vo.getOrganoidQcStatus(), vo.getScoreStatus()};
         int published = 0;
@@ -137,6 +139,22 @@ public class QcDocListService {
     private static <T> Map<Long, T> bySample(List<T> rows, Function<T, Long> key) {
         // 部分唯一索引保证一个样本每张表最多一行未删的；万一有重复，留第一行，不因脏数据整页 500
         return rows.stream().collect(Collectors.toMap(key, Function.identity(), (a, b) -> a));
+    }
+
+    /**
+     * 建了以后从没保存过：插入时自动填的 update_time 与 create_time 同一刻（差不到 1 秒）。
+     * update_time 为空的不算（seed 直接灌的行就是空的，那些是有内容的草稿）。
+     */
+    static boolean neverSaved(Date createTime, Date updateTime) {
+        return createTime != null && updateTime != null && Math.abs(updateTime.getTime() - createTime.getTime()) < 1000;
+    }
+
+    /** 列表上的单份状态：从没保存过的空草稿 = null（未填写），其余照库里的 doc_status */
+    static String listStatus(String docStatus, Date createTime, Date updateTime) {
+        if (QcDocRules.STATUS_DRAFT.equals(docStatus) && neverSaved(createTime, updateTime)) {
+            return null;
+        }
+        return docStatus;
     }
 
     private static Date touchedAt(Date updateTime, Date createTime) {

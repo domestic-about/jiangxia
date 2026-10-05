@@ -31,7 +31,7 @@ export default {
 
   filter: {
     internalNo: '内部编号',
-    internalNoPlaceholder: '内部编号（等值）',
+    internalNoPlaceholder: '内部编号（完整）',
     cryoName: '冻存样品',
     cryoNamePlaceholder: '冻存样品名称（模糊）',
     location: '位置',
@@ -152,7 +152,8 @@ export default {
     cryoNameRequired: '冻存样品名称必填',
     passage: '代数',
     passagePlaceholder: '如 P2',
-    passageRequired: '代数必填，格式形如 P2',
+    passageRequired: '请填代数，如 P2',
+    passageFormat: '代数格式应为 P 加数字，如 P2',
     freezeTime: '冻存时间',
     freezeTimeRequired: '冻存时间必填',
     initQty: '冻存数量/支',
@@ -174,7 +175,7 @@ export default {
   // ── 流水抽屉 ──────────────────────────────────────────────────────────────
   flow: {
     title: '出入库流水',
-    subtitle: '按时间倒序；「操作后剩余」是读时算的（不落库）。每行可改可删，改删后剩余与超期标记当场刷新。',
+    subtitle: '按时间倒序；「操作后剩余」按每一笔登记实时算出。每行可改可删，改删后剩余与超期标记立即更新。',
     loading: '加载中…',
     empty: '这批还没有任何出入库登记',
     colTime: '时间',
@@ -191,7 +192,7 @@ export default {
     close: '关 闭',
     edit: '修改',
     remove: '删除',
-    removeConfirm: '确认删除这一笔「{type} {delta}」登记？删掉之后追溯就断了（是软删，库里仍留痕）。',
+    removeConfirm: '确认删除这一笔「{type} {delta}」登记？删除后这一笔不再计入剩余，也不再显示在登记记录里。',
     removed: '已删除',
     edited: '已修改',
     removedRejected: '删除被拒绝（会让后面某一步剩余为负）：{msg}',
@@ -206,7 +207,8 @@ export default {
     qty: '支数',
     qtyTake: '取走支数',
     qtyAdd: '补入支数',
-    qtyAdjust: '调整量（可正可负、不为 0）',
+    qtyAdjust: '调整量',
+    qtyAdjustHint: '可正可负，不能为 0',
     qtyTakeRequired: '取走支数必须是正整数',
     qtyAddRequired: '补入支数必须是正整数',
     qtyAdjustRequired: '调整量不能为 0',
@@ -230,7 +232,7 @@ export default {
   // ── 转液氮弹窗 ────────────────────────────────────────────────────────────
   toLn2: {
     title: '登记转液氮',
-    tip: '保存后批次位置当场变液氮、超期标记与页签数字当场刷新（不必等定时任务）。',
+    tip: '保存后这一批的位置立即变为液氮，超期提醒和页签数字也会立即更新。',
     time: '转移至液氮时间',
     timeRequired: '转移时间必填，且不能早于冻存时间',
     location: '液氮储存位置',

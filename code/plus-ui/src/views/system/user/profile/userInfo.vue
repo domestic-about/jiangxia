@@ -34,8 +34,8 @@ const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const userRef = ref<ElFormInstance>();
 const rule: ElFormRules = {
   nickName: [{ required: true, message: '用户昵称不能为空', trigger: 'blur' }],
+  // 邮箱选填（后端也只校验格式）：没有邮箱的账号原来连昵称都改不了（工作台 UX 测试 WEB-16）
   email: [
-    { required: true, message: '邮箱地址不能为空', trigger: 'blur' },
     {
       type: 'email',
       message: '请输入正确的邮箱地址',

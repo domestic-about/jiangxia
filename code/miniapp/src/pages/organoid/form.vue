@@ -17,7 +17,7 @@ import NoteBar from '@/components/lqg/NoteBar.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
 import SourceUnitSheet from '@/components/lqg/SourceUnitSheet.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
-import { goPage } from '@/router/config'
+import { finishTo, goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { unitDisplay } from '@/utils/ext-profile'
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
@@ -33,6 +33,7 @@ import {
   updateExtOrganoid,
 } from './api'
 import type { OrganoidFieldKey, OrganoidFieldSpec, OrganoidMode } from './layout'
+import { useLeaveGuard } from '@/utils/leaveGuard'
 import {
   RECEIVE_FIELDS,
   fieldMaxlength,
@@ -98,6 +99,8 @@ const verifyStatus = computed(() => detail.value?.verifyStatus ?? null)
 /** 布局（纯函数）：渲染哪些字段、能不能改 */
 const layout = computed(() => organoidLayout(identity.value, verifyStatus.value, mine.value, mode.value))
 const editable = computed(() => layout.value.editable)
+// 有没保存的改动时按返回先问一句（UX 测试 MP-04）：加载完、可写时记基线
+const leave = useLeaveGuard(() => form.value, () => !loading.value && !failed.value && editable.value)
 const specs = computed<OrganoidFieldSpec[]>(() => fieldSpecs(layout.value, editable.value))
 const sendSpecs = computed(() => specs.value.filter(s => !(RECEIVE_FIELDS as readonly string[]).includes(s.key)))
 const receiveSpecs = computed(() => specs.value.filter(s => (RECEIVE_FIELDS as readonly string[]).includes(s.key)))
@@ -356,6 +359,8 @@ async function submit() {
     }
   }
   saving.value = true
+  // 成功后按钮一直禁用到离开本页（UX 测试 MP-01：原来 finally 先复位，600ms 空窗里连点会重复建一条）
+  let done = false
   try {
     if (mode.value === 'new') {
       if (isInternal.value) {
@@ -377,7 +382,9 @@ async function submit() {
       await updateExtOrganoid(organoidId.value, externalOrganoidPayload(form.value))
       uni.showToast({ title: '已保存', icon: 'none' })
     }
-    setTimeout(() => goPage('/pages/history/index'), 600)
+    done = true
+    leave.release()
+    setTimeout(() => finishTo('/pages/history/index?tab=organoid'), 600)
   }
   catch (e) {
     // 外部新用户撞上后端「来源单位不能为空」：换成去「我的 → 单位与组别」的引导
@@ -390,7 +397,9 @@ async function submit() {
     }
   }
   finally {
-    saving.value = false
+    if (!done) {
+      saving.value = false
+    }
   }
 }
 </script>

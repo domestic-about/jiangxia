@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" :title="title" size="700px" class="lqg-drawer-el" append-to-body :close-on-click-modal="true" @closed="handleClosed">
+  <el-drawer v-model="visible" :title="title" size="700px" class="lqg-drawer-el" append-to-body :close-on-click-modal="false" :before-close="closeGuard.beforeClose" @closed="handleClosed">
     <div v-if="loading" class="lqg-cryo-drawer__muted">{{ t('lqg.cryo.loading') }}</div>
 
     <template v-else>
@@ -123,7 +123,7 @@
 
     <template #footer>
       <el-button type="primary" :loading="submitting" @click="submit">{{ t('lqg.cryo.drawer.save') }}</el-button>
-      <el-button @click="visible = false">{{ t('lqg.cryo.drawer.cancel') }}</el-button>
+      <el-button @click="closeGuard.requestClose(() => (visible = false))">{{ t('lqg.cryo.drawer.cancel') }}</el-button>
     </template>
   </el-drawer>
 </template>
@@ -136,6 +136,8 @@ import { listSamples } from '@/api/lqg/sample';
 import type { SampleVO } from '@/api/lqg/sample';
 import { failText } from './flow';
 import { useI18n } from 'vue-i18n';
+import { useCloseGuard } from '@/utils/lqgCloseGuard';
+import { normalizePassage } from '../sample/passage';
 
 /**
  * 冻存批次的新增 / 编辑抽屉（UI:admin.cryo.list：「新增 / 编辑用抽屉；初始支数可改」）。
@@ -199,7 +201,18 @@ const rules = computed<ElFormRules>(() => ({
   cryoName: [{ required: true, message: t('lqg.cryo.drawer.cryoNameRequired'), trigger: 'blur' }],
   passage: [
     { required: true, message: t('lqg.cryo.drawer.passageRequired'), trigger: 'blur' },
-    { pattern: PASSAGE_PATTERN, message: t('lqg.cryo.drawer.passageRequired'), trigger: 'blur' }
+    // 小写 p 先转大写再判（与类器官送样同一套 normalizePassage）；格式不对单独一句，不再说「必填」（工作台 UX 测试 WEB-18）
+    {
+      validator: (_rule: unknown, value: string | null, callback: (error?: Error) => void) => {
+        const v = normalizePassage(value);
+        if (v && !PASSAGE_PATTERN.test(v)) {
+          callback(new Error(t('lqg.cryo.drawer.passageFormat')));
+          return;
+        }
+        callback();
+      },
+      trigger: 'blur'
+    }
   ],
   freezeTime: [{ required: true, message: t('lqg.cryo.drawer.freezeTimeRequired'), trigger: 'change' }],
   initQty: [{ required: true, message: t('lqg.cryo.drawer.initQtyRequired'), trigger: 'change' }],
@@ -219,6 +232,9 @@ const rules = computed<ElFormRules>(() => ({
     }
   ]
 }));
+
+// 有改动时按 ESC / 点 × / 点「取消」先问一句；点遮罩不再关（工作台 UX 测试 WEB-04）
+const closeGuard = useCloseGuard(() => form.value, () => visible.value && !loading.value);
 
 const openAdd = (presetSample?: SampleVO | null) => {
   mode.value = 'create';
@@ -284,7 +300,7 @@ const payload = (): CryoBatchForm => ({
   id: form.value.id,
   sampleId: form.value.sampleId,
   cryoName: form.value.cryoName,
-  passage: form.value.passage,
+  passage: normalizePassage(form.value.passage),
   freezeTime: form.value.freezeTime,
   initQty: form.value.initQty,
   density: form.value.density,

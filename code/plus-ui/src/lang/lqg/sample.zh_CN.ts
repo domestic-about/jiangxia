@@ -46,7 +46,7 @@ export default {
     sourceUnitPlaceholder: '选择来源单位',
     groupPlaceholder: '选择组别',
     groupPlaceholderNoUnit: '先选来源单位',
-    internalNoPlaceholder: '内部编号（精确）',
+    internalNoPlaceholder: '内部编号（完整）',
     operatorPlaceholder: '操作人（模糊）',
     tissuePlaceholder: '组织类型（模糊）',
     organoidPlaceholder: '类器官类型（模糊）',
@@ -164,7 +164,7 @@ export default {
     qcDocInvalid: '只有已核验有效的样本能打开质控文档',
     notYet: '在后续任务接入',
     delete: '删除',
-    deleteConfirm: '确认删除样本「{no}」？（软删，内部编号可重用）',
+    deleteConfirm: '确认删除样本「{no}」？删除后列表里就不再显示，它的内部编号可以重新使用。',
     deleted: '已删除'
   },
 

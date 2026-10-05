@@ -10,7 +10,8 @@
 
       <!-- 筛选区（UI:admin.sample.list）：一行排开，供体姓名 / 住院号旁标「精确匹配」。
            ★ 没有「类别」一格：类别由页面钉死（样本记录信息表 = tissue，类器官收样记录 = organoid，CR-20260924-10） -->
-      <el-form ref="queryRef" :model="queryParams" label-width="76px" class="lqg-sample__filter">
+      <el-form ref="queryRef" :model="queryParams" label-width="76px" class="lqg-sample__filter" @submit.prevent @keyup.enter="handleQuery">
+        <!-- 筛选框里按回车 = 点「搜索」（工作台 UX 测试 WEB-23；与质控文档列表一致） -->
         <el-row :gutter="12">
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.sample.filter.sourceUnit')" prop="sourceUnitId">
@@ -138,8 +139,9 @@
         :data="rows"
         border
         :row-class-name="rowClassName"
-        :empty-text="t('lqg.sample.empty')"
+       
       >
+        <template #empty><TableEmpty :error="loadError" :text="t('lqg.sample.empty')" @retry="getList" /></template>
         <el-table-column
           v-for="column in columns"
           :key="column.key"
@@ -149,9 +151,12 @@
           :min-width="column.minWidth"
           :align="column.align"
           :show-overflow-tooltip="column.tooltip === true"
+          :fixed="column.fixed"
         >
           <template #default="scope">
-            <span v-if="column.cell === 'mono'" class="lqg-sample__mono">{{ scope.row[column.key] || '—' }}</span>
+            <!-- 冻结的「内部编号」列：待核验 / 无效行还没有内部编号，用送检单号（灰字）认出这一行 -->
+            <span v-if="column.fixed && !scope.row[column.key] && scope.row.submitNo" class="lqg-sample__mono lqg-sample__muted">{{ scope.row.submitNo }}</span>
+            <span v-else-if="column.cell === 'mono'" class="lqg-sample__mono">{{ scope.row[column.key] || '—' }}</span>
             <span v-else-if="column.cell === 'flag'">{{ flagText(scope.row[column.key]) }}</span>
             <dict-tag v-else-if="column.cell === 'gender'" :options="lqg_gender" :value="scope.row[column.key]" />
             <dict-tag v-else-if="column.cell === 'submitSource'" :options="lqg_submit_source" :value="scope.row[column.key]" />
@@ -202,7 +207,16 @@
             >
               {{ t('lqg.sample.rowAction.qcDoc') }}
             </el-button>
-            <el-button v-hasPermi="['lqg:sample:remove']" link type="danger" icon="Delete" @click="handleDelete(scope.row)"></el-button>
+            <!-- 只有图标的按钮给一个悬停说明（工作台 UX 测试 WEB-24 / WEB-19：原来看不出这是删除） -->
+            <el-button
+              v-hasPermi="['lqg:sample:remove']"
+              link
+              type="danger"
+              icon="Delete"
+              :title="t('lqg.ux.deleteConfirm')"
+              :aria-label="t('lqg.ux.deleteConfirm')"
+              @click="handleDelete(scope.row)"
+            ></el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -250,6 +264,7 @@ import { normalizeSampleKind, sampleColumns, samplePageOf } from './pages';
 import { queryWithout, sampleIdOfQuery } from './relation';
 import type { SampleKind } from './pages';
 import { useI18n } from 'vue-i18n';
+import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -303,8 +318,12 @@ const queryParams = reactive<SampleQuery>({
   hospitalNo: null
 });
 
+// 最近一次取数失败了没有：失败时表格空白处说「没加载出来」而不是「没有数据」（工作台 UX 测试 WEB-06）
+const loadError = ref(false);
+
 const getList = async () => {
   loading.value = true;
+  loadError.value = false;
   try {
     // 日期区间两端都含（后端 ge / le），区间清掉时把两个参数一起清掉
     queryParams.receiveDateBegin = receiveDateRange.value?.[0] ?? null;
@@ -313,6 +332,11 @@ const getList = async () => {
     const res = await listSamples(queryParams);
     rows.value = (res.rows ?? []) as SampleVO[];
     total.value = res.total ?? 0;
+  } catch {
+    // 请求层已经弹过报错；这里把表格清空并标记失败
+    loadError.value = true;
+    rows.value = [];
+    total.value = 0;
   } finally {
     loading.value = false;
   }
@@ -435,7 +459,16 @@ const handleQcDoc = (row: SampleVO) => {
 };
 
 const handleDelete = async (row: SampleVO) => {
-  await proxy?.$modal.confirm(t('lqg.sample.rowAction.deleteConfirm', { no: row.submitNo }));
+  // 用内部编号认这一行（没有才用送检单号）；确认键是危险色；点取消不算错误（工作台 UX 测试 WEB-24）
+  try {
+    await ElMessageBox.confirm(
+      t('lqg.sample.rowAction.deleteConfirm', { no: row.internalNo || row.submitNo }),
+      t('lqg.ux.deleteTitle'),
+      { confirmButtonText: t('lqg.ux.deleteConfirm'), confirmButtonClass: 'el-button--danger', type: 'warning' }
+    );
+  } catch {
+    return;
+  }
   await delSample(row.id);
   proxy?.$modal.msgSuccess(t('lqg.sample.rowAction.deleted'));
   await getList();

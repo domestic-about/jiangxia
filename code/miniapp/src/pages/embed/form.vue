@@ -33,7 +33,7 @@ import FieldRow from '@/components/lqg/FieldRow.vue'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
-import { goPage } from '@/router/config'
+import { finishTo } from '@/router/config'
 import { useUserStore } from '@/store/user'
 // ★ 一律显式 import wd-* 的 .vue（SAMPLE-MP-001 坑 6：只靠 easycom 会让该模块的 .js 产物消失）
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
@@ -50,6 +50,7 @@ import {
   normalizeMode,
 } from './layout'
 import { hasOtherStain, stainProblem, toggleStain } from './stain'
+import { useLeaveGuard } from '@/utils/leaveGuard'
 
 // 石蜡包埋送样记录 · 填写页（UI:mp.embed.form）· EMBED-MP-001。
 //
@@ -110,6 +111,8 @@ const verifyStatus = computed(() => detail.value?.verifyStatus ?? null)
 /** 布局（纯函数）：渲染哪些字段、能不能改、出不出包埋卡片与「修改」 */
 const layout = computed(() => embedLayout(identity.value, verifyStatus.value, mine.value, mode.value))
 const editable = computed(() => layout.value.editable)
+// 有没保存的改动时按返回先问一句（UX 测试 MP-04）：加载完、可写时记基线
+const leave = useLeaveGuard(() => form.value, () => !loading.value && !failed.value && editable.value)
 const specs = computed<EmbedFieldSpec[]>(() => fieldSpecs(layout.value, editable.value))
 const groups = computed(() => groupSpecs(specs.value))
 /** 只读页右上角的「修改」（CR-20260918-07）：内部 + 这条记录内部可改 */
@@ -329,6 +332,8 @@ async function submit() {
     return
   }
   saving.value = true
+  // 成功后按钮一直禁用到离开本页（UX 测试 MP-01：原来 finally 先复位，600ms 空窗里连点会重复建一条）
+  let done = false
   try {
     if (mode.value === 'new') {
       if (isInternal.value) {
@@ -350,7 +355,9 @@ async function submit() {
       await updateExtEmbed(embedId.value, externalEmbedPayload(form.value))
       uni.showToast({ title: '已保存', icon: 'none' })
     }
-    setTimeout(() => goPage('/pages/history/index'), 600)
+    done = true
+    leave.release()
+    setTimeout(() => finishTo('/pages/history/index?tab=embed'), 600)
   }
   catch (e) {
     if (e instanceof Error && e.message) {
@@ -358,7 +365,9 @@ async function submit() {
     }
   }
   finally {
-    saving.value = false
+    if (!done) {
+      saving.value = false
+    }
   }
 }
 </script>

@@ -20,8 +20,8 @@ const props = withDefaults(defineProps<{
 const greeting = computed(() => {
   const hour = new Date().getHours()
   const period = hour < 6 ? '凌晨' : hour < 12 ? '上午' : hour < 18 ? '下午' : '晚上'
-  const who = props.name || '你好'
-  return `${who}，${period}好`
+  // 没有姓名（新号还没填）就只问候，不拼「你好，晚上好」
+  return props.name ? `${props.name}，${period}好` : `${period}好`
 })
 
 const label = computed(() => identityLabel(props.identity))

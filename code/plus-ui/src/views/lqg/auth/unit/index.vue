@@ -116,7 +116,7 @@
     </el-card>
 
     <!-- 单位弹窗 -->
-    <el-dialog v-model="unitDialog.visible" :title="unitDialog.isEdit ? t('lqg.auth.unit.unitDialogEdit') : t('lqg.auth.unit.unitDialogAdd')" width="480px" append-to-body :close-on-click-modal="true">
+    <el-dialog v-model="unitDialog.visible" :title="unitDialog.isEdit ? t('lqg.auth.unit.unitDialogEdit') : t('lqg.auth.unit.unitDialogAdd')" width="480px" append-to-body :close-on-click-modal="false">
       <el-form ref="unitFormRef" :model="unitDialog.form" :rules="unitDialog.rules" label-width="100px">
         <el-form-item :label="t('lqg.auth.unit.unitName')" prop="unitName">
           <el-input v-model="unitDialog.form.unitName" :placeholder="t('lqg.auth.unit.unitNamePlaceholder')" maxlength="100" clearable />
@@ -134,7 +134,7 @@
     </el-dialog>
 
     <!-- 组别弹窗 -->
-    <el-dialog v-model="groupDialog.visible" :title="groupDialog.isEdit ? t('lqg.auth.unit.groupDialogEdit') : t('lqg.auth.unit.groupDialogAdd')" width="480px" append-to-body :close-on-click-modal="true">
+    <el-dialog v-model="groupDialog.visible" :title="groupDialog.isEdit ? t('lqg.auth.unit.groupDialogEdit') : t('lqg.auth.unit.groupDialogAdd')" width="480px" append-to-body :close-on-click-modal="false">
       <el-form ref="groupFormRef" :model="groupDialog.form" :rules="groupDialog.rules" label-width="100px">
         <el-form-item :label="t('lqg.auth.unit.groupUnit')">
           <span>{{ currentUnit?.unitName }}</span>
