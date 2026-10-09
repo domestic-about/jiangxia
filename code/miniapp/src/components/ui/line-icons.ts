@@ -34,6 +34,12 @@ const ICON_BODY = {
   clock: '<circle cx=\'12\' cy=\'12\' r=\'8.5\'/><path d=\'M12 7.5V12l3 1.8\'/>',
   /** 行尾的右箭头 */
   chevron: '<path d=\'m9.5 5.5 6.5 6.5-6.5 6.5\'/>',
+  /** 选择面板里选中项的勾（种属面板，CR-20261009-18） */
+  check: '<path d=\'m5 12.5 4.5 4.5L19 7.5\'/>',
+  /** 搜索框前的放大镜 */
+  search: '<circle cx=\'11\' cy=\'11\' r=\'6.5\'/><path d=\'m16 16 4.5 4.5\'/>',
+  /** 「使用「…」」那一行前的加号 */
+  plus: '<path d=\'M12 5v14M5 12h14\'/>',
 } as const
 
 export type LineIconName = keyof typeof ICON_BODY

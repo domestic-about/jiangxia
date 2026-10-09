@@ -24,11 +24,6 @@ export function speciesChoices(dict: readonly unknown[] | null | undefined): str
   return out.length > 0 ? out : [...DEFAULT_SPECIES]
 }
 
-/** 当前值是不是手填的（有值、且不在常用值里） */
-export function isManualSpecies(value: string | null | undefined, choices: readonly string[]): boolean {
-  const text = String(value ?? '').trim()
-  return !!text && !choices.includes(text)
-}
 
 /** 提交前 / 比较用：去首尾空白 */
 export function normalizeSpecies(value: unknown): string {
@@ -56,4 +51,55 @@ export async function fetchSpeciesOptions(): Promise<string[]> {
   catch {
     return [...DEFAULT_SPECIES]
   }
+}
+
+/** 面板里的一行：值 + 是不是当前选中的 */
+export interface SpeciesRow {
+  value: string
+  selected: boolean
+}
+
+/** 面板的显示状态：过滤后的行 + 「使用「…」」那一行要用的值（null = 不出这一行） */
+export interface SpeciesSheetView {
+  rows: SpeciesRow[]
+  createValue: string | null
+}
+
+/**
+ * 种属面板显示什么（一个输入框既搜索、又能直接用输入的字 —— 不分「选」与「手填」两种模式）：
+ *   · 行 = 常用值 +（当前值是手填的就把它也列上，排最后，打勾）；输入了字就按「包含」过滤；
+ *   · 输入的字（去首尾空白）不等于任何一行 → 顶上出「使用「…」」，点它就用这几个字；
+ *   · 输入超过 50 字按 50 字截（与后端上限一致）。
+ */
+export function speciesSheetView(options: readonly string[], keyword: string, current: string): SpeciesSheetView {
+  const own = normalizeSpecies(current)
+  const all = [...options]
+  if (own && !all.includes(own)) {
+    all.push(own)
+  }
+  const kw = Array.from(normalizeSpecies(keyword)).slice(0, SPECIES_MAX).join('')
+  const rows = all
+    .filter(value => !kw || value.includes(kw))
+    .map(value => ({ value, selected: value === own }))
+  const createValue = kw && !all.includes(kw) ? kw : null
+  return { rows, createValue }
+}
+
+/**
+ * 键盘上点「完成」时用哪个值：有「使用「…」」就用输入的字；输入的字正好是某一行就用那一行；
+ * 过滤后只剩一行也用它；其余（没输入 / 还剩好几行）→ null，面板不动。
+ */
+export function speciesOnConfirm(view: SpeciesSheetView, keyword: string): string | null {
+  if (view.createValue) {
+    return view.createValue
+  }
+  const kw = normalizeSpecies(keyword)
+  if (!kw) {
+    return null
+  }
+  const exact = view.rows.find(r => r.value === kw)
+  if (exact) {
+    return exact.value
+  }
+  return view.rows.length === 1 ? view.rows[0].value : null
 }

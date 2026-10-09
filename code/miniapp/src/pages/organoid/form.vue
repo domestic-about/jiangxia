@@ -500,7 +500,7 @@ async function submit() {
       </button>
     </view>
 
-    <!-- 种属：底部弹框（CR-20261009-18）—— 字典常用值 + 「列表里没有，手动填写」 -->
+    <!-- 种属：底部弹框（CR-20261009-18）—— 一个输入框既搜常用值、又能直接「使用」列表里没有的 -->
     <SpeciesSheet
       ref="speciesSheetRef"
       :model-value="form.species"
