@@ -562,6 +562,7 @@ public class QcDocService {
         // 供体姓名是加密列：读出来解密再给工作台（ADR-0006，内部看明文）
         vo.setDonorName(fieldCipher.decrypt(sample.getDonorName()));
         vo.setGender(sample.getGender());
+        vo.setSpecies(sample.getSpecies());
         vo.setReceiveDate(sample.getReceiveDate());
         vo.setProcessTime(sample.getProcessTime());
         vo.setOperatorName(sample.getOperatorName());

@@ -52,53 +52,57 @@ public class SampleTissueExportVo implements Serializable {
     @Schema(description = "来源单位名称快照；自填单位名时是自填值")
     private String sourceUnitName;
 
-    @ExcelProperty(value = "供体姓名", index = 1)
+    @ExcelProperty(value = "种属", index = 1)
+    @Schema(description = "插入列（模板里没有，CR-20261009-18）：紧跟「来源单位」；没填的老记录留空")
+    private String species;
+
+    @ExcelProperty(value = "供体姓名", index = 2)
     @Schema(description = "明文（ADR-0006 内部人员看明文）")
     private String donorName;
 
-    @ExcelProperty(value = "性别", index = 2)
+    @ExcelProperty(value = "性别", index = 3)
     @Schema(description = "中文：男 / 女 / 未知")
     private String gender;
 
-    @ExcelProperty(value = "年龄", index = 3, converter = NumericTextConverter.class)
+    @ExcelProperty(value = "年龄", index = 4, converter = NumericTextConverter.class)
     @Schema(description = "文本：56 / 3月龄（模板没限定单位）")
     private String age;
 
-    @ExcelProperty(value = "住院号", index = 4)
+    @ExcelProperty(value = "住院号", index = 5)
     @Schema(description = "明文（ADR-0006 内部人员看明文）")
     private String hospitalNo;
 
-    @ExcelProperty(value = "组织类型", index = 5)
+    @ExcelProperty(value = "组织类型", index = 6)
     private String tissueType;
 
-    @ExcelProperty(value = "收样日期", index = 6)
+    @ExcelProperty(value = "收样日期", index = 7)
     @Schema(description = "yyyy-MM-dd")
     private String receiveDate;
 
-    @ExcelProperty(value = "内部编号", index = 7)
+    @ExcelProperty(value = "内部编号", index = 8)
     @Schema(description = "待核验 / 无效的外部样本还没有内部编号 → 空格子")
     private String internalNo;
 
-    @ExcelProperty(value = "有无固定", index = 8)
+    @ExcelProperty(value = "有无固定", index = 9)
     @Schema(description = "有 / 无；没选留空")
     private String isFixed;
 
-    @ExcelProperty(value = "处理时间", index = 9)
+    @ExcelProperty(value = "处理时间", index = 10)
     @Schema(description = "yyyy-MM-dd HH:mm:ss")
     private String processTime;
 
-    @ExcelProperty(value = "质控表", index = 10)
+    @ExcelProperty(value = "质控表", index = 11)
     @Schema(description = "有 / 无；没选留空")
     private String hasQcSheet;
 
-    @ExcelProperty(value = "细胞活率报告", index = 11)
+    @ExcelProperty(value = "细胞活率报告", index = 12)
     @Schema(description = "有 / 无；没选留空")
     private String hasViabilityReport;
 
-    @ExcelProperty(value = "操作人", index = 12)
+    @ExcelProperty(value = "操作人", index = 13)
     private String operatorName;
 
-    @ExcelProperty(value = "备注", index = 13)
+    @ExcelProperty(value = "备注", index = 14)
     private String remark;
 
 }

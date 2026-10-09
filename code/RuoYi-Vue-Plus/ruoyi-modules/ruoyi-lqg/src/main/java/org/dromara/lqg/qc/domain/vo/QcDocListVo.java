@@ -35,6 +35,9 @@ public class QcDocListVo implements Serializable {
     @Schema(description = "来源单位")
     private String sourceUnitName;
 
+    @Schema(description = "种属（样本行上的，CR-20261009-18）")
+    private String species;
+
     @Schema(description = "组织类型（tissue）或类器官类型（organoid）")
     private String typeName;
 

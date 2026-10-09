@@ -69,6 +69,8 @@ export interface QcSampleRefVO {
   sourceUnitName?: string | null;
   donorName?: string | null;
   gender?: string | null;
+  /** 种属（只读带出，CR-20261009-18） */
+  species?: string | null;
   receiveDate?: string | null;
   processTime?: string | null;
   operatorName?: string | null;
@@ -268,6 +270,8 @@ export interface QcDocListQuery extends PageQuery {
   keyword?: string;
   /** tissue（样本记录信息表）/ organoid（类器官送样记录） */
   sampleKind?: string;
+  /** 种属（等值；__none__ = 还没填，CR-20261009-18） */
+  species?: string | null;
   /** none（未开始）/ doing（填写中）/ done（三份都已完成） */
   progress?: string;
   /** 收样日期 yyyy-MM-dd（含当天） */
@@ -281,6 +285,8 @@ export interface QcDocListVO {
   internalNo?: string;
   sampleKind: 'tissue' | 'organoid';
   sourceUnitName?: string;
+  /** 种属（样本行上的，CR-20261009-18） */
+  species?: string | null;
   typeName?: string;
   receiveDate?: string;
   sampleQcStatus: QcDocStatus;

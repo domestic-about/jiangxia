@@ -18,9 +18,10 @@ import java.util.Map;
  * 看到<b>别的单位</b>填过的内容（accept 第 3 条倒数第 2 段断的就是「字典里有『肝组织』、
  * 响应里绝不能出现『测试供体甲』这种只存在于样本表里的值」）。
  *
- * <p>三个 type 与三本字典一一对应（{@code authority/field-ssot.yaml} 的 {@code lqg_hint_*}）：
+ * <p>四个 type 与四本字典一一对应（{@code authority/field-ssot.yaml} 的 {@code lqg_hint_*} 与 {@code lqg_species}）：
  * {@code tissue → lqg_hint_tissue_type}、{@code organoid → lqg_hint_organoid_type}、
- * {@code sample → lqg_hint_sample_type}。
+ * {@code sample → lqg_hint_sample_type}、{@code species → lqg_species}（CR-20261009-18：种属的常用值，
+ * 小程序填写页的种属选择面板从这里取，列表里没有的可以手填）。
  *
  * @author SAMPLE-MODEL-001
  */
@@ -37,6 +38,7 @@ public class HintDictionaryService {
         DICT_OF_TYPE.put("tissue", "lqg_hint_tissue_type");
         DICT_OF_TYPE.put("organoid", "lqg_hint_organoid_type");
         DICT_OF_TYPE.put("sample", "lqg_hint_sample_type");
+        DICT_OF_TYPE.put("species", "lqg_species");
     }
 
     private final DictService dictService;
@@ -44,13 +46,13 @@ public class HintDictionaryService {
     /**
      * 某个联想词类型下的全部候选词（按字典 {@code dict_sort} 升序）。
      *
-     * @param type tissue / organoid / sample
+     * @param type tissue / organoid / sample / species
      * @return 候选词数组（字典里没有该类型 → 空数组，不是 500）
      */
     public List<String> hints(String type) {
         String dictType = DICT_OF_TYPE.get(type == null ? "" : type.trim());
         if (dictType == null) {
-            throw new ServiceException("联想词类型只能是 tissue / organoid / sample");
+            throw new ServiceException("联想词类型只能是 tissue / organoid / sample / species");
         }
         List<DictDataDTO> data = dictService.getDictData(dictType);
         if (data == null) {

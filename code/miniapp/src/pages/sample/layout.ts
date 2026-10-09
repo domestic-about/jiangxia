@@ -29,6 +29,8 @@ export type FormMode = 'new' | 'edit' | 'view'
 /** 送检段字段 key，数组顺序即显示顺序（fixture 的 `sendFields`） */
 export const SEND_FIELDS = [
   'sourceUnitName',
+  // 种属（CR-20261009-18：甲方 2026-10-09）：紧跟来源单位，内外部都填、必填
+  'species',
   'donorName',
   'gender',
   'age',
@@ -144,6 +146,7 @@ export interface FieldSpec {
 /** 字段的中文标签（顺序与 SEND_FIELDS / RECEIVE_FIELDS 一致） */
 const LABELS: Record<FormFieldKey, string> = {
   sourceUnitName: '来源单位',
+  species: '种属',
   donorName: '供体姓名',
   gender: '性别',
   age: '年龄',
@@ -170,6 +173,8 @@ const LABELS: Record<FormFieldKey, string> = {
  */
 const CONTROLS: Partial<Record<FormFieldKey, FieldControl>> = {
   sourceUnitName: 'select',
+  // 种属：底部弹框选字典里的常用值，列表里没有的手填（SpeciesSheet，CR-20261009-18）
+  species: 'select',
   gender: 'seg',
   hasPathology: 'seg',
   isFixed: 'seg',
@@ -191,6 +196,7 @@ export function fieldLabel(key: FormFieldKey): string {
  */
 const MAXLENGTH: Partial<Record<FormFieldKey, number>> = {
   sourceUnitName: 100,
+  species: 50,
   donorName: 50,
   age: 20,
   hospitalNo: 50,

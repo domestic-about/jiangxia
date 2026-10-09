@@ -884,6 +884,12 @@
 
 {"comment": "来源单位名称（导出用；选了单位就存单位名快照）", "length": 100, "name": "source_unit_name", "nullable": false, "type": "str"}
 
+## t_lqg_sample.species
+
+**锚 id**：`FIELD:t_lqg_sample.species`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "种属（CR-20261009-18，甲方 2026-10-09）：两类都必填（服务层 SubmitSegmentRules 校验，列可空 = 本需求之前录的老记录）；文本，常用值来自字典 lqg_species（人 / 鼠兔 / 移植猪 / 鸡），列表里没有的可以手填；属于送检段（外部可填、待核验 / 无效时可改，核验时实验室可改，外部看得到）；石蜡包埋、-80 冻存、样本质控表都读所挂样本的这一列，不各存一份。迁移 V202610091000", "length": 50, "name": "species", "nullable": true, "type": "str"}
+
 ## t_lqg_sample.submit_no
 
 **锚 id**：`FIELD:t_lqg_sample.submit_no`（ticket 的 blueprint_refs 写这个）

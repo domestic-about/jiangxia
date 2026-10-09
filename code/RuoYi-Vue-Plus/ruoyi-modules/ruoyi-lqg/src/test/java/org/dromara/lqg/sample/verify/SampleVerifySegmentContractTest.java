@@ -76,6 +76,7 @@ class SampleVerifySegmentContractTest {
         assertEquals("male", set.get("gender"));
         assertEquals("Y", set.get("has_pathology"));
         assertEquals("核验时补的备注", set.get("remark"));
+        assertEquals("移植猪", set.get("species"), "种属随送检段落库（CR-20261009-18）");
         assertEquals(9000009001L, set.get("source_unit_id"));
         assertEquals("A 医院", set.get("source_unit_name"), "选了单位 → 名称取单位表的快照");
         assertTrue(set.containsKey("organoid_type") && set.get("organoid_type") == null, "组织样本清掉类器官类型列");
@@ -92,7 +93,7 @@ class SampleVerifySegmentContractTest {
         fake.service().verifyAs(PENDING_TISSUE, validBo(), true, OPERATOR);
         Map<String, Object> set = setValues(fake.updates.get(0));
         for (String col : List.of("tissue_type", "donor_name", "gender", "age", "hospital_no", "has_pathology",
-            "remark", "source_unit_id", "source_unit_name", "organoid_type", "passage")) {
+            "remark", "source_unit_id", "source_unit_name", "organoid_type", "passage", "species")) {
             assertFalse(set.containsKey(col), "没带送检段却写了 " + col + "：" + set.keySet());
         }
         assertEquals("valid", set.get("verify_status"));
@@ -138,6 +139,21 @@ class SampleVerifySegmentContractTest {
     }
 
     @Test
+    @DisplayName("④b 核验时送检段没有种属（CR-20261009-18 之前提交的老记录）→ 400「种属不能为空」，不写库")
+    void verifyWithSegmentRequiresSpecies() {
+        Fake fake = new Fake();
+        SampleVerifyBo bo = validBo();
+        SampleSubmitSegmentBo seg = tissueSegment();
+        seg.setSpecies(null);
+        bo.setSubmitSegment(seg);
+        ServiceException e = assertThrows(ServiceException.class,
+            () -> fake.service().verifyAs(PENDING_TISSUE, bo, true, OPERATOR));
+        assertEquals(Integer.valueOf(400), e.getCode());
+        assertTrue(e.getMessage().contains("种属不能为空"), e.getMessage());
+        assertEquals(0, fake.updates.size());
+    }
+
+    @Test
     @DisplayName("⑤ 判为无效：送检段随原因一起保存；收样段不落（判无效的样本不补收样信息）")
     void invalidWithSegment() {
         Fake fake = new Fake();
@@ -163,6 +179,7 @@ class SampleVerifySegmentContractTest {
         SampleVerifyBo bo = validBo();
         SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
         seg.setSourceUnitName("  自填单位  ");
+        seg.setSpecies(" 鸡 ");
         seg.setOrganoidType("胃类器官（更正）");
         seg.setRemark("备注");
         seg.setDonorName("类器官没有这一列");
@@ -171,6 +188,7 @@ class SampleVerifySegmentContractTest {
         fake.service().verifyAs(PENDING_ORGANOID, bo, true, OPERATOR);
         Map<String, Object> set = setValues(fake.updates.get(0));
         assertEquals("胃类器官（更正）", set.get("organoid_type"));
+        assertEquals("鸡", set.get("species"), "类器官也写种属（去首尾空白，CR-20261009-18）");
         assertNull(set.get("source_unit_id"));
         assertEquals("自填单位", set.get("source_unit_name"), "没选单位 → 名称去首尾空白");
         assertTrue(set.containsKey("tissue_type") && set.get("tissue_type") == null);
@@ -185,6 +203,7 @@ class SampleVerifySegmentContractTest {
         SampleVerifyBo bo = validBo();
         SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
         seg.setSourceUnitName("B 大学");
+        seg.setSpecies("人");
         seg.setOrganoidType("肝类器官");
         seg.setPassage(" p4 ");
         bo.setSubmitSegment(seg);
@@ -203,6 +222,7 @@ class SampleVerifySegmentContractTest {
         SampleVerifyBo bo = validBo();
         SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
         seg.setSourceUnitName("B 大学");
+        seg.setSpecies("人");
         seg.setOrganoidType("肝类器官");
         seg.setPassage("4");
         bo.setSubmitSegment(seg);
@@ -245,6 +265,7 @@ class SampleVerifySegmentContractTest {
         SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
         seg.setSourceUnitId(9000009001L);
         seg.setSourceUnitName("前端带回来的旧名字");
+        seg.setSpecies("移植猪");
         seg.setDonorName("测试供体乙（核验更正）");
         seg.setGender("male");
         seg.setAge("49");

@@ -53,9 +53,9 @@ function labelOf(row: SampleRow): string {
   return [str(row.internalNo), str(row.submitNo)].filter(Boolean).join(' · ') || '—'
 }
 
-/** 选项副行：组织 / 类器官类型 · 来源单位 */
+/** 选项副行：种属 · 组织 / 类器官类型 · 来源单位（种属 CR-20261009-18：选样本时就看得出是人还是动物） */
 function subOf(row: SampleRow): string {
-  return [str(row.tissueType) || str(row.organoidType), str(row.sourceUnitName)].filter(Boolean).join(' · ')
+  return [str(row.species), str(row.tissueType) || str(row.organoidType), str(row.sourceUnitName)].filter(Boolean).join(' · ')
 }
 
 function search() {

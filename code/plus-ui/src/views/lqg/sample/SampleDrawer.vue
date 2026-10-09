@@ -67,6 +67,13 @@
               </el-form-item>
             </el-col>
 
+            <!-- 种属（CR-20261009-18）：两类都必填；下拉是字典 lqg_species 的常用值，列表里没有的直接输入 -->
+            <el-col :span="12">
+              <el-form-item :label="t('lqg.species.label')" prop="species">
+                <SpeciesSelect v-model="form.species" />
+              </el-form-item>
+            </el-col>
+
             <el-col :span="12">
               <el-form-item :label="t('lqg.sample.field.operatorName')" prop="operatorName">
                 <el-input v-model="form.operatorName" maxlength="50" clearable />
@@ -236,6 +243,8 @@
 
 <script setup name="LqgSampleDrawer" lang="ts">
 import SegButtons from '@/components/lqg/SegButtons/index.vue';
+import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
+import { SPECIES_MAX, normalizeSpecies } from '@/components/lqg/SpeciesSelect/species';
 import { addSample, getSample, neverModified, updateSample, verifySample } from '@/api/lqg/sample';
 import type { SampleForm, SampleSubmitSegment, SampleVO, SampleVerifyForm } from '@/api/lqg/sample';
 import type { SourceUnitVO } from '@/api/lqg/auth/group';
@@ -297,6 +306,7 @@ const emptyForm = (): SampleForm & Partial<SampleVO> => ({
   invalidReason: null,
   sourceUnitId: null,
   sourceUnitName: null,
+  species: null,
   donorName: null,
   gender: null,
   age: null,
@@ -367,8 +377,22 @@ const validatePassage = (_rule: unknown, value: string | null | undefined, callb
   }
 };
 
+/** 种属：两类都必填（后端同一规则，CR-20261009-18）；手填的不超过 50 字 */
+const validateSpecies = (_rule: unknown, value: string | null | undefined, callback: (e?: Error) => void) => {
+  const text = normalizeSpecies(value);
+  if (!text) {
+    callback(new Error(t('lqg.species.required')));
+  } else if (Array.from(text).length > SPECIES_MAX) {
+    callback(new Error(t('lqg.species.tooLong')));
+  } else {
+    callback();
+  }
+};
+
 const rules = computed<ElFormRules>(() => ({
   sampleKind: [{ required: true, message: t('lqg.sample.drawer.kindRequired'), trigger: 'change' }],
+  // required: true 只为了标签前的红星（Element 按它画星）；真正的判断在 validator 里
+  species: [{ required: true, validator: validateSpecies, trigger: 'change' }],
   tissueType: isTissue.value ? [{ required: true, message: t('lqg.sample.drawer.tissueRequired'), trigger: 'blur' }] : [],
   organoidType: isTissue.value ? [] : [{ required: true, message: t('lqg.sample.drawer.organoidRequired'), trigger: 'blur' }],
   passage: isTissue.value ? [] : [{ validator: validatePassage, trigger: 'blur' }],
@@ -435,6 +459,7 @@ const payload = (): SampleForm => {
     sampleKind: f.sampleKind,
     sourceUnitId: f.sourceUnitId ?? null,
     sourceUnitName: f.sourceUnitName ?? null,
+    species: normalizeSpecies(f.species),
     donorName: f.donorName ?? null,
     gender: f.gender ?? null,
     age: f.age ?? null,
@@ -502,6 +527,8 @@ const submitSegmentPayload = (): SampleSubmitSegment => {
   return {
     sourceUnitId: f.sourceUnitId ?? null,
     sourceUnitName: f.sourceUnitName ?? null,
+    // ★ 种属属于送检段（整段替换，CR-20261009-18）：不带 = 后端报「种属不能为空」
+    species: normalizeSpecies(f.species),
     donorName: f.donorName ?? null,
     gender: f.gender ?? null,
     age: f.age ?? null,
@@ -565,11 +592,13 @@ const submitInvalid = () => {
         .catch(() => false)) ?? true;
     if (!submitOk) {
       proxy?.$modal.msgWarning(
-        isTissue.value
-          ? t('lqg.sample.drawer.tissueRequired')
-          : isPassageValue(form.value.passage)
-            ? t('lqg.sample.drawer.organoidRequired')
-            : t('lqg.sample.drawer.passageInvalid')
+        !normalizeSpecies(form.value.species)
+          ? t('lqg.species.required')
+          : isTissue.value
+            ? t('lqg.sample.drawer.tissueRequired')
+            : isPassageValue(form.value.passage)
+              ? t('lqg.sample.drawer.organoidRequired')
+              : t('lqg.sample.drawer.passageInvalid')
       );
       return;
     }

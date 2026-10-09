@@ -30,6 +30,12 @@
               </el-select>
             </el-form-item>
           </el-col>
+          <!-- 种属（CR-20261009-18） -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.species.label')">
+              <SpeciesSelect v-model="queryParams.species" filter class="lqg-qclist__control" @update:model-value="handleQuery" />
+            </el-form-item>
+          </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.qc.list.filter.progress')">
               <el-select v-model="queryParams.progress" clearable class="lqg-qclist__control" @change="handleQuery">
@@ -37,7 +43,8 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
+          <el-col :xs="24" :sm="24" :md="16" :lg="12">
             <el-form-item :label="t('lqg.qc.list.filter.receiveRange')">
               <el-date-picker
                 v-model="receiveRange"
@@ -45,7 +52,7 @@
                 value-format="YYYY-MM-DD"
                 :start-placeholder="t('lqg.qc.list.filter.receiveBegin')"
                 :end-placeholder="t('lqg.qc.list.filter.receiveEnd')"
-                class="lqg-qclist__control"
+                class="lqg-qclist__control lqg-range"
                 clearable
                 @change="handleQuery"
               />
@@ -74,6 +81,9 @@
         </el-table-column>
         <el-table-column :label="t('lqg.qc.list.col.sourceUnit')" prop="sourceUnitName" min-width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.sourceUnitName || '—' }}</template>
+        </el-table-column>
+        <el-table-column :label="t('lqg.species.label')" prop="species" width="80" align="center" :show-overflow-tooltip="true">
+          <template #default="scope">{{ speciesText(scope.row.species) }}</template>
         </el-table-column>
         <el-table-column :label="t('lqg.qc.list.col.receiveDate')" prop="receiveDate" width="100" align="center">
           <template #default="scope">{{ scope.row.receiveDate || '—' }}</template>
@@ -120,6 +130,8 @@ import { listQcDocs } from '@/api/lqg/qc';
 import type { QcDocListQuery, QcDocListVO, QcDocStatus } from '@/api/lqg/qc';
 import { useI18n } from 'vue-i18n';
 import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
+import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
+import { speciesText } from '@/components/lqg/SpeciesSelect/species';
 
 // 「质控文档」板块（CR-20260930-11，飞书「网页工作台」第 17 行，甲方 2026-09-30 确认）：
 // 三份质控表单独成一个板块 —— 一行一个已核验有效的样本，三列是三份表各自的状态，
@@ -145,6 +157,7 @@ const queryParams = reactive<QcDocListQuery>({
   pageSize: 20,
   keyword: undefined,
   sampleKind: undefined,
+  species: null,
   progress: undefined
 });
 
@@ -179,6 +192,7 @@ const handleQuery = () => {
 const resetQuery = () => {
   queryParams.keyword = undefined;
   queryParams.sampleKind = undefined;
+  queryParams.species = null;
   queryParams.progress = undefined;
   receiveRange.value = null;
   handleQuery();

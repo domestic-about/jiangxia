@@ -103,13 +103,15 @@ class MpExportContractTest {
     // ── ② 本包不重写列定义：上游 16 列表头 ↔ 甲方模板原件第 1 行 ─────────────
 
     @Test
-    @DisplayName("石蜡包埋 16 列表头：上游 headerIndex() 与甲方模板原件第 1 行逐字同序")
+    @DisplayName("石蜡包埋表头：上游 headerIndex() 去掉插入列后与甲方模板原件第 1 行 16 列逐字同序")
     void embedHeaderStillMatchesTheTemplate() throws Exception {
         List<String> template = firstRowOf("石蜡包埋送样记录模板.xlsx");
         if (template == null) {
             return; // 模板不在（不伪装成通过，见 printTemplateMissing）
         }
-        assertEquals(new java.util.ArrayList<>(EmbedExportService.headerIndex().keySet()), template);
+        List<String> upstream = new java.util.ArrayList<>(EmbedExportService.headerIndex().keySet());
+        upstream.removeAll(EmbedExportService.INSERTED_AFTER.keySet());
+        assertEquals(upstream, template);
     }
 
     @Test
@@ -272,8 +274,9 @@ class MpExportContractTest {
     @Test
     @DisplayName("两张样本导出视图仍在上游 SampleExportService（本包只有分派）")
     void sampleViewsComeFromUpstream() {
-        assertEquals(14, SampleExportService.tissueHeaderIndex().size());
-        // 类器官 = 模板 7 列 + 插入的「代数」（CR-20260924-10；列名只在上游 SampleExportService 手上）
+        // 组织样本 = 模板 14 列 + 插入的「种属」（CR-20261009-18）
+        assertEquals(14 + SampleExportService.TISSUE_INSERTED_AFTER.size(), SampleExportService.tissueHeaderIndex().size());
+        // 类器官 = 模板 7 列 + 插入的「种属」「代数」（CR-20261009-18 / CR-20260924-10；列名只在上游 SampleExportService 手上）
         assertEquals(7 + SampleExportService.ORGANOID_INSERTED_AFTER.size(), SampleExportService.organoidHeaderIndex().size());
         assertEquals(String.class, fieldType(SampleTissueExportVo.class, "donorName"));
         assertEquals(String.class, fieldType(SampleOrganoidExportVo.class, "organoidType"));

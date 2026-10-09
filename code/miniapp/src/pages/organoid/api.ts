@@ -19,6 +19,8 @@ export interface OrganoidFormValue {
   sourceUnitId: string | number | null
   /** 来源单位名称快照（显示 + 提交都要） */
   sourceUnitName: string
+  /** 种属（CR-20261009-18：甲方 2026-10-09 要加的一项；必填，字典常用值或手填） */
+  species: string
   organoidType: string
   /** 代数（CR-20260924-10：甲方 2026-09-24 第 18 行要加的一项；选填，形如 P3） */
   passage: string
@@ -35,6 +37,7 @@ export function emptyOrganoidForm(): OrganoidFormValue {
   return {
     sourceUnitId: null,
     sourceUnitName: '',
+    species: '',
     organoidType: '',
     passage: '',
     receiveDate: '',
@@ -59,6 +62,7 @@ export function toOrganoidFormValue(detail: Partial<SampleDetail> | null | undef
   return {
     sourceUnitId: (detail as { sourceUnitId?: string | number | null }).sourceUnitId ?? null,
     sourceUnitName: str(detail.sourceUnitName),
+    species: str(detail.species),
     organoidType: str(detail.organoidType),
     passage: str(detail.passage),
     receiveDate: str(detail.receiveDate),
@@ -98,6 +102,7 @@ export function internalOrganoidPatch(form: OrganoidFormValue): Record<string, u
   return {
     sourceUnitId: form.sourceUnitId,
     sourceUnitName: form.sourceUnitName.trim(),
+    species: form.species.trim(),
     organoidType: form.organoidType.trim(),
     // 代数选填：清空也要发空串（补丁语义「带了空值 = 清空」），不能省略这个键
     passage: normalizePassage(form.passage),
@@ -109,11 +114,12 @@ export function internalOrganoidPatch(form: OrganoidFormValue): Record<string, u
   }
 }
 
-/** 外部提交体（只有四项；夹带的内部字段后端一律不落库，这里也一个都不带） */
+/** 外部提交体（只有五项；夹带的内部字段后端一律不落库，这里也一个都不带） */
 export function externalOrganoidPayload(form: OrganoidFormValue): Record<string, unknown> {
   return {
     sourceUnitId: form.sourceUnitId,
     sourceUnitName: form.sourceUnitName.trim(),
+    species: form.species.trim(),
     organoidType: form.organoidType.trim(),
     passage: normalizePassage(form.passage),
     remark: form.remark.trim(),

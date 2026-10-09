@@ -40,6 +40,13 @@
               </span>
             </el-form-item>
           </el-col>
+          <!-- 种属（CR-20261009-18）：是样本的属性，随所挂样本带出、这里不改 -->
+          <el-col :span="12">
+            <el-form-item :label="t('lqg.species.label')">
+              <span>{{ speciesText(sampleSpecies) }}</span>
+              <span class="lqg-cryo-drawer__muted"> · {{ t('lqg.species.fromSample') }}</span>
+            </el-form-item>
+          </el-col>
 
           <el-col :span="12">
             <el-form-item :label="t('lqg.cryo.drawer.freezeTime')" prop="freezeTime">
@@ -138,6 +145,7 @@ import { failText } from './flow';
 import { useI18n } from 'vue-i18n';
 import { useCloseGuard } from '@/utils/lqgCloseGuard';
 import { normalizePassage } from '../sample/passage';
+import { speciesText } from '@/components/lqg/SpeciesSelect/species';
 
 /**
  * 冻存批次的新增 / 编辑抽屉（UI:admin.cryo.list：「新增 / 编辑用抽屉；初始支数可改」）。
@@ -169,6 +177,7 @@ const emptyForm = () => ({
   sampleId: null as string | number | null,
   internalNo: null as string | null,
   submitNo: null as string | null,
+  species: null as string | null,
   cryoName: null as string | null,
   passage: null as string | null,
   freezeTime: null as string | null,
@@ -243,6 +252,7 @@ const openAdd = (presetSample?: SampleVO | null) => {
   if (presetSample) {
     form.value.sampleId = presetSample.id;
     form.value.internalNo = presetSample.internalNo ?? null;
+    form.value.species = presetSample.species ?? null;
   }
   visible.value = true;
 };
@@ -260,6 +270,7 @@ const open = async (row: CryoBatchVO) => {
       sampleId: detail.sampleId,
       internalNo: detail.internalNo ?? null,
       submitNo: detail.submitNo ?? null,
+      species: detail.species ?? null,
       cryoName: detail.cryoName ?? null,
       passage: detail.passage ?? null,
       freezeTime: detail.freezeTime ?? null,
@@ -294,7 +305,16 @@ const searchSamples = async (keyword: string) => {
   }
 };
 
-const sampleLabel = (sample: SampleVO) => [sample.internalNo, sample.submitNo].filter(Boolean).join(' · ');
+const sampleLabel = (sample: SampleVO) => [sample.internalNo, sample.submitNo, sample.species].filter(Boolean).join(' · ');
+
+/** 所挂样本的种属：新增时取下拉里选中的样本，修改时取详情（CR-20261009-18，只读） */
+const sampleSpecies = computed(() => {
+  if (mode.value === 'create') {
+    const picked = sampleOptions.value.find((s) => String(s.id) === String(form.value.sampleId));
+    return picked?.species ?? form.value.species;
+  }
+  return form.value.species;
+});
 
 const payload = (): CryoBatchForm => ({
   id: form.value.id,

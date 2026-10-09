@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>★ 按样本<b>自己的</b>类别写（{@code SampleKindRules}）：
  * <ul>
- *   <li>两类都写：来源单位 id + 名称快照、备注；</li>
+ *   <li>两类都写：来源单位 id + 名称快照、种属（CR-20261009-18）、备注；</li>
  *   <li>组织样本：供体姓名（加密）、性别、年龄、住院号（加密）、组织类型、有无病理；类器官类型与代数置空
  *       （组织样本没有代数：传了也写 NULL，不报错 —— 与「另一类的类型列传了不生效」同口径）；</li>
  *   <li>类器官：类器官类型、代数（CR-20260924-10，归一化成大写 P 开头）；组织类型置空。
@@ -77,6 +77,7 @@ public class SampleSubmitSegmentWriter {
         SampleSubmitSegmentBo s = seg == null ? new SampleSubmitSegmentBo() : seg;
         patch.set(Sample::getSourceUnitId, unit == null ? null : unit.id())
             .set(Sample::getSourceUnitName, unit == null ? null : unit.name())
+            .set(Sample::getSpecies, trimToNull(s.getSpecies()))
             .set(Sample::getRemark, trimToNull(s.getRemark()));
         if (isOrganoid(kind)) {
             patch.set(Sample::getOrganoidType, trimToNull(s.getOrganoidType()))
@@ -102,6 +103,7 @@ public class SampleSubmitSegmentWriter {
         SampleSubmitSegmentBo s = seg == null ? new SampleSubmitSegmentBo() : seg;
         entity.setSourceUnitId(unit == null ? null : unit.id());
         entity.setSourceUnitName(unit == null ? null : unit.name());
+        entity.setSpecies(trimToNull(s.getSpecies()));
         entity.setRemark(trimToNull(s.getRemark()));
         if (isOrganoid(kind)) {
             entity.setOrganoidType(trimToNull(s.getOrganoidType()));

@@ -11,7 +11,7 @@ import java.util.Date;
 /**
  * 外部「历史编辑记录」的样本行（{@code GET /mp/ext/sample/list}，doc/api-contract.md 第 50 行）。
  *
- * <p>★ 形状与契约<b>逐键对齐</b>：{@code id, submitNo, sampleKind, donorNameMasked, tissueType,
+ * <p>★ 形状与契约<b>逐键对齐</b>：{@code id, submitNo, sampleKind, donorNameMasked, species, tissueType,
  * organoidType, verifyStatus, submitterName, mine, editable, createTime, updateTime}。
  * 多一个键就是「外部多看到一个内部字段」，少一个键前端会渲染空列。
  *
@@ -42,6 +42,9 @@ public class ExtSampleVo implements Serializable {
 
     @Schema(description = "供体姓名掩码（首字 + **）")
     private String donorNameMasked;
+
+    @Schema(description = "种属（CR-20261009-18：外部自己填的一项）")
+    private String species;
 
     @Schema(description = "组织类型")
     private String tissueType;

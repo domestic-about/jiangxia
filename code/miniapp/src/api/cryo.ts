@@ -49,6 +49,8 @@ export interface CryoBatchRow extends LedgerRow {
   internalNo?: string | null
   submitNo?: string | null
   sourceUnitName?: string | null
+  /** 所挂样本的种属（读时带出，CR-20261009-18） */
+  species?: string | null
   createTime?: string | null
   updateTime?: string | null
   handlerName?: string | null

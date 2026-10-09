@@ -74,21 +74,21 @@ accept:
       bash doc/verify/api.sh --as extA --bizcode GET '/mp/int/sample/list' | grep -qE '^403' &&
       bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sort=recent' | jq -e '([.rows[].id|tostring]|sort)==["9000001008","9000001009"] and ([.rows[]|select(.handlerName=="李工" and .mine==true and .updateTime==null)]|length)==2' &&
       bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sort=recent&mine=true' | jq -e '([.rows[].id|tostring]|sort)==["9000001008","9000001009"]' &&
-      bash doc/verify/api.sh --as extA PUT /mp/ext/sample/9000001002 '{"sourceUnitName":"A 医院","donorName":"测试供体乙","tissueType":"胆管组织"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as extA PUT /mp/ext/sample/9000001002 '{"species":"人","sourceUnitName":"A 医院","donorName":"测试供体乙","tissueType":"胆管组织"}' | jq -e '.code==200' &&
       bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sort=recent' | jq -e '([.rows[].id|tostring]|index("9000001002"))==null' &&
-      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"id":9000001001,"tissueType":"肝组织（更正）"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"species":"人","id":9000001001,"tissueType":"肝组织（更正）"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT tissue_type || '|' || verify_status || '|' || CASE WHEN update_by IS NULL THEN 'no' ELSE 'yes' END FROM t_lqg_sample WHERE id=9000001001" --eq "肝组织（更正）|valid|yes" &&
-      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"id":9000001004,"remark":"别人录的也能改（CR-20260918-07）"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"species":"人","id":9000001004,"remark":"别人录的也能改（CR-20260918-07）"}' | jq -e '.code==200' &&
       bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sort=recent' | jq -e '(.rows[0].id|tostring)=="9000001004" and (.rows[1].id|tostring)=="9000001001" and ([.rows[].id|tostring]|sort)==["9000001001","9000001004","9000001008","9000001009"] and ([.rows[]|select((.id|tostring)=="9000001001")|[.handlerName,.mine,(.updateTime!=null)]]==[["李工",true,true]])' &&
       python3 doc/verify/db.py --sql "SELECT id FROM t_lqg_sample WHERE del_flag='0' AND (create_by IN (SELECT user_id FROM sys_user WHERE user_type='sys_user' AND del_flag='0') OR update_by IN (SELECT user_id FROM sys_user WHERE user_type='sys_user' AND del_flag='0'))" --col-set "9000001001,9000001004,9000001008,9000001009" &&
       bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sort=recent&mine=true' | jq -e '([.rows[].id|tostring]|sort)==["9000001001","9000001004","9000001008","9000001009"]' &&
-      bash doc/verify/api.sh --as staff --bizcode PUT /mp/int/sample '{"id":9000001002,"tissueType":"不该改进去"}' | grep -qE '^(400|500)' &&
+      bash doc/verify/api.sh --as staff --bizcode PUT /mp/int/sample '{"species":"人","id":9000001002,"tissueType":"不该改进去"}' | grep -qE '^(400|500)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE tissue_type='不该改进去'" --eq 0 &&
-      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"id":9000001001,"remark":"临时备注"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"species":"人","id":9000001001,"remark":"临时备注"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT COALESCE(remark,'<null>') FROM t_lqg_sample WHERE id=9000001001" --eq "临时备注" &&
-      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"id":9000001001,"remark":""}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"species":"人","id":9000001001,"remark":""}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT COALESCE(remark,'<null>') || '|' || tissue_type FROM t_lqg_sample WHERE id=9000001001" --eq "<null>|肝组织（更正）" &&
-      bash doc/verify/api.sh --as staff --bizcode PUT /mp/int/sample '{"id":9000001001,"tissueType":""}' | grep -qE '^400.*组织类型不能为空' &&
+      bash doc/verify/api.sh --as staff --bizcode PUT /mp/int/sample '{"species":"人","id":9000001001,"tissueType":""}' | grep -qE '^400.*组织类型不能为空' &&
       python3 doc/verify/db.py --sql "SELECT tissue_type FROM t_lqg_sample WHERE id=9000001001" --eq "肝组织（更正）" &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-

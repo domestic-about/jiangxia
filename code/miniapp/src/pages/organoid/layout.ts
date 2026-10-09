@@ -21,18 +21,24 @@
 // ★「代数」（`passage`）不是模板 B 的列：甲方 2026-09-24 测试问题记录表第 18 行要求
 //   「合作单位和内部人员的都要再添加一项：代数」（CR-20260924-10）。它紧跟「类器官类型」，
 //   属于送检信息（外部能填、能改），fixture 里记在 `inserted`，不混进模板列。
+// ★「种属」（`species`）同理：甲方 2026-10-09 要求（CR-20261009-18），紧跟「来源单位」，内外部都填、必填；
+//   常用值从字典来（人 / 鼠兔 / 移植猪 / 鸡），列表里没有的可以手填（SpeciesSheet）。
 import type { ResolvedIdentity } from '@/types/identity'
 import { normalizeIdentity } from '@/types/identity'
 
 /** 三种入口模式；除此之外（含缺失 / 空串 / 不认识）一律按只读处理 */
 export type OrganoidMode = 'new' | 'edit' | 'view'
 
-/** 外部四项（fixture 的 `externalFields`，顺序即显示顺序）：来源单位、类器官类型、代数、备注 */
-export const EXTERNAL_FIELDS = ['sourceUnitName', 'organoidType', 'passage', 'remark'] as const
+/** 外部五项（fixture 的 `externalFields`，顺序即显示顺序）：来源单位、种属、类器官类型、代数、备注 */
+export const EXTERNAL_FIELDS = ['sourceUnitName', 'species', 'organoidType', 'passage', 'remark'] as const
 
-/** 内部八项（fixture 的 `internalFields`，顺序即显示顺序 = 模板 B 的列序，「类器官类型」后插入「代数」） */
+/**
+ * 内部九项（fixture 的 `internalFields`，顺序即显示顺序 = 模板 B 的列序，「来源单位」后插入「种属」
+ * （CR-20261009-18）、「类器官类型」后插入「代数」）
+ */
 export const INTERNAL_FIELDS = [
   'sourceUnitName',
+  'species',
   'organoidType',
   'passage',
   'receiveDate',
@@ -44,7 +50,7 @@ export const INTERNAL_FIELDS = [
 
 export type OrganoidFieldKey = (typeof INTERNAL_FIELDS)[number] | (typeof EXTERNAL_FIELDS)[number]
 
-/** 收样段字段（**只有内部**看得到）：内部八项里除去「来源单位 / 类器官类型 / 代数」之外的五项 */
+/** 收样段字段（**只有内部**看得到）：内部九项里除去「来源单位 / 种属 / 类器官类型 / 代数」之外的五项 */
 export const RECEIVE_FIELDS = [
   'receiveDate',
   'internalNo',
@@ -125,6 +131,7 @@ export interface OrganoidFieldSpec {
 /** 字段的中文标签（**逐字对甲方模板 B 的列名**，「代数」是甲方后加的；顺序与 INTERNAL_FIELDS 一致） */
 const LABELS: Record<OrganoidFieldKey, string> = {
   sourceUnitName: '来源单位',
+  species: '种属',
   organoidType: '类器官类型',
   passage: '代数',
   receiveDate: '收样日期',
@@ -138,6 +145,7 @@ const LABELS: Record<OrganoidFieldKey, string> = {
 /** 控件类型（落地规范 §5.4 / §5.5：日期与选择走底部弹框，按钮组不换成下拉或开关） */
 const CONTROLS: Partial<Record<OrganoidFieldKey, OrganoidControl>> = {
   sourceUnitName: 'select',
+  species: 'select',
   receiveDate: 'date',
   processTime: 'datetime',
   hasViabilityReport: 'seg',
@@ -151,6 +159,7 @@ export function fieldLabel(key: OrganoidFieldKey): string {
 
 /** 可输入字段最多几个字（与后端校验、库里的列长同一口径）；来源单位的手填名在单位面板里（100） */
 const MAXLENGTH: Partial<Record<OrganoidFieldKey, number>> = {
+  species: 50,
   organoidType: 100,
   // 代数形如 P3 / P12 / P999（与冻存批次同一规则 ^P\d{1,3}$），最长 4 个字
   passage: 4,

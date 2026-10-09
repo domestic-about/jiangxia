@@ -115,6 +115,7 @@ public class ExtSampleAssemblyService {
         vo.setSubmitNo(sample.getSubmitNo());
         vo.setSampleKind(sample.getSampleKind());
         vo.setSourceUnitName(sample.getSourceUnitName());
+        vo.setSpecies(sample.getSpecies());
         vo.setDonorName(sample.getDonorName());
         vo.setGender(sample.getGender());
         vo.setAge(sample.getAge());
@@ -160,6 +161,7 @@ public class ExtSampleAssemblyService {
         vo.setSubmitNo(sample.getSubmitNo());
         vo.setSampleKind(sample.getSampleKind());
         vo.setDonorNameMasked(MaskRules.maskDonorName(fieldCipher.decrypt(sample.getDonorName())));
+        vo.setSpecies(sample.getSpecies());
         vo.setTissueType(sample.getTissueType());
         vo.setOrganoidType(sample.getOrganoidType());
         vo.setVerifyStatus(sample.getVerifyStatus());

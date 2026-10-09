@@ -53,6 +53,9 @@ public class QcSampleRefVo implements Serializable {
     @Schema(description = "性别（只读带出）")
     private String gender;
 
+    @Schema(description = "种属（只读带出，CR-20261009-18）")
+    private String species;
+
     @Schema(description = "收样时间（只读带出）")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate receiveDate;

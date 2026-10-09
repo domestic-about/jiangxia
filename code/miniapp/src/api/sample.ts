@@ -28,6 +28,8 @@ export interface SampleRow {
   internalNo?: string | null
   /** 来源单位名称 */
   sourceUnitName?: string | null
+  /** 种属（CR-20261009-18；本需求之前录的老记录为空） */
+  species?: string | null
   /** 列表里是掩码（外部接口） */
   donorNameMasked?: string | null
   /** 详情 / 内部列表里有全名 */
@@ -128,6 +130,7 @@ export interface EmbedMarker {
 /** 表单字段（送检段 + 收样段；提交时整份带回去，后端 PUT 收部分字段也能改） */
 export interface SampleFormValue {
   sourceUnitName: string
+  species: string
   donorName: string
   gender: string
   age: string
@@ -148,6 +151,7 @@ export interface SampleFormValue {
 export function emptyForm(): SampleFormValue {
   return {
     sourceUnitName: '',
+    species: '',
     donorName: '',
     gender: '',
     age: '',
@@ -173,6 +177,7 @@ export function toFormValue(detail: Partial<SampleDetail> | null | undefined): S
   }
   return {
     sourceUnitName: str(detail.sourceUnitName),
+    species: str(detail.species),
     donorName: str(detail.donorName),
     gender: str(detail.gender),
     age: str(detail.age),

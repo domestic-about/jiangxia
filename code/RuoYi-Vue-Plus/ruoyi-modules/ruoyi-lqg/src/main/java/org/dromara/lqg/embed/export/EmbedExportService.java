@@ -57,6 +57,12 @@ public class EmbedExportService {
     public static final String SHEET_NAME = "石蜡包埋送样记录";
 
     /**
+     * <b>插入列</b>（CR-20261009-18）：「种属」紧跟「样本编号」—— 读所挂样本的种属。
+     * 模板列一个字不动，规则与 {@code SampleExportService.ORGANOID_INSERTED_AFTER} 同一条。
+     */
+    public static final Map<String, String> INSERTED_AFTER = Map.of("种属", "样本编号");
+
+    /**
      * 多值之间的顿号（染色）。
      */
     static final String STAIN_SEPARATOR = "、";
@@ -100,6 +106,7 @@ public class EmbedExportService {
             EmbedExportVo vo = new EmbedExportVo();
             vo.setParaffinBlockNo(row.getParaffinBlockNo());
             vo.setInternalNo(row.getInternalNo());
+            vo.setSpecies(row.getSpecies());
             vo.setSampleType(row.getSampleType());
             vo.setOrganoidSourceType(row.getOrganoidSourceType());
             vo.setTissueReceiveTime(text(row.getTissueReceiveTime()));
@@ -211,26 +218,27 @@ public class EmbedExportService {
     }
 
     /**
-     * 导出的列名清单（{@code 16} 列，与模板逐字同序）—— 给验收脚本 / 单测对表头用。
+     * 导出的列名清单（{@code 17} 列 = 模板 16 列逐字同序，「样本编号」后插入「种属」）—— 给验收脚本 / 单测对表头用。
      */
     public static Map<String, Integer> headerIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
         out.put("石蜡块编号", 0);
         out.put("样本编号", 1);
-        out.put("样本类型", 2);
-        out.put("类器官来源类型", 3);
-        out.put("组织收样时间", 4);
-        out.put("组织处理时间", 5);
-        out.put("琼脂糖包埋样本时间", 6);
-        out.put("包埋人", 7);
-        out.put("脱水时间", 8);
-        out.put("琼脂糖包埋样本送样时间", 9);
-        out.put("石蜡包埋时间", 10);
-        out.put("切片时间", 11);
-        out.put("染色", 12);
-        out.put("mark的表达情况", 13);
-        out.put("操作人", 14);
-        out.put("备注", 15);
+        out.put("种属", 2);
+        out.put("样本类型", 3);
+        out.put("类器官来源类型", 4);
+        out.put("组织收样时间", 5);
+        out.put("组织处理时间", 6);
+        out.put("琼脂糖包埋样本时间", 7);
+        out.put("包埋人", 8);
+        out.put("脱水时间", 9);
+        out.put("琼脂糖包埋样本送样时间", 10);
+        out.put("石蜡包埋时间", 11);
+        out.put("切片时间", 12);
+        out.put("染色", 13);
+        out.put("mark的表达情况", 14);
+        out.put("操作人", 15);
+        out.put("备注", 16);
         return out;
     }
 

@@ -10,9 +10,11 @@ import NoteBar from '@/components/lqg/NoteBar.vue'
 import ReasonSheet from '@/components/lqg/ReasonSheet.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
 import SourceUnitSheet from '@/components/lqg/SourceUnitSheet.vue'
+import SpeciesSheet from '@/components/lqg/SpeciesSheet.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
+import { DEFAULT_SPECIES, fetchSpeciesOptions } from '@/utils/species'
 // ★ 显式 .vue 路径导入（SAMPLE-MP-001 坑 6：只靠 easycom 会让该模块的 .js 产物消失）
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
 import { backAfterVerify, verifyFailed } from './feedback'
@@ -62,6 +64,9 @@ const units = ref<SelectorUnit[]>([])
 /** 来源单位是不是手填（没挂单位 id） */
 const manualUnit = ref(false)
 const unitSheetRef = ref<{ open: () => void } | null>(null)
+/** 种属（CR-20261009-18）：字典常用值 + 底部面板；老记录没有种属的，核验时要补选 */
+const speciesOptions = ref<string[]>([...DEFAULT_SPECIES])
+const speciesSheetRef = ref<{ open: () => void } | null>(null)
 const reasonRef = ref<{ open: () => void, reset: () => void } | null>(null)
 const pickerRef = ref<{ open: () => void } | null>(null)
 const pickerField = ref<SampleFieldKey>('receiveDate')
@@ -110,7 +115,8 @@ async function load() {
     form.value = { ...original.value }
     manualUnit.value = original.value.sourceUnitId === null && !!original.value.sourceUnitName.trim()
     uni.setNavigationBarTitle({ title: `核验 · ${kindTitle.value}` })
-    await loadUnits()
+    const [, species] = await Promise.all([loadUnits(), fetchSpeciesOptions()])
+    speciesOptions.value = species
   }
   catch {
     failed.value = true
@@ -199,6 +205,10 @@ function formatMs(ms: number, type: 'date' | 'datetime'): string {
 function onPick(key: SampleFieldKey) {
   if (key === 'sourceUnitName') {
     unitSheetRef.value?.open()
+    return
+  }
+  if (key === 'species') {
+    speciesSheetRef.value?.open()
     return
   }
   pickerField.value = key
@@ -358,6 +368,13 @@ function openInvalid() {
       :maxlength="MAX_INVALID_REASON"
       :notes="['判为无效只保存原因和送检信息的修改，收样信息不保存']"
       @confirm="(reason: string) => submit('invalid', reason)"
+    />
+
+    <SpeciesSheet
+      ref="speciesSheetRef"
+      :model-value="form.species"
+      :options="speciesOptions"
+      @update:model-value="(v: string) => setField('species', v)"
     />
 
     <SourceUnitSheet

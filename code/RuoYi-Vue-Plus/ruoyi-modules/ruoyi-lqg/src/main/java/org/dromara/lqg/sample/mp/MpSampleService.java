@@ -229,6 +229,7 @@ public class MpSampleService {
         merged.setId(exists.getId());
         merged.setSampleKind(exists.getSampleKind());
         mergeUnit(exists, patch, merged);
+        merged.setSpecies(pick(patch, "species", p.getSpecies(), exists.getSpecies()));
         merged.setDonorName(pick(patch, "donorName", p.getDonorName(), exists.getDonorName()));
         merged.setGender(pick(patch, "gender", p.getGender(), exists.getGender()));
         merged.setAge(pick(patch, "age", p.getAge(), exists.getAge()));

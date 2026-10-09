@@ -73,7 +73,7 @@ class DocTemplateContractTest {
     void sampleQcTemplate() throws Exception {
         String text = textOf(DocKinds.SAMPLE_QC);
         for (String tag : List.of("patient_no", "source_unit_name", "donor_name", "sampling_site",
-            "sampling_method", "gender", "clinical_diagnosis", "receive_desc", "receive_date",
+            "sampling_method", "gender", "species", "clinical_diagnosis", "receive_desc", "receive_date",
             "process_time", "operator_name", "internal_no", "viability_file_name",
             "orig_desc", "observe_desc", "pretreat_desc",
             "@orig_img1", "@orig_img2", "@orig_img3",
@@ -237,6 +237,37 @@ class DocTemplateContractTest {
         int rowTwips = Integer.parseInt(h.group(1));
         assertTrue(box[1] * 15 <= rowTwips, kind + "/" + slot + "：框高 " + box[1] * 15 + " twips 超过模板行高 " + rowTwips
             + " twips（图会把这一行撑高、表格被推到下一页）");
+    }
+
+    @Test
+    @DisplayName("v6（CR-20261009-18）：样本质控表「性别」行后是一行「种属 | {{species}}」，格式照抄「收样描述」行；列宽不动；版本号 ≥ 6")
+    void sampleQcHasTheSpeciesRow() throws Exception {
+        String xml = part(DocKinds.SAMPLE_QC, "word/document.xml");
+        java.util.List<String> rows = new java.util.ArrayList<>();
+        java.util.regex.Matcher tr = Pattern.compile("<w:tr\\b.*?</w:tr>", Pattern.DOTALL).matcher(xml);
+        while (tr.find()) {
+            rows.add(tr.group());
+        }
+        int gender = -1;
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).contains(">性别<")) {
+                gender = i;
+            }
+        }
+        assertTrue(gender >= 0, "找不到「性别」那一行");
+        String species = rows.get(gender + 1);
+        String receive = rows.get(gender + 2);
+        assertTrue(species.contains(">种属<") && species.contains("{{species}}"), "「性别」行的下一行应是「种属」");
+        assertTrue(receive.contains("{{receive_desc}}"), "「种属」行后面仍是「收样描述」");
+        // 结构与「收样描述」行一致：去掉文字与段落 id 后逐字相同（左格标签 + 右格跨 5 列、同一套边框与行高）
+        java.util.function.Function<String, String> shape = row -> row
+            .replaceAll("w14:paraId=\"[0-9A-F]+\"", "")
+            .replace(">种属<", "><").replace(">收样描述<", "><")
+            .replace("{{species}}", "").replace("{{receive_desc}}", "");
+        assertEquals(shape.apply(receive), shape.apply(species), "「种属」行的格式应照抄「收样描述」行");
+        assertTrue(xml.contains("<w:tblGrid><w:gridCol w:w=\"1835\"/><w:gridCol w:w=\"1626\"/><w:gridCol w:w=\"1400\"/>"
+            + "<w:gridCol w:w=\"1122\"/><w:gridCol w:w=\"846\"/><w:gridCol w:w=\"1444\"/></w:tblGrid>"), "列宽不动");
+        assertTrue(Integer.parseInt(DocTemplate.version()) >= 6, "加了一行 = 换模板文件，版本号要加一：" + DocTemplate.version());
     }
 
     @Test

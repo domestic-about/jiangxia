@@ -37,10 +37,10 @@ accept:
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null && rm -f /tmp/lqg-cryo.xlsx &&
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg --out /tmp/lqg-cryo.xlsx POST /lqg/cryo/batch/export &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --rows 7 --find "冻存样品=T-hli01-GZ-N-P2-EM2-2e5" --expect "冻存数量/支=8,冻存密度=2e5,暂存-80度超低温冰箱=是,冻存人=李工,代数=P2,当前剩余/支=6" &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --find "冻存样品=T-oco01-JC-T-P4-EM1-5e5" --expect "暂存-80度超低温冰箱=否,液氮储存位置=1号罐-1架-A2,当前剩余/支=5" &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --find "冻存样品=T-hli01-GZ-N-P5-EM2-1e5" --expect "冻存数量/支=3,当前剩余/支=0" &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_cryo_batch b JOIN t_lqg_sample s ON s.id = b.sample_id AND s.del_flag='0' WHERE b.del_flag='0'" | head -1)"
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支,种属" --rows 7 --find "冻存样品=T-hli01-GZ-N-P2-EM2-2e5" --expect "冻存数量/支=8,冻存密度=2e5,暂存-80度超低温冰箱=是,冻存人=李工,代数=P2,当前剩余/支=6" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支,种属" --find "冻存样品=T-oco01-JC-T-P4-EM1-5e5" --expect "暂存-80度超低温冰箱=否,液氮储存位置=1号罐-1架-A2,当前剩余/支=5" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支,种属" --find "冻存样品=T-hli01-GZ-N-P5-EM2-1e5" --expect "冻存数量/支=3,当前剩余/支=0" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支,种属" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_cryo_batch b JOIN t_lqg_sample s ON s.id = b.sample_id AND s.del_flag='0' WHERE b.del_flag='0'" | head -1)"
     counterfeit: |-
       「冻存数量/支」导出了剩余而不是初始 → 3001 那行期望 8 实际 6 红。甲方拿导出去对纸质记录，对的是当初冻了几支。
       追加列放到了模板列中间 → 表头顺序不等红。
@@ -77,7 +77,7 @@ accept:
       bash doc/verify/api.sh --as staff POST /lqg/cryo/batch/9000003006/flow '{"flowType":"take","qty":5,"purpose":"取完"}' | jq -e '.code==200' &&
       bash doc/verify/api.sh --as staff GET '/lqg/cryo/batch/list?emptiedOnly=true&pageSize=100' | jq -e '([.rows[].id|tostring]|sort)==["9000003004","9000003006"] and .tabCounts.emptied==2 and ([.rows[]|select((.id|tostring)=="9000003006")|[.remainingQty,.overdue]]==[[0,false]])' &&
       rm -f /tmp/lqg-cryo-e.xlsx && bash doc/verify/api.sh --as staff --out /tmp/lqg-cryo-e.xlsx POST '/lqg/cryo/batch/export?emptiedOnly=true' &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo-e.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --rows 2 --find "冻存样品=T-hli01-GZ-N-P5-EM2-1e5" --expect "当前剩余/支=0" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-cryo-e.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支,种属" --rows 2 --find "冻存样品=T-hli01-GZ-N-P5-EM2-1e5" --expect "当前剩余/支=0" &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-
       列表列还是「模板 9 列 → 内部编号 → 代数 → 当前剩余」（甲方第 22 行「请参照我发你的模板，理解先后顺序」之前的排法）或把液氮两列挤到后面 → 第 1 段列序比对红：模板外的两列要紧跟模板、与导出同序，工作台自用的列放最后。

@@ -366,7 +366,8 @@ const summary = computed<string[]>(() => {
     return []
   }
   const kind = s.sampleKind === 'organoid' ? '类器官送样记录' : '样本记录信息表'
-  return [s.sourceUnitName, kind, s.receiveDate ? `收样 ${s.receiveDate}` : '', s.operatorName ? `操作人 ${s.operatorName}` : '']
+  // 种属（CR-20261009-18）：样本质控表 Word 里也有这一行
+  return [s.sourceUnitName, s.species ? `种属 ${s.species}` : '', kind, s.receiveDate ? `收样 ${s.receiveDate}` : '', s.operatorName ? `操作人 ${s.operatorName}` : '']
     .filter(Boolean)
 })
 

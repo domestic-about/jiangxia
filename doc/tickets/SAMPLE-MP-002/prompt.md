@@ -44,14 +44,14 @@ accept:
       bash doc/verify/reseed.sh --yes >/dev/null &&
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg GET '/mp/int/sample/list?pageSize=100&sampleKind=organoid' | jq -e '([.rows[].id|tostring]|sort)==["9000001009"] and .rows[0].passage=="P3"' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND sample_kind='organoid'" --eq "$(bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sampleKind=organoid' | jq -r '.total')" &&
-      bash doc/verify/api.sh --as staff POST /mp/int/sample '{"sampleKind":"organoid","sourceUnitId":9000009002,"organoidType":"肝类器官","passage":"p5","receiveDate":"2026-09-17","internalNo":"T-oco55","hasViabilityReport":"Y","operatorName":"李工"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff POST /mp/int/sample '{"species":"人","sampleKind":"organoid","sourceUnitId":9000009002,"organoidType":"肝类器官","passage":"p5","receiveDate":"2026-09-17","internalNo":"T-oco55","hasViabilityReport":"Y","operatorName":"李工"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT sample_kind || '|' || submit_source || '|' || verify_status || '|' || source_unit_name || '|' || has_viability_report || '|' || COALESCE(passage,'-') FROM t_lqg_sample WHERE internal_no='T-oco55'" --eq "organoid|internal|valid|B 大学|Y|P5" &&
-      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"id":9000001008,"passage":"P3"}' | jq -e '.code==400 and (.msg|contains("代数"))' &&
+      bash doc/verify/api.sh --as staff PUT /mp/int/sample '{"species":"人","id":9000001008,"passage":"P3"}' | jq -e '.code==400 and (.msg|contains("代数"))' &&
       python3 doc/verify/db.py --sql "SELECT COALESCE(passage,'-') FROM t_lqg_sample WHERE id=9000001008" --eq="-" &&
       bash doc/verify/api.sh --as staff PUT /mp/int/sample "$(printf '{"id":%s,"operatorName":"王工"}' "$(python3 doc/verify/db.py --quiet --sql "SELECT id FROM t_lqg_sample WHERE internal_no='T-oco55'" | head -1)")" | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT operator_name || '|' || sample_kind || '|' || verify_status FROM t_lqg_sample WHERE internal_no='T-oco55'" --eq "王工|organoid|valid" &&
       bash doc/verify/api.sh --as staff GET '/mp/int/sample/list?pageSize=100&sampleKind=organoid&mine=true' | jq -e '[.rows[].internalNo] == ["T-oco55","T-oco01"]' &&
-      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"sourceUnitName":"A 医院","organoidType":"胃类器官","remark":"外部送类器官"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"species":"人","sourceUnitName":"A 医院","organoidType":"胃类器官","remark":"外部送类器官"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT s.sample_kind || '|' || s.verify_status || '|' || COALESCE(s.internal_no,'-') || '|' || COALESCE(s.receive_date::text,'-') || '|' || p.real_name FROM t_lqg_sample s JOIN t_lqg_ext_profile p ON p.user_id = s.submitter_id WHERE s.organoid_type='胃类器官' AND s.del_flag='0'" --eq "organoid|pending|-|-|赵医生" &&
       bash doc/verify/api.sh --as extC GET '/mp/ext/sample/list?pageSize=100&sampleKind=organoid&onlyMine=true' | jq -e '[.rows[].organoidType]==["胃类器官"] and .rows[0].editable==true and .rows[0].mine==true' &&
       bash doc/verify/api.sh --as extA GET '/mp/ext/sample/list?pageSize=100&sampleKind=organoid' | jq -e '.rows==[]' &&
@@ -87,7 +87,7 @@ accept:
         diff <(python3 doc/verify/xlsx_header.py --print-header --template "_input/templates/${S#*:}.xlsx") <(jq -r --arg k "${S%%:*}" '.sheets[$k].template[]' doc/verify/fixtures/ledger-columns-cases.json) >/dev/null || exit 1;
       done &&
       jq -e '.sheets | to_entries | all(.value as $v | $v.expect == ((reduce ($v.inserted // [])[] as $i ([$v.template[] | select(. != $v.frozen)]; (index($i.after) + 1) as $k | .[:$k] + [$i.label] + .[$k:])) + $v.extra))' doc/verify/fixtures/ledger-columns-cases.json &&
-      jq -e '.sheets.organoid.inserted == [.sheets.organoid.inserted[0]] and .sheets.organoid.inserted[0].label == "代数" and .sheets.organoid.inserted[0].after == "类器官类型" and (.sheets.organoid.inserted[0].source | length > 0)' doc/verify/fixtures/ledger-columns-cases.json
+      jq -e '(.sheets.organoid.inserted | map([.label, .after])) == [["种属","来源单位"],["代数","类器官类型"]] and (.sheets.tissue.inserted | map([.label, .after])) == [["种属","来源单位"]] and (.sheets.embed.inserted | map([.label, .after])) == [["种属","样本编号"]] and ([.sheets[].inserted[]?.source] | all(length > 0))' doc/verify/fixtures/ledger-columns-cases.json
     counterfeit: |-
       页面里手写了一份列清单（顺手把「有无固定」写成「是否固定」、把「mark的表达情况」改成「marker 表达」）→ index.vue / LedgerTable.vue 里出现列名红：列名只许从 ledgerColumns 来。
       fixture 被改得去迁就代码、不再是甲方原件的表头 → diff 红。两侧不同源：一侧是甲方发来的 xlsx 原件，一侧是 fixture。
@@ -107,7 +107,7 @@ accept:
       ! grep -nE '\.(skip|todo|only)\(' src/pages/organoid/layout.fixture.spec.ts &&
       pnpm vitest run src/pages/organoid/layout.fixture.spec.ts --reporter=json --outputFile=/tmp/lqg-organoid-layout.json >/dev/null &&
       jq -e '.numFailedTests == 0 and .numPassedTests >= 9' /tmp/lqg-organoid-layout.json &&
-      node -e "const f=require('../../doc/verify/fixtures/organoid-form-cases.json'); const c=f.cases; const ext=c.filter(x=>x.identity==='external'); const ins=(f.inserted||[])[0]||{}; const next=(a)=>a[a.indexOf(ins.after)+1]; if(c.length!==9||f.externalFields.length!==4||f.internalFields.length!==8||ins.field!=='passage'||next(f.externalFields)!=='passage'||next(f.internalFields)!=='passage'||ext.some(x=>x.expect.fields.some(k=>f.internalFields.includes(k)&&!f.externalFields.includes(k)))||c.filter(x=>!x.expect.editable).length!==5) process.exit(1)" &&
+      node -e "const f=require('../../doc/verify/fixtures/organoid-form-cases.json'); const c=f.cases; const ext=c.filter(x=>x.identity==='external'); const ins=f.inserted||[]; const follows=(a,i)=>a[a.indexOf(i.after)+1]===i.field; if(c.length!==9||f.externalFields.length!==5||f.internalFields.length!==9||ins.map(i=>i.field).join()!=='species,passage'||!ins.every(i=>follows(f.externalFields,i)&&follows(f.internalFields,i))||ext.some(x=>x.expect.fields.some(k=>f.internalFields.includes(k)&&!f.externalFields.includes(k)))||c.filter(x=>!x.expect.editable).length!==5) process.exit(1)" &&
       ! grep -nE 'donorName|hospitalNo|tissueType' src/pages/organoid/form.vue && grep -q 'organoidType' src/pages/organoid/form.vue
     counterfeit: |-
       外部复用内部七项再把收样段 v-show 掉 → 「外部新增」用例的 fields 里带着 receiveDate 红。

@@ -77,6 +77,8 @@ definePage({
 const store = useUserStore()
 
 const embedId = ref('')
+/** 所挂样本的种属（只读显示，CR-20261009-18） */
+const sampleSpecies = ref('')
 /** 从样本填写页「给这个样本加石蜡块」带过来的样本 id（`?mode=new&sampleId=`） */
 const incomingSampleId = ref('')
 const mode = ref<EmbedMode>('view')
@@ -181,12 +183,34 @@ async function load() {
       : await fetchExtEmbedDetail(embedId.value)
     detail.value = data
     form.value = toEmbedFormValue(data)
+    await loadSampleSpecies(data)
   }
   catch {
     failed.value = true
   }
   finally {
     loading.value = false
+  }
+}
+
+/**
+ * 所挂样本的种属（CR-20261009-18，只读、随样本）：内部详情行上带着；外部的送样详情没有这个键
+ * （对外的送样形状不加键），按所挂样本读一次外部样本详情（本人 / 同组的样本本来就看得到）。拉不到就显示「—」。
+ */
+async function loadSampleSpecies(data: { species?: string | null, sampleId?: string | number | null }) {
+  if (isInternal.value) {
+    sampleSpecies.value = String(data.species ?? '')
+    return
+  }
+  if (!data.sampleId) {
+    return
+  }
+  try {
+    const sample = await fetchExtSampleDetail(String(data.sampleId))
+    sampleSpecies.value = String(sample.species ?? '')
+  }
+  catch {
+    sampleSpecies.value = ''
   }
 }
 
@@ -281,6 +305,7 @@ function formatMs(ms: number): string {
  */
 function onSamplePicked(sample: SampleLike) {
   form.value.sampleId = String(sample.id)
+  sampleSpecies.value = String(sample.species ?? '')
   form.value.sampleLabel = isInternal.value
     ? ([sample.internalNo, sample.submitNo].filter(Boolean).join(' · ') || '')
     : String(sample.submitNo || '')
@@ -439,6 +464,14 @@ async function submit() {
               :placeholder="spec.key === 'sampleType' && hints.length ? `${hints[0]} 等` : undefined"
               @update:model-value="(v: string) => setField(spec.key, v)"
               @pick="onPick(spec)"
+            />
+            <!-- 种属（CR-20261009-18）：是样本的属性，选了样本就带出来；这里只读（改在样本记录 / 类器官收样记录） -->
+            <FieldRow
+              v-if="spec.key === 'sampleId' && form.sampleId"
+              label="种属"
+              control="text"
+              readonly
+              :model-value="sampleSpecies || '—'"
             />
           </template>
         </view>

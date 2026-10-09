@@ -44,17 +44,20 @@ const internalFields = fixture.internalFields as string[]
 const inserted = fixture.inserted as InsertedField[]
 
 describe('organoidLayout（fixture 驱动）', () => {
-  it('fixture 结构：9 例 / 外部 4 项 / 内部 8 项 / 不可改恰 5 例', () => {
+  it('fixture 结构：9 例 / 外部 5 项 / 内部 9 项 / 不可改恰 5 例', () => {
     expect(cases.length).toBe(9)
-    expect(externalFields.length).toBe(4)
-    expect(internalFields.length).toBe(8)
+    expect(externalFields.length).toBe(5)
+    expect(internalFields.length).toBe(9)
     expect(cases.filter(c => !c.expect.editable).length).toBe(5)
   })
 
-  it('插入字段（代数）在内外部都紧跟 after；去掉插入字段后仍是原来的三项 / 模板 B 七列', () => {
-    expect(inserted.map(i => [i.field, i.label, i.after])).toEqual([['passage', '代数', 'organoidType']])
+  it('插入字段（种属、代数）在内外部都紧跟 after；去掉插入字段后仍是原来的三项 / 模板 B 七列', () => {
+    expect(inserted.map(i => [i.field, i.label, i.after])).toEqual([
+      ['species', '种属', 'sourceUnitName'],
+      ['passage', '代数', 'organoidType'],
+    ])
     inserted.forEach((i) => {
-      expect(i.source, `${i.field} 要写明来源`).toMatch(/2026-09-24/)
+      expect(i.source, `${i.field} 要写明来源`).toMatch(/2026-09-24|2026-10-09/)
       for (const list of [externalFields, internalFields]) {
         expect(list.indexOf(i.field), i.field).toBe(list.indexOf(i.after) + 1)
       }

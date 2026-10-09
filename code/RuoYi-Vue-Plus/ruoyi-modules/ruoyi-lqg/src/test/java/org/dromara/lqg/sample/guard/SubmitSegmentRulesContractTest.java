@@ -30,6 +30,8 @@ class SubmitSegmentRulesContractTest {
     private static SampleSubmitSegmentBo tissue(String unitName, String donor, String tissueType) {
         SampleSubmitSegmentBo s = new SampleSubmitSegmentBo();
         s.setSourceUnitName(unitName);
+        // 种属两类都必填（CR-20261009-18）：这里给齐，各条用例只看自己要钉的那一项；种属本身见 ⑯
+        s.setSpecies("人");
         s.setDonorName(donor);
         s.setTissueType(tissueType);
         return s;
@@ -70,6 +72,7 @@ class SubmitSegmentRulesContractTest {
     void organoidOnlyChecksItsOwnFields() {
         SampleSubmitSegmentBo s = new SampleSubmitSegmentBo();
         s.setSourceUnitName("B 大学");
+        s.setSpecies("鼠兔");
         s.setGender("bogus");          // 组织样本字段：类器官路径根本不落库，不报
         s.setHasPathology("yes");
         assertEquals(List.of("类器官类型不能为空"), SubmitSegmentRules.submitViolations("organoid", s, Writer.EXTERNAL));
@@ -210,6 +213,7 @@ class SubmitSegmentRulesContractTest {
     private static SampleSubmitSegmentBo organoid(String passage) {
         SampleSubmitSegmentBo s = new SampleSubmitSegmentBo();
         s.setSourceUnitName("B 大学");
+        s.setSpecies("人");
         s.setOrganoidType("肝类器官");
         s.setPassage(passage);
         return s;
@@ -259,6 +263,29 @@ class SubmitSegmentRulesContractTest {
         SampleSubmitSegmentBo s = tissue("A 医院", "张三", "肝组织");
         s.setPassage("第3代");
         assertTrue(SubmitSegmentRules.submitViolations("tissue", s, Writer.EXTERNAL).isEmpty());
+    }
+
+    // ── 种属（CR-20261009-18：甲方 2026-10-09，样本记录信息表 / 类器官收样记录都加「种属」） ──────
+
+    @Test
+    @DisplayName("⑯ 种属：两类、内外部都必填；字典外的值照收（「还可以添加其他的」），只封顶 50 字")
+    void speciesIsRequiredFreeTextUpTo50() {
+        for (String kind : new String[] {"tissue", "organoid"}) {
+            for (Writer writer : Writer.values()) {
+                SampleSubmitSegmentBo s = kind.equals("tissue") ? tissue("A 医院", "张三", "肝组织") : organoid(null);
+                s.setSpecies("  ");
+                assertEquals(List.of("种属不能为空"), SubmitSegmentRules.submitViolations(kind, s, writer),
+                    kind + " / " + writer + "：空白的种属 = 没填");
+                for (String ok : new String[] {"人", "鼠兔", "移植猪", "鸡", "食蟹猴", repeat("种", 50)}) {
+                    s.setSpecies(ok);
+                    assertTrue(SubmitSegmentRules.submitViolations(kind, s, writer).isEmpty(),
+                        kind + " / " + writer + "：种属「" + ok + "」应当通过（字典外的值也收）");
+                }
+                s.setSpecies(repeat("种", 51));
+                assertEquals(List.of("种属不能超过 50 字"), SubmitSegmentRules.submitViolations(kind, s, writer));
+            }
+        }
+        assertEquals(50, SubmitSegmentRules.MAX_SPECIES, "与 t_lqg_sample.species VARCHAR(50) 一致");
     }
 
 }

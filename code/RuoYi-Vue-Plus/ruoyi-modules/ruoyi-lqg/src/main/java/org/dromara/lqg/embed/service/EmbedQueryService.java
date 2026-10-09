@@ -18,6 +18,7 @@ import org.dromara.lqg.embed.mapper.EmbedMapper;
 import org.dromara.lqg.embed.mapper.EmbedMarkerMapper;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.mapper.SampleMapper;
+import org.dromara.lqg.sample.query.SampleSpeciesFilter;
 import org.dromara.lqg.sample.service.SampleNameResolver;
 import org.springframework.stereotype.Service;
 
@@ -269,6 +270,8 @@ public class EmbedQueryService {
             .eq(StringUtils.isNotBlank(q.getVerifyStatus()), Embed::getVerifyStatus, trim(q.getVerifyStatus()))
             // 提交来源钉在已落库的列上（提交当时的快照），不按提交人当前角色现算
             .eq(StringUtils.isNotBlank(q.getSubmitSource()), Embed::getSubmitSource, trim(q.getSubmitSource()));
+        // 种属：所挂样本的列（CR-20261009-18），子查询筛，见 SampleSpeciesFilter
+        SampleSpeciesFilter.bySampleId(wrapper, q.getSpecies());
         // ★ 搜索框（UI:mp.embed.list：石蜡块编号 / 内部编号）：两个判据**合成一组 OR**，
         //   与别的筛选相与。所挂样本的内部编号是等值（这一列不是加密列，等值才能让
         //   「T-hli01」一次命中；石蜡块编号按模糊，用户常常只记得前几段）。
@@ -366,6 +369,7 @@ public class EmbedQueryService {
             vo.setSubmitNo(sample.getSubmitNo());
             vo.setSampleVerifyStatus(sample.getVerifyStatus());
             vo.setSourceUnitName(sample.getSourceUnitName());
+            vo.setSpecies(sample.getSpecies());
             vo.setSampleKind(sample.getSampleKind());
         }
         vo.setParaffinBlockNo(embed.getParaffinBlockNo());

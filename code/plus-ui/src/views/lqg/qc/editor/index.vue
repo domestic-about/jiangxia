@@ -239,6 +239,8 @@ const summaryItems = computed(() => [
   { label: t('lqg.qc.editor.sourceUnit'), value: sample.value.sourceUnitName || '—' },
   { label: t('lqg.qc.editor.donorName'), value: sample.value.donorName || '—' },
   { label: t('lqg.qc.editor.gender'), value: genderText(sample.value.gender) },
+  // 种属（CR-20261009-18）：样本质控表 Word 里「性别」行下面那一行，从样本带出
+  { label: t('lqg.species.label'), value: sample.value.species || '—' },
   { label: t('lqg.qc.editor.receiveDate'), value: sample.value.receiveDate || '—' },
   { label: t('lqg.qc.editor.processTime'), value: sample.value.processTime || '—' },
   { label: t('lqg.qc.editor.operatorName'), value: sample.value.operatorName || '—' },

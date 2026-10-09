@@ -56,6 +56,9 @@ public class ExtSampleSubmitBo implements Serializable {
     @Schema(description = "住院号（≤ 50 字）", maxLength = 50)
     private String hospitalNo;
 
+    @Schema(description = "种属（必填，≤ 50 字；常用值见字典 lqg_species，可手填）", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 50, example = "人")
+    private String species;
+
     @Schema(description = "组织类型（必填，≤ 100 字）", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 100)
     private String tissueType;
 

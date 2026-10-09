@@ -142,6 +142,7 @@ async function load() {
     const data = await fetchIntCryoDetail(cryoId.value)
     detail.value = data
     form.value = toCryoFormValue(data)
+    sampleSpecies.value = String(data.species ?? '')
   }
   catch {
     failed.value = true
@@ -150,6 +151,9 @@ async function load() {
     loading.value = false
   }
 }
+
+/** 所挂样本的种属（只读显示，CR-20261009-18） */
+const sampleSpecies = ref('')
 
 /**
  * 从样本填写页带进来的样本（`?sampleId=`）：读它的详情，把样本与冻存样品名称填好。
@@ -171,6 +175,7 @@ async function prefillSample(sampleId: string) {
  */
 function onSamplePicked(sample: SampleRow) {
   form.value.sampleId = String(sample.id)
+  sampleSpecies.value = String(sample.species ?? '')
   form.value.sampleLabel = [String(sample.internalNo || ''), String(sample.submitNo || '')]
     .filter(Boolean)
     .join(' · ')
@@ -323,6 +328,14 @@ async function submit() {
           :model-value="form.sampleLabel"
           placeholder="选有效样本"
           @pick="openSamplePicker"
+        />
+        <!-- 种属（CR-20261009-18）：是样本的属性，选了样本就带出来；这里只读 -->
+        <FieldRow
+          v-if="form.sampleId"
+          label="种属"
+          control="text"
+          readonly
+          :model-value="sampleSpecies || '—'"
         />
 
         <FieldRow

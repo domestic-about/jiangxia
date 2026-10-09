@@ -53,6 +53,7 @@ dicts:
   lqg_hint_tissue_type:   { label: 组织类型联想词,   values: { 肝组织: 肝组织, 胆管组织: 胆管组织, 结直肠组织: 结直肠组织, 胃组织: 胃组织, 胰腺组织: 胰腺组织, 肺组织: 肺组织, 乳腺组织: 乳腺组织 } }
   lqg_hint_organoid_type: { label: 类器官类型联想词, values: { 肝类器官: 肝类器官, 胆管类器官: 胆管类器官, 结直肠类器官: 结直肠类器官, 胃类器官: 胃类器官, 胰腺类器官: 胰腺类器官 } }
   lqg_hint_sample_type:   { label: 样本类型联想词,   values: { 组织: 组织, 类器官: 类器官 } }
+  lqg_species:            { label: 种属,             values: { 人: 人, 鼠兔: 鼠兔, 移植猪: 移植猪, 鸡: 鸡 } }   # CR-20261009-18：常用值；值 = 标签 = 落库的字，管理员可在字典管理里加，列表里没有的可手填
   # 评分表四个变量：value = 档位代码，label = 模板上的「分类」原文，**remark 列存该档分值**（改分值改字典 remark，不改代码）
   lqg_score_pre_culture:  { label: 培养前样本评分, values: { lt40: "<40", 40to80: "40~80", gt80: ">80" },                          scores: { lt40: 8, 40to80: 16, gt80: 20 } }
   lqg_score_culture_days: { label: 培养天数,       values: { gt14: ">14d", le14: "≤14d" },                                         scores: { gt14: 0, le14: 10 } }
@@ -143,6 +144,7 @@ tables:
       - { name: invalid_reason, type: str, length: 200, nullable: true, comment: "判无效的原因（外部可见）" }
       - { name: source_unit_id, type: id, nullable: true, comment: "FK→t_lqg_source_unit.id；自填单位名时为空。外部提交时后端按提交人绑定的单位挂 id（单位名与绑定单位同名即挂），只接受本人绑定的单位；实验室核验时可改选正式单位归口（CR-20260923-09）" }
       - { name: source_unit_name, type: str, length: 100, nullable: false, comment: "来源单位名称（导出用；选了单位就存单位名快照）" }
+      - { name: species, type: str, length: 50, nullable: true, comment: "种属（CR-20261009-18，甲方 2026-10-09）：两类都必填（服务层 SubmitSegmentRules 校验，列可空 = 本需求之前录的老记录）；文本，常用值来自字典 lqg_species（人 / 鼠兔 / 移植猪 / 鸡），列表里没有的可以手填；属于送检段（外部可填、待核验 / 无效时可改，核验时实验室可改，外部看得到）；石蜡包埋、-80 冻存、样本质控表都读所挂样本的这一列，不各存一份。迁移 V202610091000" }
       - { name: donor_name, type: str, length: 255, nullable: true, comment: "★ 供体姓名，加密落库（ADR-0006，实现为 SampleFieldCipher 手工加解密，与 @EncryptField 等价），只支持精确查询；外部提交的组织样本必填，内部录入选填（后端校验，CR-20260923-09）；organoid 类可空" }
       - { name: gender, type: dict, length: 16, dict: lqg_gender, nullable: true, comment: "性别 male / female / unknown" }
       - { name: age, type: str, length: 20, nullable: true, comment: "年龄（文本：56 / 3月龄，模板没限定单位）" }
@@ -163,6 +165,7 @@ tables:
       - { name: idx_sample_submitter, cols: [submitter_id] }
       - { name: idx_sample_unit, cols: [source_unit_id] }
       - { name: idx_sample_status_date, cols: [verify_status, receive_date] }
+      - { name: idx_sample_species, cols: [species] }
 
   # ═══════════ EMBED 石蜡包埋送样记录 ═══════════
 

@@ -23,6 +23,7 @@ function filled() {
   const f = emptyOrganoidForm()
   f.sourceUnitId = 9000009002
   f.sourceUnitName = 'B 大学'
+  f.species = ' 鼠兔 '
   f.organoidType = '结直肠类器官'
   f.passage = 'p3'
   f.receiveDate = '2026-09-17'
@@ -38,10 +39,10 @@ describe('类器官内部提交体', () => {
   it('新增（POST）带 sampleKind=organoid —— 类目由入口定下', () => {
     const body = internalOrganoidPayload(filled())
     expect(body.sampleKind).toBe('organoid')
-    // 别的字段一个都不能少（合并进 patch 之后是 10 个键：原来 9 个 + 代数）
+    // 别的字段一个都不能少（合并进 patch 之后是 11 个键：原来 9 个 + 代数 + 种属）
     expect(Object.keys(body).sort()).toEqual([
       'hasViabilityReport', 'internalNo', 'operatorName', 'organoidType', 'passage',
-      'processTime', 'receiveDate', 'sampleKind', 'sourceUnitId', 'sourceUnitName',
+      'processTime', 'receiveDate', 'sampleKind', 'sourceUnitId', 'sourceUnitName', 'species',
     ])
   })
 
@@ -50,7 +51,7 @@ describe('类器官内部提交体', () => {
     expect(body).not.toHaveProperty('sampleKind')
     expect(Object.keys(body).sort()).toEqual([
       'hasViabilityReport', 'internalNo', 'operatorName', 'organoidType', 'passage',
-      'processTime', 'receiveDate', 'sourceUnitId', 'sourceUnitName',
+      'processTime', 'receiveDate', 'sourceUnitId', 'sourceUnitName', 'species',
     ])
     // 数值 / 空值口径不变：选了单位 id 就带 id，处理时间 T → 空格
     expect(body.sourceUnitId).toBe(9000009002)
@@ -79,10 +80,17 @@ describe('类器官收样记录的代数', () => {
     f.passage = ' p12 '
     expect(internalOrganoidPatch(f).passage).toBe('P12')
     expect(externalOrganoidPayload(f).passage).toBe('P12')
-    // 外部四项：来源单位（id + 名称）、类器官类型、代数、备注 —— 收样段一个都不带
+    // 外部五项：来源单位（id + 名称）、种属、类器官类型、代数、备注 —— 收样段一个都不带
     expect(Object.keys(externalOrganoidPayload(f)).sort()).toEqual([
-      'organoidType', 'passage', 'remark', 'sourceUnitId', 'sourceUnitName',
+      'organoidType', 'passage', 'remark', 'sourceUnitId', 'sourceUnitName', 'species',
     ])
+  })
+
+  it('种属（CR-20261009-18）：内外部提交体都带，去首尾空白', () => {
+    const f = filled()
+    expect(internalOrganoidPatch(f).species).toBe('鼠兔')
+    expect(internalOrganoidPayload(f).species).toBe('鼠兔')
+    expect(externalOrganoidPayload(f).species).toBe('鼠兔')
   })
 
   it('清空代数也要发这个键（空串）：补丁语义里「没带 = 不改」，不发就清不掉', () => {

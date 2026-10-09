@@ -24,7 +24,7 @@ import java.util.TreeMap;
  *
  * <p>钉住三条「靠人盯会回退」的口径（不启 Spring 上下文）：
  * <ol>
- *   <li><b>11 列表头逐字、按序</b>：前面 9 列照甲方模板原件
+ *   <li><b>12 列表头逐字、按序</b>：前面 9 列照甲方模板原件
  *       {@code _input/templates/-80冻存模板.xlsx}，<b>其后</b>追加「代数」「当前剩余/支」
  *       —— 追加列插到中间任何位置就不等。本类同时读一遍模板原件做两侧对账
  *       （读不到模板时打印原因并跳过，不让「文件不在」伪装成「口径对」）；</li>
@@ -76,10 +76,10 @@ class CryoExportContractTest {
     /**
      * 允许追加在模板列<b>之后</b>的两列（顺序也是钉死的）。
      */
-    private static final List<String> EXTRA_HEADER = List.of("代数", "当前剩余/支");
+    private static final List<String> EXTRA_HEADER = List.of("代数", "当前剩余/支", "种属");
 
     /**
-     * 导出视图的 11 列 = 模板 9 列 + 追加 2 列。
+     * 导出视图的 12 列 = 模板 9 列 + 追加 3 列（代数、当前剩余/支、种属）。
      */
     private static final List<String> HEADER = concat(TEMPLATE_HEADER, EXTRA_HEADER);
 
@@ -91,7 +91,7 @@ class CryoExportContractTest {
     }
 
     @Test
-    @DisplayName("① 导出视图 11 列、表头逐字同序（模板 9 列 + 追加 2 列）；没有顺手多带的列")
+    @DisplayName("① 导出视图 12 列、表头逐字同序（模板 9 列 + 追加 3 列）；没有顺手多带的列")
     void exportViewMatchesTemplate() {
         Map<Integer, String[]> byIndex = new TreeMap<>();
         for (Field field : CryoExportVo.class.getDeclaredFields()) {
@@ -109,14 +109,14 @@ class CryoExportContractTest {
             assertEquals(1, entry.getValue().length, "ExcelProperty value 应当只有一个列名");
             actual.add(entry.getValue()[0]);
         }
-        assertEquals(HEADER, actual, "导出视图表头必须 = 模板 9 列 + 追加「代数」「当前剩余/支」");
-        assertEquals(11, actual.size(), "模板 9 列 + 追加 2 列 = 11 列，不多不少");
+        assertEquals(HEADER, actual, "导出视图表头必须 = 模板 9 列 + 追加「代数」「当前剩余/支」「种属」");
+        assertEquals(12, actual.size(), "模板 9 列 + 追加 3 列 = 12 列，不多不少");
 
         // ★ 追加列必须挂在模板 9 列**之后**：插到中间 = 表头顺序不等（accept 1 counterfeit）
         for (int i = 0; i < TEMPLATE_HEADER.size(); i++) {
             assertEquals(TEMPLATE_HEADER.get(i), actual.get(i), "第 " + (i + 1) + " 列必须与模板逐字一致");
         }
-        assertEquals(EXTRA_HEADER, actual.subList(9, 11), "追加的两列只能跟在模板 9 列之后");
+        assertEquals(EXTRA_HEADER, actual.subList(9, 12), "追加列只能跟在模板 9 列之后");
 
         // 「冻存数量/支」是模板第 3 列（index 2），「当前剩余/支」是追加列（index 10）——
         // 两格都在、不是拿一个顶替另一个
@@ -214,7 +214,7 @@ class CryoExportContractTest {
     @DisplayName("⑤ 表头索引自检表与注解一致（给小程序导出复用）")
     void headerIndexTable() {
         Map<String, Integer> index = CryoExportService.headerIndex();
-        assertEquals(11, index.size());
+        assertEquals(12, index.size());
         int i = 0;
         for (Map.Entry<String, Integer> entry : new LinkedHashMap<>(index).entrySet()) {
             assertEquals(i++, entry.getValue(), "headerIndex() 的顺序必须与模板列序 + 追加列一致");

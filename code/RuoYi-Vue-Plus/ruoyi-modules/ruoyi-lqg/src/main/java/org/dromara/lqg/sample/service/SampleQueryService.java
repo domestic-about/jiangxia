@@ -276,6 +276,10 @@ public class SampleQueryService {
             // 收样日期区间：两端都含（begin <= receive_date <= end）
             .ge(q.getReceiveDateBegin() != null, Sample::getReceiveDate, q.getReceiveDateBegin())
             .le(q.getReceiveDateEnd() != null, Sample::getReceiveDate, q.getReceiveDateEnd())
+            // 种属（CR-20261009-18）：等值；__none__ = 还没填种属的老记录
+            .isNull(SampleQueryBo.SPECIES_NONE.equals(trim(q.getSpecies())), Sample::getSpecies)
+            .eq(StringUtils.isNotBlank(q.getSpecies()) && !SampleQueryBo.SPECIES_NONE.equals(trim(q.getSpecies())),
+                Sample::getSpecies, trim(q.getSpecies()))
             // 自由文本两项走模糊（不是加密列，没有精确匹配的约束）
             .like(StringUtils.isNotBlank(q.getTissueType()), Sample::getTissueType, trim(q.getTissueType()))
             // 类器官类型：工作台「类器官收样记录」页的那一格（CR-20260924-10 拆页后，组织类型那一格在这页没有意义）
@@ -409,6 +413,7 @@ public class SampleQueryService {
         vo.setInvalidReason(sample.getInvalidReason());
         vo.setSourceUnitId(sample.getSourceUnitId());
         vo.setSourceUnitName(sample.getSourceUnitName());
+        vo.setSpecies(sample.getSpecies());
         vo.setDonorName(fieldCipher.decrypt(sample.getDonorName()));
         vo.setGender(sample.getGender());
         vo.setAge(sample.getAge());

@@ -16,6 +16,7 @@ import org.dromara.lqg.qc.mapper.QcOrganoidDocMapper;
 import org.dromara.lqg.qc.mapper.QcSampleDocMapper;
 import org.dromara.lqg.qc.mapper.QcScoreDocMapper;
 import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.domain.bo.SampleQueryBo;
 import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.dromara.lqg.sample.verify.VerifyTransitions;
 import org.springframework.stereotype.Service;
@@ -88,6 +89,10 @@ public class QcDocListService {
         LambdaQueryWrapper<Sample> w = new LambdaQueryWrapper<Sample>()
             .eq(Sample::getVerifyStatus, VerifyTransitions.VALID)
             .eq(StringUtils.isNotBlank(q.getSampleKind()), Sample::getSampleKind, trim(q.getSampleKind()))
+            // 种属（CR-20261009-18）：与样本表同一口径，__none__ = 还没填的老记录
+            .isNull(SampleQueryBo.SPECIES_NONE.equals(trim(q.getSpecies())), Sample::getSpecies)
+            .eq(StringUtils.isNotBlank(q.getSpecies()) && !SampleQueryBo.SPECIES_NONE.equals(trim(q.getSpecies())),
+                Sample::getSpecies, trim(q.getSpecies()))
             .ge(StringUtils.isNotBlank(q.getReceiveBegin()), Sample::getReceiveDate, parseDate(q.getReceiveBegin()))
             .le(StringUtils.isNotBlank(q.getReceiveEnd()), Sample::getReceiveDate, parseDate(q.getReceiveEnd()));
         String keyword = trim(q.getKeyword());
@@ -106,6 +111,7 @@ public class QcDocListService {
         vo.setInternalNo(sample.getInternalNo());
         vo.setSampleKind(sample.getSampleKind());
         vo.setSourceUnitName(sample.getSourceUnitName());
+        vo.setSpecies(sample.getSpecies());
         vo.setTypeName("organoid".equals(sample.getSampleKind()) ? sample.getOrganoidType() : sample.getTissueType());
         vo.setReceiveDate(sample.getReceiveDate());
         // ★ 编辑页打开时（GET bundle）就地建的空草稿、之后从没保存过 → 列表里仍算「未填写」

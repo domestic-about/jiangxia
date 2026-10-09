@@ -21,11 +21,13 @@ import NoteBar from '@/components/lqg/NoteBar.vue'
 import OcrBar from '@/components/lqg/OcrBar.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
 import SourceUnitSheet from '@/components/lqg/SourceUnitSheet.vue'
+import SpeciesSheet from '@/components/lqg/SpeciesSheet.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { finishTo, goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { unitDisplay } from '@/utils/ext-profile'
 import { http } from '@/utils/request'
+import { DEFAULT_SPECIES, fetchSpeciesOptions, speciesProblem } from '@/utils/species'
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
 import type { FieldSpec, FormFieldKey, FormMode } from './layout'
 import { useLeaveGuard } from '@/utils/leaveGuard'
@@ -78,6 +80,9 @@ const ocrMarks = ref<Set<string>>(new Set())
  */
 const stubCase = ref('')
 const tissueHints = ref<string[]>([])
+/** 种属的常用值（字典 lqg_species，CR-20261009-18；拉不到用内置四个，不挡填写） */
+const speciesOptions = ref<string[]>([...DEFAULT_SPECIES])
+const speciesSheetRef = ref<{ open: () => void } | null>(null)
 /** 启用中的单位（`/mp/ext/units`，拉不到不挡填写）：内部的来源单位从这里选（V01） */
 const units = ref<SelectorUnit[]>([])
 /** 来源单位：选中的单位 id（手填时为 null）与「手动填写」开关；名字在 `form.sourceUnitName` */
@@ -194,7 +199,7 @@ async function load() {
         form.value.sourceUnitName = bound ? bound.unitName : unitDisplay(store.ext)
         manualUnit.value = !bound && !!form.value.sourceUnitName
       }
-      await Promise.all([loadHints(), loadUnits()])
+      await Promise.all([loadHints(), loadUnits(), loadSpecies()])
       return
     }
     if (!sampleId.value) {
@@ -207,7 +212,7 @@ async function load() {
     detail.value = data
     serverEditable.value = data.editable === true
     form.value = toFormValue(data)
-    await loadUnits()
+    await Promise.all([loadUnits(), loadSpecies()])
     // 来源单位：内部详情带 id；外部详情没有这个键 → 名字与本人绑定单位相同才算选中它，否则按手填
     unitId.value = data.sourceUnitId ?? sourceUnitIdFor(form.value.sourceUnitName, unitCandidates())
     manualUnit.value = unitId.value === null && !!form.value.sourceUnitName.trim()
@@ -324,6 +329,11 @@ function guideToUnitGroup() {
   })
 }
 
+/** 种属常用值：字典接口 `/mp/dict/hints?type=species`（拉不到用内置四个） */
+async function loadSpecies() {
+  speciesOptions.value = await fetchSpeciesOptions()
+}
+
 /** 组织类型联想词：字典接口 `/mp/dict/hints?type=tissue`（拉不到不挡填写） */
 async function loadHints() {
   try {
@@ -408,12 +418,14 @@ function onBeforeRecognize() {
 /**
  * 必填标记与提交前校验（G26：与后端同一口径，不另起一套）——
  *   · 来源单位：`t_lqg_sample.source_unit_name` 非空（field-ssot），内外部都要；
+ *   · 种属：两类、内外部都必填（CR-20261009-18）；
  *   · 组织类型：tissue 类必填（`SampleKindRules.missingRequiredFields`）；
  *   · 供体姓名：**外部必填、内部选填**（后端口径：外部送检必须写清供体，内部补录可以空着）；
  *   · 内部另要收样日期、内部编号（内部新增直接有效，这两项必须有）。
  */
 function isRequired(key: FormFieldKey): boolean {
-  if (key === 'sourceUnitName' || key === 'tissueType') {
+  // 种属（CR-20261009-18）：两类、内外部都必填（后端 SubmitSegmentRules 同口径）
+  if (key === 'sourceUnitName' || key === 'species' || key === 'tissueType') {
     return true
   }
   if (key === 'donorName') {
@@ -455,6 +467,10 @@ function onPick(key: FormFieldKey) {
     unitSheetRef.value?.open()
     return
   }
+  if (key === 'species') {
+    speciesSheetRef.value?.open()
+    return
+  }
   pickerField.value = key
   pickerValue.value = toMs(fieldValue(key))
   pickerRef.value?.open()
@@ -489,6 +505,7 @@ function payload(): Record<string, unknown> {
     //   外部只可能是本人绑定单位的 id；手填 / 名字改过就不带 id。
     sourceUnitId: currentUnitId(),
     sourceUnitName: f.sourceUnitName,
+    species: f.species.trim(),
     donorName: f.donorName,
     gender: f.gender,
     age: f.age,
@@ -519,7 +536,7 @@ async function submit() {
   if (!editable.value || saving.value) {
     return
   }
-  // 必填项与 isRequired 同一口径（G26）：来源单位、组织类型；外部另要供体姓名；内部另要收样日期、内部编号
+  // 必填项与 isRequired 同一口径（G26）：来源单位、种属、组织类型；外部另要供体姓名；内部另要收样日期、内部编号
   if (!form.value.sourceUnitName.trim()) {
     if (isInternal.value) {
       uni.showToast({ title: '请选择来源单位', icon: 'none' })
@@ -527,6 +544,11 @@ async function submit() {
     else {
       guideToUnitGroup()
     }
+    return
+  }
+  const speciesError = speciesProblem(form.value.species)
+  if (speciesError) {
+    uni.showToast({ title: speciesError, icon: 'none' })
     return
   }
   if (!isInternal.value && !form.value.donorName.trim()) {
@@ -737,6 +759,15 @@ function addCryo() {
       @pick="onUnitPick"
       @manual="onUnitManual"
       @update:unit-name="onUnitName"
+    />
+
+    <!-- 种属：底部弹框（CR-20261009-18）—— 字典常用值 + 「列表里没有，手动填写」 -->
+    <SpeciesSheet
+      ref="speciesSheetRef"
+      :model-value="form.species"
+      :options="speciesOptions"
+      :disabled="!editable"
+      @update:model-value="(v: string) => setField('species', v)"
     />
 
     <!-- 日期 / 时间：底部弹框（落地规范 §5.4）；开关调组件的 open()，不用不存在的 :visible -->

@@ -132,6 +132,16 @@ public class SampleQueryBo extends PageQuery {
     private LocalDate receiveDateEnd;
 
     /**
+     * 种属（等值，CR-20261009-18）：甲方按种属归类（人 / 鼠兔 / 移植猪 / 鸡 / 手填的其它值）；
+     * 传 {@link #SPECIES_NONE} 查还没填种属的老记录。
+     */
+    @Schema(description = "种属（等值；传 __none__ 查未填的）")
+    private String species;
+
+    /** {@link #species} 的特殊值：查还没填种属的记录（CR-20261009-18 之前录的） */
+    public static final String SPECIES_NONE = "__none__";
+
+    /**
      * 组织类型（模糊）。
      */
     @Schema(description = "组织类型（模糊）")

@@ -45,6 +45,9 @@ public class SampleSubmitBo implements Serializable {
     @Schema(description = "来源单位名称（没选单位时用它）")
     private String sourceUnitName;
 
+    @Schema(description = "种属（两类都必填，≤ 50 字；常用值见字典 lqg_species，可手填）", example = "人")
+    private String species;
+
     @Schema(description = "供体姓名（加密落库）")
     private String donorName;
 

@@ -44,6 +44,7 @@ declare module 'vue' {
     SamplePickerExt: typeof import('./../components/lqg/SamplePickerExt.vue')['default']
     SegButtons: typeof import('./../components/lqg/SegButtons.vue')['default']
     SourceUnitSheet: typeof import('./../components/lqg/SourceUnitSheet.vue')['default']
+    SpeciesSheet: typeof import('./../components/lqg/SpeciesSheet.vue')['default']
     StainButtons: typeof import('./../components/lqg/StainButtons.vue')['default']
     StatusChip: typeof import('./../components/lqg/StatusChip.vue')['default']
     ThumbStrip: typeof import('./../components/lqg/ThumbStrip.vue')['default']

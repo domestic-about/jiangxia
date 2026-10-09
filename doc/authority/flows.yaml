@@ -231,7 +231,7 @@ records:
         action: >-
           首页点「样本记录信息表」进填写页：填送检段（来源单位、供体姓名、性别、年龄、住院号、组织类型、有无病理、备注），可先拍照识别预填；提交。
           2026-09-17 晚起外部也能点「类器官收样记录」：填来源单位、类器官类型、代数（选填，形如 P3；2026-09-24 加，CR-20260924-10）、备注后提交（sample_kind=organoid，同样待核验，CR-20260917-05）
-        writes: [FIELD:t_lqg_sample.submit_no, FIELD:t_lqg_sample.sample_kind, FIELD:t_lqg_sample.submit_source, FIELD:t_lqg_sample.submitter_id, FIELD:t_lqg_sample.source_unit_id, FIELD:t_lqg_sample.source_unit_name, FIELD:t_lqg_sample.donor_name, FIELD:t_lqg_sample.gender, FIELD:t_lqg_sample.age, FIELD:t_lqg_sample.hospital_no, FIELD:t_lqg_sample.tissue_type, FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.has_pathology, FIELD:t_lqg_sample.remark]
+        writes: [FIELD:t_lqg_sample.submit_no, FIELD:t_lqg_sample.sample_kind, FIELD:t_lqg_sample.submit_source, FIELD:t_lqg_sample.submitter_id, FIELD:t_lqg_sample.source_unit_id, FIELD:t_lqg_sample.source_unit_name, FIELD:t_lqg_sample.species, FIELD:t_lqg_sample.donor_name, FIELD:t_lqg_sample.gender, FIELD:t_lqg_sample.age, FIELD:t_lqg_sample.hospital_no, FIELD:t_lqg_sample.tissue_type, FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.has_pathology, FIELD:t_lqg_sample.remark]
         produces: 样本 verify_status=pending、submit_source=external、sample_kind=tissue 或 organoid，生成送检单号；收样段全空
       - id: FLOW:F-SAMPLE-01.step2
         label: 实时进入样本表
@@ -251,7 +251,7 @@ records:
           来源单位可改选正式单位，把只填了单位名的外部样本归口（CR-20260923-09）。
           2026-09-24 起小程序也能核验（CR-20260924-10，甲方第 20 行）：内部人员从首页「待处理」或内部管理表格点待核验的那一条进核验页，
           调同一个 PUT /lqg/sample/{id}/verify、同一份规则；送检段是整段替换，所以小程序里送检信息一项没改就不带 submitSegment，改了就带整段。改判仍只在工作台。
-        writes: [FIELD:t_lqg_sample.verify_status, FIELD:t_lqg_sample.verify_by, FIELD:t_lqg_sample.verify_time, FIELD:t_lqg_sample.invalid_reason, FIELD:t_lqg_sample.receive_date, FIELD:t_lqg_sample.internal_no, FIELD:t_lqg_sample.is_fixed, FIELD:t_lqg_sample.process_time, FIELD:t_lqg_sample.has_qc_sheet, FIELD:t_lqg_sample.has_viability_report, FIELD:t_lqg_sample.operator_name, FIELD:t_lqg_sample.source_unit_id, FIELD:t_lqg_sample.source_unit_name, FIELD:t_lqg_sample.donor_name, FIELD:t_lqg_sample.gender, FIELD:t_lqg_sample.age, FIELD:t_lqg_sample.hospital_no, FIELD:t_lqg_sample.tissue_type, FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.has_pathology, FIELD:t_lqg_sample.remark]
+        writes: [FIELD:t_lqg_sample.verify_status, FIELD:t_lqg_sample.verify_by, FIELD:t_lqg_sample.verify_time, FIELD:t_lqg_sample.invalid_reason, FIELD:t_lqg_sample.receive_date, FIELD:t_lqg_sample.internal_no, FIELD:t_lqg_sample.is_fixed, FIELD:t_lqg_sample.process_time, FIELD:t_lqg_sample.has_qc_sheet, FIELD:t_lqg_sample.has_viability_report, FIELD:t_lqg_sample.operator_name, FIELD:t_lqg_sample.source_unit_id, FIELD:t_lqg_sample.source_unit_name, FIELD:t_lqg_sample.species, FIELD:t_lqg_sample.donor_name, FIELD:t_lqg_sample.gender, FIELD:t_lqg_sample.age, FIELD:t_lqg_sample.hospital_no, FIELD:t_lqg_sample.tissue_type, FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.has_pathology, FIELD:t_lqg_sample.remark]
         produces: verify_status=valid（带内部编号）或 invalid（带原因）
       - id: FLOW:F-SAMPLE-01.step4
         label: 无效的改后重提
@@ -290,7 +290,7 @@ records:
         action: >-
           填类器官收样记录 7 列 + 代数：来源单位、类器官类型、代数（选填，形如 P3，紧跟类器官类型；模板没有这一列，甲方 2026-09-24 第 18 行要加，CR-20260924-10）、
           收样日期、内部编号、处理时间、细胞活率报告、操作人
-        writes: [FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.sample_kind]
+        writes: [FIELD:t_lqg_sample.species, FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.sample_kind]
         produces: 样本 sample_kind=organoid、submit_source=internal、verify_status=valid
       - id: FLOW:F-SAMPLE-02.step3
         label: 样本表批量筛选查询

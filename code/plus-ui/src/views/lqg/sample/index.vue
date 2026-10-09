@@ -55,7 +55,8 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
+          <el-col :xs="24" :sm="24" :md="16" :lg="12">
             <el-form-item :label="t('lqg.sample.filter.receiveDateRange')">
               <el-date-picker
                 v-model="receiveDateRange"
@@ -63,9 +64,15 @@
                 value-format="YYYY-MM-DD"
                 :start-placeholder="t('lqg.sample.filter.receiveDateBegin')"
                 :end-placeholder="t('lqg.sample.filter.receiveDateEnd')"
-                class="lqg-sample__control"
+                class="lqg-sample__control lqg-range"
                 clearable
               />
+            </el-form-item>
+          </el-col>
+          <!-- 种属（CR-20261009-18）：甲方按种属归类；「未填」= 本需求之前录的、还没补种属的 -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.species.label')" prop="species">
+              <SpeciesSelect v-model="queryParams.species" filter class="lqg-sample__control" />
             </el-form-item>
           </el-col>
           <!-- 类型一格按页面：组织样本筛组织类型，类器官筛类器官类型（都是模糊） -->
@@ -265,6 +272,7 @@ import { queryWithout, sampleIdOfQuery } from './relation';
 import type { SampleKind } from './pages';
 import { useI18n } from 'vue-i18n';
 import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
+import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -310,6 +318,7 @@ const queryParams = reactive<SampleQuery>({
   verifyStatus: null,
   receiveDateBegin: null,
   receiveDateEnd: null,
+  species: null,
   tissueType: null,
   organoidType: null,
   internalNo: null,
@@ -368,6 +377,7 @@ const resetQuery = () => {
   queryParams.groupId = null;
   queryParams.submitSource = null;
   queryParams.verifyStatus = null;
+  queryParams.species = null;
   queryParams.tissueType = null;
   queryParams.organoidType = null;
   queryParams.internalNo = null;

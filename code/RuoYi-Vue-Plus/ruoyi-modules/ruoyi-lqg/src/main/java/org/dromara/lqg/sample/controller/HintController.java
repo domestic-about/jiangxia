@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 样本表单的联想词（doc/api-contract.md 的 {@code GET /mp/dict/hints?type=tissue|organoid|sample}，
+ * 样本表单的联想词（doc/api-contract.md 的 {@code GET /mp/dict/hints?type=tissue|organoid|sample|species}，
  * 挂在本模块**非 ext** 的包下）。
  *
  * <p>★ <b>内外部都能调</b>（契约「通用」一节的表：{@code /mp/me}、{@code /mp/ocr/**}、

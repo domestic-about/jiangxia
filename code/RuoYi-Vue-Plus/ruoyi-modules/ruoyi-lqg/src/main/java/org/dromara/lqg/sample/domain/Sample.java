@@ -91,6 +91,13 @@ public class Sample extends BaseEntity {
     private String sourceUnitName;
 
     /**
+     * 种属（CR-20261009-18：甲方 2026-10-09 要求样本记录信息表 / 类器官收样记录加这一项）：两类都必填；
+     * 文本，常用值来自字典 {@code lqg_species}（人 / 鼠兔 / 移植猪 / 鸡），列表里没有的可以手填。
+     * 石蜡包埋、-80 冻存、样本质控表都挂在样本上，种属读时从这里带出，不各存一份。
+     */
+    private String species;
+
+    /**
      * 供体姓名（加密落库；只支持精确查询；organoid 类可空）
      */
     private String donorName;

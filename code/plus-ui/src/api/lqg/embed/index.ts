@@ -43,6 +43,8 @@ export interface EmbedVO {
   /** ★ 所挂样本的核验状态 —— 核验抽屉据此置灰「判为有效」 */
   sampleVerifyStatus?: string | null;
   sourceUnitName?: string | null;
+  /** ★ 所挂样本的种属（读时带出，本表不存；CR-20261009-18） */
+  species?: string | null;
   /** 所挂样本的类别 tissue / organoid（读时带出）——「样本编号」点回样本时决定回哪一页 */
   sampleKind?: string | null;
   /** 外部送样在核验前为空 */
@@ -89,6 +91,8 @@ export interface EmbedQuery {
   paraffinBlockNo?: string | null;
   /** 内部编号（所挂样本的，等值） */
   internalNo?: string | null;
+  /** 种属（所挂样本的，等值；__none__ = 样本还没填，CR-20261009-18） */
+  species?: string | null;
   /** 所挂样本 id（从样本总表带 sampleId 跳入时用） */
   sampleId?: string | number | null;
   /** 染色（数组包含，精确匹配：HE / IF / IHC / OTHER / NONE 之一） */

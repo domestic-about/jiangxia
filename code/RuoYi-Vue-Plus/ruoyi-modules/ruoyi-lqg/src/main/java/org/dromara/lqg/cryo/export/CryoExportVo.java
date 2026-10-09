@@ -22,7 +22,7 @@ import java.io.Serializable;
  * <pre>
  * 冻存时间 / 冻存样品 / 冻存数量/支 / 冻存密度 / 暂存-80度超低温冰箱 / 冻存人 /
  * -80度超低温冰箱转移至液氮时间 / 液氮储存位置 / 备注             ← 模板原件 9 列，逐字同序
- * 代数 / 当前剩余/支                                            ← 只许追加在模板列之后
+ * 代数 / 当前剩余/支 / 种属                                     ← 只许追加在模板列之后（种属：CR-20261009-18）
  * </pre>
  * ★ 追加列<b>只能挂在第 9 列之后</b>：插到中间任何一个位置表头顺序就不等（accept 1 counterfeit）。
  *
@@ -43,7 +43,7 @@ import java.io.Serializable;
  */
 @Data
 @ExcelIgnoreUnannotated
-@Schema(description = "-80 冻存导出视图（模板 9 列 + 代数 + 当前剩余/支）")
+@Schema(description = "-80 冻存导出视图（模板 9 列 + 代数 + 当前剩余/支 + 种属）")
 public class CryoExportVo implements Serializable {
 
     @Serial
@@ -56,6 +56,7 @@ public class CryoExportVo implements Serializable {
     @ExcelProperty(value = "冻存样品", index = 1)
     @Schema(description = "冻存样品名称（手填）")
     private String cryoName;
+
 
     /**
      * ★ <b>初始</b>支数（不是当前剩余）—— 「当前剩余/支」是第 11 列。
@@ -104,5 +105,13 @@ public class CryoExportVo implements Serializable {
     @ExcelProperty(value = "当前剩余/支", index = 10, converter = NumericTextConverter.class)
     @Schema(description = "当前剩余支数（读时算：初始 + 未删流水累计）")
     private String remainingQty;
+
+    /**
+     * 追加列（模板里没有，CR-20261009-18）：所挂样本的种属，排在「当前剩余/支」之后 ——
+     * 与「代数」「当前剩余/支」同一条规则，追加列只挂在模板 9 列之后。
+     */
+    @ExcelProperty(value = "种属", index = 11)
+    @Schema(description = "所挂样本的种属；样本没填留空")
+    private String species;
 
 }

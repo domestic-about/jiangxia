@@ -169,6 +169,7 @@ public class ExtSampleSubmitService {
         SampleResubmitBo fields = new SampleResubmitBo();
         fields.setSourceUnitId(src.getSourceUnitId());
         fields.setSourceUnitName(src.getSourceUnitName());
+        fields.setSpecies(src.getSpecies());
         fields.setDonorName(src.getDonorName());
         fields.setGender(src.getGender());
         fields.setAge(src.getAge());
@@ -182,7 +183,7 @@ public class ExtSampleSubmitService {
     /**
      * 类器官收样的修改重提（{@code PUT /mp/ext/organoid/{id}}）。
      *
-     * <p>只拷「来源单位 + 类器官类型 + 代数 + 备注」四项：类器官入参里根本没有别的键
+     * <p>只拷「来源单位 + 种属 + 类器官类型 + 代数 + 备注」五项：类器官入参里根本没有别的键
      * （代数是 CR-20260924-10 加的；外部改自己待核验 / 无效的记录时也能改代数）。
      */
     @Transactional(rollbackFor = Exception.class)
@@ -191,6 +192,7 @@ public class ExtSampleSubmitService {
         SampleResubmitBo fields = new SampleResubmitBo();
         fields.setSourceUnitId(src.getSourceUnitId());
         fields.setSourceUnitName(src.getSourceUnitName());
+        fields.setSpecies(src.getSpecies());
         fields.setOrganoidType(src.getOrganoidType());
         fields.setPassage(src.getPassage());
         fields.setRemark(src.getRemark());
@@ -247,6 +249,7 @@ public class ExtSampleSubmitService {
         SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
         seg.setSourceUnitId(src.getSourceUnitId());
         seg.setSourceUnitName(src.getSourceUnitName());
+        seg.setSpecies(src.getSpecies());
         seg.setDonorName(src.getDonorName());
         seg.setGender(src.getGender());
         seg.setAge(src.getAge());
@@ -258,12 +261,13 @@ public class ExtSampleSubmitService {
     }
 
     /**
-     * 外部类器官入参 → 送检段（只有来源单位、类器官类型、代数、备注四项）。
+     * 外部类器官入参 → 送检段（只有来源单位、种属、类器官类型、代数、备注五项）。
      */
     static SampleSubmitSegmentBo segmentOf(ExtOrganoidSubmitBo src) {
         SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
         seg.setSourceUnitId(src.getSourceUnitId());
         seg.setSourceUnitName(src.getSourceUnitName());
+        seg.setSpecies(src.getSpecies());
         seg.setOrganoidType(src.getOrganoidType());
         seg.setPassage(src.getPassage());
         seg.setRemark(src.getRemark());

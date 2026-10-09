@@ -66,6 +66,12 @@
               />
             </el-form-item>
           </el-col>
+          <!-- 种属：所挂样本的（CR-20261009-18） -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.species.label')" prop="species">
+              <SpeciesSelect v-model="queryParams.species" filter class="lqg-cryo__control" />
+            </el-form-item>
+          </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.cryo.filter.cryoName')" prop="cryoName">
               <el-input
@@ -84,7 +90,8 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
+          <el-col :xs="24" :sm="24" :md="16" :lg="12">
             <el-form-item :label="t('lqg.cryo.filter.freezeTimeRange')">
               <el-date-picker
                 v-model="freezeTimeRange"
@@ -92,7 +99,7 @@
                 value-format="YYYY-MM-DD"
                 :start-placeholder="t('lqg.cryo.filter.freezeTimeBegin')"
                 :end-placeholder="t('lqg.cryo.filter.freezeTimeEnd')"
-                class="lqg-cryo__control"
+                class="lqg-cryo__control lqg-range"
                 clearable
               />
             </el-form-item>
@@ -192,6 +199,10 @@
             </div>
           </template>
         </el-table-column>
+        <!-- 追加列「种属」：所挂样本的种属，排在「当前剩余/支」之后（与导出同一位置，CR-20261009-18） -->
+        <el-table-column :label="t('lqg.species.label')" prop="species" width="90" align="center" :show-overflow-tooltip="true">
+          <template #default="scope">{{ speciesText(scope.row.species) }}</template>
+        </el-table-column>
         <!-- 以下三列模板里没有，工作台自己要看：所挂样本的内部编号、当前位置、最后修改。
              ★ 内部编号点回样本（2026-09-24 本机验收「反向可回」）：按样本类别回到它所在那一页并打开它 -->
         <el-table-column :label="t('lqg.cryo.col.internalNo')" prop="internalNo" width="120" :show-overflow-tooltip="true">
@@ -279,6 +290,8 @@ import CryoToLn2Dialog from './CryoToLn2Dialog.vue';
 import type { FlowKind } from './flow';
 import { useI18n } from 'vue-i18n';
 import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
+import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
+import { speciesText } from '@/components/lqg/SpeciesSelect/species';
 
 /**
  * 工作台「-80 冻存管理」（UI:admin.cryo.list）。
@@ -316,6 +329,7 @@ const queryParams = reactive<CryoQuery>({
   pageNum: 1,
   pageSize: 10,
   internalNo: null,
+  species: null,
   cryoName: null,
   sampleId: null,
   location: null,
@@ -405,6 +419,7 @@ const clearFilters = () => {
   queryRef.value?.resetFields();
   freezeTimeRange.value = null;
   queryParams.internalNo = null;
+  queryParams.species = null;
   queryParams.cryoName = null;
   queryParams.sampleId = null;
   queryParams.location = null;

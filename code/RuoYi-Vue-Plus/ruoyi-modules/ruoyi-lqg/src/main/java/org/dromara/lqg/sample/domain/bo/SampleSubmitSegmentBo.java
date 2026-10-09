@@ -8,7 +8,7 @@ import java.io.Serializable;
 
 /**
  * 样本的<b>送检段</b>（FLOW:F-SAMPLE-01.step1 的 {@code writes} 里除身份列以外的那一组）：
- * 来源单位、供体姓名、性别、年龄、住院号、组织类型 / 类器官类型、代数（类器官）、有无病理、备注。
+ * 来源单位、种属、供体姓名、性别、年龄、住院号、组织类型 / 类器官类型、代数（类器官）、有无病理、备注。
  *
  * <p>★ 三条写路径共用这一个形状、共用 {@code SubmitSegmentRules} 那一份必填与格式、共用
  * {@code SampleSubmitSegmentWriter} 那一份落库列（FIX V02，避免两套规则）：
@@ -21,8 +21,8 @@ import java.io.Serializable;
  * </ul>
  *
  * <p>★ 语义 = <b>整段替换</b>：按样本<b>自己的</b> {@code sample_kind} 写本类别的那几列，没传的按清空处理
- * （组织样本：来源单位、供体姓名、性别、年龄、住院号、组织类型、有无病理、备注；
- * 类器官：来源单位、类器官类型、代数、备注）。另一类的类型列（含代数）传了也不生效。
+ * （组织样本：来源单位、种属、供体姓名、性别、年龄、住院号、组织类型、有无病理、备注；
+ * 类器官：来源单位、种属、类器官类型、代数、备注）。另一类的类型列（含代数）传了也不生效。
  *
  * <p>★ 本类<b>没有</b>身份列（{@code submitNo / submitSource / submitterId / sampleKind}）、
  * <b>没有</b>核验段与收样段（{@code verifyStatus / internalNo / receiveDate / operatorName …}）：
@@ -42,6 +42,9 @@ public class SampleSubmitSegmentBo implements Serializable {
 
     @Schema(description = "来源单位名称（没选单位时必填，≤ 100 字）", maxLength = 100)
     private String sourceUnitName;
+
+    @Schema(description = "种属（两类都必填，≤ 50 字；常用值见字典 lqg_species，可手填）", maxLength = 50, example = "人")
+    private String species;
 
     @Schema(description = "供体姓名（组织样本；加密落库，≤ 50 字）", maxLength = 50)
     private String donorName;

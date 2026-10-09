@@ -32,17 +32,17 @@ accept:
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null && rm -f /tmp/lqg-mpx-*.xlsx &&
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg --out /tmp/lqg-mpx-tissue.xlsx GET /mp/int/export/tissue &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-tissue.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND sample_kind='tissue'" | head -1)" --find "内部编号=T-hli01" --expect "供体姓名=测试供体甲,有无固定=有" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-tissue.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --insert "种属@来源单位" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND sample_kind='tissue'" | head -1)" --find "内部编号=T-hli01" --expect "供体姓名=测试供体甲,有无固定=有" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-organoid.xlsx GET /mp/int/export/organoid &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-organoid.xlsx --template "_input/templates/类器官收样记录模板.xlsx" --insert "代数@类器官类型" --rows 1 --find "内部编号=T-oco01" --expect "代数=P3" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-organoid.xlsx --template "_input/templates/类器官收样记录模板.xlsx" --insert "种属@来源单位,代数@类器官类型" --rows 1 --find "内部编号=T-oco01" --expect "代数=P3" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-embed.xlsx GET /mp/int/export/embed &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-embed.xlsx --template "_input/templates/石蜡包埋送样记录模板.xlsx" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_embed e JOIN t_lqg_sample s ON s.id = e.sample_id AND s.del_flag='0' WHERE e.del_flag='0'" | head -1)" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-embed.xlsx --template "_input/templates/石蜡包埋送样记录模板.xlsx" --insert "种属@样本编号" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_embed e JOIN t_lqg_sample s ON s.id = e.sample_id AND s.del_flag='0' WHERE e.del_flag='0'" | head -1)" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-cryo.xlsx GET /mp/int/export/cryo &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --rows 7 --find "冻存样品=T-hli01-GZ-N-P2-EM2-2e5" --expect "冻存数量/支=8,当前剩余/支=6" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-cryo.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支,种属" --rows 7 --find "冻存样品=T-hli01-GZ-N-P2-EM2-2e5" --expect "冻存数量/支=8,当前剩余/支=6" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-tissue-f.xlsx GET '/mp/int/export/tissue?verifyStatus=pending' &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-tissue-f.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --rows 2 &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-tissue-f.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --insert "种属@来源单位" --rows 2 &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-mpx-cryo-e.xlsx GET '/mp/int/export/cryo?emptiedOnly=true' &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-cryo-e.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支" --rows 1 --find "冻存样品=T-hli01-GZ-N-P5-EM2-1e5" --expect "当前剩余/支=0" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-mpx-cryo-e.xlsx --template "_input/templates/-80冻存模板.xlsx" --extra "代数,当前剩余/支,种属" --rows 1 --find "冻存样品=T-hli01-GZ-N-P5-EM2-1e5" --expect "当前剩余/支=0" &&
       bash doc/verify/api.sh --as extA --bizcode GET /mp/int/export/tissue | grep -qE '^403' &&
       bash doc/verify/api.sh --as staff --bizcode GET /mp/int/export/qc | grep -qE '^(400|404)'
     counterfeit: |-

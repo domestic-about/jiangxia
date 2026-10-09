@@ -14,7 +14,8 @@
 // ★ 列清单（sampleColumns）按「模板列 + 插入列 + 追加列」拼：
 //   模板列 = 甲方 xlsx 原件第 1 行（期望值在 doc/verify/fixtures/ledger-columns-cases.json，
 //   pages.fixture.spec.ts 逐字对它）；「内部编号」是冻结列，挪到最前面当行的主键列（与小程序表格页同一规则）；
-//   插入列 = 甲方后来要求加、模板里没有的列（类器官收样记录「类器官类型」后的「代数」，第 18 行）；
+//   插入列 = 甲方后来要求加、模板里没有的列（类器官收样记录「类器官类型」后的「代数」，第 18 行；
+//            两张表「来源单位」后的「种属」，CR-20261009-18）；
 //   追加列 = 工作台自己的管理列（送检单号 / 来源 / 核验状态在前，有无病理或备注、提交人、组别、
 //   切片染色、最后修改在后；「石蜡包埋 / 冻存」与「操作」两列在页面里单独写，固定在右侧 ——
 //   2026-09-24 本机验收：关联记录的数量与入口在「石蜡包埋 / 冻存」一列（relation.ts），「操作」只放对样本本身的动作）。
@@ -96,6 +97,9 @@ const col = (key: string, cell: SampleCell, extra: Partial<SampleColumn> = {}): 
 /** 冻结列：内部编号（行的主键列，排在最前；它在模板里的位置由这里代表，与小程序表格页同一规则） */
 const FROZEN: SampleColumn = col('internalNo', 'mono', { width: 130, tooltip: true, fixed: 'left' });
 
+/** 插入列「种属」（CR-20261009-18）：两张样本表都紧跟「来源单位」 */
+const SPECIES: SampleColumn = col('species', 'text', { width: 90, align: 'center', tooltip: true });
+
 /** 前置管理列：送检单号、来源（内 / 外部）、核验状态 */
 const LEAD: SampleColumn[] = [
   col('submitNo', 'mono', { width: 140, tooltip: true }),
@@ -111,6 +115,8 @@ const TEMPLATE: Record<SampleKind, SampleColumn[]> = {
   // 样本记录信息表（14 列 → 去掉「内部编号」13 列）
   tissue: [
     col('sourceUnitName', 'text', { minWidth: 130, tooltip: true, labelKey: 'lqg.sample.col.sourceUnit' }),
+    // 插入列：「来源单位」后的「种属」（甲方 2026-10-09，CR-20261009-18）
+    SPECIES,
     col('donorName', 'text', { width: 110, tooltip: true }),
     col('gender', 'gender', { width: 80, align: 'center' }),
     col('age', 'text', { width: 80, align: 'center' }),
@@ -124,9 +130,10 @@ const TEMPLATE: Record<SampleKind, SampleColumn[]> = {
     col('operatorName', 'text', { width: 100, tooltip: true }),
     col('remark', 'text', { minWidth: 120, tooltip: true })
   ],
-  // 类器官收样记录（7 列 → 去掉「内部编号」6 列；「类器官类型」后插入「代数」，甲方 2026-09-24 第 18 行）
+  // 类器官收样记录（7 列 → 去掉「内部编号」6 列；「来源单位」后插入「种属」（CR-20261009-18）、「类器官类型」后插入「代数」，甲方 2026-09-24 第 18 行）
   organoid: [
     col('sourceUnitName', 'text', { minWidth: 130, tooltip: true, labelKey: 'lqg.sample.col.sourceUnit' }),
+    SPECIES,
     col('organoidType', 'text', { width: 150, tooltip: true }),
     col('passage', 'mono', { width: 80, align: 'center' }),
     col('receiveDate', 'text', { width: 115, align: 'center' }),

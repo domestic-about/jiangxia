@@ -24,6 +24,7 @@ import java.util.Set;
  * <ul>
  *   <li>必填：{@code FIELD:t_lqg_sample.source_unit_name} 是 NOT NULL（没选单位就必须给名称）；
  *       {@code tissue_type}「tissue 类必填」、{@code organoid_type}「organoid 类必填」；
+ *       {@code species} 两类都必填（CR-20261009-18）；
  *       {@code donor_name}「organoid 类可空」→ 外部送<b>组织样本</b>必须写供体姓名
  *       （小程序填写页本来就这么要求，这里把口径收回后端，G26）。</li>
  *   <li>字典：{@code lqg_gender} = male / female / unknown；{@code lqg_has_none} / {@code lqg_yes_no} = Y / N。</li>
@@ -62,6 +63,8 @@ public final class SubmitSegmentRules {
     public static final int MAX_AGE = 20;
     /** 住院号（加密列）明文字数上限 —— 与工作台输入框的 maxlength 一致 */
     public static final int MAX_HOSPITAL_NO = 50;
+    /** {@code t_lqg_sample.species} VARCHAR(50)（CR-20261009-18） */
+    public static final int MAX_SPECIES = 50;
     /** {@code tissue_type} / {@code organoid_type} VARCHAR(100) */
     public static final int MAX_TYPE = 100;
     /** {@code t_lqg_sample.remark} VARCHAR(500) */
@@ -115,6 +118,12 @@ public final class SubmitSegmentRules {
                 : "来源单位不能为空（请选择单位或填写单位名称）");
         }
         checkLength(out, "来源单位名称", s.getSourceUnitName(), MAX_UNIT_NAME);
+
+        // 种属（CR-20261009-18）：两类都必填；文本，常用值来自字典 lqg_species，列表里没有的可以手填 → 只判非空与长度
+        if (StringUtils.isBlank(s.getSpecies())) {
+            out.add("种属不能为空");
+        }
+        checkLength(out, "种属", s.getSpecies(), MAX_SPECIES);
 
         if (organoid) {
             if (StringUtils.isBlank(s.getOrganoidType())) {

@@ -63,6 +63,12 @@
               />
             </el-form-item>
           </el-col>
+          <!-- 种属：所挂样本的（CR-20261009-18） -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.species.label')" prop="species">
+              <SpeciesSelect v-model="queryParams.species" filter class="lqg-embed__control" />
+            </el-form-item>
+          </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.embed.filter.stain')" prop="stain">
               <el-select v-model="queryParams.stain" clearable class="lqg-embed__control">
@@ -70,7 +76,8 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
+          <el-col :xs="24" :sm="24" :md="16" :lg="12">
             <el-form-item :label="t('lqg.embed.filter.sectionTimeRange')">
               <el-date-picker
                 v-model="sectionTimeRange"
@@ -78,7 +85,7 @@
                 value-format="YYYY-MM-DD"
                 :start-placeholder="t('lqg.embed.filter.sectionTimeBegin')"
                 :end-placeholder="t('lqg.embed.filter.sectionTimeEnd')"
-                class="lqg-embed__control"
+                class="lqg-embed__control lqg-range"
                 clearable
               />
             </el-form-item>
@@ -158,6 +165,10 @@
             </el-link>
             <span v-else class="lqg-embed__mono">—</span>
           </template>
+        </el-table-column>
+        <!-- 插入列「种属」：紧跟「样本编号」，所挂样本的种属（CR-20261009-18，与导出同一位置） -->
+        <el-table-column :label="t('lqg.species.label')" prop="species" width="90" align="center" :show-overflow-tooltip="true">
+          <template #default="scope">{{ speciesText(scope.row.species) }}</template>
         </el-table-column>
         <el-table-column :label="t('lqg.embed.col.sampleType')" prop="sampleType" width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.sampleType || '—' }}</template>
@@ -264,6 +275,8 @@ import { useScopeSample } from '@/views/lqg/sample/useScopeSample';
 import EmbedDrawer from './EmbedDrawer.vue';
 import { useI18n } from 'vue-i18n';
 import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
+import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
+import { speciesText } from '@/components/lqg/SpeciesSelect/species';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { t } = useI18n();
@@ -290,6 +303,7 @@ const queryParams = reactive<EmbedQuery>({
   pageSize: 10,
   paraffinBlockNo: null,
   internalNo: null,
+  species: null,
   sampleId: null,
   stain: null,
   sectionTimeBegin: null,
@@ -332,6 +346,7 @@ const clearFilters = () => {
   sectionTimeRange.value = null;
   queryParams.paraffinBlockNo = null;
   queryParams.internalNo = null;
+  queryParams.species = null;
   queryParams.stain = null;
   queryParams.verifyStatus = null;
   queryParams.submitSource = null;

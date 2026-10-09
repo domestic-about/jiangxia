@@ -64,6 +64,9 @@ public class SampleVo implements Serializable {
     @Schema(description = "来源单位名称")
     private String sourceUnitName;
 
+    @Schema(description = "种属（CR-20261009-18）")
+    private String species;
+
     @Schema(description = "供体姓名（明文）")
     private String donorName;
 

@@ -69,12 +69,12 @@ class LqgExcelTest {
         String longNo = "ZY000000070012";
         try (Workbook wb = writeTissue(List.of(tissue("52", "ZY1"), tissue("48", longNo)))) {
             Sheet sheet = wb.getSheetAt(0);
-            int hospitalNoCol = 4;
+            int hospitalNoCol = 5;   // 「来源单位」后插入了「种属」（CR-20261009-18）
             assertEquals("住院号", sheet.getRow(0).getCell(hospitalNoCol).getStringCellValue());
             int widthChars = sheet.getColumnWidth(hospitalNoCol) / 256;
             assertTrue(widthChars >= longNo.length() + 2, "住院号列宽 " + widthChars + " 放不下 " + longNo);
             // 处理时间（19 个字符）也要放得下
-            assertTrue(sheet.getColumnWidth(9) / 256 >= 19 + 2);
+            assertTrue(sheet.getColumnWidth(10) / 256 >= 19 + 2);
             assertNotNull(sheet.getPaneInformation(), "表头行应冻结");
             assertEquals(1, sheet.getPaneInformation().getHorizontalSplitPosition());
         }
@@ -87,12 +87,12 @@ class LqgExcelTest {
             Sheet sheet = wb.getSheetAt(0);
             Row first = sheet.getRow(1);
             Row second = sheet.getRow(2);
-            assertEquals(CellType.NUMERIC, first.getCell(3).getCellType());
-            assertEquals(52d, first.getCell(3).getNumericCellValue());
-            assertEquals(CellType.STRING, second.getCell(3).getCellType());
-            assertEquals("3月龄", second.getCell(3).getStringCellValue());
+            assertEquals(CellType.NUMERIC, first.getCell(4).getCellType());
+            assertEquals(52d, first.getCell(4).getNumericCellValue());
+            assertEquals(CellType.STRING, second.getCell(4).getCellType());
+            assertEquals("3月龄", second.getCell(4).getStringCellValue());
             // 住院号是编号不是数量：永远是文本
-            assertEquals(CellType.STRING, first.getCell(4).getCellType());
+            assertEquals(CellType.STRING, first.getCell(5).getCellType());
         }
     }
 

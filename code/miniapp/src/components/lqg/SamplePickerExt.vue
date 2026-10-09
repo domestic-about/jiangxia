@@ -49,11 +49,11 @@ function labelOf(row: SampleRow): string {
   return str(row.submitNo) || '—'
 }
 
-/** 选项副行：掩码供体姓名 · 组织 / 类器官类型（后端给的就是掩码过的姓名） */
+/** 选项副行：掩码供体姓名 · 种属 · 组织 / 类器官类型（后端给的就是掩码过的姓名；种属 CR-20261009-18） */
 function subOf(row: SampleRow): string {
   const name = str(row.donorNameMasked)
   const kind = str(row.tissueType) || str(row.organoidType)
-  return [name, kind].filter(Boolean).join(' · ')
+  return [name, str(row.species), kind].filter(Boolean).join(' · ')
 }
 
 /** 前端只在**已拉回来的本人候选**里按送检单号 / 掩码姓名过滤，不另发一次请求 */

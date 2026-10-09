@@ -21,6 +21,7 @@ import org.dromara.lqg.cryo.remind.service.CryoOverdueService;
 import org.dromara.lqg.cryo.remind.sql.CryoOverdueSqlProvider;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.mapper.SampleMapper;
+import org.dromara.lqg.sample.query.SampleSpeciesFilter;
 import org.dromara.lqg.sample.service.SampleNameResolver;
 import org.springframework.stereotype.Service;
 
@@ -302,6 +303,8 @@ public class CryoQueryService {
             .eq(q.getSampleId() != null, CryoBatch::getSampleId, q.getSampleId())
             .ge(q.getFreezeTimeBegin() != null, CryoBatch::getFreezeTime, q.getFreezeTimeBegin())
             .le(q.getFreezeTimeEnd() != null, CryoBatch::getFreezeTime, q.getFreezeTimeEnd());
+        // 种属：所挂样本的列（CR-20261009-18），子查询筛，见 SampleSpeciesFilter
+        SampleSpeciesFilter.bySampleId(wrapper, q.getSpecies());
         // ★ 位置筛选与行上的 location **同源判据**（CryoBalanceChecker.locationOf）：
         //   ln2 = 直接进液氮（in_minus80='N'）**或**已登记转液氮（to_ln2_time 非空）。
         //   只看 in_minus80 会把「先 -80 后转液氮」的批次（seed 的 3003）漏掉 —— accept 3 的
@@ -483,6 +486,7 @@ public class CryoQueryService {
             vo.setInternalNo(sample.getInternalNo());
             vo.setSubmitNo(sample.getSubmitNo());
             vo.setSourceUnitName(sample.getSourceUnitName());
+            vo.setSpecies(sample.getSpecies());
             vo.setSampleVerifyStatus(sample.getVerifyStatus());
             vo.setSampleKind(sample.getSampleKind());
         }

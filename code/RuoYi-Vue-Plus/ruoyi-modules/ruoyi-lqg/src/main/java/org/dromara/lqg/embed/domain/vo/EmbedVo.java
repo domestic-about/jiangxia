@@ -56,6 +56,9 @@ public class EmbedVo implements Serializable {
     @Schema(description = "所挂样本的来源单位名称（读时带出）")
     private String sourceUnitName;
 
+    @Schema(description = "所挂样本的种属（读时带出，CR-20261009-18；本表不存）")
+    private String species;
+
     /**
      * 所挂样本的类别（读时带出；样本软删 / 查不到时为 null）。
      *

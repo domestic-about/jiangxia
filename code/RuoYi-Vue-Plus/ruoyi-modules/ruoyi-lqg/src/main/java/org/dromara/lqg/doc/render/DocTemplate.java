@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <pre>
  *   sample_qc.docx  organoid_qc.docx  organoid_score.docx   ← 由甲方原件改占位符得到
- *   template-version.txt                                   ← 模板版本号（从 1 起，当前 5）
+ *   template-version.txt                                   ← 模板版本号（从 1 起，当前 6）
  *   ole-icons/*.png                                        ← 嵌入附件的图标（PDF / 图片 / Word / Excel / 其它）
  * </pre>
  *
@@ -45,7 +45,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>「细胞活率测定」一格嵌入附件本身（图标 + 文件名，Word / WPS 里双击打开，{@link DocOleEmbedder}）。</li>
  * </ul>
  *
- * @author DOC-RENDER-001 · G 批 C 组（v4）· H 批 H4 组（v5）
+ * <p>★ <b>v6（CR-20261009-18，甲方 2026-10-09 要求样本质控表加「种属」）</b>：样本质控表在「性别 / 临床诊断」行后
+ * 多一行「种属 | {@code {{species}}}」，照抄「收样描述」那一行的格式（左格标签 + 右格跨 5 列），
+ * 改法见 {@code doc/waves/reports/CR-20261009-18/add-species-row.py}；另两份模板不变。
+ *
+ * @author DOC-RENDER-001 · G 批 C 组（v4）· H 批 H4 组（v5）· CR-20261009-18（v6）
  */
 public final class DocTemplate {
 

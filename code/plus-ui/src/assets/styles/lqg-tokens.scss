@@ -203,3 +203,8 @@
   .el-drawer .el-form-item__label { font-size: 13px; }
   .el-drawer .el-alert { padding: 8px 10px; }
 }
+
+// 列表筛选区的日期区间（CR-20261009-18 顺带）：所在列占两格，区间框本身封顶 360px，不撑满整行也不盖住右边
+.el-date-editor.lqg-range {
+  max-width: 360px;
+}

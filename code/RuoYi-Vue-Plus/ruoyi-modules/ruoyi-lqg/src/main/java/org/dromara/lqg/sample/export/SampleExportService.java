@@ -107,14 +107,22 @@ public class SampleExportService {
     private static final Map<String, String> GENDER_LABELS = Map.of("male", "男", "female", "女", "unknown", "未知");
 
     /**
-     * 「类器官收样记录」的<b>插入列</b>：列名 → 插在哪一列后面（CR-20260924-10）。
+     * 「类器官收样记录」的<b>插入列</b>：列名 → 插在哪一列后面（「代数」CR-20260924-10；「种属」CR-20261009-18）。
      *
      * <p>★ 列名、列序的唯一来源是甲方模板原件第 1 行；「代数」是甲方 2026-09-24 测试问题记录表第 18 行
      * <b>自己要求加的</b>、模板原件里没有 —— 所以不去改「模板列」，而是单独记一条插入规则，
      * 表头 = 模板列在指定列后插入这些列（与 {@code doc/verify/fixtures/ledger-columns-cases.json}
      * 的 {@code inserted}、{@code doc/verify/xlsx_header.py --insert} 同一条规则）。
      */
-    public static final Map<String, String> ORGANOID_INSERTED_AFTER = Map.of("代数", "类器官类型");
+    public static final Map<String, String> ORGANOID_INSERTED_AFTER = insertedAfter(
+        "种属", "来源单位",
+        "代数", "类器官类型");
+
+    /**
+     * 「样本记录信息表」的<b>插入列</b>（CR-20261009-18）：「种属」紧跟「来源单位」。
+     * 规则同 {@link #ORGANOID_INSERTED_AFTER}：模板列一个字不动，甲方后来要加的列单独记一条插入规则。
+     */
+    public static final Map<String, String> TISSUE_INSERTED_AFTER = insertedAfter("种属", "来源单位");
 
     private final SampleQueryService sampleQueryService;
 
@@ -153,6 +161,7 @@ public class SampleExportService {
         for (SampleVo row : source) {
             SampleTissueExportVo vo = new SampleTissueExportVo();
             vo.setSourceUnitName(row.getSourceUnitName());
+            vo.setSpecies(row.getSpecies());
             vo.setDonorName(row.getDonorName());
             vo.setGender(genderText(row.getGender()));
             vo.setAge(row.getAge());
@@ -180,6 +189,7 @@ public class SampleExportService {
         for (SampleVo row : source) {
             SampleOrganoidExportVo vo = new SampleOrganoidExportVo();
             vo.setSourceUnitName(row.getSourceUnitName());
+            vo.setSpecies(row.getSpecies());
             vo.setOrganoidType(row.getOrganoidType());
             vo.setPassage(row.getPassage());
             vo.setReceiveDate(dateText(row.getReceiveDate()));
@@ -281,36 +291,47 @@ public class SampleExportService {
     public static Map<String, Integer> tissueHeaderIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
         out.put("来源单位", 0);
-        out.put("供体姓名", 1);
-        out.put("性别", 2);
-        out.put("年龄", 3);
-        out.put("住院号", 4);
-        out.put("组织类型", 5);
-        out.put("收样日期", 6);
-        out.put("内部编号", 7);
-        out.put("有无固定", 8);
-        out.put("处理时间", 9);
-        out.put("质控表", 10);
-        out.put("细胞活率报告", 11);
-        out.put("操作人", 12);
-        out.put("备注", 13);
+        out.put("种属", 1);
+        out.put("供体姓名", 2);
+        out.put("性别", 3);
+        out.put("年龄", 4);
+        out.put("住院号", 5);
+        out.put("组织类型", 6);
+        out.put("收样日期", 7);
+        out.put("内部编号", 8);
+        out.put("有无固定", 9);
+        out.put("处理时间", 10);
+        out.put("质控表", 11);
+        out.put("细胞活率报告", 12);
+        out.put("操作人", 13);
+        out.put("备注", 14);
         return out;
     }
 
     /**
-     * 「类器官收样记录」的列名清单（{@code 8} 列 = 模板 7 列逐字同序，「类器官类型」后插入「代数」）。
+     * 「类器官收样记录」的列名清单（{@code 9} 列 = 模板 7 列逐字同序，「来源单位」后插入「种属」、「类器官类型」后插入「代数」）。
      */
     public static Map<String, Integer> organoidHeaderIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
         out.put("来源单位", 0);
-        out.put("类器官类型", 1);
-        out.put("代数", 2);
-        out.put("收样日期", 3);
-        out.put("内部编号", 4);
-        out.put("处理时间", 5);
-        out.put("细胞活率报告", 6);
-        out.put("操作人", 7);
+        out.put("种属", 1);
+        out.put("类器官类型", 2);
+        out.put("代数", 3);
+        out.put("收样日期", 4);
+        out.put("内部编号", 5);
+        out.put("处理时间", 6);
+        out.put("细胞活率报告", 7);
+        out.put("操作人", 8);
         return out;
+    }
+
+    /** 有序的「插入列 → 锚点列」表（成对给：列名, 锚点, 列名, 锚点 …；不可变、顺序 = 给的顺序）。 */
+    private static Map<String, String> insertedAfter(String... pairs) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < pairs.length; i += 2) {
+            out.put(pairs[i], pairs[i + 1]);
+        }
+        return java.util.Collections.unmodifiableMap(out);
     }
 
 }

@@ -73,6 +73,15 @@ class EmbedExportContractTest {
         "琼脂糖包埋样本时间", "包埋人", "脱水时间", "琼脂糖包埋样本送样时间", "石蜡包埋时间", "切片时间",
         "染色", "mark的表达情况", "操作人", "备注");
 
+    /** 导出表头 = 模板列 + 插入列（「种属」紧跟「样本编号」，CR-20261009-18）—— 按规则拼，不手抄 */
+    private static final List<String> EXPORT_HEADER = withInserted(HEADER, EmbedExportService.INSERTED_AFTER);
+
+    private static List<String> withInserted(List<String> template, Map<String, String> insertedAfter) {
+        List<String> out = new ArrayList<>(template);
+        insertedAfter.forEach((column, after) -> out.add(out.indexOf(after) + 1, column));
+        return List.copyOf(out);
+    }
+
     @Test
     @DisplayName("① 导出视图 16 列、表头逐字同序，且与甲方模板原件第 1 行一致；没有顺手多带的列")
     void exportViewMatchesTemplate() {
@@ -92,8 +101,8 @@ class EmbedExportContractTest {
             assertEquals(1, entry.getValue().length, "ExcelProperty value 应当只有一个列名");
             actual.add(entry.getValue()[0]);
         }
-        assertEquals(HEADER, actual, "导出视图表头必须与甲方模板逐字同序");
-        assertEquals(16, actual.size(), "模板是 16 列，不多不少");
+        assertEquals(EXPORT_HEADER, actual, "导出视图表头 = 甲方模板 16 列逐字同序 + 「样本编号」后插入「种属」");
+        assertEquals(17, actual.size(), "模板 16 列 + 插入的「种属」= 17 列，不多不少");
 
         // 「mark的表达情况」这一格单独再断一次：顺手「修正」成 marker 会在这里红
         assertTrue(actual.contains("mark的表达情况"), "第 14 列必须是「mark的表达情况」（甲方原件的写法）");
@@ -253,11 +262,11 @@ class EmbedExportContractTest {
     @DisplayName("⑤ 表头索引自检表与注解一致（给小程序导出复用）")
     void headerIndexTable() {
         Map<String, Integer> index = EmbedExportService.headerIndex();
-        assertEquals(16, index.size());
+        assertEquals(17, index.size());
         int i = 0;
         for (Map.Entry<String, Integer> entry : new LinkedHashMap<>(index).entrySet()) {
             assertEquals(i++, entry.getValue(), "headerIndex() 的顺序必须与模板列序一致");
-            assertEquals(HEADER.get(entry.getValue()), entry.getKey());
+            assertEquals(EXPORT_HEADER.get(entry.getValue()), entry.getKey());
         }
     }
 

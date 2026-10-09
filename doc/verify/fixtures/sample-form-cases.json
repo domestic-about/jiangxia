@@ -1,7 +1,8 @@
 {
-  "_doc": "SAMPLE-MP-001 的验收用例。被测函数：formLayout(identity, verifyStatus, mine, mode) → { fields: 渲染的字段 key 数组（顺序即显示顺序）, editable: 是否可编辑, showOcr: 是否显示识别条 }。verifyStatus 为 null 表示新增。mode 是入口：new = 首页点表进来；edit = 「我的 → 历史编辑记录」点一条进来；view = 「我的 → 内部管理」表格页点一行进来（只读；只读页右上角「修改」切到 mode=edit，CR-20260918-07）；mode 缺失或不认识按只读。外部永远不渲染收样段字段（不是置灰，是不渲染）。CR-20260917-04 起内部修改模式：有效样本可改；待核验、无效的外部样本在小程序里只读（核验与改判在工作台）。CR-20260917-05 起修改入口在历史编辑记录；CR-20260918-07 起内部管理的只读页也能切修改模式（内部人员可改任何人录的，外部送来未核验的仍只读）。",
+  "_doc": "SAMPLE-MP-001 的验收用例。被测函数：formLayout(identity, verifyStatus, mine, mode) → { fields: 渲染的字段 key 数组（顺序即显示顺序）, editable: 是否可编辑, showOcr: 是否显示识别条 }。verifyStatus 为 null 表示新增。mode 是入口：new = 首页点表进来；edit = 「我的 → 历史编辑记录」点一条进来；view = 「我的 → 内部管理」表格页点一行进来（只读；只读页右上角「修改」切到 mode=edit，CR-20260918-07）；mode 缺失或不认识按只读。外部永远不渲染收样段字段（不是置灰，是不渲染）。CR-20260917-04 起内部修改模式：有效样本可改；待核验、无效的外部样本在小程序里只读（核验与改判在工作台）。CR-20260917-05 起修改入口在历史编辑记录；CR-20260918-07 起内部管理的只读页也能切修改模式（内部人员可改任何人录的，外部送来未核验的仍只读）。 CR-20261009-18 起送检段「来源单位」后多一项「种属」（内外部都填、必填）。",
   "sendFields": [
     "sourceUnitName",
+    "species",
     "donorName",
     "gender",
     "age",
@@ -29,6 +30,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -50,6 +52,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -71,6 +74,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -92,6 +96,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -113,6 +118,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -134,6 +140,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -162,6 +169,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -190,6 +198,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -218,6 +227,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -246,6 +256,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -274,6 +285,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",
@@ -302,6 +314,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "donorName",
           "gender",
           "age",

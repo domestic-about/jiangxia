@@ -11,7 +11,8 @@ import java.io.Serializable;
  *
  * <p>★ 按 {@code doc/api-contract.md} 第 53 行与 {@code CR-20260917-05}：外部填类器官只填
  * <b>来源单位（id 或名称）、类器官类型、备注</b>三项 —— 比组织样本还少；
- * CR-20260924-10（甲方 2026-09-24 第 18 行）在「类器官类型」后加一项<b>代数</b>（选填，形如 P3），共四项。
+ * CR-20260924-10（甲方 2026-09-24 第 18 行）在「类器官类型」后加一项<b>代数</b>（选填，形如 P3）；
+ * CR-20261009-18 再加<b>种属</b>（必填），共五项。
  *
  * <p>★ <b>刻意不复用内部的 {@code SampleSubmitBo}，也不复用 {@link ExtSampleSubmitBo}</b>：
  * 前者带 {@code internalNo} / {@code receiveDate} / {@code hasViabilityReport} /
@@ -39,6 +40,9 @@ public class ExtOrganoidSubmitBo implements Serializable {
 
     @Schema(description = "来源单位名称（未带 id 时必填，≤ 100 字）", maxLength = 100)
     private String sourceUnitName;
+
+    @Schema(description = "种属（必填，≤ 50 字；常用值见字典 lqg_species，可手填）", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 50, example = "人")
+    private String species;
 
     @Schema(description = "类器官类型（必填，≤ 100 字）", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 100)
     private String organoidType;

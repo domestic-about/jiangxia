@@ -114,6 +114,8 @@ const rows = computed(() => {
   }
   return [
     { label: '送检单号', value: str(d.submitNo), mono: true },
+    // 种属（CR-20261009-18）：外部自己填的一项
+    { label: '种属', value: str(d.species), mono: false },
     { label: '供体姓名', value: str(d.donorName), mono: false },
     { label: '性别', value: genderText(d.gender), mono: false },
     { label: '年龄', value: str(d.age), mono: false },

@@ -63,6 +63,7 @@ export default {
     internalNo: 'Internal no.',
     submitNo: 'Submit no.',
     sourceUnit: 'Source unit',
+    species: 'Species',
     sampleKind: 'Kind',
     submitSource: 'Source',
     verifyStatus: 'Verify status',

@@ -98,6 +98,7 @@ public class CryoExportService {
         CryoExportVo vo = new CryoExportVo();
         vo.setFreezeTime(text(row.getFreezeTime()));
         vo.setCryoName(row.getCryoName());
+        vo.setSpecies(row.getSpecies());
         // ★ 初始支数，不是剩余（accept 1 counterfeit 第一条）
         vo.setInitQty(numberText(row.getInitQty()));
         vo.setDensity(row.getDensity());
@@ -152,7 +153,7 @@ public class CryoExportService {
     }
 
     /**
-     * 导出的列名清单（11 列 = 模板 9 列 + 代数 + 当前剩余/支）—— 给验收脚本 / 单测对表头用。
+     * 导出的列名清单（12 列 = 模板 9 列 + 代数 + 当前剩余/支 + 种属）—— 给验收脚本 / 单测对表头用。
      */
     public static Map<String, Integer> headerIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
@@ -167,6 +168,7 @@ public class CryoExportService {
         out.put("备注", 8);
         out.put("代数", 9);
         out.put("当前剩余/支", 10);
+        out.put("种属", 11);
         return out;
     }
 

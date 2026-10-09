@@ -34,6 +34,9 @@ public class QcDocListQueryBo extends PageQuery {
     @Schema(description = "tissue（样本记录信息表）/ organoid（类器官送样记录）；空 = 全部")
     private String sampleKind;
 
+    @Schema(description = "种属（等值；传 __none__ 查还没填的；空 = 全部，CR-20261009-18）")
+    private String species;
+
     @Schema(description = "none（三份都没动过）/ doing（填写中）/ done（三份都已完成并同步）；空 = 全部")
     private String progress;
 

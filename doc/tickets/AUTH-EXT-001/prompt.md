@@ -62,7 +62,7 @@ accept:
       bash doc/verify/api.sh --as extC GET /mp/ext/sample/9000001001 | jq -e '.code==404 and ((.data // {}) | length == 0)' &&
       bash doc/verify/api.sh --as extE GET /mp/ext/sample/9000001001 | jq -e '.code==404' &&
       bash doc/verify/api.sh --as extA GET /mp/ext/sample/9000001010 | jq -e '.code==404' &&
-      bash doc/verify/api.sh --as extB GET /mp/ext/sample/9000001001 | jq -e '.code==200 and .data.donorName=="测试供体甲" and .data.mine==false and .data.editable==false and .data.submitterName=="王医生" and ((.data|keys) - ["id","submitNo","sampleKind","sourceUnitName","donorName","gender","age","hospitalNo","tissueType","organoidType","passage","hasPathology","remark","verifyStatus","invalidReason","submitterName","mine","editable","createTime","embeds","docs"] == [])' &&
+      bash doc/verify/api.sh --as extB GET /mp/ext/sample/9000001001 | jq -e '.code==200 and .data.donorName=="测试供体甲" and .data.mine==false and .data.editable==false and .data.submitterName=="王医生" and ((.data|keys) - ["id","submitNo","sampleKind","sourceUnitName","species","donorName","gender","age","hospitalNo","tissueType","organoidType","passage","hasPathology","remark","verifyStatus","invalidReason","submitterName","mine","editable","createTime","embeds","docs"] == [])' &&
       bash doc/verify/api.sh --as extA GET '/mp/ext/sample/list?pageSize=100' | jq -e '[.rows[] | keys[]] | unique | (index("internalNo")==null and index("donorName")==null and index("hospitalNo")==null and index("operatorName")==null) and (index("donorNameMasked")!=null)' &&
       bash doc/verify/api.sh --as extA --bizcode GET /mp/ext/home | grep -qE '^404' &&
       bash doc/verify/api.sh --as extA --bizcode GET '/lqg/sample/list' | grep -qE '^403' &&
@@ -75,34 +75,34 @@ accept:
       onlyMine 被忽略（前端自己过滤）→ extA 带 onlyMine 仍有 1004 红。
       列表过滤了但详情接口忘了 assertVisible（只在列表里看不到、猜 id 能直接打开）→ extC 取 1001 拿到 200 红。这是越权事故最常见的形态。
       越权时返回 403 → .code==404 红（403 泄露了存在性）。
-      详情 VO 多带了 receiveDate / internalNo / operatorName 任何一个 → keys 差集非空红。（`passage` 代数在白名单里：它是外部自己在类器官收样记录里填的送检段字段，不是内部字段，CR-20260924-10；组织样本上该键为 null。）列表里直接给了全名而不是掩码 → 红。
+      详情 VO 多带了 receiveDate / internalNo / operatorName 任何一个 → keys 差集非空红。（`passage` 代数在白名单里：它是外部自己在类器官收样记录里填的送检段字段，不是内部字段，CR-20260924-10；组织样本上该键为 null。）（`species` 种属同理：外部自己填的送检段字段，CR-20261009-18。）列表里直接给了全名而不是掩码 → 红。
       旧的 /mp/ext/home 还留着 → 404 那段红（首页已经没有最近记录，留着就是一个没人维护的外部出口）。
       最后三段是角色闸：外部打内部接口、内部打外部接口都必须 403。
   - name: "写保护：同组别人的样本可看不可改、已核验有效的自己也改不了、入参里夹带内部字段不生效（组织样本与类器官收样两种）；无效的改后重提回到待核验；每个被拒之后库里都没变；只发单位名时后端按提交人绑定的单位挂上 id，缺来源单位 400 且不回吐 SQL（CR-20260923-09）；类器官收样可带代数（小写 p 转大写后落库、外部详情看得到），代数格式不对 400 且库里不写（CR-20260924-10）"
     form: STATE
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
-      bash doc/verify/api.sh --as extB --fresh-module ruoyi-lqg --bizcode PUT /mp/ext/sample/9000001002 '{"sourceUnitName":"A 医院","donorName":"被同组人篡改","tissueType":"肝组织"}' | grep -qE '^(400|403|404)' &&
-      bash doc/verify/api.sh --as extA --bizcode PUT /mp/ext/sample/9000001001 '{"sourceUnitName":"A 医院","donorName":"改已核验的","tissueType":"肝组织"}' | grep -qE '^(400|403)' &&
+      bash doc/verify/api.sh --as extB --fresh-module ruoyi-lqg --bizcode PUT /mp/ext/sample/9000001002 '{"species":"人","sourceUnitName":"A 医院","donorName":"被同组人篡改","tissueType":"肝组织"}' | grep -qE '^(400|403|404)' &&
+      bash doc/verify/api.sh --as extA --bizcode PUT /mp/ext/sample/9000001001 '{"species":"人","sourceUnitName":"A 医院","donorName":"改已核验的","tissueType":"肝组织"}' | grep -qE '^(400|403)' &&
       bash doc/verify/api.sh --as staff GET '/lqg/sample/list?pageSize=100' | jq -e '[.rows[] | select((.id|tostring)=="9000001001" or (.id|tostring)=="9000001002") | .donorName] | sort == ["测试供体乙","测试供体甲"]' &&
-      bash doc/verify/api.sh --as extA PUT /mp/ext/sample/9000001003 '{"sourceUnitName":"A 医院","donorName":"测试供体丙","gender":"male","hospitalNo":"ZY0000003","tissueType":"肝组织","internalNo":"T-hack01","verifyStatus":"valid","submitSource":"internal","receiveDate":"2026-09-17"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as extA PUT /mp/ext/sample/9000001003 '{"species":"人","sourceUnitName":"A 医院","donorName":"测试供体丙","gender":"male","hospitalNo":"ZY0000003","tissueType":"肝组织","internalNo":"T-hack01","verifyStatus":"valid","submitSource":"internal","receiveDate":"2026-09-17"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT verify_status || '|' || COALESCE(internal_no,'-') || '|' || submit_source || '|' || COALESCE(receive_date::text,'-') || '|' || COALESCE(invalid_reason,'-') FROM t_lqg_sample WHERE id=9000001003" --eq "pending|-|external|-|-" &&
-      bash doc/verify/api.sh --as extC POST /mp/ext/sample '{"sourceUnitName":"A 医院","donorName":"新送检","gender":"female","age":"40","hospitalNo":"ZYNEW01","tissueType":"胃组织","hasPathology":"N"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as extC POST /mp/ext/sample '{"species":"人","sourceUnitName":"A 医院","donorName":"新送检","gender":"female","age":"40","hospitalNo":"ZYNEW01","tissueType":"胃组织","hasPathology":"N"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT sample_kind || '|' || submit_source || '|' || verify_status || '|' || submitter_id || '|' || (submit_no ~ '^SJ[0-9]{8}$') FROM t_lqg_sample WHERE tissue_type='胃组织' AND submitter_id=9000000113 AND create_time > now() - interval '5 minutes'" --eq "tissue|external|pending|9000000113|true" &&
-      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"sourceUnitName":"A 医院","organoidType":"胃类器官","remark":"外部送类器官","internalNo":"T-hack02","verifyStatus":"valid","receiveDate":"2026-09-17","hasViabilityReport":"Y","operatorName":"外部自填"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"species":"人","sourceUnitName":"A 医院","organoidType":"胃类器官","remark":"外部送类器官","internalNo":"T-hack02","verifyStatus":"valid","receiveDate":"2026-09-17","hasViabilityReport":"Y","operatorName":"外部自填"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT sample_kind || '|' || submit_source || '|' || verify_status || '|' || COALESCE(internal_no,'-') || '|' || COALESCE(receive_date::text,'-') || '|' || COALESCE(has_viability_report,'-') || '|' || COALESCE(operator_name,'-') || '|' || COALESCE(donor_name,'-') FROM t_lqg_sample WHERE organoid_type='胃类器官' AND submitter_id=9000000113" --eq "organoid|external|pending|-|-|-|-|-" &&
       OID="$(python3 doc/verify/db.py --quiet --sql "SELECT id FROM t_lqg_sample WHERE organoid_type='胃类器官' AND submitter_id=9000000113" | head -1)" &&
-      bash doc/verify/api.sh --as extD --bizcode PUT "/mp/ext/organoid/${OID}" '{"sourceUnitName":"A 医院","organoidType":"被外单位改"}' | grep -qE '^(400|403|404)' &&
-      bash doc/verify/api.sh --as extC --bizcode PUT "/mp/ext/sample/${OID}" '{"sourceUnitName":"A 医院","donorName":"借组织样本的口改","tissueType":"肝组织"}' | grep -qE '^(400|404)' &&
+      bash doc/verify/api.sh --as extD --bizcode PUT "/mp/ext/organoid/${OID}" '{"species":"人","sourceUnitName":"A 医院","organoidType":"被外单位改"}' | grep -qE '^(400|403|404)' &&
+      bash doc/verify/api.sh --as extC --bizcode PUT "/mp/ext/sample/${OID}" '{"species":"人","sourceUnitName":"A 医院","donorName":"借组织样本的口改","tissueType":"肝组织"}' | grep -qE '^(400|404)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE organoid_type='被外单位改' OR (donor_name IS NOT NULL AND sample_kind='organoid' AND submitter_id=9000000113)" --eq 0 &&
       python3 doc/verify/db.py --sql "SELECT COALESCE(source_unit_id::text,'-') || '|' || source_unit_name FROM t_lqg_sample WHERE tissue_type='胃组织' AND submitter_id=9000000113 AND create_time > now() - interval '5 minutes'" --eq "9000009001|A 医院" &&
-      bash doc/verify/api.sh --as extC POST /mp/ext/sample '{"donorName":"x","tissueType":"肝组织"}' | jq -e '.code==400 and (.msg|contains("来源单位不能为空")) and (tostring|contains("Failing row")|not)' &&
+      bash doc/verify/api.sh --as extC POST /mp/ext/sample '{"species":"人","donorName":"x","tissueType":"肝组织"}' | jq -e '.code==400 and (.msg|contains("来源单位不能为空")) and (tostring|contains("Failing row")|not)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE submitter_id=9000000113 AND tissue_type='肝组织'" --eq 0 &&
-      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"sourceUnitName":"A 医院","organoidType":"肝类器官","passage":"p4"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"species":"人","sourceUnitName":"A 医院","organoidType":"肝类器官","passage":"p4"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT sample_kind || '|' || verify_status || '|' || COALESCE(passage,'-') FROM t_lqg_sample WHERE organoid_type='肝类器官' AND submitter_id=9000000113" --eq "organoid|pending|P4" &&
       PID="$(python3 doc/verify/db.py --quiet --sql "SELECT id FROM t_lqg_sample WHERE organoid_type='肝类器官' AND submitter_id=9000000113" | head -1)" &&
       bash doc/verify/api.sh --as extC GET "/mp/ext/sample/${PID}" | jq -e '.code==200 and .data.sampleKind=="organoid" and .data.passage=="P4"' &&
-      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"sourceUnitName":"A 医院","organoidType":"胆管类器官","passage":"第3代"}' | jq -e '.code==400 and (.msg|contains("代数请填 P 加数字，如 P3"))' &&
+      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"species":"人","sourceUnitName":"A 医院","organoidType":"胆管类器官","passage":"第3代"}' | jq -e '.code==400 and (.msg|contains("代数请填 P 加数字，如 P3"))' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE organoid_type='胆管类器官' AND submitter_id=9000000113" --eq 0 &&
       bash doc/verify/reseed.sh --yes >/dev/null
     counterfeit: |-

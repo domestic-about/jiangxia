@@ -53,6 +53,13 @@
                 </span>
               </el-form-item>
             </el-col>
+            <!-- 种属（CR-20261009-18）：是样本的属性，随所挂样本带出、这里不改（改在样本记录信息表 / 类器官送样记录） -->
+            <el-col :span="12">
+              <el-form-item :label="t('lqg.species.label')">
+                <span>{{ speciesText(form.species) }}</span>
+                <span class="lqg-embed-drawer__muted"> · {{ t('lqg.species.fromSample') }}</span>
+              </el-form-item>
+            </el-col>
             <el-col :span="12">
               <el-form-item :label="t('lqg.embed.drawer.paraffinBlockNo')" prop="paraffinBlockNo">
                 <el-input
@@ -243,6 +250,7 @@ import { fillText, invalidFill, labChanges } from './verifyFill';
 import type { FillLabKey } from './verifyFill';
 import { useI18n } from 'vue-i18n';
 import { useCloseGuard } from '@/utils/lqgCloseGuard';
+import { speciesText } from '@/components/lqg/SpeciesSelect/species';
 
 const emit = defineEmits<{ (e: 'saved'): void }>();
 
@@ -283,6 +291,7 @@ const emptyForm = (): EmbedForm & Partial<EmbedVO> => ({
   internalNo: null,
   submitNo: null,
   sampleVerifyStatus: null,
+  species: null,
   paraffinBlockNo: null,
   sampleType: null,
   organoidSourceType: null,
@@ -419,7 +428,7 @@ const searchSamples = async (keyword: string) => {
   }
 };
 
-const sampleLabel = (sample: SampleVO) => [sample.internalNo, sample.submitNo].filter(Boolean).join(' · ');
+const sampleLabel = (sample: SampleVO) => [sample.internalNo, sample.submitNo, sample.species].filter(Boolean).join(' · ');
 
 /** 选样本后带出组织收样时间 / 组织处理时间（后端也会兜底带出，这里只是让用户先看到） */
 const handleSampleChange = (sampleId: string | number) => {
@@ -427,6 +436,7 @@ const handleSampleChange = (sampleId: string | number) => {
   if (!sample) {
     return;
   }
+  form.value.species = sample.species ?? null;
   form.value.tissueReceiveTime = form.value.tissueReceiveTime || sample.receiveDate || null;
   form.value.tissueProcessTime = form.value.tissueProcessTime || (sample.processTime ? String(sample.processTime).slice(0, 10) : null);
 };

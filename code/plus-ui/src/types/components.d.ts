@@ -93,6 +93,7 @@ declare module 'vue' {
     Screenfull: typeof import('./../components/Screenfull/index.vue')['default']
     SegButtons: typeof import('./../components/lqg/SegButtons/index.vue')['default']
     SizeSelect: typeof import('./../components/SizeSelect/index.vue')['default']
+    SpeciesSelect: typeof import('./../components/lqg/SpeciesSelect/index.vue')['default']
     SubmitVerify: typeof import('./../components/Process/submitVerify.vue')['default']
     SvgIcon: typeof import('./../components/SvgIcon/index.vue')['default']
     TableEmpty: typeof import('./../components/lqg/TableEmpty/index.vue')['default']

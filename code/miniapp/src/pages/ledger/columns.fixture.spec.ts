@@ -69,8 +69,12 @@ describe('ledgerColumns（fixture 驱动）', () => {
         expect(s.template, `${key}.${col.label} 与模板列重名`).not.toContain(col.label)
       }
     })
-    // 目前唯一的插入列：类器官收样记录「类器官类型」后的「代数」（甲方 2026-09-24 第 18 行）
-    expect(sheets.organoid.inserted?.map(c => [c.label, c.after])).toEqual([['代数', '类器官类型']])
+    // 插入列：类器官收样记录「类器官类型」后的「代数」（甲方 2026-09-24 第 18 行）；
+    // 三张表的「种属」（甲方 2026-10-09，CR-20261009-18；冻存那张是追加列）
+    expect(sheets.organoid.inserted?.map(c => [c.label, c.after])).toEqual([['种属', '来源单位'], ['代数', '类器官类型']])
+    expect(sheets.tissue.inserted?.map(c => [c.label, c.after])).toEqual([['种属', '来源单位']])
+    expect(sheets.embed.inserted?.map(c => [c.label, c.after])).toEqual([['种属', '样本编号']])
+    expect(sheets.cryo.extra).toContain('种属')
   })
 
   SHEET_KEYS.forEach((key) => {

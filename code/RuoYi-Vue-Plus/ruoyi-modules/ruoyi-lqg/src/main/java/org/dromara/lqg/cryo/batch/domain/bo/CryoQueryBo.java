@@ -50,6 +50,9 @@ public class CryoQueryBo extends PageQuery {
     @Schema(description = "内部编号（所挂样本的，等值）")
     private String internalNo;
 
+    @Schema(description = "种属（所挂样本的，等值；传 __none__ 查样本还没填种属的，CR-20261009-18）")
+    private String species;
+
     @Schema(description = "冻存样品名称（模糊）")
     private String cryoName;
 

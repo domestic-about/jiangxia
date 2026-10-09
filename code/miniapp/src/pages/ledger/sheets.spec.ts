@@ -67,8 +67,8 @@ describe('toTableRows 的最后一列', () => {
 
   it('不覆盖行上原有的列（cells 长度 = 该表的列数）', () => {
     const table = toTableRows([{ id: '9000001002', sampleKind: 'tissue', hint: { blockCount: 0, sectioned: false, stains: [] } }])
-    // tissue = 冻结 1 列（内部编号）+ 其余 14 列（13 个模板列 + 追加的「切片染色」）
-    expect(table[0].cells).toHaveLength(14)
+    // tissue = 冻结 1 列（内部编号）+ 其余 15 列（13 个模板列 + 插入的「种属」+ 追加的「切片染色」）
+    expect(table[0].cells).toHaveLength(15)
     expect(table[0].cells[table[0].cells.length - 1]).toBe('—')
     expect(table[0].frozen).toBe('—')
   })

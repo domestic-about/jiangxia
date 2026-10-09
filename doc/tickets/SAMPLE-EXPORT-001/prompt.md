@@ -29,12 +29,12 @@ accept:
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null && rm -f /tmp/lqg-tissue.xlsx /tmp/lqg-organoid.xlsx /tmp/lqg-tissue-f.xlsx &&
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg --out /tmp/lqg-tissue.xlsx POST /lqg/sample/export/tissue &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-tissue.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --rows 8 --find "内部编号=T-hli01" --expect "来源单位=A 医院,供体姓名=测试供体甲,性别=男,年龄=56,住院号=ZY0000001,组织类型=肝组织,有无固定=有,质控表=有,细胞活率报告=有,操作人=李工" &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-tissue.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND sample_kind='tissue'" | head -1)" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-tissue.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --insert "种属@来源单位" --rows 8 --find "内部编号=T-hli01" --expect "来源单位=A 医院,供体姓名=测试供体甲,性别=男,年龄=56,住院号=ZY0000001,组织类型=肝组织,有无固定=有,质控表=有,细胞活率报告=有,操作人=李工" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-tissue.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --insert "种属@来源单位" --rows "$(python3 doc/verify/db.py --quiet --sql "SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND sample_kind='tissue'" | head -1)" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-organoid.xlsx POST /lqg/sample/export/organoid &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-organoid.xlsx --template "_input/templates/类器官收样记录模板.xlsx" --insert "代数@类器官类型" --rows 1 --find "内部编号=T-oco01" --expect "来源单位=B 大学,类器官类型=结直肠类器官,代数=P3,细胞活率报告=有" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-organoid.xlsx --template "_input/templates/类器官收样记录模板.xlsx" --insert "种属@来源单位,代数@类器官类型" --rows 1 --find "内部编号=T-oco01" --expect "来源单位=B 大学,类器官类型=结直肠类器官,代数=P3,细胞活率报告=有" &&
       bash doc/verify/api.sh --as staff --out /tmp/lqg-tissue-f.xlsx POST '/lqg/sample/export/tissue?sourceUnitId=9000009002' &&
-      python3 doc/verify/xlsx_header.py --file /tmp/lqg-tissue-f.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --rows "$(bash doc/verify/api.sh --as staff GET '/lqg/sample/list?sourceUnitId=9000009002&sampleKind=tissue&pageSize=100' | jq '.total')" &&
+      python3 doc/verify/xlsx_header.py --file /tmp/lqg-tissue-f.xlsx --template "_input/templates/样本记录信息表模板.xlsx" --insert "种属@来源单位" --rows "$(bash doc/verify/api.sh --as staff GET '/lqg/sample/list?sourceUnitId=9000009002&sampleKind=tissue&pageSize=100' | jq '.total')" &&
       bash doc/verify/api.sh --as extA --bizcode POST /lqg/sample/export/tissue | grep -qE '^403'
     counterfeit: |-
       导出 VO 直接复用列表 VO → 表头多出送检单号、核验状态、有无病理等列，与模板不等红。

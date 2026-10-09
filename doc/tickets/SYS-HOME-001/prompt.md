@@ -35,7 +35,7 @@ accept:
       bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg GET /lqg/home/todo | jq -e '.data == {"pendingSamples":2,"pendingTissue":2,"pendingOrganoid":0,"pendingEmbeds":1,"cryoOverdue":2,"pendingExtUsers":2,"renderFailed":0}' &&
       python3 doc/verify/db.py --sql "SELECT (SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND verify_status='pending') || '|' || (SELECT count(*) FROM t_lqg_embed WHERE del_flag='0' AND verify_status='pending') || '|' || (SELECT count(*) FROM t_lqg_ext_profile WHERE del_flag='0' AND bind_status='pending')" --eq "2|1|2" &&
       test "$(bash doc/verify/api.sh --as staff GET /lqg/home/todo | jq '.data.cryoOverdue')" = "$(bash doc/verify/api.sh --as staff GET /lqg/cryo/overdue | jq '.data|length')" &&
-      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"sourceUnitName":"A 医院","organoidType":"胃类器官"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as extC POST /mp/ext/organoid '{"species":"人","sourceUnitName":"A 医院","organoidType":"胃类器官"}' | jq -e '.code==200' &&
       bash doc/verify/api.sh --as extA POST /mp/ext/embed '{"sampleId":9000001001,"sampleType":"组织"}' | jq -e '.code==200' &&
       bash doc/verify/api.sh --as staff GET /lqg/home/todo | jq -e '.data.pendingSamples==3 and .data.pendingEmbeds==2 and .data.pendingTissue==2 and .data.pendingOrganoid==1 and .data.pendingSamples==(.data.pendingTissue+.data.pendingOrganoid)' &&
       python3 doc/verify/db.py --sql "SELECT (SELECT count(*) FROM t_lqg_sample WHERE del_flag='0' AND verify_status='pending' AND sample_kind='organoid') || '|' || (SELECT count(*) FROM t_lqg_embed e JOIN t_lqg_sample s ON s.id = e.sample_id WHERE e.del_flag='0' AND e.verify_status='pending')" --eq "1|2" &&

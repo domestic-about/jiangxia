@@ -68,6 +68,8 @@ export interface SampleVO {
   invalidReason?: string | null;
   sourceUnitId?: string | number | null;
   sourceUnitName?: string | null;
+  /** 种属（两类都必填；字典 lqg_species 的常用值或手填，CR-20261009-18） */
+  species?: string | null;
   donorName?: string | null;
   gender?: string | null;
   age?: string | null;
@@ -112,6 +114,8 @@ export interface SampleQuery {
   /** 收样日期区间（两端都含）yyyy-MM-dd */
   receiveDateBegin?: string | null;
   receiveDateEnd?: string | null;
+  /** 种属（等值；__none__ = 还没填的，CR-20261009-18） */
+  species?: string | null;
   tissueType?: string | null;
   /** 类器官类型（模糊；类器官收样记录页用，CR-20260924-10） */
   organoidType?: string | null;
@@ -128,6 +132,8 @@ export interface SampleForm {
   sampleKind: string;
   sourceUnitId?: string | number | null;
   sourceUnitName?: string | null;
+  /** 种属（两类都必填；字典 lqg_species 的常用值或手填，CR-20261009-18） */
+  species?: string | null;
   donorName?: string | null;
   gender?: string | null;
   age?: string | null;
@@ -157,6 +163,8 @@ export interface SampleForm {
 export interface SampleSubmitSegment {
   sourceUnitId?: string | number | null;
   sourceUnitName?: string | null;
+  /** 种属（两类都必填；字典 lqg_species 的常用值或手填，CR-20261009-18） */
+  species?: string | null;
   donorName?: string | null;
   gender?: string | null;
   age?: string | null;

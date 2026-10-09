@@ -43,6 +43,8 @@ export interface QcSampleRef {
   sourceUnitName?: string | null
   donorName?: string | null
   gender?: string | null
+  /** 种属（只读带出，CR-20261009-18） */
+  species?: string | null
   receiveDate?: string | null
   processTime?: string | null
   operatorName?: string | null

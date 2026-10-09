@@ -57,6 +57,9 @@ public class EmbedQueryBo extends PageQuery {
     @Schema(description = "内部编号（所挂样本的，等值）")
     private String internalNo;
 
+    @Schema(description = "种属（所挂样本的，等值；传 __none__ 查样本还没填种属的，CR-20261009-18）")
+    private String species;
+
     /**
      * 小程序内部管理表格页那<b>一个</b>搜索框（UI:mp.embed.list：搜索 = 石蜡块编号 / 内部编号）。
      *

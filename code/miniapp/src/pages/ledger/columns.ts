@@ -8,8 +8,9 @@
 //
 // ★ 规则（fixture 的 `_doc` 逐字）：
 //   冻结列 = `frozen`；其余列 = 模板第 1 行去掉冻结列后按原顺序，把 `inserted` 插到各自的 `after` 列后面，
-//   再追加 `extra`。`inserted` 是甲方后来要求加、模板原件里没有的列（目前只有类器官收样记录的「代数」，
-//   甲方 2026-09-24 第 18 行 / CR-20260924-10），模板列本身一个字不动。
+//   再追加 `extra`。`inserted` 是甲方后来要求加、模板原件里没有的列（类器官收样记录的「代数」，
+//   甲方 2026-09-24 第 18 行 / CR-20260924-10；四张表的「种属」，CR-20261009-18 —— 冻存那张按它的规矩追加在最后），
+//   模板列本身一个字不动。
 //
 // ★ 本文件四张表一次定完（ticket §2）：本张只**注册** tissue / organoid 两个工作表
 //   （`sheets.ts`），embed / cryo 的列在这里备好，由 EMBED-MP-001 / CRYO-MP-001 注册。
@@ -43,6 +44,8 @@ const COLUMNS: Record<SheetKey, LedgerColumns> = {
     frozen: { key: 'internalNo', label: '内部编号' },
     columns: [
       { key: 'sourceUnitName', label: '来源单位' },
+      // 插入列（模板里没有，甲方 2026-10-09 要加，CR-20261009-18）：fixture 的 tissue.inserted
+      { key: 'species', label: '种属' },
       { key: 'donorNameMasked', label: '供体姓名' },
       { key: 'gender', label: '性别' },
       { key: 'age', label: '年龄' },
@@ -64,6 +67,8 @@ const COLUMNS: Record<SheetKey, LedgerColumns> = {
     frozen: { key: 'internalNo', label: '内部编号' },
     columns: [
       { key: 'sourceUnitName', label: '来源单位' },
+      // 插入列（CR-20261009-18）：fixture 的 organoid.inserted
+      { key: 'species', label: '种属' },
       { key: 'organoidType', label: '类器官类型' },
       // 插入列（模板里没有，甲方 2026-09-24 第 18 行要加）：fixture 的 organoid.inserted
       { key: 'passage', label: '代数' },
@@ -80,6 +85,8 @@ const COLUMNS: Record<SheetKey, LedgerColumns> = {
     frozen: { key: 'paraffinBlockNo', label: '石蜡块编号' },
     columns: [
       { key: 'sampleSubmitNo', label: '样本编号' },
+      // 插入列（CR-20261009-18）：所挂样本的种属，fixture 的 embed.inserted
+      { key: 'species', label: '种属' },
       { key: 'sampleType', label: '样本类型' },
       { key: 'organoidSourceType', label: '类器官来源类型' },
       { key: 'tissueReceiveTime', label: '组织收样时间' },
@@ -111,6 +118,8 @@ const COLUMNS: Record<SheetKey, LedgerColumns> = {
       { key: 'remark', label: '备注' },
       { key: 'passageNo', label: '代数' },
       { key: 'remainingQty', label: '当前剩余/支' },
+      // 追加列（CR-20261009-18）：所挂样本的种属，fixture 的 cryo.extra
+      { key: 'species', label: '种属' },
     ],
   },
 }

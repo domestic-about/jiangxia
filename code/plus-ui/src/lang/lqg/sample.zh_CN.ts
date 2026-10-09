@@ -73,6 +73,8 @@ export default {
     internalNo: '内部编号',
     submitNo: '送检单号',
     sourceUnit: '来源单位',
+    // 插入列（CR-20261009-18）；与 lqg.species.label 同字
+    species: '种属',
     sampleKind: '类别',
     submitSource: '来源',
     verifyStatus: '核验状态',

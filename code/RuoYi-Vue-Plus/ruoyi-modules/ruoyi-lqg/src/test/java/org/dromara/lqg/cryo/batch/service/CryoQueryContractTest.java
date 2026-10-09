@@ -228,4 +228,21 @@ class CryoQueryContractTest {
         assertEquals(0, writes, "写流水的接口属于 CRYO-FLOW-001，本票不该新增：" + writes);
     }
 
+    @Test
+    @DisplayName("种属（CR-20261009-18）：按所挂样本的种属筛 = 子查询 + 绑定参数；__none__ = 样本没填；不带 = 不筛")
+    void speciesFiltersByTheSamplesSpecies() {
+        CryoQueryBo q = query();
+        q.setSpecies("移植猪");
+        LambdaQueryWrapper<CryoBatch> wrapper = CryoQueryService.buildWrapper(q, null, null, PROBE_DAYS);
+        String sql = wrapper.getTargetSql();
+        assertTrue(sql.contains("sample_id IN (SELECT id FROM t_lqg_sample WHERE del_flag = '0' AND species = ?)"), sql);
+        assertFalse(sql.contains("移植猪"), "值不许拼进 SQL：" + sql);
+        assertTrue(wrapper.getParamNameValuePairs().containsValue("移植猪"), wrapper.getParamNameValuePairs().toString());
+
+        CryoQueryBo none = query();
+        none.setSpecies(org.dromara.lqg.sample.domain.bo.SampleQueryBo.SPECIES_NONE);
+        assertTrue(CryoQueryService.buildWrapper(none, null, null, PROBE_DAYS).getTargetSql().contains("species IS NULL"));
+        assertFalse(whereOnly(CryoQueryService.buildWrapper(query(), null, null, PROBE_DAYS)).contains("species"));
+    }
+
 }

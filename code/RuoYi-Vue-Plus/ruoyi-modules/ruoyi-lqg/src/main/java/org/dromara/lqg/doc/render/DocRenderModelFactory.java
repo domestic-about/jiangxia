@@ -183,6 +183,8 @@ public class DocRenderModelFactory {
             .text("sampling_site", doc.getSamplingSite())
             .text("sampling_method", doc.getSamplingMethod())
             .text("gender", dictLabel("lqg_gender", sample.getGender()))
+            // 种属（CR-20261009-18，模板 v6）：样本行上的文本，直接印；老记录没填 = 空格子
+            .text("species", sample.getSpecies())
             .text("clinical_diagnosis", doc.getClinicalDiagnosis())
             // ★ 三段模板原文只有 QcDocRules 一个真相源；这里做**渲染期回落**：
             //   seed 里 9000001005 的草稿行三段是 NULL（不是走「新建草稿」建的），

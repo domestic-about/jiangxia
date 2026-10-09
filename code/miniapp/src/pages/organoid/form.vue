@@ -16,10 +16,12 @@ import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
 import SourceUnitSheet from '@/components/lqg/SourceUnitSheet.vue'
+import SpeciesSheet from '@/components/lqg/SpeciesSheet.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { finishTo, goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { unitDisplay } from '@/utils/ext-profile'
+import { DEFAULT_SPECIES, fetchSpeciesOptions, speciesProblem } from '@/utils/species'
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
 import type { OrganoidFormValue } from './api'
 import {
@@ -77,6 +79,9 @@ const units = ref<SelectorUnit[]>([])
 /** 来源单位的选择面板（底部弹层，`SourceUnitSheet`）与「手填」开关 */
 const unitSheetRef = ref<{ open: () => void } | null>(null)
 const manualUnit = ref(false)
+/** 种属（CR-20261009-18）：字典常用值 + 底部选择面板（`SpeciesSheet`，可手填） */
+const speciesOptions = ref<string[]>([...DEFAULT_SPECIES])
+const speciesSheetRef = ref<{ open: () => void } | null>(null)
 /** 日期 / 时间控件的目标字段、回填毫秒值与组件实例 */
 const pickerField = ref<OrganoidFieldKey>('receiveDate')
 const pickerValue = ref<number>(Date.now())
@@ -146,7 +151,8 @@ async function load() {
     if (!store.me) {
       await store.loadMe()
     }
-    await loadUnits()
+    const [, species] = await Promise.all([loadUnits(), fetchSpeciesOptions()])
+    speciesOptions.value = species
     if (mode.value === 'new') {
       form.value = emptyOrganoidForm()
       if (isInternal.value) {
@@ -251,6 +257,10 @@ function onPick(spec: OrganoidFieldSpec) {
   if (!editable.value) {
     return
   }
+  if (spec.key === 'species') {
+    speciesSheetRef.value?.open()
+    return
+  }
   if (spec.control === 'select') {
     unitSheetRef.value?.open()
     return
@@ -327,6 +337,12 @@ function toEdit() {
 
 async function submit() {
   if (!editable.value || saving.value) {
+    return
+  }
+  // 种属（CR-20261009-18）：两类、内外部都必填
+  const speciesError = speciesProblem(form.value.species)
+  if (speciesError) {
+    uni.showToast({ title: speciesError, icon: 'none' })
     return
   }
   if (!form.value.organoidType.trim()) {
@@ -431,7 +447,7 @@ async function submit() {
           :label="spec.label"
           :control="spec.control"
           :readonly="!spec.editable"
-          :required="spec.key === 'organoidType' || spec.key === 'sourceUnitName'" marker-side="after"
+          :required="spec.key === 'organoidType' || spec.key === 'sourceUnitName' || spec.key === 'species'" marker-side="after"
           :maxlength="fieldMaxlength(spec.key)"
           :model-value="fieldValue(spec.key)"
           :placeholder="placeholderOf(spec.key)"
@@ -483,6 +499,15 @@ async function submit() {
         {{ mode === 'new' ? '提交' : '保存' }}
       </button>
     </view>
+
+    <!-- 种属：底部弹框（CR-20261009-18）—— 字典常用值 + 「列表里没有，手动填写」 -->
+    <SpeciesSheet
+      ref="speciesSheetRef"
+      :model-value="form.species"
+      :options="speciesOptions"
+      :disabled="!editable"
+      @update:model-value="(v: string) => setField('species', v)"
+    />
 
     <!-- 来源单位：底部弹框（内部 = 全部启用单位；外部 = 本人绑定的单位；都能手填） -->
     <SourceUnitSheet

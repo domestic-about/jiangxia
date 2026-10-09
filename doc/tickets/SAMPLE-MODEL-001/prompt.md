@@ -50,7 +50,7 @@ accept:
     form: DATA
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
-      NEW="$(bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg POST /lqg/sample '{"sampleKind":"tissue","sourceUnitName":"本中心","donorName":"加密探针","gender":"male","age":"50","hospitalNo":"ZYPROBE01","tissueType":"肝组织","receiveDate":"2026-09-17","internalNo":"T-probe01"}')" &&
+      NEW="$(bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg POST /lqg/sample '{"species":"人","sampleKind":"tissue","sourceUnitName":"本中心","donorName":"加密探针","gender":"male","age":"50","hospitalNo":"ZYPROBE01","tissueType":"肝组织","receiveDate":"2026-09-17","internalNo":"T-probe01"}')" &&
       printf '%s' "${NEW}" | jq -e '.code==200' &&
       WANT="$(printf '%s' '加密探针' | openssl enc -aes-128-ecb -K 4c7167546573744165734b6579233031 -nosalt -base64 -A)" &&
       python3 doc/verify/db.py --sql "SELECT donor_name FROM t_lqg_sample WHERE internal_no='T-probe01'" --eq "${WANT}" &&
@@ -69,15 +69,15 @@ accept:
     form: STATE
     run: |-
       bash doc/verify/reseed.sh --yes >/dev/null &&
-      bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg --bizcode POST /lqg/sample '{"sampleKind":"tissue","sourceUnitName":"本中心","tissueType":"肝组织","receiveDate":"2026-09-17","internalNo":"T-hli01"}' | grep -qE '^(400|500)' &&
+      bash doc/verify/api.sh --as staff --fresh-module ruoyi-lqg --bizcode POST /lqg/sample '{"species":"人","sampleKind":"tissue","sourceUnitName":"本中心","tissueType":"肝组织","receiveDate":"2026-09-17","internalNo":"T-hli01"}' | grep -qE '^(400|500)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE internal_no='T-hli01'" --eq 1 &&
-      bash doc/verify/api.sh --as staff POST /lqg/sample '{"sampleKind":"tissue","sourceUnitName":"本中心","tissueType":"肝组织","receiveDate":"2026-09-17","internalNo":"T-del99"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff POST /lqg/sample '{"species":"人","sampleKind":"tissue","sourceUnitName":"本中心","tissueType":"肝组织","receiveDate":"2026-09-17","internalNo":"T-del99"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT del_flag FROM t_lqg_sample WHERE internal_no='T-del99'" --col-set 0,1 &&
-      bash doc/verify/api.sh --as staff --bizcode POST /lqg/sample '{"sampleKind":"organoid","sourceUnitName":"本中心","receiveDate":"2026-09-17","internalNo":"T-oco77"}' | grep -qE '^(400|500)' &&
+      bash doc/verify/api.sh --as staff --bizcode POST /lqg/sample '{"species":"人","sampleKind":"organoid","sourceUnitName":"本中心","receiveDate":"2026-09-17","internalNo":"T-oco77"}' | grep -qE '^(400|500)' &&
       python3 doc/verify/db.py --sql "SELECT count(*) FROM t_lqg_sample WHERE internal_no='T-oco77'" --eq 0 &&
-      bash doc/verify/api.sh --as staff POST /lqg/sample '{"sampleKind":"organoid","sourceUnitName":"本中心","organoidType":"肝类器官","passage":" p5 ","receiveDate":"2026-09-17","internalNo":"T-oco78"}' | jq -e '.code==200' &&
-      bash doc/verify/api.sh --as staff POST /lqg/sample '{"sampleKind":"organoid","sourceUnitName":"本中心","organoidType":"肝类器官","passage":"3","receiveDate":"2026-09-17","internalNo":"T-oco79"}' | jq -e '.code==400 and (.msg|contains("代数请填 P 加数字，如 P3"))' &&
-      bash doc/verify/api.sh --as staff POST /lqg/sample '{"sampleKind":"tissue","sourceUnitName":"本中心","tissueType":"肝组织","passage":"P3","receiveDate":"2026-09-17","internalNo":"T-hli80"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff POST /lqg/sample '{"species":"人","sampleKind":"organoid","sourceUnitName":"本中心","organoidType":"肝类器官","passage":" p5 ","receiveDate":"2026-09-17","internalNo":"T-oco78"}' | jq -e '.code==200' &&
+      bash doc/verify/api.sh --as staff POST /lqg/sample '{"species":"人","sampleKind":"organoid","sourceUnitName":"本中心","organoidType":"肝类器官","passage":"3","receiveDate":"2026-09-17","internalNo":"T-oco79"}' | jq -e '.code==400 and (.msg|contains("代数请填 P 加数字，如 P3"))' &&
+      bash doc/verify/api.sh --as staff POST /lqg/sample '{"species":"人","sampleKind":"tissue","sourceUnitName":"本中心","tissueType":"肝组织","passage":"P3","receiveDate":"2026-09-17","internalNo":"T-hli80"}' | jq -e '.code==200' &&
       python3 doc/verify/db.py --sql "SELECT internal_no || ':' || COALESCE(passage,'-') FROM t_lqg_sample WHERE internal_no IN ('T-oco78','T-oco79','T-hli80')" --col-set "T-oco78:P5,T-hli80:-" &&
       bash doc/verify/api.sh --as extA GET '/mp/dict/hints?type=tissue' | jq -e '.code==200 and (.data|index("肝组织")!=null) and (.data|index("测试供体甲")==null)' &&
       bash doc/verify/reseed.sh --yes >/dev/null

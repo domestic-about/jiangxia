@@ -43,33 +43,37 @@ public class SampleOrganoidExportVo implements Serializable {
     @Schema(description = "来源单位名称快照；自填单位名时是自填值")
     private String sourceUnitName;
 
-    @ExcelProperty(value = "类器官类型", index = 1)
+    @ExcelProperty(value = "种属", index = 1)
+    @Schema(description = "插入列（模板里没有，CR-20261009-18）：紧跟「来源单位」；没填的老记录留空")
+    private String species;
+
+    @ExcelProperty(value = "类器官类型", index = 2)
     private String organoidType;
 
     /**
      * 插入列（模板里没有，CR-20260924-10）：紧跟「类器官类型」。
      */
-    @ExcelProperty(value = "代数", index = 2)
+    @ExcelProperty(value = "代数", index = 3)
     @Schema(description = "形如 P3；没填留空")
     private String passage;
 
-    @ExcelProperty(value = "收样日期", index = 3)
+    @ExcelProperty(value = "收样日期", index = 4)
     @Schema(description = "yyyy-MM-dd")
     private String receiveDate;
 
-    @ExcelProperty(value = "内部编号", index = 4)
+    @ExcelProperty(value = "内部编号", index = 5)
     @Schema(description = "待核验 / 无效的外部样本还没有内部编号 → 空格子")
     private String internalNo;
 
-    @ExcelProperty(value = "处理时间", index = 5)
+    @ExcelProperty(value = "处理时间", index = 6)
     @Schema(description = "yyyy-MM-dd HH:mm:ss")
     private String processTime;
 
-    @ExcelProperty(value = "细胞活率报告", index = 6)
+    @ExcelProperty(value = "细胞活率报告", index = 7)
     @Schema(description = "有 / 无；没选留空")
     private String hasViabilityReport;
 
-    @ExcelProperty(value = "操作人", index = 7)
+    @ExcelProperty(value = "操作人", index = 8)
     private String operatorName;
 
 }

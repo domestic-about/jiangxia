@@ -29,6 +29,8 @@ import { wasEdited } from '@/utils/edited'
 export interface EmbedDetail extends EmbedRow {
   internalNo?: string | null
   sourceUnitName?: string | null
+  /** 所挂样本的种属（内部详情读时带出，CR-20261009-18；外部详情没有这个键） */
+  species?: string | null
   /** 所挂样本自己的核验状态（与这条送样的状态不是一回事） */
   sampleVerifyStatus?: string | null
   submitSource?: string | null

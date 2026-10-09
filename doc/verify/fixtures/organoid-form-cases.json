@@ -2,12 +2,14 @@
   "_doc": "SAMPLE-MP-002 的验收用例。被测函数：organoidLayout(identity, verifyStatus, mine, mode) → { fields, editable }。类器官收样记录：内部八项（模板 B 的 7 列 + inserted 的「代数」）；外部四项（来源单位、类器官类型、备注，Kevin 2026-09-17 晚定外部可填，CR-20260917-05；+ inserted 的「代数」），外部永远不渲染收样段。inserted = 模板原件里没有、甲方后来要求加的字段，插在 after 字段后面（内外部都插），写明 source。mode：new = 首页点表进来；edit = 历史编辑记录点一条进来；view = 内部管理表格页点一行进来（只读；只读页右上角「修改」会切到 mode=edit 重算，CR-20260918-07）。身份缺失、不认识：什么都不渲染。",
   "externalFields": [
     "sourceUnitName",
+    "species",
     "organoidType",
     "passage",
     "remark"
   ],
   "internalFields": [
     "sourceUnitName",
+    "species",
     "organoidType",
     "passage",
     "receiveDate",
@@ -17,6 +19,12 @@
     "operatorName"
   ],
   "inserted": [
+    {
+      "field": "species",
+      "label": "种属",
+      "after": "sourceUnitName",
+      "source": "甲方 2026-10-09 微信语音（CR-20261009-18）：样本记录信息表、类器官收样记录都要加「种属」（人、鼠兔、移植猪、鸡，还可以添加其他的），合作单位和内部人员都填、必填"
+    },
     {
       "field": "passage",
       "label": "代数",
@@ -34,6 +42,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "remark"
@@ -50,6 +59,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "remark"
@@ -66,6 +76,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "remark"
@@ -82,6 +93,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "remark"
@@ -98,6 +110,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "receiveDate",
@@ -118,6 +131,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "receiveDate",
@@ -138,6 +152,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "receiveDate",
@@ -158,6 +173,7 @@
       "expect": {
         "fields": [
           "sourceUnitName",
+          "species",
           "organoidType",
           "passage",
           "receiveDate",

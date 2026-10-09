@@ -41,39 +41,51 @@ import java.util.TreeMap;
  */
 class SampleExportContractTest {
 
-    private static final List<String> TISSUE_HEADER = List.of(
+    /** 样本记录信息表模板原件第 1 行（14 列，唯一来源是甲方原件，本类同时读原件对账） */
+    private static final List<String> TISSUE_TEMPLATE = List.of(
         "来源单位", "供体姓名", "性别", "年龄", "住院号", "组织类型", "收样日期", "内部编号",
         "有无固定", "处理时间", "质控表", "细胞活率报告", "操作人", "备注");
+
+    /** 导出表头 = 模板列 + 插入列（「种属」紧跟「来源单位」，CR-20261009-18） */
+    private static final List<String> TISSUE_HEADER =
+        withInserted(TISSUE_TEMPLATE, SampleExportService.TISSUE_INSERTED_AFTER);
 
     /** 类器官收样记录模板原件第 1 行（7 列，唯一来源是甲方原件，本类同时读原件对账） */
     private static final List<String> ORGANOID_TEMPLATE = List.of(
         "来源单位", "类器官类型", "收样日期", "内部编号", "处理时间", "细胞活率报告", "操作人");
 
-    /** 导出表头 = 模板列 + 插入列（「代数」紧跟「类器官类型」）—— 按规则拼，不手抄 */
+    /** 导出表头 = 模板列 + 插入列（「种属」紧跟「来源单位」、「代数」紧跟「类器官类型」）—— 按规则拼，不手抄 */
     private static final List<String> ORGANOID_HEADER =
         withInserted(ORGANOID_TEMPLATE, SampleExportService.ORGANOID_INSERTED_AFTER);
 
     @Test
-    @DisplayName("① 两个导出视图的列数 / 列名 / 列序：模板列逐字对甲方原件第 1 行，organoid 另在「类器官类型」后插入「代数」")
+    @DisplayName("① 两个导出视图的列数 / 列名 / 列序：模板列逐字对甲方原件第 1 行，两张都在「来源单位」后插入「种属」，organoid 另在「类器官类型」后插入「代数」")
     void exportViewsMatchTemplates() {
-        assertEquals(14, annotatedHeader(SampleTissueExportVo.class).size(), "tissue 模板是 14 列");
-        assertEquals(8, annotatedHeader(SampleOrganoidExportVo.class).size(), "organoid = 模板 7 列 + 插入的「代数」");
+        assertEquals(15, annotatedHeader(SampleTissueExportVo.class).size(), "tissue = 模板 14 列 + 插入的「种属」");
+        assertEquals(9, annotatedHeader(SampleOrganoidExportVo.class).size(), "organoid = 模板 7 列 + 插入的「种属」「代数」");
         assertEquals(TISSUE_HEADER, annotatedHeader(SampleTissueExportVo.class));
         assertEquals(ORGANOID_HEADER, annotatedHeader(SampleOrganoidExportVo.class));
-        assertEquals(List.of("来源单位", "类器官类型", "代数", "收样日期", "内部编号", "处理时间", "细胞活率报告", "操作人"),
+        assertEquals(List.of("来源单位", "种属", "类器官类型", "代数", "收样日期", "内部编号", "处理时间", "细胞活率报告", "操作人"),
             ORGANOID_HEADER, "插入规则拼出来的表头（防呆：规则本身写反了也要红）");
+        assertEquals(List.of("来源单位", "种属", "供体姓名", "性别", "年龄", "住院号", "组织类型", "收样日期", "内部编号",
+            "有无固定", "处理时间", "质控表", "细胞活率报告", "操作人", "备注"), TISSUE_HEADER);
 
-        assertEquals(TISSUE_HEADER, firstRowOfTemplate("样本记录信息表模板.xlsx"));
+        assertEquals(TISSUE_TEMPLATE, firstRowOfTemplate("样本记录信息表模板.xlsx"),
+            "模板原件没改：「种属」不是模板列，别往模板列里塞");
         assertEquals(ORGANOID_TEMPLATE, firstRowOfTemplate("类器官收样记录模板.xlsx"),
             "模板原件没改：「代数」不是模板列，别往模板列里塞");
     }
 
     @Test
-    @DisplayName("⑥ 插入列：只插在模板里存在的列后面，且插入的列名不与模板列重名（CR-20260924-10）")
+    @DisplayName("⑥ 插入列：只插在模板里存在的列后面，且插入的列名不与模板列重名（CR-20260924-10 / CR-20261009-18）")
     void insertedColumnsAreWellFormed() {
         SampleExportService.ORGANOID_INSERTED_AFTER.forEach((column, after) -> {
             assertTrue(ORGANOID_TEMPLATE.contains(after), "插入锚点「" + after + "」必须是模板里的列");
             assertTrue(!ORGANOID_TEMPLATE.contains(column), "插入列「" + column + "」不许与模板列重名");
+        });
+        SampleExportService.TISSUE_INSERTED_AFTER.forEach((column, after) -> {
+            assertTrue(TISSUE_TEMPLATE.contains(after), "插入锚点「" + after + "」必须是模板里的列");
+            assertTrue(!TISSUE_TEMPLATE.contains(column), "插入列「" + column + "」不许与模板列重名");
         });
         // 组织样本不插代数
         assertTrue(!TISSUE_HEADER.contains("代数"));
@@ -84,6 +96,7 @@ class SampleExportContractTest {
     void organoidRowsCarryThePassage() {
         org.dromara.lqg.sample.domain.vo.SampleVo filled = new org.dromara.lqg.sample.domain.vo.SampleVo();
         filled.setSourceUnitName("B 大学");
+        filled.setSpecies("鼠兔");
         filled.setOrganoidType("结直肠类器官");
         filled.setPassage("P4");
         filled.setInternalNo("T-oco01");

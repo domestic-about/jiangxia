@@ -60,6 +60,7 @@ class ExtOrganoidPassageContractTest {
         Fake fake = new Fake();
         ExtOrganoidSubmitBo bo = new ExtOrganoidSubmitBo();
         bo.setSourceUnitName("A 医院");
+        bo.setSpecies("鼠兔");
         bo.setOrganoidType("肝类器官");
         bo.setPassage(" p3 ");
         bo.setRemark("外部填的备注");
@@ -73,6 +74,7 @@ class ExtOrganoidPassageContractTest {
         assertEquals("external", row.getSubmitSource());
         assertEquals("P3", row.getPassage(), "★ 外部填的代数要落库（p→P、去空白）");
         assertEquals("肝类器官", row.getOrganoidType());
+        assertEquals("鼠兔", row.getSpecies(), "种属随外部提交落库（CR-20261009-18）");
         assertEquals(9000009001L, row.getSourceUnitId(), "单位名与本人绑定的单位同名 → 挂上 id（FIX V01 口径不变）");
     }
 
@@ -82,6 +84,7 @@ class ExtOrganoidPassageContractTest {
         Fake fake = new Fake();
         ExtOrganoidSubmitBo bad = new ExtOrganoidSubmitBo();
         bad.setSourceUnitName("A 医院");
+        bad.setSpecies("鼠兔");
         bad.setOrganoidType("肝类器官");
         bad.setPassage("3");
         ServiceException e = assertThrows(ServiceException.class, () -> fake.service().submitOrganoid(EXT_USER, bad));
@@ -91,6 +94,7 @@ class ExtOrganoidPassageContractTest {
 
         ExtOrganoidSubmitBo blank = new ExtOrganoidSubmitBo();
         blank.setSourceUnitName("A 医院");
+        blank.setSpecies("鼠兔");
         blank.setOrganoidType("肝类器官");
         fake.service().submitOrganoid(EXT_USER, blank);
         assertNull(fake.inserts.get(0).getPassage(), "没填代数 = NULL（选填）");
@@ -102,6 +106,7 @@ class ExtOrganoidPassageContractTest {
         Fake fake = new Fake();
         ExtOrganoidSubmitBo bo = new ExtOrganoidSubmitBo();
         bo.setSourceUnitName("A 医院");
+        bo.setSpecies("鼠兔");
         bo.setOrganoidType("肝类器官");
         bo.setPassage("P5");
 
@@ -111,6 +116,7 @@ class ExtOrganoidPassageContractTest {
         Map<String, Object> set = setValues(fake.updates.get(0));
         assertEquals("P5", set.get("passage"));
         assertEquals("肝类器官", set.get("organoid_type"));
+        assertEquals("鼠兔", set.get("species"), "★ 重提的手工拷贝带上了种属（漏拷 = 改了库里没变）");
     }
 
     @Test
@@ -118,11 +124,13 @@ class ExtOrganoidPassageContractTest {
     void segmentCopyCarriesThePassage() {
         ExtOrganoidSubmitBo bo = new ExtOrganoidSubmitBo();
         bo.setSourceUnitName("A 医院");
+        bo.setSpecies("鼠兔");
         bo.setOrganoidType("肝类器官");
         bo.setPassage("P2");
         bo.setRemark("r");
         var seg = ExtSampleSubmitService.segmentOf(bo);
         assertEquals("P2", seg.getPassage());
+        assertEquals("鼠兔", seg.getSpecies());
         assertEquals("肝类器官", seg.getOrganoidType());
         assertEquals("r", seg.getRemark());
         assertNull(seg.getDonorName(), "类器官入参里根本没有组织样本字段");
@@ -221,6 +229,7 @@ class ExtOrganoidPassageContractTest {
             s.setSubmitterId(EXT_USER);
             s.setSourceUnitId(9000009001L);
             s.setSourceUnitName("A 医院");
+            s.setSpecies("鼠兔");
             s.setOrganoidType("肝类器官");
             s.setPassage("P3");
             return s;

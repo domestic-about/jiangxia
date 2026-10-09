@@ -237,6 +237,7 @@ public class SampleService {
         SampleSubmitSegmentBo seg = new SampleSubmitSegmentBo();
         seg.setSourceUnitId(bo.getSourceUnitId());
         seg.setSourceUnitName(bo.getSourceUnitName());
+        seg.setSpecies(bo.getSpecies());
         seg.setDonorName(bo.getDonorName());
         seg.setGender(bo.getGender());
         seg.setAge(bo.getAge());

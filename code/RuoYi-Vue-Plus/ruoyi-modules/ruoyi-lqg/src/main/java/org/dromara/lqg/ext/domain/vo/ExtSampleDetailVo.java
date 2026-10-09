@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * 外部样本详情（{@code GET /mp/ext/sample/{id}}，doc/api-contract.md 第 51 行）。
  *
- * <p>★ <b>键集合就是白名单</b>：{@code id, submitNo, sampleKind, sourceUnitName, donorName, gender,
+ * <p>★ <b>键集合就是白名单</b>：{@code id, submitNo, sampleKind, sourceUnitName, species, donorName, gender,
  * age, hospitalNo, tissueType, organoidType, passage, hasPathology, remark, verifyStatus, invalidReason,
  * submitterName, mine, editable, createTime, embeds, docs}。
  * {@code passage}（代数）是 CR-20260924-10 加的：外部自己在类器官收样记录里填的一项，<b>不是内部字段</b>
@@ -55,6 +55,9 @@ public class ExtSampleDetailVo implements Serializable {
 
     @Schema(description = "来源单位名称")
     private String sourceUnitName;
+
+    @Schema(description = "种属（CR-20261009-18：外部自己填的一项，改后重提要带回来）")
+    private String species;
 
     @Schema(description = "供体姓名（详情给全名）")
     private String donorName;

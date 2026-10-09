@@ -29,6 +29,8 @@ export interface VerifySampleForm {
   /** 选中的来源单位 id（手填单位时为 null） */
   sourceUnitId: string | number | null
   sourceUnitName: string
+  /** 种属（CR-20261009-18）：两类都有、都必填 */
+  species: string
   donorName: string
   gender: string
   age: string
@@ -51,11 +53,11 @@ export type SampleFieldKey = Exclude<keyof VerifySampleForm, 'sourceUnitId'>
 
 /**
  * 送检信息（合作单位填的，核验时可以直接改）。顺序 = 填写页的顺序；
- * 类器官的「代数」紧跟「类器官类型」（A 组口径）。
+ * 类器官的「代数」紧跟「类器官类型」（A 组口径）；两类的「种属」都紧跟「来源单位」（CR-20261009-18）。
  */
 export const SUBMIT_FIELDS: Record<SampleKind, SampleFieldKey[]> = {
-  tissue: ['sourceUnitName', 'donorName', 'gender', 'age', 'hospitalNo', 'tissueType', 'hasPathology', 'remark'],
-  organoid: ['sourceUnitName', 'organoidType', 'passage', 'remark'],
+  tissue: ['sourceUnitName', 'species', 'donorName', 'gender', 'age', 'hospitalNo', 'tissueType', 'hasPathology', 'remark'],
+  organoid: ['sourceUnitName', 'species', 'organoidType', 'passage', 'remark'],
 }
 
 /**
@@ -70,6 +72,7 @@ export const RECEIVE_FIELDS: Record<SampleKind, SampleFieldKey[]> = {
 /** 字段标签（逐字对甲方模板列名；代数是甲方 9-24 加的） */
 export const SAMPLE_LABEL: Record<SampleFieldKey, string> = {
   sourceUnitName: '来源单位',
+  species: '种属',
   donorName: '供体姓名',
   gender: '性别',
   age: '年龄',
@@ -92,6 +95,7 @@ export type SampleControl = 'text' | 'date' | 'datetime' | 'select' | 'seg' | 't
 
 const SAMPLE_CONTROL: Partial<Record<SampleFieldKey, SampleControl>> = {
   sourceUnitName: 'select',
+  species: 'select',
   gender: 'seg',
   hasPathology: 'seg',
   isFixed: 'seg',
@@ -110,6 +114,7 @@ export function sampleControl(key: SampleFieldKey): SampleControl {
 /** 可输入字段的字数上限（与后端 `SubmitSegmentRules` / 库里列长同一口径） */
 const SAMPLE_MAXLENGTH: Partial<Record<SampleFieldKey, number>> = {
   sourceUnitName: 100,
+  species: 50,
   donorName: 50,
   age: 20,
   hospitalNo: 50,
@@ -131,11 +136,11 @@ export const MAX_INVALID_REASON = 200
 export type VerifyAction = 'valid' | 'invalid'
 
 /**
- * 必填小星号：送检段的来源单位、组织类型 / 类器官类型（两个动作都要，后端校验送检段就查它们）；
+ * 必填小星号：送检段的来源单位、种属、组织类型 / 类器官类型（两个动作都要，后端校验送检段就查它们）；
  * 收样日期、内部编号只在判有效时必填（判无效不收收样信息）。
  */
 export function sampleRequired(kind: SampleKind, key: SampleFieldKey, action: VerifyAction = 'valid'): boolean {
-  if (key === 'sourceUnitName') {
+  if (key === 'sourceUnitName' || key === 'species') {
     return true
   }
   if (key === (kind === 'organoid' ? 'organoidType' : 'tissueType')) {
@@ -155,6 +160,7 @@ export function toVerifySampleForm(detail: Record<string, unknown> | null | unde
   return {
     sourceUnitId: unitId === null || unitId === undefined || unitId === '' ? null : unitId as string | number,
     sourceUnitName: str(d.sourceUnitName),
+    species: str(d.species),
     donorName: str(d.donorName),
     gender: str(d.gender),
     age: str(d.age),
@@ -217,6 +223,8 @@ export function submitSegmentOf(kind: SampleKind, now: VerifySampleForm, withPas
   const seg: Record<string, unknown> = {
     sourceUnitId: now.sourceUnitId,
     sourceUnitName: now.sourceUnitName.trim(),
+    // 种属（CR-20261009-18）：两类都有，整段里总带它（不带 = 后端「种属不能为空」）
+    species: now.species.trim(),
   }
   if (kind === 'organoid') {
     seg.organoidType = now.organoidType.trim()
@@ -280,6 +288,10 @@ export function sampleVerifyBody(
 export function sampleProblem(kind: SampleKind, action: VerifyAction, now: VerifySampleForm, reason = ''): string {
   if (!now.sourceUnitName.trim()) {
     return '请选择来源单位'
+  }
+  // 种属（CR-20261009-18）：老记录没有种属的，核验时要补选（后端送检段同样查）
+  if (!now.species.trim()) {
+    return '请选择种属'
   }
   if (kind === 'organoid' && !now.organoidType.trim()) {
     return '请填类器官类型'

@@ -56,6 +56,8 @@ export interface CryoBatchVO {
   internalNo?: string | null;
   submitNo?: string | null;
   sourceUnitName?: string | null;
+  /** 所挂样本的种属（读时带出，本表不存；CR-20261009-18） */
+  species?: string | null;
   sampleVerifyStatus?: string | null;
   /** 所挂样本的类别 tissue / organoid（读时带出）——「内部编号」点回样本时决定回哪一页 */
   sampleKind?: string | null;
@@ -93,6 +95,8 @@ export interface CryoQuery {
   pageSize?: number;
   /** 内部编号（所挂样本的，等值） */
   internalNo?: string | null;
+  /** 种属（所挂样本的，等值；__none__ = 样本还没填，CR-20261009-18） */
+  species?: string | null;
   /** 冻存样品名称（模糊） */
   cryoName?: string | null;
   /** 所挂样本 id（从样本总表带 sampleId 跳入时用） */
