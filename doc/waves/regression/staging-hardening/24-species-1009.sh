@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # CR-20261009-18「种属」回归（本机，对 doc/verify/verify.env 指向的后端）。
-#   bash doc/waves/regression/staging-hardening/24-species-1009.sh
+#   bash doc/verify/reseed.sh --yes && bash doc/waves/regression/staging-hardening/24-species-1009.sh
+# S0 / S0b 的期望值钉在模拟数据（seed）的种属分配上，所以要先 reseed。
 # 会建一条外部组织样本、一条内部组织样本 + 一个石蜡块 + 一个冻存批次（编号前缀 R24-），结束时全部删掉。
 set -uo pipefail
 cd "$(dirname "$0")/../../../.."
@@ -11,6 +12,60 @@ bad()  { FAIL=$((FAIL+1)); echo "  ✗ $1"; echo "    → $2" | cut -c1-400; }
 check(){ local name="$1" cond="$2" body="$3"; if echo "$body" | jq -e "$cond" >/dev/null 2>&1; then ok "$name"; else bad "$name" "$body"; fi; }
 TAG="R24-$(date +%H%M%S)"
 TMP=$(mktemp -d)
+
+# ── S0 模拟数据逐表按种属筛（2026-10-10 加：甲方要验「选了种属只出相应的记录、导出的 Excel 只有这个种属」）──
+#    期望值来自 doc/verify/gen_seed.py 的种属分配（与迁移 V202610101000 同值）；跑之前先 reseed。
+#    urlencode：人 %E4%BA%BA ｜ 鼠兔 %E9%BC%A0%E5%85%94 ｜ 移植猪 %E7%A7%BB%E6%A4%8D%E7%8C%AA ｜ 鸡 %E9%B8%A1
+REN=%E4%BA%BA; SHUTU=%E9%BC%A0%E5%85%94; ZHU=%E7%A7%BB%E6%A4%8D%E7%8C%AA; JI=%E9%B8%A1
+echo "S0 模拟数据：五张表逐个按种属筛，只出这个种属的、而且一条不漏"
+ids() { $API GET "$1&pageNum=1&pageSize=200" | jq -c "[.rows[]|$2]|sort"; }
+eq() { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "期望 $3 实际 $2"; fi; }
+eq "样本记录信息表 · 人 = 有效 / 待核验 / 无效三条"        "$(ids "/lqg/sample/list?sampleKind=tissue&species=$REN" .submitNo)"    '["SJ90000001","SJ90000002","SJ90000003"]'
+eq "样本记录信息表 · 移植猪 = T-hli02、T-hli05"             "$(ids "/lqg/sample/list?sampleKind=tissue&species=$ZHU" .internalNo)" '["T-hli02","T-hli05"]'
+eq "样本记录信息表 · 鼠兔 = T-hga03"                        "$(ids "/lqg/sample/list?sampleKind=tissue&species=$SHUTU" .internalNo)" '["T-hga03"]'
+eq "样本记录信息表 · 鸡 = T-hco04（已删除的那条鸡不出来）"   "$(ids "/lqg/sample/list?sampleKind=tissue&species=$JI" .internalNo)"  '["T-hco04"]'
+eq "样本记录信息表 · 未填 = 待核验的 SJ90000007"            "$(ids "/lqg/sample/list?sampleKind=tissue&species=__none__" .submitNo)" '["SJ90000007"]'
+eq "类器官收样记录 · 鼠兔 = T-oco01"                        "$(ids "/lqg/sample/list?sampleKind=organoid&species=$SHUTU" .internalNo)" '["T-oco01"]'
+eq "类器官收样记录 · 人 = 没有"                             "$(ids "/lqg/sample/list?sampleKind=organoid&species=$REN" .internalNo)" '[]'
+eq "石蜡包埋 · 人 = T-E01-1、T-E01-2 + 一条待核验的送样"    "$(ids "/lqg/embed/list?species=$REN" '(.paraffinBlockNo // "待核验")')" '["T-E01-1","T-E01-2","待核验"]'
+eq "石蜡包埋 · 移植猪 = T-E02-1（T-hli05 那块已删除的不出来）" "$(ids "/lqg/embed/list?species=$ZHU" .paraffinBlockNo)" '["T-E02-1"]'
+eq "石蜡包埋 · 鸡 = T-E04-1"                                "$(ids "/lqg/embed/list?species=$JI" .paraffinBlockNo)" '["T-E04-1"]'
+eq "石蜡包埋 · 鼠兔 = 没有"                                 "$(ids "/lqg/embed/list?species=$SHUTU" .paraffinBlockNo)" '[]'
+eq "-80 冻存 · 人 = T-hli01 的两批"                          "$(ids "/lqg/cryo/batch/list?species=$REN" .cryoName)" '["T-hli01-GZ-N-P2-EM2-2e5","T-hli01-GZ-N-P5-EM2-1e5"]'
+eq "-80 冻存 · 移植猪 = T-hli02 一批 + T-hli05 两批（已删除的那批不出来）" "$(ids "/lqg/cryo/batch/list?species=$ZHU" .cryoName)" '["T-hli02-GZ-N-P2-EM2-2e5","T-hli05-GZ-N-P7-EM2-2e5","T-hli05-GZ-N-P8-EM2-2e5"]'
+eq "-80 冻存 · 鼠兔 = T-oco01 的两批"                        "$(ids "/lqg/cryo/batch/list?species=$SHUTU" .cryoName)" '["T-oco01-JC-T-P3-EM1-5e5","T-oco01-JC-T-P4-EM1-5e5"]'
+eq "-80 冻存 · 鸡 = 没有"                                    "$(ids "/lqg/cryo/batch/list?species=$JI" .cryoName)" '[]'
+eq "质控文档 · 人 = T-hli01"                                 "$(ids "/lqg/qc/list?species=$REN" .internalNo)" '["T-hli01"]'
+eq "质控文档 · 移植猪 = T-hli02、T-hli05（甲方的例子：选猪，猪的都出来）" "$(ids "/lqg/qc/list?species=$ZHU" .internalNo)" '["T-hli02","T-hli05"]'
+eq "质控文档 · 鼠兔 = T-hga03、T-oco01"                      "$(ids "/lqg/qc/list?species=$SHUTU" .internalNo)" '["T-hga03","T-oco01"]'
+eq "质控文档 · 鸡 = T-hco04"                                 "$(ids "/lqg/qc/list?species=$JI" .internalNo)" '["T-hco04"]'
+# 不筛 = 全部：各表按种属分出来的加起来正好是整张表（没有漏掉、也没有重复算）
+eq "不筛种属：质控文档 6 条、冻存 7 批、石蜡包埋 5 条" "$($API GET '/lqg/qc/list?pageNum=1&pageSize=200' | jq .total)/$($API GET '/lqg/cryo/batch/list?pageNum=1&pageSize=200' | jq .total)/$($API GET '/lqg/embed/list?pageNum=1&pageSize=200' | jq .total)" '6/7/5'
+
+echo "S0b 模拟数据：带着种属筛选导出 —— Excel 里只有这个种属、而且都在同一张表里"
+$API --out "$TMP/s-t.xlsx" POST "/lqg/sample/export/tissue?species=$ZHU"
+$API --out "$TMP/s-o.xlsx" POST "/lqg/sample/export/organoid?species=$SHUTU"
+$API --out "$TMP/s-e.xlsx" POST "/lqg/embed/export?species=$REN"
+$API --out "$TMP/s-c.xlsx" POST "/lqg/cryo/batch/export?species=$ZHU"
+$API --out "$TMP/s-all.xlsx" POST "/lqg/sample/export/tissue"
+R=$(python3 - "$TMP" <<'PY'
+import sys,json,warnings
+warnings.filterwarnings('ignore')
+import openpyxl
+d=sys.argv[1]; out={}
+for k in ('s-t','s-o','s-e','s-c','s-all'):
+    ws=openpyxl.load_workbook(f'{d}/{k}.xlsx').active
+    rows=[[('' if c is None else str(c)) for c in r] for r in ws.iter_rows(values_only=True)]
+    head=rows[0]; i=head.index('种属')
+    out[k]={'n':len(rows)-1,'species':sorted(set(r[i] for r in rows[1:])),'rows':[dict(zip(head,r)) for r in rows[1:]]}
+print(json.dumps(out,ensure_ascii=False))
+PY
+)
+check "样本记录信息表导出（筛移植猪）：2 行，全是移植猪，T-hli02、T-hli05 都在" '.["s-t"].n==2 and .["s-t"].species==["移植猪"] and ([.["s-t"].rows[]|.["内部编号"]]|sort)==["T-hli02","T-hli05"]' "$R"
+check "类器官收样记录导出（筛鼠兔）：1 行 T-oco01" '.["s-o"].n==1 and .["s-o"].species==["鼠兔"] and .["s-o"].rows[0]["内部编号"]=="T-oco01"' "$R"
+check "石蜡包埋导出（筛人）：全是人，T-E01-1、T-E01-2 都在" '.["s-e"].species==["人"] and (([.["s-e"].rows[]|.["石蜡块编号"]]|map(select(.!=""))|sort)==["T-E01-1","T-E01-2"])' "$R"
+check "-80 冻存导出（筛移植猪）：3 行，全是移植猪" '.["s-c"].n==3 and .["s-c"].species==["移植猪"]' "$R"
+check "不筛种属导出：各种属都在同一张表里（人 / 移植猪 / 鼠兔 / 鸡 + 一条未填）" '.["s-all"].species==["","人","移植猪","鸡","鼠兔"]' "$R"
 
 echo "S1 字典：/mp/dict/hints?type=species = 人 / 鼠兔 / 移植猪 / 鸡"
 R=$($API --as extA GET '/mp/dict/hints?type=species')

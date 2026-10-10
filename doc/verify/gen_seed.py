@@ -180,27 +180,38 @@ def sample(sid, no, kind, source, submitter, status, unit_id, unit_name, created
 
 
 recv = dict(is_fixed="Y", has_qc_sheet="Y", has_viability_report="Y", operator_name="李工", verify_by=9000000101)
+# 种属 species（CR-20261009-18；2026-10-10 Kevin：给现有模拟数据加上种属，甲方要逐表验「选了种属只出相应的记录」）。
+# 分配要让五张表每张都筛得出东西 —— 石蜡块、冻存批次、质控文档读的是所挂样本的种属：
+#   人     1001 T-hli01（2 个石蜡块、2 批冻存、3 份文档）· 1002 待核验（挂着一条待核验的送样）· 1003 无效
+#   移植猪 1004 T-hli02（1 个石蜡块、1 批冻存、质控文档）· 1008 T-hli05（2 批冻存 + 1 批软删、1 个软删的石蜡块）
+#   鼠兔   1005 T-hga03（质控文档）· 1009 T-oco01（唯一的类器官收样记录，2 批冻存）
+#   鸡     1006 T-hco04（B 大学；1 个石蜡块、评分表）· 1010 软删（病灶：按「鸡」筛不得把它带出来）
+#   未填   1007 待核验（病灶：加这一项之前录的老记录 —— 「未填」筛得出它；核验 / 修改带送检段时必须补选种属）
+# 与迁移 V202610101000（给已经灌进库的这几行补种属，测试站不 reseed）逐行同值，改这里要同步改它。
 sample(9000001001, "SJ90000001", "tissue", "external", 9000000111, "valid", 9000009001, "A 医院", ts(31), donor_name="测试供体甲", gender="male", age="56",
-       hospital_no="ZY0000001", tissue_type="肝组织", has_pathology="Y", receive_date=d(30), internal_no="T-hli01", process_time=ts(30, "14:20"), verify_time=ts(30), **recv)
+       hospital_no="ZY0000001", tissue_type="肝组织", has_pathology="Y", receive_date=d(30), internal_no="T-hli01", process_time=ts(30, "14:20"), verify_time=ts(30),
+       species="人", **recv)
 sample(9000001002, "SJ90000002", "tissue", "external", 9000000111, "pending", 9000009001, "A 医院", today(1), donor_name="测试供体乙", gender="female", age="48",
-       hospital_no="ZY0000002", tissue_type="胆管组织", has_pathology="N")
+       hospital_no="ZY0000002", tissue_type="胆管组织", has_pathology="N", species="人")
 sample(9000001003, "SJ90000003", "tissue", "external", 9000000111, "invalid", 9000009001, "A 医院", ts(9), donor_name="测试供体丙", gender="unknown",
-       tissue_type="肝组织", invalid_reason="信息不全：缺住院号", verify_by=9000000101, verify_time=ts(8))
+       tissue_type="肝组织", invalid_reason="信息不全：缺住院号", verify_by=9000000101, verify_time=ts(8), species="人")
 sample(9000001004, "SJ90000004", "tissue", "external", 9000000112, "valid", 9000009001, "A 医院", ts(26), donor_name="测试供体丁", gender="male", age="61",
-       hospital_no="ZY0000004", tissue_type="肝组织", receive_date=d(25), internal_no="T-hli02", process_time=ts(25, "09:40"), verify_time=ts(25), **recv)
+       hospital_no="ZY0000004", tissue_type="肝组织", receive_date=d(25), internal_no="T-hli02", process_time=ts(25, "09:40"), verify_time=ts(25),
+       species="移植猪", **recv)
 sample(9000001005, "SJ90000005", "tissue", "external", 9000000113, "valid", 9000009001, "A 医院", ts(21), donor_name="测试供体戊", gender="female", age="39",
-       hospital_no="ZY0000005", tissue_type="胃组织", receive_date=d(20), internal_no="T-hga03", process_time=ts(20), verify_time=ts(20), **recv)
+       hospital_no="ZY0000005", tissue_type="胃组织", receive_date=d(20), internal_no="T-hga03", process_time=ts(20), verify_time=ts(20), species="鼠兔", **recv)
 sample(9000001006, "SJ90000006", "tissue", "external", 9000000114, "valid", 9000009002, "B 大学", ts(19), donor_name="测试供体己", gender="male", age="70",
-       hospital_no="ZY0000006", tissue_type="结直肠组织", receive_date=d(18), internal_no="T-hco04", process_time=ts(18), verify_time=ts(18), **recv)
+       hospital_no="ZY0000006", tissue_type="结直肠组织", receive_date=d(18), internal_no="T-hco04", process_time=ts(18), verify_time=ts(18), species="鸡", **recv)
 sample(9000001007, "SJ90000007", "tissue", "external", 9000000115, "pending", 9000009001, "A 医院", today(2), donor_name="测试供体庚", gender="male", age="52",
        hospital_no="ZY0000007", tissue_type="肝组织")
 sample(9000001008, "SJ90000008", "tissue", "internal", 9000000101, "valid", None, "本中心", ts(45), donor_name="测试供体辛", gender="female", age="45",
-       hospital_no="ZY0000008", tissue_type="肝组织", receive_date=d(45), internal_no="T-hli05", process_time=ts(45), verify_time=ts(45), **recv)
+       hospital_no="ZY0000008", tissue_type="肝组织", receive_date=d(45), internal_no="T-hli05", process_time=ts(45), verify_time=ts(45), species="移植猪", **recv)
 # 代数 passage（CR-20260924-10，类器官收样记录在「类器官类型」后加的一项）：唯一的类器官样本带上 P3，H5 / 工作台 / 导出里 T-oco01 都能看到带值的代数
 sample(9000001009, "SJ90000009", "organoid", "internal", 9000000101, "valid", 9000009002, "B 大学", ts(60), organoid_type="结直肠类器官", passage="P3",
-       receive_date=d(60), internal_no="T-oco01", process_time=ts(60), has_viability_report="Y", operator_name="李工", verify_by=9000000101, verify_time=ts(60))
+       receive_date=d(60), internal_no="T-oco01", process_time=ts(60), has_viability_report="Y", operator_name="李工", verify_by=9000000101, verify_time=ts(60),
+       species="鼠兔")
 sample(9000001010, "SJ90000010", "tissue", "external", 9000000111, "valid", 9000009001, "A 医院", today(3), donor_name="已删除供体", gender="male",
-       tissue_type="肝组织", receive_date=d(10), internal_no="T-del99", del_flag="1")
+       tissue_type="肝组织", receive_date=d(10), internal_no="T-del99", del_flag="1", species="鸡")
 
 # ═══════════ 石蜡包埋 ═══════════
 begin("05-embed.sql", "t_lqg_sample", "t_lqg_embed", "t_lqg_embed_marker")
