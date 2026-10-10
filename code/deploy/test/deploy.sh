@@ -339,6 +339,19 @@ phase_miniapp() {
     "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" \
     || die "小程序产物里有『自定义组件死键』—— 小程序里点了没反应（H5 反而正常）；修法见上面的清单"
 
+  # ★ 2026-10-10 加：产物「转发给朋友」自检（CR-20261010-19）。
+  #   在假的微信运行环境里加载产物，逐页确认注册了 onShareAppMessage、卡片是固定标题 + 固定封面 + 落地首页
+  #   （封面不固定时微信拿当前页截图当封面，会把表单上的患者信息发出去）。
+  #   退出码 1 = 转发真的有问题 → 拦住上传；退出码 2 = 检查脚本自己没跑起来 → 只提示，不拦发版。
+  local share_rc=0
+  node "${ROOT}/doc/waves/tools/check-mp-share.mjs" \
+    "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" || share_rc=$?
+  if [ "${share_rc}" -eq 1 ]; then
+    die "小程序产物的『转发给朋友』有问题（页面没注册上，或卡片内容 / 封面不对）；详见上面的清单"
+  elif [ "${share_rc}" -ne 0 ]; then
+    warn "『转发给朋友』自检没跑起来（退出码 ${share_rc}，不是转发坏了）—— 本次不拦，上传后请在体验版里手动转发一次确认"
+  fi
+
   # ★ 2026-09-30 起缺省走「本机编译上传 + 测试机固定 IP 出口」（tunnel）：
   #   在测试机上编译会被 OOM 杀（miniprogram-ci 编译子进程约 2.5–3 GB，测试机和别的项目合用、可用常年 3 GB 出头），
   #   而 miniprogram-ci 被杀后 promise 不结束 —— CI 上表现为退出码 13 或一直挂着。

@@ -1,0 +1,56 @@
+# CR-20261010-19「转发给朋友」产物检查（2026-10-10，本机）
+
+## 1. 正式构建（pnpm build:mp-weixin → dist/build/mp-weixin）
+产物：code/miniapp/dist/build/mp-weixin
+  ✓ app.js 加载后调用了 App()，并带着 $vm
+  ✓ 全局混入里有 onShareAppMessage — 共 1 个全局混入
+  ✓ 全局混入里没有 onShareTimeline（不开朋友圈）
+  ✓ 卡片内容 = 固定标题 + 首页路径（不带参数）+ 固定封面 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ 22 个页面都注册成了页面
+  ✓ ① 每个页面都有 onShareAppMessage（共 22 页）
+  ✓ ② 没有页面注册 onShareTimeline
+  ✓ ③ pages/sample/form：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ③ pages/qc/preview：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ③ pages/login/index：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ③ pages/legal/agreement：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ④ 封面图在产物里，是 5:4 的 PNG — 1000×800，60.0 KB
+
+结果：PASS —— 每个页面都能转发给朋友，卡片是固定标题 + 固定封面 + 落地首页
+
+## 2. 测试模式构建（部署脚本用的那种：uni build --mode test → dist/build/mp-weixin-test）
+产物：code/miniapp/dist/build/mp-weixin-test
+  ✓ app.js 加载后调用了 App()，并带着 $vm
+  ✓ 全局混入里有 onShareAppMessage — 共 1 个全局混入
+  ✓ 全局混入里没有 onShareTimeline（不开朋友圈）
+  ✓ 卡片内容 = 固定标题 + 首页路径（不带参数）+ 固定封面 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ 22 个页面都注册成了页面
+  ✓ ① 每个页面都有 onShareAppMessage（共 22 页）
+  ✓ ② 没有页面注册 onShareTimeline
+  ✓ ③ pages/sample/form：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ③ pages/qc/preview：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ③ pages/login/index：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ③ pages/legal/agreement：点右上角「转发给朋友」拿到固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ ④ 封面图在产物里，是 5:4 的 PNG — 1000×800，60.0 KB
+
+结果：PASS —— 每个页面都能转发给朋友，卡片是固定标题 + 固定封面 + 落地首页
+
+## 3. 反证：把 main.ts 里的 app.mixin({ onShareAppMessage }) 拿掉重新构建 → 检查必须变红（= 改之前的状态：转发是灰的）
+  ✗ 全局混入里有 onShareAppMessage — 共 0 个全局混入
+  ✗ ① 每个页面都有 onShareAppMessage（共 22 页） — 缺：pages/index/index、pages/cryo/form、…（22 页全缺）
+  结果：FAIL（退出码 1）—— 之后已恢复 main.ts 并重新构建，见上面 1、2
+
+## 4. 微信开发者工具模拟器（真实小程序运行时）：26-mp-share-devtools.cjs
+（开发模式产物 + 游客 appid；本机登录开发者工具的微信号不是本小程序的开发者，用真 appid 打不开项目）
+运行环境：微信开发者工具模拟器 · 基础库 3.17.2 · iPhone 12/13 (Pro)
+  ✓ 登录页（pages/login/index）：onShareAppMessage 返回固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ 首页（卡片的落地页）（pages/index/index）：onShareAppMessage 返回固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ 隐私政策页（pages/legal/privacy）：onShareAppMessage 返回固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ 样本记录信息表页（pages/sample/form）：onShareAppMessage 返回固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ 质控文档预览页（pages/qc/preview）：onShareAppMessage 返回固定卡片 — {"title":"湖北江夏实验室类器官研究中心 · 类器官送检","path":"/pages/index/index","imageUrl":"/static/share/cover.png"}
+  ✓ 页面实例上没有 onShareTimeline（不开朋友圈） — none
+
+结果：PASS（微信开发者工具模拟器，真实小程序运行时）
+
+补充：第一次用 cli auto 冷启动打开项目（没登录）时，当前页是 pages/login/index —— 没登录的人点开卡片先到登录页。
+没验证的：登录后的页面（本机走系统代理，模拟器发往 127.0.0.1 的请求失败，测试登录登不上；卡片内容与页面数据无关）；
+          卡片在微信聊天里的样子、别人点开后的落地 —— 要在体验版真机上转发一次看。

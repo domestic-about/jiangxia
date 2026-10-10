@@ -30,6 +30,7 @@ on:
       - 'code/deploy/test/wx-egress-proxy.mjs'
       - 'code/deploy/test/remote/04-miniapp-upload.sh'
       - 'doc/waves/tools/check-mp-component-events.py'
+      - 'doc/waves/tools/check-mp-share.mjs'
       - '.github/workflows/miniapp-staging.yml'
   workflow_dispatch: {}
 
