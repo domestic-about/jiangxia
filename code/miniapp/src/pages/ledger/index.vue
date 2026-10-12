@@ -14,6 +14,7 @@ import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
 import { downloadToTemp, openFile, shareFile } from '@/utils/fileHandoff'
 import { pagingFooterText, usePagedList } from '@/utils/paging'
+import { fetchSpeciesOptions, speciesFilterOptions } from '@/utils/species'
 import { openDocumentType } from '@/pages/doc/download'
 import { authHeader, exportFileName, exportUrl, isExportSheet } from './export'
 import type { LedgerFilterKey, LedgerFilterSpec, LedgerSheet, LedgerTableRow } from './sheets'
@@ -85,8 +86,13 @@ const cols = computed(() => columnsOf(sheet.value))
 const columnLabels = computed(() => cols.value?.columns.map(c => c.label) ?? [])
 const tableWidth = computed(() => ledgerTableWidth(columnLabels.value.length))
 const tableRows = computed<LedgerTableRow[]>(() => toTableRows(rows.value, sheet.value))
-/** 该表的筛选项（样本两张表只有核验状态；石蜡包埋那张另有染色） */
-const filterGroups = computed(() => sheet.value.filters)
+/**
+ * 种属筛选（CR-20261009-18 后续）：四张表都有的一排 ——「全部种属 / 字典里的常用值 / 未填」。
+ * 选项来自字典（`/mp/dict/hints?type=species`，拉不到用内置四个），所以不写在 sheets.ts 的静态注册表里。
+ */
+const speciesGroup = ref<LedgerFilterSpec>({ key: 'species', label: '种属', options: speciesFilterOptions(null) })
+/** 该表的筛选项（样本两张表只有核验状态；石蜡包埋那张另有染色；冻存是四个页签）+ 四张表共有的种属 */
+const filterGroups = computed<LedgerFilterSpec[]>(() => [...sheet.value.filters, speciesGroup.value])
 const rowById = computed(() => new Map(rows.value.map(row => [String(row.id), row])))
 /** 这一页只给内部人员（外部连入口都没有，「我的」里整块不渲染） */
 const isExternal = computed(() => store.me !== null && store.me !== undefined && normalizeIdentity(store.identity) !== 'internal')
@@ -153,7 +159,8 @@ function activeFilter(key: LedgerFilterKey): string {
  * 否则原样显示注册表里的 label。数字来自接口的 `tabCounts`，不是页面上的行数。
  */
 function chipText(group: LedgerFilterSpec, value: string, label: string): string {
-  if (!sheet.value.chipsText) {
+  // 页签数字只属于该表自己注册的筛选组（冻存的四个页签）；种属那一排不套（否则「全部种属」会被换成「全部 7」）
+  if (!sheet.value.chipsText || group.key === 'species') {
     return label
   }
   return sheet.value.chipsText(tabCounts.value)[value] ?? label
@@ -285,6 +292,10 @@ onLoad((options) => {
   }
   uni.setNavigationBarTitle({ title: sheet.value.title })
   load()
+  // 种属那一排的选项：字典拉回来再换上（管理员在字典里加的种属会出现在这里；拉不到就是内置四个，不挡看表）
+  fetchSpeciesOptions().then((list) => {
+    speciesGroup.value = { key: 'species', label: '种属', options: speciesFilterOptions(list) }
+  })
 })
 
 // H5 深链首屏不触发 onShow，所以两个钩子都挂；`started` 保证同一屏只取一次数
@@ -326,7 +337,7 @@ onReachBottom(() => {
     </view>
 
     <!-- ② 筛选行：搜索框 + 该表自己的筛选项（核验状态 / 染色，由 sheets.ts 给） -->
-    <!-- ② 筛选行：搜索框（该表有搜索才渲染）+ 该表自己的筛选项（由 sheets.ts 给） -->
+    <!-- ② 筛选行：搜索框（该表有搜索才渲染）+ 该表自己的筛选项（由 sheets.ts 给）+ 四张表共有的种属一排 -->
     <view v-if="sheet.searchPlaceholder" class="lqg-filter">
       <view class="lqg-filter__chip ledger-page__search">
         <input

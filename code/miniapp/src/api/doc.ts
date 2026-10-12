@@ -40,6 +40,8 @@ export interface DocListRow {
 export interface DocListQuery {
   sampleId?: string | number
   docKind?: string
+  /** 种属（**只有内部清单**认这个参数；等值，`__none__` = 还没填的。CR-20261009-18 后续） */
+  species?: string
   publishedBegin?: string
   publishedEnd?: string
   pageSize?: number
@@ -52,6 +54,7 @@ export function fetchIntDocList(params: DocListQuery = {}) {
     {
       sampleId: params.sampleId,
       docKind: params.docKind,
+      species: params.species,
       publishedBegin: params.publishedBegin,
       publishedEnd: params.publishedEnd,
       pageSize: params.pageSize ?? 100,

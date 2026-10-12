@@ -11,6 +11,8 @@ import { DOC_SECTION_NAME, DOC_TAB_NAME } from '@/config/app'
 import { groupDocs } from '@/pages/doc/group'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
+import type { SpeciesFilterOption } from '@/utils/species'
+import { fetchSpeciesOptions, speciesFilterOptions } from '@/utils/species'
 
 // 文档页签（UI:mp.doc.list / FLOW:F-DOC-02.step1 · 方案 A「按样本分组」）。
 //
@@ -57,6 +59,12 @@ const KIND_FILTERS = [
   { value: 'organoid_qc', label: '类器官质控' },
   { value: 'organoid_score', label: '类器官质量评分' },
 ]
+/**
+ * 种属（CR-20261009-18 后续，甲方 2026-10-10：小程序里也要能按种属看质控文档）：**只给内部人员**这一行 ——
+ * 中心要按种属归类看全部样本的文档；合作单位只看得到自己组的那几份，对外的文档清单也不带种属这个键。
+ */
+const species = ref('')
+const speciesFilters = ref<SpeciesFilterOption[]>(speciesFilterOptions(null))
 const RANGES: Array<{ value: RangeKey, label: string }> = [
   { value: 'all', label: '全部' },
   { value: 'week', label: '近一周' },
@@ -100,8 +108,15 @@ async function load() {
   failed.value = false
   try {
     // 身份还没拉回来时按外部那条打（最窄的那条），拿到 /mp/me 之后再刷一次
-    const fetcher = identity.value === 'internal' ? fetchIntDocList : fetchExtDocList
-    const res = await fetcher({ docKind: kind.value || undefined, pageSize: 100, ...rangeParams() })
+    const internal = identity.value === 'internal'
+    const fetcher = internal ? fetchIntDocList : fetchExtDocList
+    const res = await fetcher({
+      docKind: kind.value || undefined,
+      // 种属只发给内部清单（外部清单没有这个参数）
+      species: internal ? (species.value || undefined) : undefined,
+      pageSize: 100,
+      ...rangeParams(),
+    })
     rows.value = res.rows ?? []
   }
   catch {
@@ -124,6 +139,14 @@ function pickRange(value: RangeKey) {
   load()
 }
 
+function pickSpecies(value: string) {
+  if (species.value === value) {
+    return
+  }
+  species.value = value
+  load()
+}
+
 function pickKind(value: string) {
   if (kind.value === value) {
     return
@@ -135,6 +158,13 @@ function pickKind(value: string) {
 function pickCustom() {
   load()
 }
+
+// 种属那一行的选项来自字典（拉不到用内置四个，不挡看清单）
+onLoad(() => {
+  fetchSpeciesOptions().then((list) => {
+    speciesFilters.value = speciesFilterOptions(list)
+  })
+})
 
 onShow(async () => {
   uni.setNavigationBarTitle({ title: DOC_TAB_NAME })
@@ -203,6 +233,22 @@ onShow(async () => {
               :class="{ 'lqg-seg__item--on': kind === item.value }"
               @click="pickKind(item.value)"
             >{{ item.label }}</text>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 种属：只给内部人员（见 script 里的说明）；与上面两行同一个样子，放不下这一行自己左右滑 -->
+      <view v-if="identity === 'internal'" class="doc__row doc__row--line">
+        <text class="doc__label">种属</text>
+        <scroll-view class="doc__scroll" scroll-x :show-scrollbar="false" enhanced>
+          <view class="doc__chips">
+            <text
+              v-for="item in speciesFilters"
+              :key="item.value || 'all'"
+              class="lqg-seg__item doc__chip"
+              :class="{ 'lqg-seg__item--on': species === item.value }"
+              @click="pickSpecies(item.value)"
+            >{{ item.value ? item.label : '全部' }}</text>
           </view>
         </scroll-view>
       </view>

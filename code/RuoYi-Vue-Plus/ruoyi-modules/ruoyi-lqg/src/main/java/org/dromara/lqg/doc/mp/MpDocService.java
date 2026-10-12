@@ -20,6 +20,7 @@ import org.dromara.lqg.doc.render.mapper.DocFileMapper;
 import org.dromara.lqg.doc.render.service.DocRenderService;
 import org.dromara.lqg.doc.service.DocAvailabilityService;
 import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.query.SampleSpeciesFilter;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -137,6 +138,10 @@ public class MpDocService {
                     // 软删 / 不存在的样本 → 跳过（@TableLogic 兜住，seed 的 1010 走这条路）
                     sample = modelFactory.requireSample(sampleId);
                 } catch (Exception e) {
+                    continue;
+                }
+                // 种属（CR-20261009-18 后续）：样本行上的，与工作台「质控文档」列表同一口径
+                if (!SampleSpeciesFilter.matches(q.getSpecies(), sample.getSpecies())) {
                     continue;
                 }
                 // ★ 同一个判据，换成内部版这个 audience；前端不许自己再判一次

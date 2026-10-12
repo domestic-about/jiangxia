@@ -57,17 +57,20 @@ function queryOf(sheet: ExportSheet, filters?: Partial<LedgerFilters> | null): s
     case 'organoid':
       push(pairs, 'keyword', f.keyword)
       push(pairs, 'verifyStatus', f.verifyStatus)
+      push(pairs, 'species', f.species)
       break
     case 'embed':
       push(pairs, 'keyword', f.keyword)
       push(pairs, 'verifyStatus', f.verifyStatus)
       push(pairs, 'stain', f.stain)
+      push(pairs, 'species', f.species)
       break
     case 'cryo':
       // 四个页签：全部（都不带）/ -80 超期（overdueOnly=true）/ 液氮（location=ln2）/ 已取空（emptiedOnly=true）
       push(pairs, 'overdueOnly', f.cryoView === 'overdue' ? 'true' : '')
       push(pairs, 'location', f.cryoView === 'ln2' ? 'ln2' : '')
       push(pairs, 'emptiedOnly', f.cryoView === 'emptied' ? 'true' : '')
+      push(pairs, 'species', f.species)
       break
   }
   return pairs.length > 0 ? `?${pairs.join('&')}` : ''
@@ -80,6 +83,7 @@ function queryOf(sheet: ExportSheet, filters?: Partial<LedgerFilters> | null): s
  * exportUrl('tissue', { verifyStatus: 'pending' })  // '/mp/int/export/tissue?verifyStatus=pending'
  * exportUrl('cryo', { cryoView: 'overdue' })        // '/mp/int/export/cryo?overdueOnly=true'
  * exportUrl('embed', { stain: '', keyword: '' })     // '/mp/int/export/embed'（空值不带）
+ * exportUrl('tissue', { species: '移植猪' })        // '/mp/int/export/tissue?species=%E7%A7%BB%E6%A4%8D%E7%8C%AA'（四张表都带种属）
  * ```
  */
 export function exportUrl(sheet: ExportSheet, filters?: Partial<LedgerFilters> | null): string {

@@ -1,6 +1,6 @@
 // 种属纯函数（CR-20261009-18）
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SPECIES, normalizeSpecies, speciesChoices, speciesOnConfirm, speciesProblem, speciesSheetView } from './species'
+import { DEFAULT_SPECIES, SPECIES_NONE, normalizeSpecies, speciesChoices, speciesFilterOptions, speciesOnConfirm, speciesProblem, speciesSheetView } from './species'
 
 vi.mock('@/utils/request', () => ({ http: { get: vi.fn() } }))
 
@@ -74,5 +74,24 @@ describe('speciesSheetView / speciesOnConfirm（种属面板：一个输入框�
     expect(speciesOnConfirm(speciesSheetView(opts, '鸡', ''), '鸡')).toBe('鸡')
     expect(speciesOnConfirm(speciesSheetView(opts, '', ''), '')).toBeNull()
     expect(speciesOnConfirm(speciesSheetView(['鼠兔', '鼠'], '鼠', ''), '鼠')).toBe('鼠')
+  })
+})
+
+describe('speciesFilterOptions（列表页那一排种属筛选）', () => {
+  it('全部种属 + 字典值（保序）+ 未填；「未填」的值是后端认的 __none__', () => {
+    expect(speciesFilterOptions(['人', '鼠兔', '移植猪', '鸡'])).toEqual([
+      { value: '', label: '全部种属' },
+      { value: '人', label: '人' },
+      { value: '鼠兔', label: '鼠兔' },
+      { value: '移植猪', label: '移植猪' },
+      { value: '鸡', label: '鸡' },
+      { value: '__none__', label: '未填' },
+    ])
+    expect(SPECIES_NONE).toBe('__none__')
+  })
+
+  it('管理员在字典里加的种属会出现；字典拉不到用内置四个', () => {
+    expect(speciesFilterOptions(['人', '食蟹猴']).map(o => o.label)).toEqual(['全部种属', '人', '食蟹猴', '未填'])
+    expect(speciesFilterOptions(null).map(o => o.value)).toEqual(['', '人', '鼠兔', '移植猪', '鸡', '__none__'])
   })
 })

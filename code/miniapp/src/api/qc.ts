@@ -103,6 +103,8 @@ export interface QcListRow {
   internalNo?: string | null
   sampleKind: 'tissue' | 'organoid'
   sourceUnitName?: string | null
+  /** 种属（样本行上的，CR-20261009-18；没填的老记录为空） */
+  species?: string | null
   typeName?: string | null
   receiveDate?: string | null
   sampleQcStatus: QcDocStatus
@@ -116,6 +118,8 @@ export interface QcListRow {
 
 export interface QcListQuery {
   keyword?: string
+  /** 种属（等值；`__none__` = 还没填的） */
+  species?: string
   progress?: string
   pageNum: number
   pageSize: number

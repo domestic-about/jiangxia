@@ -40,7 +40,7 @@ import type { SheetKey } from './columns'
 import { ledgerColumns } from './columns'
 
 /** 筛选条件的键（每张表用其中一部分；`cryoView` 是冻存那三个页签专有的） */
-export type LedgerFilterKey = 'verifyStatus' | 'stain' | 'cryoView'
+export type LedgerFilterKey = 'verifyStatus' | 'stain' | 'cryoView' | 'species'
 
 /** 一个筛选项：chips 组（空串 = 不筛） */
 export interface LedgerFilterSpec {

@@ -22,6 +22,25 @@ public final class SampleSpeciesFilter {
     }
 
     /**
+     * 内存里判一条样本的种属合不合筛选（小程序「已完成文档清单」是按文档逐条装配的，不走样本表的 SQL）：
+     * 筛选为空 = 不筛；{@link SampleQueryBo#SPECIES_NONE} = 只要还没填种属的；其余 = 去首尾空白后逐字相等。
+     * 与 {@link #bySampleId} 的 SQL 口径一一对应。
+     *
+     * @param filter  筛选值
+     * @param species 样本行上的种属
+     */
+    public static boolean matches(String filter, String species) {
+        String value = StringUtils.isBlank(filter) ? null : filter.trim();
+        if (value == null) {
+            return true;
+        }
+        if (SampleQueryBo.SPECIES_NONE.equals(value)) {
+            return StringUtils.isBlank(species);
+        }
+        return value.equals(species == null ? null : species.trim());
+    }
+
+    /**
      * 给一条以 {@code sample_id} 挂样本的表的查询加上「所挂样本的种属 = species」。
      *
      * @param wrapper 石蜡包埋 / 冻存批次的查询

@@ -103,3 +103,28 @@ export function speciesOnConfirm(view: SpeciesSheetView, keyword: string): strin
   }
   return view.rows.length === 1 ? view.rows[0].value : null
 }
+
+// ── 列表按种属筛（CR-20261009-18 后续，甲方 2026-10-10：小程序和工作台都要能按种属筛）────────────
+
+/** 筛选值「未填」：只看还没填种属的记录（后端 `SampleQueryBo.SPECIES_NONE`，与工作台同一个值） */
+export const SPECIES_NONE = '__none__'
+
+/** 一个筛选按钮：值 + 文案 */
+export interface SpeciesFilterOption {
+  value: string
+  label: string
+}
+
+/**
+ * 列表页那一排种属筛选按钮：`全部种属` + 常用值（字典，拉不到用内置四个）+ `未填`。
+ *
+ * ★ 第一项叫「全部种属」而不是「全部」：同一页上还有别的筛选组（核验状态、类型…），都叫「全部」分不清是哪一组的。
+ * ★ 手填的、字典里没有的种属不在这一排里（没法穷举）—— 常填的请管理员加进字典；工作台的筛选框可以直接输入。
+ */
+export function speciesFilterOptions(dict: readonly unknown[] | null | undefined): SpeciesFilterOption[] {
+  return [
+    { value: '', label: '全部种属' },
+    ...speciesChoices(dict).map(value => ({ value, label: value })),
+    { value: SPECIES_NONE, label: '未填' },
+  ]
+}

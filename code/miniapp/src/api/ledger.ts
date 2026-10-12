@@ -55,11 +55,17 @@ export interface LedgerFilters {
    *   否则切到样本表时会把它当成一个不存在的核验状态发出去 → 空页）。
    */
   cryoView: string
+  /**
+   * 种属（CR-20261009-18 后续）：四张表都有这一档，切换工作表时保留。
+   * `''` 全部 / 字典里的某个种属 / `__none__` 未填。样本两张表筛的是样本自己的种属，
+   * 石蜡包埋、-80 冻存筛的是所挂样本的种属（后端同一个参数名 `species`）。
+   */
+  species: string
 }
 
 /** 空筛选 */
 export function emptyFilters(): LedgerFilters {
-  return { keyword: '', verifyStatus: '', stain: '', cryoView: '' }
+  return { keyword: '', verifyStatus: '', stain: '', cryoView: '', species: '' }
 }
 
 /**
@@ -73,6 +79,7 @@ export function fetchSampleLedgerRows(sampleKind: 'tissue' | 'organoid', filters
       sampleKind,
       keyword: filters.keyword.trim() || undefined,
       verifyStatus: filters.verifyStatus || undefined,
+      species: filters.species || undefined,
       pageNum,
       pageSize,
     },

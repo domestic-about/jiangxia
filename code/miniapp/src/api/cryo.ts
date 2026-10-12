@@ -218,6 +218,7 @@ export function fetchCryoLedgerRows(filters: LedgerFilters, pageNum = 1, pageSiz
       overdueOnly: filters.cryoView === 'overdue' ? true : undefined,
       location: filters.cryoView === 'ln2' ? 'ln2' : undefined,
       emptiedOnly: filters.cryoView === 'emptied' ? true : undefined,
+      species: filters.species || undefined,
       pageNum,
       pageSize,
     },

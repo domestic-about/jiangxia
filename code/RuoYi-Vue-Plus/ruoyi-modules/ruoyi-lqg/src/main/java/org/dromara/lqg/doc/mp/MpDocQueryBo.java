@@ -47,6 +47,9 @@ public class MpDocQueryBo extends PageQuery {
     @Schema(description = "sample_qc / organoid_qc / organoid_score / merged")
     private String docKind;
 
+    @Schema(description = "种属（样本行上的，等值；传 __none__ 只看还没填种属的；CR-20261009-18 后续：小程序质控文档页按种属筛）")
+    private String species;
+
     @Schema(description = "完成时间起（yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）")
     private String publishedBegin;
 

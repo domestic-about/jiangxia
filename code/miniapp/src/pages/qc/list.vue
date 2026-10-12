@@ -9,6 +9,8 @@ import { goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
 import { pagingFooterText, usePagedList } from '@/utils/paging'
+import type { SpeciesFilterOption } from '@/utils/species'
+import { fetchSpeciesOptions, speciesFilterOptions } from '@/utils/species'
 import { PROGRESS_FILTERS, progressText, QC_TABS, statusTag, statusText } from './status'
 
 // 小程序「填写质控文档」列表（内部人员专用；甲方 2026-09-30：小程序里也能编辑质控文档）。
@@ -28,10 +30,14 @@ const isInternal = computed(() => normalizeIdentity(store.identity) === 'interna
 
 const keyword = ref('')
 const progress = ref('')
+/** 种属筛选（CR-20261009-18 后续）：全部种属 / 字典里的常用值 / 未填 —— 与工作台「质控文档」列表同一个参数 */
+const species = ref('')
+const speciesFilters = ref<SpeciesFilterOption[]>(speciesFilterOptions(null))
 
 const pager = usePagedList<QcListRow>({
   fetchPage: (pageNum, pageSize) => fetchQcList({
     keyword: keyword.value.trim() || undefined,
+    species: species.value || undefined,
     progress: progress.value || undefined,
     pageNum,
     pageSize,
@@ -66,6 +72,14 @@ async function load() {
   await pager.reload()
 }
 
+function pickSpecies(value: string) {
+  if (species.value === value) {
+    return
+  }
+  species.value = value
+  load()
+}
+
 function pickProgress(value: string) {
   if (progress.value === value) {
     return
@@ -85,6 +99,13 @@ function onFooterTap() {
 // 从编辑页回来（保存 / 完成并同步过）状态要是新的
 onShow(() => {
   load()
+})
+
+// 种属那一排的选项来自字典（拉不到用内置四个，不挡看列表）
+onLoad(() => {
+  fetchSpeciesOptions().then((list) => {
+    speciesFilters.value = speciesFilterOptions(list)
+  })
 })
 
 onPullDownRefresh(async () => {
@@ -121,6 +142,18 @@ onReachBottom(() => {
             >{{ item.label }}</text>
           </view>
         </scroll-view>
+        <!-- 种属一排（CR-20261009-18 后续）：放不下时这一行自己左右滑 -->
+        <scroll-view class="qcl__scroll qcl__scroll--species" scroll-x :show-scrollbar="false" enhanced>
+          <view class="qcl__chips">
+            <text
+              v-for="item in speciesFilters"
+              :key="item.value || 'all'"
+              class="lqg-seg__item qcl__chip"
+              :class="{ 'lqg-seg__item--on': species === item.value }"
+              @click="pickSpecies(item.value)"
+            >{{ item.label }}</text>
+          </view>
+        </scroll-view>
       </view>
 
       <LoadingState v-if="loading" />
@@ -141,7 +174,7 @@ onReachBottom(() => {
             <text class="qcl__no lqg-mono">{{ row.internalNo || '—' }}</text>
             <text class="qcl__progress" :class="`qcl__progress--${row.progress}`">{{ progressText(row.progress, row.publishedCount) }}</text>
           </view>
-          <text class="qcl__sub">{{ row.sourceUnitName || '—' }} · {{ row.sampleKind === 'organoid' ? '类器官送样记录' : '样本记录信息表' }} · 收样 {{ row.receiveDate || '—' }}</text>
+          <text class="qcl__sub">{{ row.sourceUnitName || '—' }} · {{ row.species || '种属未填' }} · {{ row.sampleKind === 'organoid' ? '类器官送样记录' : '样本记录信息表' }} · 收样 {{ row.receiveDate || '—' }}</text>
           <view class="qcl__docs">
             <view v-for="tab in QC_TABS" :key="tab.type" class="qcl__doc">
               <text class="qcl__doc-name">{{ tab.short }}</text>
@@ -183,6 +216,10 @@ onReachBottom(() => {
 .qcl__scroll {
   width: 100%;
   white-space: nowrap;
+}
+
+.qcl__scroll--species {
+  margin-top: var(--lqg-sp-3);
 }
 
 .qcl__chips {

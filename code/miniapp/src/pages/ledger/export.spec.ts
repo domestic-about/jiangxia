@@ -84,4 +84,16 @@ describe('exportFileName(sheet, at)', () => {
     expect(exportFileName('embed', at)).toBe('石蜡包埋送样记录-20260918102030.xlsx')
     expect(exportFileName('cryo', at)).toBe('-80冻存-20260918102030.xlsx')
   })
+
+  // 种属（CR-20261009-18 后续）：四张表都带；空值不带；值要转义
+  it('种属筛选：四张表都带 species，排在各自原有参数之后；「未填」发 __none__', () => {
+    const zhu = encodeURIComponent('移植猪')
+    expect(exportUrl('tissue', { species: '移植猪' })).toBe(`/mp/int/export/tissue?species=${zhu}`)
+    expect(exportUrl('organoid', { keyword: 'T-oco01', verifyStatus: 'valid', species: '移植猪' }))
+      .toBe(`/mp/int/export/organoid?keyword=T-oco01&verifyStatus=valid&species=${zhu}`)
+    expect(exportUrl('embed', { stain: 'HE', species: '移植猪' })).toBe(`/mp/int/export/embed?stain=HE&species=${zhu}`)
+    expect(exportUrl('cryo', { cryoView: 'ln2', species: '移植猪' })).toBe(`/mp/int/export/cryo?location=ln2&species=${zhu}`)
+    expect(exportUrl('cryo', { species: '__none__' })).toBe('/mp/int/export/cryo?species=__none__')
+    expect(exportUrl('tissue', { species: '' })).toBe('/mp/int/export/tissue')
+  })
 })

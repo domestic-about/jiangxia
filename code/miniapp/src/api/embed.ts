@@ -372,6 +372,7 @@ export function fetchEmbedLedgerRows(filters: LedgerFilters, pageNum = 1, pageSi
       keyword: filters.keyword.trim() || undefined,
       verifyStatus: filters.verifyStatus || undefined,
       stain: filters.stain || undefined,
+      species: filters.species || undefined,
       pageNum,
       pageSize,
     },
