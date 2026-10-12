@@ -24,7 +24,13 @@
 
 **锚 id**：`FIELD:t_lqg_cryo_batch.frozen_by`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "冻存人", "length": 50, "name": "frozen_by", "nullable": true, "type": "str"}
+{"comment": "冻存人姓名（选人时的快照；CR-20261012-22 之前是手填文字）", "length": 50, "name": "frozen_by", "nullable": true, "type": "str"}
+
+## t_lqg_cryo_batch.frozen_by_id
+
+**锚 id**：`FIELD:t_lqg_cryo_batch.frozen_by_id`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "冻存人 user_id（CR-20261012-22：从内部人员名单里选）", "name": "frozen_by_id", "nullable": true, "type": "id"}
 
 ## t_lqg_cryo_batch.id
 
@@ -318,7 +324,13 @@
 
 **锚 id**：`FIELD:t_lqg_embed.embed_by`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "包埋人", "length": 50, "name": "embed_by", "nullable": true, "type": "str"}
+{"comment": "包埋人姓名（选人时的快照；CR-20261012-22 之前是手填文字）", "length": 50, "name": "embed_by", "nullable": true, "type": "str"}
+
+## t_lqg_embed.embed_by_id
+
+**锚 id**：`FIELD:t_lqg_embed.embed_by_id`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "包埋人 user_id（CR-20261012-22：从内部人员名单里选）", "name": "embed_by_id", "nullable": true, "type": "id"}
 
 ## t_lqg_embed.id
 
@@ -332,11 +344,17 @@
 
 {"comment": "判无效的原因（外部可见）", "length": 200, "name": "invalid_reason", "nullable": true, "type": "str"}
 
+## t_lqg_embed.operator_id
+
+**锚 id**：`FIELD:t_lqg_embed.operator_id`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "操作人 user_id（CR-20261012-22：从内部人员名单里选）", "name": "operator_id", "nullable": true, "type": "id"}
+
 ## t_lqg_embed.operator_name
 
 **锚 id**：`FIELD:t_lqg_embed.operator_name`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "操作人", "length": 50, "name": "operator_name", "nullable": true, "type": "str"}
+{"comment": "操作人姓名（选人时的快照；CR-20261012-22 之前是手填文字）", "length": 50, "name": "operator_name", "nullable": true, "type": "str"}
 
 ## t_lqg_embed.organoid_source_type
 
@@ -830,11 +848,17 @@
 
 {"comment": "有无固定 Y 有 / N 无（按钮）", "name": "is_fixed", "nullable": true, "type": "flag"}
 
+## t_lqg_sample.operator_id
+
+**锚 id**：`FIELD:t_lqg_sample.operator_id`（ticket 的 blueprint_refs 写这个）
+
+{"comment": "操作人 user_id（CR-20261012-22：从内部人员名单里选；空 = 没填，或历史手填的姓名对不上账号）。操作人统计按它认人", "name": "operator_id", "nullable": true, "type": "id"}
+
 ## t_lqg_sample.operator_name
 
 **锚 id**：`FIELD:t_lqg_sample.operator_name`（ticket 的 blueprint_refs 写这个）
 
-{"comment": "操作人（姓名文本，默认带当前登录人，可改）", "length": 50, "name": "operator_name", "nullable": true, "type": "str"}
+{"comment": "操作人姓名（选人时的快照，默认当前登录人；CR-20261012-22 之前是手填文字）", "length": 50, "name": "operator_name", "nullable": true, "type": "str"}
 
 ## t_lqg_sample.organoid_type
 

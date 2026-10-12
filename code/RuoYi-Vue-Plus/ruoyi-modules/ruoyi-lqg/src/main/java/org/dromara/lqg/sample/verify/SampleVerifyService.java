@@ -10,6 +10,8 @@ import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.lqg.auth.staff.guard.StaffGrantRules;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryService;
+import org.dromara.lqg.auth.staff.directory.StaffRef;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitSegmentBo;
 import org.dromara.lqg.sample.guard.SampleChildrenCheckers;
@@ -65,6 +67,8 @@ public class SampleVerifyService {
     private final SampleMapper sampleMapper;
     private final SampleChildrenCheckers childrenCheckers;
     private final SampleSubmitSegmentWriter segmentWriter;
+    /** 操作人从内部人员名单里选（CR-20261012-22） */
+    private final StaffDirectoryService staffDirectory;
 
     /**
      * 核验（{@code PUT /lqg/sample/{id}/verify}）：pending→valid / pending→invalid /
@@ -254,6 +258,12 @@ public class SampleVerifyService {
             bo.getHasQcSheet(), bo.getHasViabilityReport(), bo.getOperatorName()));
         String internalNo = SampleKindRules.normalize(bo.getInternalNo());
         requireInternalNoUnique(internalNo, sample.getId());
+        // 操作人（做实验的人，不是点核验的人）：请求里带了才动；带了账号 id 以它为准（CR-20261012-22）
+        boolean operatorGiven = bo.getOperatorId() != null || bo.getOperatorName() != null;
+        StaffRef operator = operatorGiven
+            ? staffDirectory.resolve("操作人", bo.getOperatorId(), bo.getOperatorName(),
+                StaffRef.of(sample.getOperatorId(), sample.getOperatorName()))
+            : StaffRef.EMPTY;
         Date now = new Date();
         LambdaUpdateWrapper<Sample> patch = new LambdaUpdateWrapper<Sample>()
             .eq(Sample::getId, sample.getId())
@@ -272,7 +282,8 @@ public class SampleVerifyService {
             .set(bo.getHasQcSheet() != null, Sample::getHasQcSheet, trimToNull(bo.getHasQcSheet()))
             .set(bo.getHasViabilityReport() != null, Sample::getHasViabilityReport,
                 trimToNull(bo.getHasViabilityReport()))
-            .set(bo.getOperatorName() != null, Sample::getOperatorName, trimToNull(bo.getOperatorName()));
+            .set(operatorGiven, Sample::getOperatorId, operator.id())
+            .set(operatorGiven, Sample::getOperatorName, operator.name());
         applySegment(patch, segment);
         sampleMapper.update(null, patch);
         log.info("核验判有效：id={} internalNo={} receiveDate={} verifyBy={} 一并保存送检段={}",

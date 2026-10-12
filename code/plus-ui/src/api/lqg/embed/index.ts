@@ -55,6 +55,8 @@ export interface EmbedVO {
   tissueProcessTime?: string | null;
   agaroseEmbedTime?: string | null;
   embedBy?: string | null;
+  /** 包埋人账号 id（从内部人员名单里选，CR-20261012-22；历史手填的姓名没有它） */
+  embedById?: string | number | null;
   dehydrateTime?: string | null;
   agaroseSendTime?: string | null;
   paraffinEmbedTime?: string | null;
@@ -65,6 +67,8 @@ export interface EmbedVO {
   stainOther?: string | null;
   markers?: EmbedMarkerVO[] | null;
   operatorName?: string | null;
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22） */
+  operatorId?: string | number | null;
   remark?: string | null;
   /** internal / external（提交当时的快照，不按当前角色现算） */
   submitSource?: 'internal' | 'external' | string | null;
@@ -100,6 +104,12 @@ export interface EmbedQuery {
   /** 切片时间区间（两端都含）yyyy-MM-dd */
   sectionTimeBegin?: string | null;
   sectionTimeEnd?: string | null;
+  /** 石蜡包埋时间区间（两端都含）yyyy-MM-dd —— 操作人统计按这个时间（CR-20261012-22） */
+  paraffinEmbedTimeBegin?: string | null;
+  paraffinEmbedTimeEnd?: string | null;
+  /** 按人筛（CR-20261012-22）：u:<账号 id> / n:<没关联账号的姓名> / none */
+  embedByKey?: string | null;
+  operatorKey?: string | null;
   verifyStatus?: string | null;
   /** internal / external */
   submitSource?: string | null;
@@ -118,6 +128,8 @@ export interface EmbedFillForm {
   tissueProcessTime?: string | null;
   agaroseEmbedTime?: string | null;
   embedBy?: string | null;
+  /** 包埋人账号 id（从内部人员名单里选，CR-20261012-22；历史手填的姓名没有它） */
+  embedById?: string | number | null;
   dehydrateTime?: string | null;
   agaroseSendTime?: string | null;
   paraffinEmbedTime?: string | null;
@@ -128,6 +140,8 @@ export interface EmbedFillForm {
   /** 传了就整组替换（后端 marker 的语义） */
   markers?: EmbedMarkerVO[] | null;
   operatorName?: string | null;
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22） */
+  operatorId?: string | number | null;
   remark?: string | null;
 }
 

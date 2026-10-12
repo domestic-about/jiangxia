@@ -19,6 +19,9 @@ import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import SamplePicker from '@/components/lqg/SamplePicker.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
+import StaffSheet from '@/components/lqg/StaffSheet.vue'
+import type { PersonValue } from '@/utils/staff'
+import { defaultPerson, fetchStaffOptions } from '@/utils/staff'
 import { finishTo } from '@/router/config'
 import { useUserStore } from '@/store/user'
 // ★ 一律显式 import wd-* 的 .vue（SAMPLE-MP-001 坑 6：只靠 easycom 会静默丢掉该模块的 .js 产物）
@@ -67,6 +70,8 @@ const pickerValue = ref<number>(Date.now())
 const pickerField = ref<'freezeTime' | 'toLn2Time'>('freezeTime')
 const pickerRef = ref<{ open: () => void } | null>(null)
 const samplePickerRef = ref<{ open: () => void } | null>(null)
+/** 冻存人：从内部人员名单里选（CR-20261012-22） */
+const staffSheetRef = ref<{ open: () => void } | null>(null)
 
 /** 入口模式归一化：只认三个字面量，其余（含 undefined / ''）一律只读 */
 function normalizeMode(raw: unknown): CryoMode {
@@ -128,8 +133,10 @@ async function load() {
     }
     if (mode.value === 'new') {
       form.value = emptyCryoForm()
-      // 冻存人默认带当前登录人（可改）
-      form.value.frozenBy = store.name || ''
+      // 冻存人默认带当前登录人（可改；在内部人员名单里就带上账号 id，CR-20261012-22）
+      const me = defaultPerson(await fetchStaffOptions(), store.me?.userId, store.name)
+      form.value.frozenById = me.id
+      form.value.frozenBy = me.name
       if (incomingSampleId.value) {
         await prefillSample(incomingSampleId.value)
       }
@@ -173,6 +180,16 @@ async function prefillSample(sampleId: string) {
  * 选了样本（只列已核验有效的样本，筛选在后端）：记样本，并用**「内部编号-」预填**冻存样品名称。
  * 用户已经手填过名称就不覆盖。
  */
+function openStaffSheet() {
+  staffSheetRef.value?.open()
+}
+
+/** 选了冻存人：账号 id 与姓名一起落 */
+function onFrozenByPicked(person: PersonValue) {
+  form.value.frozenById = person.id
+  form.value.frozenBy = person.name
+}
+
 function onSamplePicked(sample: SampleRow) {
   form.value.sampleId = String(sample.id)
   sampleSpecies.value = String(sample.species ?? '')
@@ -390,12 +407,13 @@ async function submit() {
           />
         </FieldRow>
 
+        <!-- 冻存人（CR-20261012-22）：从内部人员名单里选，不再手填 -->
         <FieldRow
           label="冻存人"
-          :maxlength="50"
+          control="select"
           :readonly="!editable"
           :model-value="form.frozenBy"
-          @update:model-value="(v: string) => form.frozenBy = v"
+          @pick="openStaffSheet"
         />
 
         <!-- 飞书 2026-10-03 小程序行12：新增 / 修改时可直接选（与工作台抽屉一致）；没转液氮就留空。
@@ -455,6 +473,15 @@ async function submit() {
     </view>
 
     <SamplePicker ref="samplePickerRef" :disabled="!editable" @pick="onSamplePicked" />
+
+    <!-- 冻存人：底部弹框从内部人员名单里选（CR-20261012-22） -->
+    <StaffSheet
+      ref="staffSheetRef"
+      title="冻存人"
+      :model-value="{ id: form.frozenById, name: form.frozenBy }"
+      :disabled="!editable"
+      @update:model-value="onFrozenByPicked"
+    />
 
     <wd-datetime-picker
       ref="pickerRef"

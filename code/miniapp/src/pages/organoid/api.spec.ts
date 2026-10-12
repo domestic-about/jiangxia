@@ -39,9 +39,9 @@ describe('类器官内部提交体', () => {
   it('新增（POST）带 sampleKind=organoid —— 类目由入口定下', () => {
     const body = internalOrganoidPayload(filled())
     expect(body.sampleKind).toBe('organoid')
-    // 别的字段一个都不能少（合并进 patch 之后是 11 个键：原来 9 个 + 代数 + 种属）
+    // 别的字段一个都不能少（合并进 patch 之后是 12 个键：原来 9 个 + 代数 + 种属 + 操作人账号 id）
     expect(Object.keys(body).sort()).toEqual([
-      'hasViabilityReport', 'internalNo', 'operatorName', 'organoidType', 'passage',
+      'hasViabilityReport', 'internalNo', 'operatorId', 'operatorName', 'organoidType', 'passage',
       'processTime', 'receiveDate', 'sampleKind', 'sourceUnitId', 'sourceUnitName', 'species',
     ])
   })
@@ -50,12 +50,19 @@ describe('类器官内部提交体', () => {
     const body = internalOrganoidPatch(filled())
     expect(body).not.toHaveProperty('sampleKind')
     expect(Object.keys(body).sort()).toEqual([
-      'hasViabilityReport', 'internalNo', 'operatorName', 'organoidType', 'passage',
+      'hasViabilityReport', 'internalNo', 'operatorId', 'operatorName', 'organoidType', 'passage',
       'processTime', 'receiveDate', 'sourceUnitId', 'sourceUnitName', 'species',
     ])
     // 数值 / 空值口径不变：选了单位 id 就带 id，处理时间 T → 空格
     expect(body.sourceUnitId).toBe(9000009002)
     expect(body.processTime).toBe('2026-09-18 10:00:00')
+  })
+
+  it('操作人是一对键（CR-20261012-22）：选了名单里的人带账号 id；历史手填的姓名没有账号 → id 发 null', () => {
+    const picked = filled()
+    picked.operatorId = '1970000000000000001'
+    expect(internalOrganoidPatch(picked)).toMatchObject({ operatorId: '1970000000000000001', operatorName: '李工' })
+    expect(internalOrganoidPatch(filled())).toMatchObject({ operatorId: null, operatorName: '李工' })
   })
 
   it('修改模式的调用点用的是 patch（不是 payload）', () => {

@@ -245,7 +245,18 @@ public class MpSampleService {
         merged.setHasQcSheet(pick(patch, "hasQcSheet", p.getHasQcSheet(), exists.getHasQcSheet()));
         merged.setHasViabilityReport(pick(patch, "hasViabilityReport", p.getHasViabilityReport(),
             exists.getHasViabilityReport()));
-        merged.setOperatorName(pick(patch, "operatorName", p.getOperatorName(), exists.getOperatorName()));
+        // 操作人是一对（账号 id + 姓名，CR-20261012-22）：带了 id 以它为准（姓名由名单定，补丁里没带名字就不拿库里的旧名字去凑）；
+        // 只带名字（旧版小程序）→ id 交给 SampleService 按名单对；都没带 → 都沿用
+        if (patch.has("operatorId")) {
+            merged.setOperatorId(p.getOperatorId());
+            merged.setOperatorName(patch.has("operatorName") ? p.getOperatorName() : null);
+        } else if (patch.has("operatorName")) {
+            merged.setOperatorId(null);
+            merged.setOperatorName(p.getOperatorName());
+        } else {
+            merged.setOperatorId(exists.getOperatorId());
+            merged.setOperatorName(exists.getOperatorName());
+        }
         merged.setRemark(pick(patch, "remark", p.getRemark(), exists.getRemark()));
         return merged;
     }

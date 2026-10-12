@@ -157,6 +157,15 @@ function logout() {
           :note="INTERNAL_ADMIN_NOTE"
           @pick="onAdminPick"
         />
+        <!-- 操作人统计（CR-20261012-22）：按人、按时间段看四张表各做了多少 -->
+        <view class="lqg-card lqg-card--flush mine__card mine__card--stat">
+          <MeRow
+            icon="stat"
+            title="操作人统计"
+            desc="按人、按时间段看每张表做了多少"
+            @click="goPage(ME_TARGET.operatorStat)"
+          />
+        </view>
       </template>
 
       <!-- 协议与隐私（正文在 SYS-RELEASE-001） -->
@@ -190,6 +199,11 @@ function logout() {
 
 .mine__head {
   margin: 0 var(--lqg-gutter);
+}
+
+/* 「操作人统计」那一行紧跟内部管理板块，留一点间距 */
+.mine__card--stat {
+  margin-top: var(--lqg-sp-4);
 }
 
 /* 分组卡左右留屏边距（落地规范 §7：屏边距 16；以前这两张贴着屏幕边缘，G14） */

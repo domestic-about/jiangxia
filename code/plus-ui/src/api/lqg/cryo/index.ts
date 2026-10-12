@@ -45,6 +45,8 @@ export interface CryoBatchVO {
   /** 暂存 -80：Y 是 / N 否 */
   inMinus80?: string | null;
   frozenBy?: string | null;
+  /** 冻存人账号 id（从内部人员名单里选，CR-20261012-22；历史手填的姓名没有它） */
+  frozenById?: string | number | null;
   toLn2Time?: string | null;
   ln2Location?: string | null;
   remark?: string | null;
@@ -109,6 +111,8 @@ export interface CryoQuery {
   emptiedOnly?: boolean | null;
   freezeTimeBegin?: string | null;
   freezeTimeEnd?: string | null;
+  /** 冻存人，按人筛（CR-20261012-22）：u:<账号 id> / n:<没关联账号的姓名> / none */
+  frozenByKey?: string | null;
 }
 
 /** 新增 / 修改批次入参（POST / PUT /lqg/cryo/batch） */
@@ -124,6 +128,8 @@ export interface CryoBatchForm {
   /** Y 是 / N 否 */
   inMinus80?: string | null;
   frozenBy?: string | null;
+  /** 冻存人账号 id（从内部人员名单里选，CR-20261012-22；历史手填的姓名没有它） */
+  frozenById?: string | number | null;
   toLn2Time?: string | null;
   ln2Location?: string | null;
   remark?: string | null;

@@ -159,13 +159,15 @@ tables:
       - { name: process_time, type: datetime, nullable: true, comment: "处理时间" }
       - { name: has_qc_sheet, type: flag, nullable: true, comment: "质控表 Y 有 / N 无（按钮，手点，不自动推导）" }
       - { name: has_viability_report, type: flag, nullable: true, comment: "细胞活率报告 Y 有 / N 无（按钮，手点）" }
-      - { name: operator_name, type: str, length: 50, nullable: true, comment: "操作人（姓名文本，默认带当前登录人，可改）" }
+      - { name: operator_id, type: id, nullable: true, comment: "操作人 user_id（CR-20261012-22：从内部人员名单里选；空 = 没填，或历史手填的姓名对不上账号）。操作人统计按它认人" }
+      - { name: operator_name, type: str, length: 50, nullable: true, comment: "操作人姓名（选人时的快照，默认当前登录人；CR-20261012-22 之前是手填文字）" }
       - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
     indexes:
       - { name: idx_sample_submitter, cols: [submitter_id] }
       - { name: idx_sample_unit, cols: [source_unit_id] }
       - { name: idx_sample_status_date, cols: [verify_status, receive_date] }
       - { name: idx_sample_species, cols: [species] }
+      - { name: idx_sample_operator, cols: [operator_id] }
 
   # ═══════════ EMBED 石蜡包埋送样记录 ═══════════
 
@@ -189,19 +191,23 @@ tables:
       - { name: tissue_receive_time, type: date, nullable: true, comment: "组织收样时间（默认带样本的收样日期，可改）" }
       - { name: tissue_process_time, type: date, nullable: true, comment: "组织处理时间（默认带样本处理时间的日期部分，可改）" }
       - { name: agarose_embed_time, type: date, nullable: true, comment: "琼脂糖包埋样本时间" }
-      - { name: embed_by, type: str, length: 50, nullable: true, comment: "包埋人" }
+      - { name: embed_by, type: str, length: 50, nullable: true, comment: "包埋人姓名（选人时的快照；CR-20261012-22 之前是手填文字）" }
+      - { name: embed_by_id, type: id, nullable: true, comment: "包埋人 user_id（CR-20261012-22：从内部人员名单里选）" }
       - { name: dehydrate_time, type: date, nullable: true, comment: "脱水时间" }
       - { name: agarose_send_time, type: date, nullable: true, comment: "琼脂糖包埋样本送样时间" }
       - { name: paraffin_embed_time, type: date, nullable: true, comment: "石蜡包埋时间" }
       - { name: section_time, type: date, nullable: true, comment: "切片时间（非空 = 已切片，样本表（样本记录信息表 / 类器官收样记录两页）的切片染色提示读它）" }
       - { name: stain_types, type: str, length: 64, nullable: true, comment: "★ 染色，多选，逗号分隔的 lqg_stain_type 值（HE,IF,IHC,OTHER / NONE）；NONE 与其余互斥；空 = 还没选" }
       - { name: stain_other, type: str, length: 100, nullable: true, comment: "选了 OTHER 时写具体染色名" }
-      - { name: operator_name, type: str, length: 50, nullable: true, comment: "操作人" }
+      - { name: operator_name, type: str, length: 50, nullable: true, comment: "操作人姓名（选人时的快照；CR-20261012-22 之前是手填文字）" }
+      - { name: operator_id, type: id, nullable: true, comment: "操作人 user_id（CR-20261012-22：从内部人员名单里选）" }
       - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
     indexes:
       - { name: idx_embed_sample, cols: [sample_id] }
       - { name: idx_embed_submitter, cols: [submitter_id] }
       - { name: idx_embed_status, cols: [verify_status] }
+      - { name: idx_embed_embed_by, cols: [embed_by_id] }
+      - { name: idx_embed_operator, cols: [operator_id] }
 
   - table: t_lqg_embed_marker
     comment: "石蜡块的 marker 表达（一个蜡块可测多个 marker；导出时拼成「Ki67：强表达；CK19：阴性」一格）"
@@ -233,13 +239,15 @@ tables:
       - { name: init_qty, type: int, nullable: false, comment: "冻存数量/支（初始支数，>0；可改，改后按时间逐笔算剩余不得为负，见 FLOW:F-CRYO-02.step5）" }
       - { name: density, type: str, length: 50, nullable: true, comment: "冻存密度（文本，如 2e5）" }
       - { name: in_minus80, type: flag, nullable: false, comment: "暂存 -80 度超低温冰箱 Y 是 / N 否（按钮）；N = 直接进液氮，ln2_location 必填" }
-      - { name: frozen_by, type: str, length: 50, nullable: true, comment: "冻存人" }
+      - { name: frozen_by, type: str, length: 50, nullable: true, comment: "冻存人姓名（选人时的快照；CR-20261012-22 之前是手填文字）" }
+      - { name: frozen_by_id, type: id, nullable: true, comment: "冻存人 user_id（CR-20261012-22：从内部人员名单里选）" }
       - { name: to_ln2_time, type: date, nullable: true, comment: "★ -80 转移至液氮时间；非空 = 已转液氮，不再参与超期提醒，此后取走的 from_location = ln2" }
       - { name: ln2_location, type: str, length: 100, nullable: true, comment: "液氮储存位置（文本；登记转液氮时必填）" }
       - { name: remark, type: str, length: 500, nullable: true, comment: "备注" }
     indexes:
       - { name: idx_cryo_batch_sample, cols: [sample_id] }
       - { name: idx_cryo_batch_remind, cols: [in_minus80, to_ln2_time, freeze_time] }
+      - { name: idx_cryo_batch_frozen_by, cols: [frozen_by_id] }
 
   - table: t_lqg_cryo_flow
     comment: "冻存出入库流水（追溯靠它；取走 / 补入登记可改可删，删为软删；改删后逐笔剩余不得为负）"

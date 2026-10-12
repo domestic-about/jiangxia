@@ -9,6 +9,7 @@ import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.dromara.common.core.domain.dto.DictDataDTO;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.service.DictService;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryStub;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.domain.EmbedMarker;
 import org.dromara.lqg.embed.domain.bo.EmbedFillBo;
@@ -281,11 +282,11 @@ class EmbedVerifyFillContractTest {
     }
 
     @Test
-    @DisplayName("⑪ 形状：补填段 15 项 = EmbedFillBo 的字段 = 外部两项 + 实验室 13 项；EmbedSubmitBo = 补填段 + id / 所挂样本 / 石蜡块编号")
+    @DisplayName("⑪ 形状：补填段 17 项 = EmbedFillBo 的字段 = 外部两项 + 实验室 15 项（包埋人、操作人各带一个账号 id）；EmbedSubmitBo = 补填段 + id / 所挂样本 / 石蜡块编号")
     void fillShapeIsPinned() {
         Set<String> fillFields = fields(EmbedFillBo.class);
         assertEquals(new LinkedHashSet<>(EmbedFillRules.ALL_KEYS), fillFields);
-        assertEquals(15, EmbedFillRules.ALL_KEYS.size());
+        assertEquals(17, EmbedFillRules.ALL_KEYS.size());
         assertTrue(EmbedFillRules.SUBMIT_KEYS.stream().noneMatch(EmbedFillRules.LAB_KEYS::contains), "两组不重叠");
         Set<String> submit = new LinkedHashSet<>();
         for (Class<?> k = EmbedSubmitBo.class; k != null && k != Object.class; k = k.getSuperclass()) {
@@ -430,7 +431,7 @@ class EmbedVerifyFillContractTest {
                     }
                     throw new UnsupportedOperationException(method.getName());
                 });
-            return new EmbedFillWriter(markerMapper, new EmbedDictService(dict));
+            return new EmbedFillWriter(markerMapper, new EmbedDictService(dict), StaffDirectoryStub.empty());
         }
 
         EmbedVerifyService service() {

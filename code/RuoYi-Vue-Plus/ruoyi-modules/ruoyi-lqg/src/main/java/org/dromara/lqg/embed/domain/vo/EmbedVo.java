@@ -92,6 +92,9 @@ public class EmbedVo implements Serializable {
     @Schema(description = "包埋人")
     private String embedBy;
 
+    @Schema(description = "包埋人 user_id（内部人员；空 = 没填或历史手填的姓名没关联账号，CR-20261012-22）")
+    private Long embedById;
+
     @Schema(description = "脱水时间")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dehydrateTime;
@@ -122,6 +125,9 @@ public class EmbedVo implements Serializable {
 
     @Schema(description = "操作人")
     private String operatorName;
+
+    @Schema(description = "操作人 user_id（内部人员；空 = 没填或历史手填的姓名没关联账号，CR-20261012-22）")
+    private Long operatorId;
 
     @Schema(description = "备注")
     private String remark;

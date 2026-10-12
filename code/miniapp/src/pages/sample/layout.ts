@@ -175,6 +175,8 @@ const CONTROLS: Partial<Record<FormFieldKey, FieldControl>> = {
   sourceUnitName: 'select',
   // 种属：底部弹框选字典里的常用值，列表里没有的手填（SpeciesSheet，CR-20261009-18）
   species: 'select',
+  // 操作人：底部弹框从内部人员名单里选（StaffSheet，CR-20261012-22），不再手填
+  operatorName: 'select',
   gender: 'seg',
   hasPathology: 'seg',
   isFixed: 'seg',

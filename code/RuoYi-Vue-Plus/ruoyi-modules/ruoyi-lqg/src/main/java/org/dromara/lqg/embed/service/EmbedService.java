@@ -9,6 +9,7 @@ import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
+import org.dromara.lqg.auth.staff.directory.StaffRef;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.domain.EmbedMarker;
 import org.dromara.lqg.embed.domain.bo.EmbedSubmitBo;
@@ -98,6 +99,11 @@ public class EmbedService {
         // ③ 补填段：长度、染色组合 + marker 表达（字典外的值一律拒）—— 与修改、核验时补填同一份规则（EmbedFillWriter）
         EmbedFillWriter.Prepared fill = fillWriter.prepare(PatchBody.of(bo, new LinkedHashSet<>(EmbedFillRules.ALL_KEYS)));
         List<String> stains = fill.stains();
+        // 包埋人、操作人：从内部人员名单里选（CR-20261012-22）；操作人没填默认当前登录人，包埋人没填就空着
+        StaffRef embedBy = fillWriter.resolvePerson("包埋人", bo.getEmbedById(), bo.getEmbedBy());
+        StaffRef operator = bo.getOperatorId() == null && StringUtils.isBlank(bo.getOperatorName())
+            ? fillWriter.currentUser()
+            : fillWriter.resolvePerson("操作人", bo.getOperatorId(), bo.getOperatorName());
         Long userId = currentUserId();
         if (userId == null) {
             throw new ServiceException("取不到当前登录用户，无法落提交人");
@@ -121,15 +127,16 @@ public class EmbedService {
             entity.setTissueProcessTime(bo.getTissueProcessTime() != null
                 ? bo.getTissueProcessTime() : toLocalDate(sample.getProcessTime()));
             entity.setAgaroseEmbedTime(bo.getAgaroseEmbedTime());
-            entity.setEmbedBy(trimToNull(bo.getEmbedBy()));
+            entity.setEmbedById(embedBy.id());
+            entity.setEmbedBy(embedBy.name());
             entity.setDehydrateTime(bo.getDehydrateTime());
             entity.setAgaroseSendTime(bo.getAgaroseSendTime());
             entity.setParaffinEmbedTime(bo.getParaffinEmbedTime());
             entity.setSectionTime(bo.getSectionTime());
             entity.setStainTypes(StainRules.toCsv(stains));
             entity.setStainOther(StainRules.hasOther(stains) ? trimToNull(bo.getStainOther()) : null);
-            entity.setOperatorName(StringUtils.isNotBlank(bo.getOperatorName())
-                ? bo.getOperatorName().trim() : currentNickname());
+            entity.setOperatorId(operator.id());
+            entity.setOperatorName(operator.name());
             entity.setRemark(trimToNull(bo.getRemark()));
             embedMapper.insert(entity);
             fillWriter.insertMarkers(entity.getId(), fill.markers());
@@ -199,7 +206,7 @@ public class EmbedService {
             // —— 校验全部在写库之前，与核验抽屉一并保存的 fill 同一份（EmbedFillWriter，FIX V02b）
             EmbedFillWriter.Prepared fill = fillWriter.prepare(body);
             // 补填段的列拼进同一条 UPDATE：没传 = 不动；传了空值 = 清空（FIX V33：以前 null = 不动，日期清不掉）
-            fillWriter.applyTo(patch, fill);
+            fillWriter.applyTo(patch, fill, exists);
             embedMapper.update(null, patch);
             // marker：传了就整组替换（先软删旧的、再插新的，同一事务；传 null / [] = 清空）
             fillWriter.replaceMarkers(exists.getId(), fill);
@@ -273,11 +280,6 @@ public class EmbedService {
         } catch (Exception ignored) {
             return null;
         }
-    }
-
-    private static String currentNickname() {
-        LoginUser loginUser = LoginHelper.getLoginUser();
-        return loginUser == null ? null : loginUser.getNickname();
     }
 
     /**

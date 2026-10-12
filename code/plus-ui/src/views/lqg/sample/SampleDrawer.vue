@@ -75,8 +75,9 @@
             </el-col>
 
             <el-col :span="12">
+              <!-- 操作人（CR-20261012-22）：从内部人员名单里选（做实验的人），操作人统计按它认人 -->
               <el-form-item :label="t('lqg.sample.field.operatorName')" prop="operatorName">
-                <el-input v-model="form.operatorName" maxlength="50" clearable />
+                <StaffSelect v-model:id="form.operatorId" v-model:name="form.operatorName" />
               </el-form-item>
             </el-col>
 
@@ -244,6 +245,10 @@
 <script setup name="LqgSampleDrawer" lang="ts">
 import SegButtons from '@/components/lqg/SegButtons/index.vue';
 import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
+import StaffSelect from '@/components/lqg/StaffSelect/index.vue';
+import { defaultPerson } from '@/components/lqg/StaffSelect/staff';
+import { useStaff } from '@/components/lqg/StaffSelect/useStaff';
+import { useUserStore } from '@/store/modules/user';
 import { SPECIES_MAX, normalizeSpecies } from '@/components/lqg/SpeciesSelect/species';
 import { addSample, getSample, neverModified, updateSample, verifySample } from '@/api/lqg/sample';
 import type { SampleForm, SampleSubmitSegment, SampleVO, SampleVerifyForm } from '@/api/lqg/sample';
@@ -321,6 +326,7 @@ const emptyForm = (): SampleForm & Partial<SampleVO> => ({
   processTime: null,
   hasQcSheet: null,
   hasViabilityReport: null,
+  operatorId: null,
   operatorName: null,
   remark: null,
   updateByName: null,
@@ -423,11 +429,25 @@ const invalidRules: ElFormRules = {
 // 有改动时按 ESC / 点 × / 点「取消」先问一句；点遮罩不再关（工作台 UX 测试 WEB-04）
 const closeGuard = useCloseGuard(() => form.value, () => visible.value && !loading.value);
 
-const openAdd = (kind?: string) => {
+/** 操作人的默认值：当前登录人（在内部人员名单里才带；CR-20261012-22） */
+const { load: loadStaff } = useStaff();
+const userStore = useUserStore();
+const fillDefaultOperator = async () => {
+  if (form.value.operatorId || form.value.operatorName) {
+    return;
+  }
+  const me = defaultPerson(await loadStaff(), userStore.userId);
+  form.value.operatorId = me.id;
+  form.value.operatorName = me.name;
+};
+
+const openAdd = async (kind?: string) => {
   form.value = emptyForm();
   form.value.sampleKind = (kind ?? props.kind) === 'organoid' ? 'organoid' : 'tissue';
   hasChildren.value = false;
   mode.value = 'create';
+  // 先带出默认操作人再打开：关闭前的「有没有改动」基线里要包含它
+  await fillDefaultOperator();
   visible.value = true;
 };
 
@@ -439,6 +459,10 @@ const open = async (row: SampleVO) => {
     const res = await getSample(row.id);
     form.value = { ...emptyForm(), ...(res.data as SampleVO) };
     hasChildren.value = false;
+    // 核验合作单位提交的记录：操作人还没填过 → 默认当前登录人（可改；与小程序核验页同一个口径）
+    if (mode.value === 'verify') {
+      await fillDefaultOperator();
+    }
   } catch {
     proxy?.$modal.msgError(t('lqg.sample.drawer.loadFailed'));
   } finally {
@@ -474,6 +498,7 @@ const payload = (): SampleForm => {
     processTime: f.processTime ?? null,
     hasQcSheet: f.hasQcSheet ?? null,
     hasViabilityReport: f.hasViabilityReport ?? null,
+    operatorId: f.operatorId ?? null,
     operatorName: f.operatorName ?? null,
     remark: f.remark ?? null
   };
@@ -552,6 +577,7 @@ const verifyPayload = (action: 'valid' | 'invalid', reason?: string): SampleVeri
     processTime: f.processTime ?? null,
     hasQcSheet: f.hasQcSheet ?? null,
     hasViabilityReport: f.hasViabilityReport ?? null,
+    operatorId: f.operatorId ?? null,
     operatorName: f.operatorName ?? null,
     reason: reason ?? null,
     // ★ FIX V02：送检段随核验一起保存（不带这个键，送检段的修改会被静默丢弃）

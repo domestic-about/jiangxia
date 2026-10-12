@@ -59,6 +59,9 @@ public class EmbedFillBo implements Serializable {
     @Schema(description = "包埋人（≤ 50 字）", maxLength = 50)
     private String embedBy;
 
+    @Schema(description = "包埋人 user_id（从内部人员名单里选，CR-20261012-22；带了就以它为准）")
+    private Long embedById;
+
     @Schema(description = "脱水时间")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dehydrateTime;
@@ -86,6 +89,9 @@ public class EmbedFillBo implements Serializable {
 
     @Schema(description = "操作人（≤ 50 字）", maxLength = 50)
     private String operatorName;
+
+    @Schema(description = "操作人 user_id（从内部人员名单里选，CR-20261012-22；带了就以它为准）")
+    private Long operatorId;
 
     @Schema(description = "备注（≤ 500 字）", maxLength = 500)
     private String remark;

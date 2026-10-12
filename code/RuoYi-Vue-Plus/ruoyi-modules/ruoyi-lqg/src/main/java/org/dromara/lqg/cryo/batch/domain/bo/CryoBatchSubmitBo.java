@@ -61,6 +61,9 @@ public class CryoBatchSubmitBo implements Serializable {
     @Schema(description = "冻存人")
     private String frozenBy;
 
+    @Schema(description = "冻存人 user_id（从内部人员名单里选，CR-20261012-22；带了就以它为准）")
+    private Long frozenById;
+
     @Schema(description = "转移至液氮时间 yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate toLn2Time;

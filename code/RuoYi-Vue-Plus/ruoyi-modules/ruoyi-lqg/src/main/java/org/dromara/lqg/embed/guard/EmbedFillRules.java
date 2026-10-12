@@ -42,13 +42,16 @@ public final class EmbedFillRules {
     /** 外部送样填的两项（判有效、判无效都随核验一起保存） */
     public static final List<String> SUBMIT_KEYS = List.of("sampleType", "organoidSourceType");
 
-    /** 实验室补填的 13 项（只在判为有效时随核验一起保存） */
+    /**
+     * 实验室补填的 15 项（只在判为有效时随核验一起保存）。包埋人、操作人各是一对键：姓名 + 账号 id
+     * （{@code embedById} / {@code operatorId}，CR-20261012-22 从内部人员名单里选）。
+     */
     public static final List<String> LAB_KEYS = List.of(
-        "tissueReceiveTime", "tissueProcessTime", "agaroseEmbedTime", "embedBy", "dehydrateTime",
+        "tissueReceiveTime", "tissueProcessTime", "agaroseEmbedTime", "embedBy", "embedById", "dehydrateTime",
         "agaroseSendTime", "paraffinEmbedTime", "sectionTime", "stainTypes", "stainOther", "markers",
-        "operatorName", "remark");
+        "operatorName", "operatorId", "remark");
 
-    /** 补填段全部 15 项 = {@link EmbedFillBo} 的字段（契约测试钉住两边一致） */
+    /** 补填段全部 17 项 = {@link EmbedFillBo} 的字段（契约测试钉住两边一致） */
     public static final List<String> ALL_KEYS = Stream.concat(SUBMIT_KEYS.stream(), LAB_KEYS.stream()).toList();
 
     /**
@@ -81,6 +84,7 @@ public final class EmbedFillRules {
         labels.put("sampleType", "样本类型");
         labels.put("organoidSourceType", "类器官来源类型");
         labels.put("embedBy", "包埋人");
+        labels.put("embedById", "包埋人");
         labels.put("tissueReceiveTime", "组织收样时间");
         labels.put("tissueProcessTime", "组织处理时间");
         labels.put("agaroseEmbedTime", "琼脂糖包埋样本时间");
@@ -92,6 +96,7 @@ public final class EmbedFillRules {
         labels.put("stainOther", "其他染色名称");
         labels.put("markers", "marker 表达");
         labels.put("operatorName", "操作人");
+        labels.put("operatorId", "操作人");
         labels.put("remark", "备注");
         labels.put("sampleId", "所挂样本");
         labels.put("paraffinBlockNo", "石蜡块编号");

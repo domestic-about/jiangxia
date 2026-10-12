@@ -21,6 +21,7 @@ import org.dromara.lqg.cryo.remind.service.CryoOverdueService;
 import org.dromara.lqg.cryo.remind.sql.CryoOverdueSqlProvider;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.mapper.SampleMapper;
+import org.dromara.lqg.auth.staff.directory.PersonKey;
 import org.dromara.lqg.sample.query.SampleSpeciesFilter;
 import org.dromara.lqg.sample.service.SampleNameResolver;
 import org.springframework.stereotype.Service;
@@ -305,6 +306,8 @@ public class CryoQueryService {
             .le(q.getFreezeTimeEnd() != null, CryoBatch::getFreezeTime, q.getFreezeTimeEnd());
         // 种属：所挂样本的列（CR-20261009-18），子查询筛，见 SampleSpeciesFilter
         SampleSpeciesFilter.bySampleId(wrapper, q.getSpecies());
+        // 按人（CR-20261012-22）：冻存人，与操作人统计同一个口径
+        PersonKey.apply(wrapper, CryoBatch::getFrozenById, CryoBatch::getFrozenBy, q.getFrozenByKey());
         // ★ 位置筛选与行上的 location **同源判据**（CryoBalanceChecker.locationOf）：
         //   ln2 = 直接进液氮（in_minus80='N'）**或**已登记转液氮（to_ln2_time 非空）。
         //   只看 in_minus80 会把「先 -80 后转液氮」的批次（seed 的 3003）漏掉 —— accept 3 的
@@ -466,6 +469,7 @@ public class CryoQueryService {
         vo.setDensity(batch.getDensity());
         vo.setInMinus80(batch.getInMinus80());
         vo.setFrozenBy(batch.getFrozenBy());
+        vo.setFrozenById(batch.getFrozenById());
         vo.setToLn2Time(batch.getToLn2Time());
         vo.setLn2Location(batch.getLn2Location());
         vo.setRemark(batch.getRemark());

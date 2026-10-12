@@ -72,6 +72,12 @@
               <SpeciesSelect v-model="queryParams.species" filter class="lqg-cryo__control" />
             </el-form-item>
           </el-col>
+          <!-- 冻存人（CR-20261012-22）：操作人统计按它算，点统计页的数字会带着它和冻存时间段过来 -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.person.frozenBy')">
+              <StaffSelect v-model="queryParams.frozenByKey" :name="routePersonName" filter class="lqg-cryo__control" />
+            </el-form-item>
+          </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.cryo.filter.cryoName')" prop="cryoName">
               <el-input
@@ -281,7 +287,7 @@ import {
 import type { CryoBatchVO, CryoQuery } from '@/api/lqg/cryo';
 import { useLqgTodoStore } from '@/store/modules/lqgTodo';
 // ★ 四张表之间的来回（2026-09-24 本机验收）：路径、query 解析、提示条样本名都在 relation.ts
-import { CRYO_PATH, flagOfQuery, queryWithout, routeKeyOf, sampleIdOfQuery, sampleOf, sampleScopeLabel } from '@/views/lqg/sample/relation';
+import { CRYO_PATH, dateOfQuery, flagOfQuery, queryWithout, routeKeyOf, sampleIdOfQuery, sampleOf, sampleScopeLabel } from '@/views/lqg/sample/relation';
 import { useScopeSample } from '@/views/lqg/sample/useScopeSample';
 import CryoDrawer from './CryoDrawer.vue';
 import CryoFlowDialog from './CryoFlowDialog.vue';
@@ -291,6 +297,8 @@ import type { FlowKind } from './flow';
 import { useI18n } from 'vue-i18n';
 import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
 import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
+import StaffSelect from '@/components/lqg/StaffSelect/index.vue';
+import { personKeyOfQuery } from '@/components/lqg/StaffSelect/staff';
 import { speciesText } from '@/components/lqg/SpeciesSelect/species';
 
 /**
@@ -318,6 +326,8 @@ const total = ref(0);
 /** ★ 页签数字的唯一来源：后端 tabCounts（初始给整表 0，拉到就覆盖） */
 const tabCounts = reactive<{ all: number; overdue: number; ln2: number; emptied: number }>({ all: 0, overdue: 0, ln2: 0, emptied: 0 });
 const freezeTimeRange = ref<[string, string] | null>(null);
+/** 操作人统计页带过来的姓名（那个人已不在名单里时，筛选框里显示用） */
+const routePersonName = ref<string | null>(null);
 
 const drawerRef = ref<InstanceType<typeof CryoDrawer>>();
 const flowDrawerRef = ref<InstanceType<typeof CryoFlowDrawer>>();
@@ -336,7 +346,8 @@ const queryParams = reactive<CryoQuery>({
   overdueOnly: null,
   emptiedOnly: null,
   freezeTimeBegin: null,
-  freezeTimeEnd: null
+  freezeTimeEnd: null,
+  frozenByKey: null
 });
 
 // ★ 页签 / 位置下拉 / 只看超期勾选**共用一个真相源**：queryParams.location、
@@ -418,6 +429,8 @@ const handleQuery = () => {
 const clearFilters = () => {
   queryRef.value?.resetFields();
   freezeTimeRange.value = null;
+  routePersonName.value = null;
+  queryParams.frozenByKey = null;
   queryParams.internalNo = null;
   queryParams.species = null;
   queryParams.cryoName = null;
@@ -434,7 +447,8 @@ const clearFilters = () => {
 //   按地址重新套一遍并重拉；一样就不动（从标签页切回来保留页面上的手动筛选）。
 
 /** 本页认的地址筛选；`add` 不在里面（它只是「到了就开新增抽屉」的一次性动作） */
-const ROUTE_KEYS = ['sampleId', 'overdueOnly', 'emptiedOnly'];
+// frozenByKey / timeBegin / timeEnd / personName：操作人统计页点数字带过来的（按人 + 冻存时间段，CR-20261012-22）
+const ROUTE_KEYS = ['sampleId', 'overdueOnly', 'emptiedOnly', 'frozenByKey', 'timeBegin', 'timeEnd', 'personName'];
 
 /** 上一次按地址套上的筛选指纹；null = 还没套过 */
 let appliedRouteKey: string | null = null;
@@ -461,6 +475,12 @@ const applyRouteScope = async (): Promise<boolean> => {
   queryParams.overdueOnly = flagOfQuery(route.query.overdueOnly) ? true : null;
   // 与小程序表格页同一种直达写法：?emptiedOnly=true 落在「已取空」页签（与超期互斥，超期优先）
   queryParams.emptiedOnly = !queryParams.overdueOnly && flagOfQuery(route.query.emptiedOnly) ? true : null;
+  // 操作人统计页点数字进来：冻存人 + 冻存时间段
+  queryParams.frozenByKey = personKeyOfQuery(route.query.frozenByKey);
+  routePersonName.value = typeof route.query.personName === 'string' ? route.query.personName : null;
+  const timeBegin = dateOfQuery(route.query.timeBegin);
+  const timeEnd = dateOfQuery(route.query.timeEnd);
+  freezeTimeRange.value = timeBegin && timeEnd ? [timeBegin, timeEnd] : null;
   queryParams.pageNum = 1;
   await Promise.all([getList(), loadScopeSample(queryParams.sampleId)]);
   return true;

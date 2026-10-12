@@ -51,16 +51,16 @@ const opened = (): EmbedFillForm => ({
 });
 
 describe('补填段的两组键 = 后端 EmbedFillRules', () => {
-  it('外部送样两项、实验室补填 13 项，与后端逐字同序', () => {
+  it('外部送样两项、实验室补填 15 项，与后端逐字同序', () => {
     expect([...FILL_SUBMIT_KEYS]).toEqual(backendList('SUBMIT_KEYS'));
     expect([...FILL_LAB_KEYS]).toEqual(backendList('LAB_KEYS'));
-    expect(FILL_SUBMIT_KEYS.length + FILL_LAB_KEYS.length).toBe(15);
+    expect(FILL_SUBMIT_KEYS.length + FILL_LAB_KEYS.length).toBe(17);
     expect(FILL_LAB_KEYS.some((k) => (FILL_SUBMIT_KEYS as readonly string[]).includes(k))).toBe(false);
   });
 });
 
 describe('invalidFill：判为无效只带外部送样填的两项', () => {
-  it('其余 13 项一个都不带', () => {
+  it('其余 15 项一个都不带', () => {
     const now = { ...opened(), sampleType: '组织（更正）', dehydrateTime: '2026-09-19', remark: 'x', stainTypes: ['HE'] };
     expect(invalidFill(now)).toEqual({ sampleType: '组织（更正）', organoidSourceType: null });
   });

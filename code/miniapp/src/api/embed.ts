@@ -16,6 +16,7 @@ import type { EmbedMarker, EmbedRow, SampleRow } from '@/api/sample'
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
 import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
+import { personIdOf } from '@/utils/staff'
 import { wasEdited } from '@/utils/edited'
 
 // ── 行 / 详情形状 ────────────────────────────────────────────────────────────
@@ -55,6 +56,8 @@ export type EmbedLedgerRow = LedgerRow & {
   tissueProcessTime?: string | null
   agaroseEmbedTime?: string | null
   embedBy?: string | null
+  /** 包埋人账号 id（内部详情才有；CR-20261012-22） */
+  embedById?: string | number | null
   dehydrateTime?: string | null
   agaroseSendTime?: string | null
   paraffinEmbedTime?: string | null
@@ -64,6 +67,8 @@ export type EmbedLedgerRow = LedgerRow & {
   stainOther?: string | null
   markers?: EmbedMarker[] | null
   operatorName?: string | null
+  /** 操作人账号 id（内部详情才有；CR-20261012-22） */
+  operatorId?: string | number | null
   remark?: string | null
   submitSource?: string | null
 }
@@ -87,6 +92,8 @@ export interface EmbedFormValue {
   tissueProcessTime: string
   agaroseEmbedTime: string
   embedBy: string
+  /** 包埋人账号 id（从内部人员名单里选，CR-20261012-22；'' = 没填，或历史手填的姓名没关联账号） */
+  embedById: string
   dehydrateTime: string
   agaroseSendTime: string
   paraffinEmbedTime: string
@@ -95,6 +102,8 @@ export interface EmbedFormValue {
   stainOther: string
   markers: EmbedMarkerValue[]
   operatorName: string
+  /** 操作人账号 id（CR-20261012-22） */
+  operatorId: string
   remark: string
 }
 
@@ -110,6 +119,7 @@ export function emptyEmbedForm(): EmbedFormValue {
     tissueProcessTime: '',
     agaroseEmbedTime: '',
     embedBy: '',
+    embedById: '',
     dehydrateTime: '',
     agaroseSendTime: '',
     paraffinEmbedTime: '',
@@ -118,6 +128,7 @@ export function emptyEmbedForm(): EmbedFormValue {
     stainOther: '',
     markers: [],
     operatorName: '',
+    operatorId: '',
     remark: '',
   }
 }
@@ -143,6 +154,7 @@ export function toEmbedFormValue(detail: Partial<EmbedDetail> | null | undefined
     tissueProcessTime: dayOf(detail.tissueProcessTime),
     agaroseEmbedTime: dayOf(detail.agaroseEmbedTime),
     embedBy: str(detail.embedBy),
+    embedById: str(detail.embedById),
     dehydrateTime: dayOf(detail.dehydrateTime),
     agaroseSendTime: dayOf(detail.agaroseSendTime),
     paraffinEmbedTime: dayOf(detail.paraffinEmbedTime),
@@ -154,6 +166,7 @@ export function toEmbedFormValue(detail: Partial<EmbedDetail> | null | undefined
       expression: str(m?.expression),
     })),
     operatorName: str(detail.operatorName),
+    operatorId: str(detail.operatorId),
     remark: str(detail.remark),
   }
 }
@@ -202,6 +215,8 @@ export function internalEmbedPayload(form: EmbedFormValue): Record<string, unkno
     tissueProcessTime: form.tissueProcessTime || null,
     agaroseEmbedTime: form.agaroseEmbedTime || null,
     embedBy: form.embedBy.trim(),
+    // 包埋人 / 操作人各是一对键（姓名 + 账号 id，CR-20261012-22）：后端带了 id 以它为准
+    embedById: personIdOf(form.embedById),
     dehydrateTime: form.dehydrateTime || null,
     agaroseSendTime: form.agaroseSendTime || null,
     paraffinEmbedTime: form.paraffinEmbedTime || null,
@@ -210,6 +225,7 @@ export function internalEmbedPayload(form: EmbedFormValue): Record<string, unkno
     stainOther: form.stainOther.trim(),
     markers: markersPayload(form),
     operatorName: form.operatorName.trim(),
+    operatorId: personIdOf(form.operatorId),
     remark: form.remark.trim(),
   }
 }

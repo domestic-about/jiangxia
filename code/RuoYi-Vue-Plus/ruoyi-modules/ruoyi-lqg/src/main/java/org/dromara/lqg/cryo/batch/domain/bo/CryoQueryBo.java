@@ -70,6 +70,9 @@ public class CryoQueryBo extends PageQuery {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate freezeTimeEnd;
 
+    @Schema(description = "冻存人（按人：u:<账号 id> / n:<姓名> / none，CR-20261012-22，口径见 PersonKey）")
+    private String frozenByKey;
+
     @Schema(description = "recent = 按最后修改（没有则创建）时间倒序")
     private String sort;
 

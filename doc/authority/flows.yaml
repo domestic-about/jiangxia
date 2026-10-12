@@ -251,7 +251,7 @@ records:
           来源单位可改选正式单位，把只填了单位名的外部样本归口（CR-20260923-09）。
           2026-09-24 起小程序也能核验（CR-20260924-10，甲方第 20 行）：内部人员从首页「待处理」或内部管理表格点待核验的那一条进核验页，
           调同一个 PUT /lqg/sample/{id}/verify、同一份规则；送检段是整段替换，所以小程序里送检信息一项没改就不带 submitSegment，改了就带整段。改判仍只在工作台。
-        writes: [FIELD:t_lqg_sample.verify_status, FIELD:t_lqg_sample.verify_by, FIELD:t_lqg_sample.verify_time, FIELD:t_lqg_sample.invalid_reason, FIELD:t_lqg_sample.receive_date, FIELD:t_lqg_sample.internal_no, FIELD:t_lqg_sample.is_fixed, FIELD:t_lqg_sample.process_time, FIELD:t_lqg_sample.has_qc_sheet, FIELD:t_lqg_sample.has_viability_report, FIELD:t_lqg_sample.operator_name, FIELD:t_lqg_sample.source_unit_id, FIELD:t_lqg_sample.source_unit_name, FIELD:t_lqg_sample.species, FIELD:t_lqg_sample.donor_name, FIELD:t_lqg_sample.gender, FIELD:t_lqg_sample.age, FIELD:t_lqg_sample.hospital_no, FIELD:t_lqg_sample.tissue_type, FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.has_pathology, FIELD:t_lqg_sample.remark]
+        writes: [FIELD:t_lqg_sample.verify_status, FIELD:t_lqg_sample.verify_by, FIELD:t_lqg_sample.verify_time, FIELD:t_lqg_sample.invalid_reason, FIELD:t_lqg_sample.receive_date, FIELD:t_lqg_sample.internal_no, FIELD:t_lqg_sample.is_fixed, FIELD:t_lqg_sample.process_time, FIELD:t_lqg_sample.has_qc_sheet, FIELD:t_lqg_sample.has_viability_report, FIELD:t_lqg_sample.operator_name, FIELD:t_lqg_sample.operator_id, FIELD:t_lqg_sample.source_unit_id, FIELD:t_lqg_sample.source_unit_name, FIELD:t_lqg_sample.species, FIELD:t_lqg_sample.donor_name, FIELD:t_lqg_sample.gender, FIELD:t_lqg_sample.age, FIELD:t_lqg_sample.hospital_no, FIELD:t_lqg_sample.tissue_type, FIELD:t_lqg_sample.organoid_type, FIELD:t_lqg_sample.passage, FIELD:t_lqg_sample.has_pathology, FIELD:t_lqg_sample.remark]
         produces: verify_status=valid（带内部编号）或 invalid（带原因）
       - id: FLOW:F-SAMPLE-01.step4
         label: 无效的改后重提
@@ -282,7 +282,7 @@ records:
         label: 内部录入组织样本
         actor: 内部人员(mp/admin)
         action: 填样本记录信息表全部 14 列 + 有无病理；内部编号必填且唯一
-        writes: [FIELD:t_lqg_sample.internal_no, FIELD:t_lqg_sample.receive_date, FIELD:t_lqg_sample.is_fixed, FIELD:t_lqg_sample.process_time, FIELD:t_lqg_sample.has_qc_sheet, FIELD:t_lqg_sample.has_viability_report, FIELD:t_lqg_sample.operator_name]
+        writes: [FIELD:t_lqg_sample.internal_no, FIELD:t_lqg_sample.receive_date, FIELD:t_lqg_sample.is_fixed, FIELD:t_lqg_sample.process_time, FIELD:t_lqg_sample.has_qc_sheet, FIELD:t_lqg_sample.has_viability_report, FIELD:t_lqg_sample.operator_name, FIELD:t_lqg_sample.operator_id]
         produces: 样本 sample_kind=tissue、submit_source=internal、verify_status=valid
       - id: FLOW:F-SAMPLE-02.step2
         label: 内部录入类器官收样
@@ -363,7 +363,7 @@ records:
         label: 陆续补填工序时间
         actor: 内部人员(mp/admin)
         action: 琼脂糖包埋样本时间、包埋人、脱水时间、琼脂糖包埋样本送样时间、石蜡包埋时间、切片时间，做完一步填一步，全部允许留空
-        writes: [FIELD:t_lqg_embed.agarose_embed_time, FIELD:t_lqg_embed.embed_by, FIELD:t_lqg_embed.dehydrate_time, FIELD:t_lqg_embed.agarose_send_time, FIELD:t_lqg_embed.paraffin_embed_time, FIELD:t_lqg_embed.section_time]
+        writes: [FIELD:t_lqg_embed.agarose_embed_time, FIELD:t_lqg_embed.embed_by, FIELD:t_lqg_embed.embed_by_id, FIELD:t_lqg_embed.dehydrate_time, FIELD:t_lqg_embed.agarose_send_time, FIELD:t_lqg_embed.paraffin_embed_time, FIELD:t_lqg_embed.section_time]
         produces: 记录逐步完整
       - id: FLOW:F-EMBED-01.step3
         label: 选染色与 marker 表达
@@ -371,7 +371,7 @@ records:
         action: >-
           染色五个按钮多选（HE / IF / IHC / 其他 / 无染色），「无染色」与其余互斥，选「其他」必须写具体名称；
           marker 表达可加多行，每行 = 名称（可空）+ 三按钮单选（阴性 / 弱表达 / 强表达）
-        writes: [FIELD:t_lqg_embed.stain_types, FIELD:t_lqg_embed.stain_other, FIELD:t_lqg_embed_marker.marker_name, FIELD:t_lqg_embed_marker.expression, FIELD:t_lqg_embed.operator_name, FIELD:t_lqg_embed.remark]
+        writes: [FIELD:t_lqg_embed.stain_types, FIELD:t_lqg_embed.stain_other, FIELD:t_lqg_embed_marker.marker_name, FIELD:t_lqg_embed_marker.expression, FIELD:t_lqg_embed.operator_name, FIELD:t_lqg_embed.operator_id, FIELD:t_lqg_embed.remark]
         produces: 染色与 marker 落库；非法组合（NONE 与别的并存、OTHER 无名称）被拒
       - id: FLOW:F-EMBED-01.step4
         label: 对外展示包埋情况
@@ -404,7 +404,7 @@ records:
           抽屉里补填的工序时间、包埋人、染色、marker、操作人、备注以及样本类型、类器官来源类型的更正，与核验结论同一事务保存，校验同石蜡包埋修改，被拒则库里不变。
           判无效必须写原因，只保存原因与样本类型、类器官来源类型的更正；实验室补填项不保存，界面在原因弹窗里明说（CR-20260923-09）。
           合法转移同样本主档：pending→valid、pending→invalid、invalid→pending（外部重提）、invalid→valid；内部录入的直接 valid
-        writes: [FIELD:t_lqg_embed.verify_status, FIELD:t_lqg_embed.verify_by, FIELD:t_lqg_embed.verify_time, FIELD:t_lqg_embed.invalid_reason, FIELD:t_lqg_embed.paraffin_block_no, FIELD:t_lqg_embed.sample_type, FIELD:t_lqg_embed.organoid_source_type, FIELD:t_lqg_embed.tissue_receive_time, FIELD:t_lqg_embed.tissue_process_time, FIELD:t_lqg_embed.agarose_embed_time, FIELD:t_lqg_embed.embed_by, FIELD:t_lqg_embed.dehydrate_time, FIELD:t_lqg_embed.agarose_send_time, FIELD:t_lqg_embed.paraffin_embed_time, FIELD:t_lqg_embed.section_time, FIELD:t_lqg_embed.stain_types, FIELD:t_lqg_embed.stain_other, FIELD:t_lqg_embed.operator_name, FIELD:t_lqg_embed.remark, FIELD:t_lqg_embed_marker.marker_name, FIELD:t_lqg_embed_marker.expression]
+        writes: [FIELD:t_lqg_embed.verify_status, FIELD:t_lqg_embed.verify_by, FIELD:t_lqg_embed.verify_time, FIELD:t_lqg_embed.invalid_reason, FIELD:t_lqg_embed.paraffin_block_no, FIELD:t_lqg_embed.sample_type, FIELD:t_lqg_embed.organoid_source_type, FIELD:t_lqg_embed.tissue_receive_time, FIELD:t_lqg_embed.tissue_process_time, FIELD:t_lqg_embed.agarose_embed_time, FIELD:t_lqg_embed.embed_by, FIELD:t_lqg_embed.embed_by_id, FIELD:t_lqg_embed.dehydrate_time, FIELD:t_lqg_embed.agarose_send_time, FIELD:t_lqg_embed.paraffin_embed_time, FIELD:t_lqg_embed.section_time, FIELD:t_lqg_embed.stain_types, FIELD:t_lqg_embed.stain_other, FIELD:t_lqg_embed.operator_name, FIELD:t_lqg_embed.operator_id, FIELD:t_lqg_embed.remark, FIELD:t_lqg_embed_marker.marker_name, FIELD:t_lqg_embed_marker.expression]
         produces: valid（有石蜡块编号）或 invalid（有原因）；工作台首页与内部人员小程序首页「待核验石蜡包埋送样」数字随之变化
     related_reqs: [REQ-EMBED-001, REQ-EMBED-002, REQ-EMBED-003, REQ-EMBED-004, REQ-AUTH-006, REQ-AUTH-013, REQ-AUTH-015, REQ-SAMPLE-013]
 
@@ -424,7 +424,7 @@ records:
         label: 新建冻存批次
         actor: 内部人员(mp/admin)
         action: 选样本 → 冻存样品名称（用「内部编号-」预填，手改）、代数（P+数字）、冻存时间、数量、密度、是否暂存 -80、冻存人；选「否」时必须填液氮储存位置
-        writes: [FIELD:t_lqg_cryo_batch.sample_id, FIELD:t_lqg_cryo_batch.cryo_name, FIELD:t_lqg_cryo_batch.passage, FIELD:t_lqg_cryo_batch.freeze_time, FIELD:t_lqg_cryo_batch.init_qty, FIELD:t_lqg_cryo_batch.density, FIELD:t_lqg_cryo_batch.in_minus80, FIELD:t_lqg_cryo_batch.frozen_by, FIELD:t_lqg_cryo_batch.ln2_location, FIELD:t_lqg_cryo_batch.remark]
+        writes: [FIELD:t_lqg_cryo_batch.sample_id, FIELD:t_lqg_cryo_batch.cryo_name, FIELD:t_lqg_cryo_batch.passage, FIELD:t_lqg_cryo_batch.freeze_time, FIELD:t_lqg_cryo_batch.init_qty, FIELD:t_lqg_cryo_batch.density, FIELD:t_lqg_cryo_batch.in_minus80, FIELD:t_lqg_cryo_batch.frozen_by, FIELD:t_lqg_cryo_batch.frozen_by_id, FIELD:t_lqg_cryo_batch.ln2_location, FIELD:t_lqg_cryo_batch.remark]
         produces: 批次建立，剩余 = 初始支数；同一样本可有多条不同代数的批次。之后批次的每一项都可以改（含初始支数，校验见 FLOW:F-CRYO-02.step5）
       - id: FLOW:F-CRYO-01.step2
         label: 计算超期清单

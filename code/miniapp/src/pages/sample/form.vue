@@ -22,12 +22,15 @@ import OcrBar from '@/components/lqg/OcrBar.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
 import SourceUnitSheet from '@/components/lqg/SourceUnitSheet.vue'
 import SpeciesSheet from '@/components/lqg/SpeciesSheet.vue'
+import StaffSheet from '@/components/lqg/StaffSheet.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { finishTo, goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { unitDisplay } from '@/utils/ext-profile'
 import { http } from '@/utils/request'
 import { DEFAULT_SPECIES, fetchSpeciesOptions, speciesProblem } from '@/utils/species'
+import type { PersonValue } from '@/utils/staff'
+import { defaultPerson, fetchStaffOptions, personIdOf } from '@/utils/staff'
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
 import type { FieldSpec, FormFieldKey, FormMode } from './layout'
 import { useLeaveGuard } from '@/utils/leaveGuard'
@@ -83,6 +86,8 @@ const tissueHints = ref<string[]>([])
 /** 种属的常用值（字典 lqg_species，CR-20261009-18；拉不到用内置四个，不挡填写） */
 const speciesOptions = ref<string[]>([...DEFAULT_SPECIES])
 const speciesSheetRef = ref<{ open: () => void } | null>(null)
+/** 操作人：从内部人员名单里选（CR-20261012-22） */
+const staffSheetRef = ref<{ open: () => void } | null>(null)
 /** 启用中的单位（`/mp/ext/units`，拉不到不挡填写）：内部的来源单位从这里选（V01） */
 const units = ref<SelectorUnit[]>([])
 /** 来源单位：选中的单位 id（手填时为 null）与「手动填写」开关；名字在 `form.sourceUnitName` */
@@ -188,8 +193,10 @@ async function load() {
     if (mode.value === 'new') {
       form.value = emptyForm()
       if (isInternal.value) {
-        // 内部新增：操作人默认带当前登录人（可改）
-        form.value.operatorName = store.name || ''
+        // 内部新增：操作人默认带当前登录人（可改；在内部人员名单里就带上账号 id）
+        const me = defaultPerson(await fetchStaffOptions(), store.me?.userId, store.name)
+        form.value.operatorId = me.id
+        form.value.operatorName = me.name
       }
       else {
         // 外部新增：来源单位默认带档案里的单位（UI:mp.sample.form）。绑定了单位（待核验 / 已核验）
@@ -471,9 +478,19 @@ function onPick(key: FormFieldKey) {
     speciesSheetRef.value?.open()
     return
   }
+  if (key === 'operatorName') {
+    staffSheetRef.value?.open()
+    return
+  }
   pickerField.value = key
   pickerValue.value = toMs(fieldValue(key))
   pickerRef.value?.open()
+}
+
+/** 选了操作人：账号 id 与姓名一起落 */
+function onOperatorPicked(person: PersonValue) {
+  form.value.operatorId = person.id
+  setField('operatorName', person.name)
 }
 
 function onPicked(event: { value: number | string }) {
@@ -528,6 +545,7 @@ function payload(): Record<string, unknown> {
     body.hasQcSheet = f.hasQcSheet
     body.hasViabilityReport = f.hasViabilityReport
     body.operatorName = f.operatorName
+    body.operatorId = personIdOf(f.operatorId)
   }
   return body
 }
@@ -768,6 +786,15 @@ function addCryo() {
       :options="speciesOptions"
       :disabled="!editable"
       @update:model-value="(v: string) => setField('species', v)"
+    />
+
+    <!-- 操作人：底部弹框从内部人员名单里选（CR-20261012-22） -->
+    <StaffSheet
+      ref="staffSheetRef"
+      title="操作人"
+      :model-value="{ id: form.operatorId, name: form.operatorName }"
+      :disabled="!editable"
+      @update:model-value="onOperatorPicked"
     />
 
     <!-- 日期 / 时间：底部弹框（落地规范 §5.4）；开关调组件的 open()，不用不存在的 :visible -->

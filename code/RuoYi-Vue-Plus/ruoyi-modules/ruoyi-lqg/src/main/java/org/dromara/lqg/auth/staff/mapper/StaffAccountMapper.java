@@ -1,10 +1,13 @@
 package org.dromara.lqg.auth.staff.mapper;
 
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.dromara.common.mybatis.core.mapper.BaseMapperPlus;
 import org.dromara.lqg.auth.staff.domain.vo.StaffMemberVo;
+import org.dromara.lqg.auth.staff.domain.vo.StaffOptionVo;
 import org.dromara.system.domain.SysUser;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -42,5 +45,39 @@ public interface StaffAccountMapper extends BaseMapperPlus<SysUser, StaffMemberV
          ORDER BY r.role_sort, u.user_id
         """)
     List<StaffMemberVo> selectStaffList();
+
+    /**
+     * 「选人」用的内部人员名单（CR-20261012-22）：带内部角色、账号未停用的人，只取 id 与姓名。
+     *
+     * <p>一个账号挂了两条内部角色行时会出两行 —— 由 service 侧按 userId 去重。
+     */
+    @Select("""
+        SELECT u.user_id   AS userId,
+               u.nick_name AS name
+          FROM sys_user u
+          JOIN sys_user_role ur ON ur.user_id = u.user_id
+          JOIN sys_role r       ON r.role_id  = ur.role_id
+         WHERE u.del_flag = '0'
+           AND u.status = '0'
+           AND r.del_flag = '0'
+           AND r.role_key IN ('lqg_admin', 'lqg_internal')
+         ORDER BY u.nick_name, u.user_id
+        """)
+    List<StaffOptionVo> selectDirectory();
+
+    /**
+     * 按账号 id 取姓名（CR-20261012-22）：统计页显示用。<b>不看角色</b> ——
+     * 已经撤销授权的人，他名下的历史记录照样要显示得出名字。
+     */
+    @Select("""
+        <script>
+        SELECT u.user_id   AS userId,
+               u.nick_name AS name
+          FROM sys_user u
+         WHERE u.user_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        </script>
+        """)
+    List<StaffOptionVo> selectNamesByIds(@Param("ids") Collection<Long> ids);
 
 }

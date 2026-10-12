@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.encrypt.properties.EncryptorProperties;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryStub;
 import org.dromara.lqg.auth.group.domain.SourceUnit;
 import org.dromara.lqg.auth.group.mapper.SourceUnitMapper;
 import org.dromara.lqg.auth.group.service.UnitQueryService;
@@ -331,7 +332,7 @@ class SampleVerifySegmentContractTest {
                 });
             SampleSubmitSegmentWriter writer = new SampleSubmitSegmentWriter(cipher(),
                 new UnitQueryService(unitMapper, null, null));
-            return new SampleVerifyService(sampleMapper, new SampleChildrenCheckers(List.of()), writer);
+            return new SampleVerifyService(sampleMapper, new SampleChildrenCheckers(List.of()), writer, StaffDirectoryStub.empty());
         }
 
         private static Sample sample(Long id) {

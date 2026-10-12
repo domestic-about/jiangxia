@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.dromara.common.core.exception.ServiceException;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryStub;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.domain.bo.EmbedSubmitBo;
 import org.dromara.lqg.embed.mapper.EmbedMapper;
@@ -125,7 +126,7 @@ class EmbedPatchSemanticsTest {
                 });
             // FIX V02b：补填段的校验与落库列在 EmbedFillWriter（本组用例不碰染色 / marker，两个依赖留空）
             return new EmbedService(embedMapper, null, null, new EmbedBlockNoGuard(embedMapper),
-                new EmbedFillWriter(null, null));
+                new EmbedFillWriter(null, null, StaffDirectoryStub.empty()));
         }
     }
 

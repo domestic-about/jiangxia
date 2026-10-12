@@ -170,7 +170,12 @@ public class Sample extends BaseEntity {
     private String hasViabilityReport;
 
     /**
-     * 操作人（姓名文本，默认带当前登录人，可改）
+     * 操作人 user_id（内部人员，CR-20261012-22；空 = 没填，或历史手填的姓名对不上账号）
+     */
+    private Long operatorId;
+
+    /**
+     * 操作人姓名（选人时的快照；历史数据是手填文字）
      */
     private String operatorName;
 

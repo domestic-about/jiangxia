@@ -70,6 +70,9 @@ public class CryoBatchVo implements Serializable {
     @Schema(description = "冻存人")
     private String frozenBy;
 
+    @Schema(description = "冻存人 user_id（内部人员；空 = 没填或历史手填的姓名没关联账号，CR-20261012-22）")
+    private Long frozenById;
+
     @Schema(description = "转移至液氮时间（空 = 还在 -80）")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate toLn2Time;

@@ -40,6 +40,9 @@ import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-da
 import MarkerRows from '@/components/lqg/MarkerRows.vue'
 import SamplePicker from '@/components/lqg/SamplePicker.vue'
 import SamplePickerExt from '@/components/lqg/SamplePickerExt.vue'
+import StaffSheet from '@/components/lqg/StaffSheet.vue'
+import type { PersonValue } from '@/utils/staff'
+import { defaultPerson, fetchStaffOptions } from '@/utils/staff'
 import StainButtons from '@/components/lqg/StainButtons.vue'
 import type { EmbedFieldKey, EmbedFieldSpec, EmbedMode } from './layout'
 import {
@@ -166,7 +169,10 @@ async function load() {
       form.value = emptyEmbedForm()
       if (isInternal.value) {
         // 内部新增：操作人默认带当前登录人（可改）
-        form.value.operatorName = store.name || ''
+        // 在内部人员名单里就带上账号 id（CR-20261012-22）；包埋人不默认，谁包的选谁
+        const me = defaultPerson(await fetchStaffOptions(), store.me?.userId, store.name)
+        form.value.operatorId = me.id
+        form.value.operatorName = me.name
       }
       // 从样本填写页「给这个样本加石蜡块」进来：带上样本，并把两格工序时间带出来
       if (incomingSampleId.value) {
@@ -269,6 +275,12 @@ function onPick(spec: EmbedFieldSpec) {
   if (!editable.value) {
     return
   }
+  // 包埋人 / 操作人：选人面板（CR-20261012-22）
+  if (spec.key === 'embedBy' || spec.key === 'operatorName') {
+    personField.value = spec.key
+    staffSheetRef.value?.open()
+    return
+  }
   if (spec.control === 'select') {
     if (isInternal.value) {
       samplePickerRef.value?.open()
@@ -281,6 +293,25 @@ function onPick(spec: EmbedFieldSpec) {
   pickerField.value = spec.key
   pickerValue.value = toMs(fieldValue(spec.key))
   pickerRef.value?.open()
+}
+
+/** 选人面板这次是给哪一栏开的 */
+const personField = ref<'embedBy' | 'operatorName'>('operatorName')
+const staffSheetRef = ref<{ open: () => void } | null>(null)
+const personValue = computed<PersonValue>(() => personField.value === 'embedBy'
+  ? { id: form.value.embedById, name: form.value.embedBy }
+  : { id: form.value.operatorId, name: form.value.operatorName })
+
+/** 选了人：账号 id 与姓名一起落到对应那一栏 */
+function onPersonPicked(person: PersonValue) {
+  if (personField.value === 'embedBy') {
+    form.value.embedById = person.id
+    form.value.embedBy = person.name
+  }
+  else {
+    form.value.operatorId = person.id
+    form.value.operatorName = person.name
+  }
 }
 
 function onPicked(event: { value: number | string }) {
@@ -460,7 +491,7 @@ async function submit() {
               :required="spec.key === 'sampleId' || (isInternal && spec.key === 'paraffinBlockNo')" marker-side="after"
               :mono="spec.key === 'sampleId' || spec.key === 'paraffinBlockNo'"
               :maxlength="fieldMaxlength(spec.key)"
-              :model-value="spec.control === 'select' ? form.sampleLabel : fieldValue(spec.key)"
+              :model-value="spec.key === 'sampleId' ? form.sampleLabel : fieldValue(spec.key)"
               :placeholder="spec.key === 'sampleType' && hints.length ? `${hints[0]} 等` : undefined"
               @update:model-value="(v: string) => setField(spec.key, v)"
               @pick="onPick(spec)"
@@ -488,6 +519,15 @@ async function submit() {
 
     <SamplePicker ref="samplePickerRef" :disabled="!editable" @pick="onSamplePicked" />
     <SamplePickerExt ref="extPickerRef" :disabled="!editable" @pick="onSamplePicked" />
+
+    <!-- 包埋人 / 操作人：底部弹框从内部人员名单里选（CR-20261012-22；两栏共用一个面板） -->
+    <StaffSheet
+      ref="staffSheetRef"
+      :title="personField === 'embedBy' ? '包埋人' : '操作人'"
+      :model-value="personValue"
+      :disabled="!editable"
+      @update:model-value="onPersonPicked"
+    />
 
     <wd-datetime-picker
       ref="pickerRef"

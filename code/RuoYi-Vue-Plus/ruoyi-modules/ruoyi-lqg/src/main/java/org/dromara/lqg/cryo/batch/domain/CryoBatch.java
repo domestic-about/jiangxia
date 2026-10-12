@@ -79,9 +79,14 @@ public class CryoBatch extends BaseEntity {
     private String inMinus80;
 
     /**
-     * 冻存人（姓名文本，默认当前登录人，可改）
+     * 冻存人姓名（选人时的快照；历史数据是手填文字）
      */
     private String frozenBy;
+
+    /**
+     * 冻存人 user_id（内部人员，CR-20261012-22）
+     */
+    private Long frozenById;
 
     /**
      * 转移至液氮时间；非空 = 已转液氮，不再参与超期提醒

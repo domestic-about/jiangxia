@@ -90,6 +90,30 @@
               />
             </el-form-item>
           </el-col>
+          <!-- 石蜡包埋时间、包埋人、操作人（CR-20261012-22）：操作人统计按这三项算，点统计页的数字会带着它们过来 -->
+          <el-col :xs="24" :sm="24" :md="16" :lg="12">
+            <el-form-item :label="t('lqg.person.paraffinRange')" label-width="104px">
+              <el-date-picker
+                v-model="paraffinTimeRange"
+                type="daterange"
+                value-format="YYYY-MM-DD"
+                :start-placeholder="t('lqg.person.rangeBegin')"
+                :end-placeholder="t('lqg.person.rangeEnd')"
+                class="lqg-embed__control lqg-range"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.person.embedBy')">
+              <StaffSelect v-model="queryParams.embedByKey" :name="routePersonName" filter class="lqg-embed__control" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item :label="t('lqg.person.operator')">
+              <StaffSelect v-model="queryParams.operatorKey" :name="routePersonName" filter class="lqg-embed__control" />
+            </el-form-item>
+          </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item label=" ">
               <el-button type="primary" icon="Search" @click="handleQuery">{{ t('lqg.embed.search') }}</el-button>
@@ -258,12 +282,15 @@
 <script setup name="LqgEmbed" lang="ts">
 import { delEmbed, exportEmbeds, isEditable, isExternalPending, listEmbeds, neverModified } from '@/api/lqg/embed';
 import type { EmbedQuery, EmbedVO } from '@/api/lqg/embed';
+import StaffSelect from '@/components/lqg/StaffSelect/index.vue';
+import { personKeyOfQuery } from '@/components/lqg/StaffSelect/staff';
 import { useLqgTodoStore } from '@/store/modules/lqgTodo';
 // ★ 四张表之间的来回（2026-09-24 本机验收）：路径、query 解析、提示条样本名都在 relation.ts
 import {
   EMBED_PATH,
   SUBMIT_SOURCES,
   VERIFY_STATUSES,
+  dateOfQuery,
   oneOfQuery,
   queryWithout,
   routeKeyOf,
@@ -295,6 +322,9 @@ const exporting = ref(false);
 const rows = ref<EmbedVO[]>([]);
 const total = ref(0);
 const sectionTimeRange = ref<[string, string] | null>(null);
+const paraffinTimeRange = ref<[string, string] | null>(null);
+/** 操作人统计页带过来的姓名（那个人已不在名单里时，筛选框里显示用） */
+const routePersonName = ref<string | null>(null);
 const drawerRef = ref<InstanceType<typeof EmbedDrawer>>();
 
 const queryRef = ref<ElFormInstance>();
@@ -309,7 +339,11 @@ const queryParams = reactive<EmbedQuery>({
   sectionTimeBegin: null,
   sectionTimeEnd: null,
   verifyStatus: null,
-  submitSource: null
+  submitSource: null,
+  paraffinEmbedTimeBegin: null,
+  paraffinEmbedTimeEnd: null,
+  embedByKey: null,
+  operatorKey: null
 });
 
 // 最近一次取数失败了没有：失败时表格空白处说「没加载出来」而不是「没有数据」（工作台 UX 测试 WEB-06）
@@ -322,6 +356,8 @@ const getList = async () => {
     // 切片时间区间两端都含（后端 ge / le），区间清掉时两个参数一起清掉
     queryParams.sectionTimeBegin = sectionTimeRange.value?.[0] ?? null;
     queryParams.sectionTimeEnd = sectionTimeRange.value?.[1] ?? null;
+    queryParams.paraffinEmbedTimeBegin = paraffinTimeRange.value?.[0] ?? null;
+    queryParams.paraffinEmbedTimeEnd = paraffinTimeRange.value?.[1] ?? null;
     const res = await listEmbeds(queryParams);
     rows.value = (res.rows ?? []) as EmbedVO[];
     total.value = res.total ?? 0;
@@ -344,6 +380,10 @@ const handleQuery = () => {
 const clearFilters = () => {
   queryRef.value?.resetFields();
   sectionTimeRange.value = null;
+  paraffinTimeRange.value = null;
+  routePersonName.value = null;
+  queryParams.embedByKey = null;
+  queryParams.operatorKey = null;
   queryParams.paraffinBlockNo = null;
   queryParams.internalNo = null;
   queryParams.species = null;
@@ -359,8 +399,11 @@ const clearFilters = () => {
 //   进来，onMounted 不会再跑。所以看整条地址：地址里的筛选（sampleId / verifyStatus / submitSource）
 //   与上一次套上的不一样，才清掉旧筛选、按地址重新套一遍并重拉；一样就不动（从标签页切回来保留手动筛选）。
 
+/** 操作人统计页点数字带过来的筛选（CR-20261012-22）：按人 + 石蜡包埋时间段 */
+const STAT_ROUTE_KEYS = ['embedByKey', 'operatorKey', 'timeBegin', 'timeEnd', 'personName'];
+
 /** 本页认的地址筛选；`add` 不在里面（它只是「到了就开新增抽屉」的一次性动作） */
-const ROUTE_KEYS = ['sampleId', 'verifyStatus', 'submitSource'];
+const ROUTE_KEYS = ['sampleId', 'verifyStatus', 'submitSource', ...STAT_ROUTE_KEYS];
 
 /** 上一次按地址套上的筛选指纹；null = 还没套过 */
 let appliedRouteKey: string | null = null;
@@ -386,6 +429,13 @@ const applyRouteScope = async (): Promise<boolean> => {
   // 样本表「待核验 N」带 sampleId + verifyStatus=pending 进来 → 自动套上筛选（只认字典里的值）
   queryParams.verifyStatus = oneOfQuery(route.query.verifyStatus, VERIFY_STATUSES);
   queryParams.submitSource = oneOfQuery(route.query.submitSource, SUBMIT_SOURCES);
+  // 操作人统计页点数字进来：按人 + 石蜡包埋时间段（只带了一头的时间段不套 —— 这里的区间框要两头都有）
+  queryParams.embedByKey = personKeyOfQuery(route.query.embedByKey);
+  queryParams.operatorKey = personKeyOfQuery(route.query.operatorKey);
+  routePersonName.value = typeof route.query.personName === 'string' ? route.query.personName : null;
+  const timeBegin = dateOfQuery(route.query.timeBegin);
+  const timeEnd = dateOfQuery(route.query.timeEnd);
+  paraffinTimeRange.value = timeBegin && timeEnd ? [timeBegin, timeEnd] : null;
   queryParams.pageNum = 1;
   await Promise.all([getList(), loadScopeSample(queryParams.sampleId)]);
   return true;
@@ -405,7 +455,7 @@ const openAddFromRoute = () => {
 
 const resetQuery = () => {
   clearFilters();
-  syncRouteScope(['sampleId', 'verifyStatus', 'submitSource', 'add']);
+  syncRouteScope(['sampleId', 'verifyStatus', 'submitSource', 'add', ...STAT_ROUTE_KEYS]);
   handleQuery();
 };
 
@@ -500,6 +550,8 @@ const handleExport = async () => {
   try {
     queryParams.sectionTimeBegin = sectionTimeRange.value?.[0] ?? null;
     queryParams.sectionTimeEnd = sectionTimeRange.value?.[1] ?? null;
+    queryParams.paraffinEmbedTimeBegin = paraffinTimeRange.value?.[0] ?? null;
+    queryParams.paraffinEmbedTimeEnd = paraffinTimeRange.value?.[1] ?? null;
     const res: any = await exportEmbeds(queryParams);
     const blob = new Blob([res.data ?? res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     if (!blob.size) {

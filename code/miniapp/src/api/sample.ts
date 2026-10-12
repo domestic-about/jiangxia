@@ -75,6 +75,8 @@ export interface SampleDetail extends SampleRow {
   hasQcSheet?: string | null
   hasViabilityReport?: string | null
   operatorName?: string | null
+  /** 操作人账号 id（内部详情才有；CR-20261012-22） */
+  operatorId?: string | number | null
   /** 第②段：该样本名下的石蜡包埋卡片（**含外部提交还没核验的送样**，AUTH-EXT-002） */
   embeds?: EmbedRow[]
   /** 第③段：质控文档（AUTH-EXT-003） */
@@ -117,8 +119,12 @@ export interface EmbedRow {
   editable?: boolean | null
   /** 包埋人 */
   embedBy?: string | null
+  /** 包埋人账号 id（内部详情才有，外部的 VO 里没有这个键；CR-20261012-22） */
+  embedById?: string | number | null
   /** 操作人 */
   operatorName?: string | null
+  /** 操作人账号 id（内部详情才有；CR-20261012-22） */
+  operatorId?: string | number | null
 }
 
 /** 一条 marker 表达（只有名称与表达两个键） */
@@ -145,6 +151,8 @@ export interface SampleFormValue {
   hasQcSheet: string
   hasViabilityReport: string
   operatorName: string
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22；'' = 没填，或历史手填的姓名没关联账号） */
+  operatorId: string
 }
 
 /** 空表单（新增时用） */
@@ -166,6 +174,7 @@ export function emptyForm(): SampleFormValue {
     hasQcSheet: '',
     hasViabilityReport: '',
     operatorName: '',
+    operatorId: '',
   }
 }
 
@@ -192,6 +201,7 @@ export function toFormValue(detail: Partial<SampleDetail> | null | undefined): S
     hasQcSheet: str(detail.hasQcSheet),
     hasViabilityReport: str(detail.hasViabilityReport),
     operatorName: str(detail.operatorName),
+    operatorId: str(detail.operatorId),
   }
 }
 

@@ -9,6 +9,7 @@
 // ★ 来源单位：选了列表项要**同时**带 `sourceUnitId` 与 `sourceUnitName`
 //   —— 后端按 id 取单位名快照（`SampleService.resolveUnitName`），手填的只有名字。
 //   两个都带上，快照那一列永远是名字，不会空（ticket 的 counterfeit 第 2 条）。
+import { personIdOf } from '@/utils/staff'
 import type { SampleDetail } from '@/api/sample'
 import { http } from '@/utils/request'
 import { normalizePassage } from './layout'
@@ -29,6 +30,8 @@ export interface OrganoidFormValue {
   processTime: string
   hasViabilityReport: string
   operatorName: string
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22；'' = 没填，或历史手填的姓名没关联账号） */
+  operatorId: string
   remark: string
 }
 
@@ -45,6 +48,7 @@ export function emptyOrganoidForm(): OrganoidFormValue {
     processTime: '',
     hasViabilityReport: '',
     operatorName: '',
+    operatorId: '',
     remark: '',
   }
 }
@@ -70,6 +74,7 @@ export function toOrganoidFormValue(detail: Partial<SampleDetail> | null | undef
     processTime: str(detail.processTime),
     hasViabilityReport: str(detail.hasViabilityReport),
     operatorName: str(detail.operatorName),
+    operatorId: str(detail.operatorId),
     remark: str(detail.remark),
   }
 }
@@ -111,6 +116,8 @@ export function internalOrganoidPatch(form: OrganoidFormValue): Record<string, u
     processTime: form.processTime ? form.processTime.replace('T', ' ') : null,
     hasViabilityReport: form.hasViabilityReport,
     operatorName: form.operatorName.trim(),
+    // 操作人账号 id（CR-20261012-22）：与姓名是一对，后端带了 id 以它为准
+    operatorId: personIdOf(form.operatorId),
   }
 }
 

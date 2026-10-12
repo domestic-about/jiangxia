@@ -106,9 +106,14 @@ public class Embed extends BaseEntity {
     private LocalDate agaroseEmbedTime;
 
     /**
-     * 包埋人
+     * 包埋人姓名（选人时的快照；历史数据是手填文字）
      */
     private String embedBy;
+
+    /**
+     * 包埋人 user_id（内部人员，CR-20261012-22）
+     */
+    private Long embedById;
 
     /**
      * 脱水时间
@@ -142,9 +147,14 @@ public class Embed extends BaseEntity {
     private String stainOther;
 
     /**
-     * 操作人
+     * 操作人姓名（选人时的快照；历史数据是手填文字）
      */
     private String operatorName;
+
+    /**
+     * 操作人 user_id（内部人员，CR-20261012-22）
+     */
+    private Long operatorId;
 
     /**
      * 备注

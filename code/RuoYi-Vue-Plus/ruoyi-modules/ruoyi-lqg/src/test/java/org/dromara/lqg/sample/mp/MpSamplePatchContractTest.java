@@ -2,6 +2,7 @@ package org.dromara.lqg.sample.mp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dromara.common.core.exception.ServiceException;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryStub;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.PatchBody;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitBo;
@@ -137,7 +138,7 @@ class MpSamplePatchContractTest {
                 }
                 default -> throw new UnsupportedOperationException(method.getName());
             });
-        SampleService sampleService = new SampleService(mapper, null, null, null);
+        SampleService sampleService = new SampleService(mapper, null, null, null, StaffDirectoryStub.empty());
         SampleSubmitBo merged = MpSampleService.mergePatch(tissueRow(),
             parse("{\"id\":9000001001,\"tissueType\":\"\",\"internalNo\":null,\"receiveDate\":null,\"sourceUnitName\":\"\"}"));
         ServiceException e = assertThrows(ServiceException.class, () -> sampleService.update(merged));
@@ -160,7 +161,7 @@ class MpSamplePatchContractTest {
             });
         SampleSubmitBo merged = MpSampleService.mergePatch(tissueRow(), parse("{\"id\":9000001001,\"hasPathology\":\"yes\"}"));
         ServiceException e = assertThrows(ServiceException.class,
-            () -> new SampleService(mapper, null, null, null).update(merged));
+            () -> new SampleService(mapper, null, null, null, StaffDirectoryStub.empty()).update(merged));
         assertEquals(Integer.valueOf(400), e.getCode());
         assertTrue(e.getMessage().contains("有无病理只能是"), e.getMessage());
     }

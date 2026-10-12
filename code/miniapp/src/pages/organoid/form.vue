@@ -22,6 +22,9 @@ import { finishTo, goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { unitDisplay } from '@/utils/ext-profile'
 import { DEFAULT_SPECIES, fetchSpeciesOptions, speciesProblem } from '@/utils/species'
+import type { PersonValue } from '@/utils/staff'
+import { defaultPerson, fetchStaffOptions } from '@/utils/staff'
+import StaffSheet from '@/components/lqg/StaffSheet.vue'
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
 import type { OrganoidFormValue } from './api'
 import {
@@ -82,6 +85,8 @@ const manualUnit = ref(false)
 /** 种属（CR-20261009-18）：字典常用值 + 底部选择面板（`SpeciesSheet`，可手填） */
 const speciesOptions = ref<string[]>([...DEFAULT_SPECIES])
 const speciesSheetRef = ref<{ open: () => void } | null>(null)
+/** 操作人：从内部人员名单里选（CR-20261012-22） */
+const staffSheetRef = ref<{ open: () => void } | null>(null)
 /** 日期 / 时间控件的目标字段、回填毫秒值与组件实例 */
 const pickerField = ref<OrganoidFieldKey>('receiveDate')
 const pickerValue = ref<number>(Date.now())
@@ -156,8 +161,10 @@ async function load() {
     if (mode.value === 'new') {
       form.value = emptyOrganoidForm()
       if (isInternal.value) {
-        // 内部新增：操作人默认带当前登录人（可改）
-        form.value.operatorName = store.name || ''
+        // 内部新增：操作人默认带当前登录人（可改；在内部人员名单里就带上账号 id）
+        const me = defaultPerson(await fetchStaffOptions(), store.me?.userId, store.name)
+        form.value.operatorId = me.id
+        form.value.operatorName = me.name
       }
       else {
         // 外部新增：来源单位默认带档案里**绑定**的单位（待核验 / 已核验才算；UI:mp.organoid.form）；
@@ -261,6 +268,10 @@ function onPick(spec: OrganoidFieldSpec) {
     speciesSheetRef.value?.open()
     return
   }
+  if (spec.key === 'operatorName') {
+    staffSheetRef.value?.open()
+    return
+  }
   if (spec.control === 'select') {
     unitSheetRef.value?.open()
     return
@@ -268,6 +279,12 @@ function onPick(spec: OrganoidFieldSpec) {
   pickerField.value = spec.key
   pickerValue.value = toMs(fieldValue(spec.key))
   pickerRef.value?.open()
+}
+
+/** 选了操作人：账号 id 与姓名一起落 */
+function onOperatorPicked(person: PersonValue) {
+  form.value.operatorId = person.id
+  form.value.operatorName = person.name
 }
 
 function onPicked(event: { value: number | string }) {
@@ -507,6 +524,15 @@ async function submit() {
       :options="speciesOptions"
       :disabled="!editable"
       @update:model-value="(v: string) => setField('species', v)"
+    />
+
+    <!-- 操作人：底部弹框从内部人员名单里选（CR-20261012-22） -->
+    <StaffSheet
+      ref="staffSheetRef"
+      title="操作人"
+      :model-value="{ id: form.operatorId, name: form.operatorName }"
+      :disabled="!editable"
+      @update:model-value="onOperatorPicked"
     />
 
     <!-- 来源单位：底部弹框（内部 = 全部启用单位；外部 = 本人绑定的单位；都能手填） -->

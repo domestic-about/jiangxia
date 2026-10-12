@@ -91,8 +91,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <!-- 冻存人（CR-20261012-22）：从内部人员名单里选；新增时默认当前登录人 -->
             <el-form-item :label="t('lqg.cryo.drawer.frozenBy')">
-              <el-input v-model="form.frozenBy" maxlength="50" clearable />
+              <StaffSelect v-model:id="form.frozenById" v-model:name="form.frozenBy" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -137,6 +138,10 @@
 
 <script setup name="LqgCryoDrawer" lang="ts">
 import SegButtons from '@/components/lqg/SegButtons/index.vue';
+import StaffSelect from '@/components/lqg/StaffSelect/index.vue';
+import { defaultPerson } from '@/components/lqg/StaffSelect/staff';
+import { useStaff } from '@/components/lqg/StaffSelect/useStaff';
+import { useUserStore } from '@/store/modules/user';
 import { addBatch, getBatch, neverModified, updateBatch } from '@/api/lqg/cryo';
 import type { CryoBatchForm, CryoBatchVO } from '@/api/lqg/cryo';
 import { listSamples } from '@/api/lqg/sample';
@@ -185,6 +190,7 @@ const emptyForm = () => ({
   density: null as string | null,
   inMinus80: null as string | null,
   frozenBy: null as string | null,
+  frozenById: null as string | number | null,
   toLn2Time: null as string | null,
   ln2Location: null as string | null,
   remark: null as string | null,
@@ -245,9 +251,16 @@ const rules = computed<ElFormRules>(() => ({
 // 有改动时按 ESC / 点 × / 点「取消」先问一句；点遮罩不再关（工作台 UX 测试 WEB-04）
 const closeGuard = useCloseGuard(() => form.value, () => visible.value && !loading.value);
 
-const openAdd = (presetSample?: SampleVO | null) => {
+const { load: loadStaff } = useStaff();
+const userStore = useUserStore();
+
+const openAdd = async (presetSample?: SampleVO | null) => {
   mode.value = 'create';
   form.value = emptyForm();
+  // 冻存人默认当前登录人（在内部人员名单里才带）—— 先带出来再打开，关闭前「有没有改动」的基线里要包含它
+  const me = defaultPerson(await loadStaff(), userStore.userId);
+  form.value.frozenById = me.id;
+  form.value.frozenBy = me.name;
   sampleOptions.value = presetSample ? [presetSample] : [];
   if (presetSample) {
     form.value.sampleId = presetSample.id;
@@ -278,6 +291,7 @@ const open = async (row: CryoBatchVO) => {
       density: detail.density ?? null,
       inMinus80: detail.inMinus80 ?? null,
       frozenBy: detail.frozenBy ?? null,
+      frozenById: detail.frozenById ?? null,
       toLn2Time: detail.toLn2Time ?? null,
       ln2Location: detail.ln2Location ?? null,
       remark: detail.remark ?? null,
@@ -326,6 +340,7 @@ const payload = (): CryoBatchForm => ({
   density: form.value.density,
   inMinus80: form.value.inMinus80,
   frozenBy: form.value.frozenBy,
+  frozenById: form.value.frozenById,
   toLn2Time: form.value.toLn2Time,
   ln2Location: form.value.ln2Location,
   remark: form.value.remark

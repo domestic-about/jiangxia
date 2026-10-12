@@ -9,7 +9,9 @@ import LoadingState from '@/components/lqg/LoadingState.vue'
 import MarkerRows from '@/components/lqg/MarkerRows.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import ReasonSheet from '@/components/lqg/ReasonSheet.vue'
+import StaffSheet from '@/components/lqg/StaffSheet.vue'
 import StainButtons from '@/components/lqg/StainButtons.vue'
+import type { PersonValue } from '@/utils/staff'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { hasOtherStain, toggleStain } from '@/pages/embed/stain'
 import { goPage } from '@/router/config'
@@ -157,7 +159,30 @@ function formatMs(ms: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/** 选人面板这次是给哪一栏开的（包埋人 / 操作人，CR-20261012-22：从内部人员名单里选） */
+const personField = ref<'embedBy' | 'operatorName'>('operatorName')
+const staffSheetRef = ref<{ open: () => void } | null>(null)
+const personValue = computed<PersonValue>(() => personField.value === 'embedBy'
+  ? { id: form.value.embedById, name: form.value.embedBy }
+  : { id: form.value.operatorId, name: form.value.operatorName })
+
+function openStaff(field: 'embedBy' | 'operatorName') {
+  personField.value = field
+  staffSheetRef.value?.open()
+}
+
+/** 选了人：账号 id 与姓名一起落到对应那一栏 */
+function onPersonPicked(person: PersonValue) {
+  form.value = personField.value === 'embedBy'
+    ? { ...form.value, embedById: person.id, embedBy: person.name }
+    : { ...form.value, operatorId: person.id, operatorName: person.name }
+}
+
 function onPick(key: EmbedFillKey) {
+  if (key === 'embedBy') {
+    openStaff('embedBy')
+    return
+  }
   pickerField.value = key
   pickerValue.value = toMs(fieldValue(key))
   pickerRef.value?.open()
@@ -308,7 +333,7 @@ onUnload(() => uni.$off(VERIFIED_EVENT, refreshSample))
             v-for="key in PROCESS_KEYS"
             :key="key"
             :label="EMBED_LABEL[key]"
-            :control="isDate(key) ? 'date' : 'text'"
+            :control="isDate(key) ? 'date' : key === 'embedBy' ? 'select' : 'text'"
             :maxlength="isDate(key) ? undefined : 50"
             :model-value="fieldValue(key)"
             @update:model-value="(v: string) => setField(key, v)"
@@ -345,11 +370,12 @@ onUnload(() => uni.$off(VERIFIED_EVENT, refreshSample))
           <text>其他</text>
         </view>
         <view class="ve__group">
+          <!-- 操作人（CR-20261012-22）：从内部人员名单里选，不再手填 -->
           <FieldRow
             :label="EMBED_LABEL.operatorName"
-            :maxlength="50"
+            control="select"
             :model-value="form.operatorName"
-            @update:model-value="(v: string) => setField('operatorName', v)"
+            @pick="openStaff('operatorName')"
           />
           <FieldRow
             :label="EMBED_LABEL.remark"
@@ -379,6 +405,14 @@ onUnload(() => uni.$off(VERIFIED_EVENT, refreshSample))
       :maxlength="MAX_INVALID_REASON"
       :notes="reasonNotes"
       @confirm="(reason: string) => submit('invalid', reason)"
+    />
+
+    <!-- 包埋人 / 操作人：底部弹框从内部人员名单里选（CR-20261012-22；两栏共用一个面板） -->
+    <StaffSheet
+      ref="staffSheetRef"
+      :title="personField === 'embedBy' ? '包埋人' : '操作人'"
+      :model-value="personValue"
+      @update:model-value="onPersonPicked"
     />
 
     <wd-datetime-picker

@@ -87,6 +87,12 @@ export const oneOfQuery = <T extends string>(value: unknown, allowed: readonly T
   return typeof raw === 'string' && (allowed as readonly string[]).includes(raw) ? (raw as T) : null;
 };
 
+/** 地址里的日期（yyyy-MM-dd，操作人统计页点数字带时间段过来，CR-20261012-22）；不是这个形状的一律当没带 */
+export const dateOfQuery = (value: unknown): string | null => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+};
+
 /** 路由 query 里的开关（'true' / '1' 算开） */
 export const flagOfQuery = (value: unknown): boolean => {
   const raw = Array.isArray(value) ? value[0] : value;

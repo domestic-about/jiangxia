@@ -40,6 +40,8 @@ const ICON_BODY = {
   search: '<circle cx=\'11\' cy=\'11\' r=\'6.5\'/><path d=\'m16 16 4.5 4.5\'/>',
   /** 「使用「…」」那一行前的加号 */
   plus: '<path d=\'M12 5v14M5 12h14\'/>',
+  /** 操作人统计：三根柱子 + 底线 */
+  stat: '<path d=\'M4 20.5h16\'/><path d=\'M7.5 20.5V12\'/><path d=\'M12 20.5V5\'/><path d=\'M16.5 20.5V14.5\'/>',
 } as const
 
 export type LineIconName = keyof typeof ICON_BODY

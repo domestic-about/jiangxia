@@ -93,8 +93,9 @@
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
-            <el-form-item :label="t('lqg.sample.filter.operatorName')" prop="operatorName">
-              <el-input v-model="queryParams.operatorName" :placeholder="t('lqg.sample.filter.operatorPlaceholder')" clearable class="lqg-sample__control" />
+            <!-- 操作人（CR-20261012-22）：从内部人员名单里选；也可以直接输入姓名，找历史手填、还没关联账号的记录 -->
+            <el-form-item :label="t('lqg.sample.filter.operatorName')" prop="operatorKey">
+              <StaffSelect v-model="queryParams.operatorKey" :name="routePersonName" filter class="lqg-sample__control" />
             </el-form-item>
           </el-col>
           <!-- 供体姓名 / 住院号只有组织样本有（类器官收样记录没有这两列） -->
@@ -268,11 +269,13 @@ import HintBadges from './HintBadges.vue';
 // ★ 石蜡包埋 / 冻存一列（2026-09-24 本机验收）：数量 + 可点，去向全在 relation.ts
 import RelationLinks from './RelationLinks.vue';
 import { normalizeSampleKind, sampleColumns, samplePageOf } from './pages';
-import { queryWithout, sampleIdOfQuery } from './relation';
+import { dateOfQuery, queryWithout, sampleIdOfQuery } from './relation';
 import type { SampleKind } from './pages';
 import { useI18n } from 'vue-i18n';
 import TableEmpty from '@/components/lqg/TableEmpty/index.vue';
 import SpeciesSelect from '@/components/lqg/SpeciesSelect/index.vue';
+import StaffSelect from '@/components/lqg/StaffSelect/index.vue';
+import { personKeyOfQuery } from '@/components/lqg/StaffSelect/staff';
 
 const props = withDefaults(
   defineProps<{
@@ -304,6 +307,8 @@ const total = ref(0);
 const units = ref<SourceUnitVO[]>([]);
 const groups = ref<UnitGroupVO[]>([]);
 const receiveDateRange = ref<[string, string] | null>(null);
+/** 操作人统计页带过来的姓名（那个人已不在名单里时，筛选框里显示用） */
+const routePersonName = ref<string | null>(null);
 const drawerRef = ref<InstanceType<typeof SampleDrawer>>();
 
 const queryRef = ref<ElFormInstance>();
@@ -323,6 +328,7 @@ const queryParams = reactive<SampleQuery>({
   organoidType: null,
   internalNo: null,
   operatorName: null,
+  operatorKey: null,
   donorName: null,
   hospitalNo: null
 });
@@ -370,7 +376,8 @@ const handleQuery = () => {
   getList();
 };
 
-const resetQuery = () => {
+/** 清空全部筛选（不发请求；「重置」与「操作人统计页带筛选进来」共用） */
+const clearFilters = () => {
   queryRef.value?.resetFields();
   receiveDateRange.value = null;
   queryParams.sourceUnitId = null;
@@ -382,9 +389,15 @@ const resetQuery = () => {
   queryParams.organoidType = null;
   queryParams.internalNo = null;
   queryParams.operatorName = null;
+  queryParams.operatorKey = null;
+  routePersonName.value = null;
   queryParams.donorName = null;
   queryParams.hospitalNo = null;
   groups.value = [];
+};
+
+const resetQuery = () => {
+  clearFilters();
   handleQuery();
 };
 
@@ -501,6 +514,18 @@ const applyRouteQuery = () => {
   if (typeof verifyStatus === 'string' && ['pending', 'valid', 'invalid'].includes(verifyStatus)) {
     queryParams.verifyStatus = verifyStatus;
   }
+  // 操作人统计页点数字进来（CR-20261012-22）：操作人 + 收样日期段（统计只算已核验有效的，verifyStatus=valid 一起带着）
+  const operatorKey = personKeyOfQuery(route.query.operatorKey);
+  if (operatorKey) {
+    // 统计页的数字只按「操作人 + 时间段 + 已核验有效」算：别的手动筛选先清掉，否则列表条数对不上那个数字
+    clearFilters();
+    queryParams.verifyStatus = 'valid';
+    queryParams.operatorKey = operatorKey;
+    routePersonName.value = typeof route.query.personName === 'string' ? route.query.personName : null;
+    const timeBegin = dateOfQuery(route.query.timeBegin);
+    const timeEnd = dateOfQuery(route.query.timeEnd);
+    receiveDateRange.value = timeBegin && timeEnd ? [timeBegin, timeEnd] : null;
+  }
 };
 
 /**
@@ -547,7 +572,20 @@ onMounted(async () => {
 watch(
   () => route.query.verifyStatus,
   (value, old) => {
-    if (route.path !== page.value.path || value === old || value === undefined) {
+    // 带着 operatorKey 的地址由下面那个 watch 管（避免同一次跳转拉两遍）
+    if (route.path !== page.value.path || value === old || value === undefined || route.query.operatorKey !== undefined) {
+      return;
+    }
+    applyRouteQuery();
+    handleQuery();
+  }
+);
+
+// ★ 同理：已经打开过这一页，再从操作人统计页点数字进来（?operatorKey=…&timeBegin=…&timeEnd=…）→ 重新套筛选并重拉。
+watch(
+  () => [route.query.operatorKey, route.query.timeBegin, route.query.timeEnd].join('|'),
+  (value, old) => {
+    if (route.path !== page.value.path || value === old || route.query.operatorKey === undefined) {
       return;
     }
     applyRouteQuery();

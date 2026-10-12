@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.dromara.common.core.exception.ServiceException;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryStub;
 import org.dromara.lqg.cryo.batch.domain.CryoBatch;
 import org.dromara.lqg.cryo.batch.domain.bo.CryoBatchSubmitBo;
 import org.dromara.lqg.cryo.batch.mapper.CryoBatchMapper;
@@ -123,7 +124,7 @@ class CryoBatchPatchSemanticsTest {
                     }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
-            return new CryoBatchService(batchMapper, null, null);
+            return new CryoBatchService(batchMapper, null, null, StaffDirectoryStub.empty());
         }
     }
 

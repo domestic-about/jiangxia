@@ -92,7 +92,10 @@ public class SampleSubmitBo implements Serializable {
     @Schema(description = "细胞活率报告 Y / N（按钮手点）")
     private String hasViabilityReport;
 
-    @Schema(description = "操作人（默认带当前登录人，可改）")
+    @Schema(description = "操作人 user_id（从内部人员名单里选，CR-20261012-22；带了就以它为准）")
+    private Long operatorId;
+
+    @Schema(description = "操作人姓名（默认带当前登录人；带了 operatorId 时以名单里的姓名为准）")
     private String operatorName;
 
     @Schema(description = "备注")

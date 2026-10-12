@@ -8,6 +8,7 @@ import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
+import org.dromara.lqg.auth.staff.directory.PersonKey;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.domain.EmbedMarker;
 import org.dromara.lqg.embed.domain.bo.EmbedQueryBo;
@@ -267,11 +268,17 @@ public class EmbedQueryService {
             .eq(q.getSampleId() != null, Embed::getSampleId, q.getSampleId())
             .ge(q.getSectionTimeBegin() != null, Embed::getSectionTime, q.getSectionTimeBegin())
             .le(q.getSectionTimeEnd() != null, Embed::getSectionTime, q.getSectionTimeEnd())
+            // 石蜡包埋时间区间（CR-20261012-22：操作人统计按这个时间，点数字跳过来时带）
+            .ge(q.getParaffinEmbedTimeBegin() != null, Embed::getParaffinEmbedTime, q.getParaffinEmbedTimeBegin())
+            .le(q.getParaffinEmbedTimeEnd() != null, Embed::getParaffinEmbedTime, q.getParaffinEmbedTimeEnd())
             .eq(StringUtils.isNotBlank(q.getVerifyStatus()), Embed::getVerifyStatus, trim(q.getVerifyStatus()))
             // 提交来源钉在已落库的列上（提交当时的快照），不按提交人当前角色现算
             .eq(StringUtils.isNotBlank(q.getSubmitSource()), Embed::getSubmitSource, trim(q.getSubmitSource()));
         // 种属：所挂样本的列（CR-20261009-18），子查询筛，见 SampleSpeciesFilter
         SampleSpeciesFilter.bySampleId(wrapper, q.getSpecies());
+        // 按人（CR-20261012-22）：包埋人、操作人各一个，与操作人统计同一个口径
+        PersonKey.apply(wrapper, Embed::getEmbedById, Embed::getEmbedBy, q.getEmbedByKey());
+        PersonKey.apply(wrapper, Embed::getOperatorId, Embed::getOperatorName, q.getOperatorKey());
         // ★ 搜索框（UI:mp.embed.list：石蜡块编号 / 内部编号）：两个判据**合成一组 OR**，
         //   与别的筛选相与。所挂样本的内部编号是等值（这一列不是加密列，等值才能让
         //   「T-hli01」一次命中；石蜡块编号按模糊，用户常常只记得前几段）。
@@ -379,6 +386,7 @@ public class EmbedQueryService {
         vo.setTissueProcessTime(embed.getTissueProcessTime());
         vo.setAgaroseEmbedTime(embed.getAgaroseEmbedTime());
         vo.setEmbedBy(embed.getEmbedBy());
+        vo.setEmbedById(embed.getEmbedById());
         vo.setDehydrateTime(embed.getDehydrateTime());
         vo.setAgaroseSendTime(embed.getAgaroseSendTime());
         vo.setParaffinEmbedTime(embed.getParaffinEmbedTime());
@@ -389,6 +397,7 @@ public class EmbedQueryService {
         vo.setStainOther(embed.getStainOther());
         vo.setMarkers(markers == null ? List.of() : markers);
         vo.setOperatorName(embed.getOperatorName());
+        vo.setOperatorId(embed.getOperatorId());
         vo.setRemark(embed.getRemark());
         vo.setSubmitSource(embed.getSubmitSource());
         vo.setSubmitterId(embed.getSubmitterId());

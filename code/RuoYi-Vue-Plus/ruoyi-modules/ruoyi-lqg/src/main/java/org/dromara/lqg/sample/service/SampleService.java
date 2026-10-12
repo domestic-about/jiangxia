@@ -9,6 +9,8 @@ import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryService;
+import org.dromara.lqg.auth.staff.directory.StaffRef;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitBo;
 import org.dromara.lqg.sample.domain.bo.SampleSubmitSegmentBo;
@@ -53,6 +55,8 @@ public class SampleService {
     private final SampleQueryService sampleQueryService;
     private final SampleSubmitNoGenerator submitNoGenerator;
     private final SampleSubmitSegmentWriter segmentWriter;
+    /** 操作人从内部人员名单里选（CR-20261012-22） */
+    private final StaffDirectoryService staffDirectory;
 
     /**
      * 内部新增（{@code POST /lqg/sample}）。
@@ -130,6 +134,9 @@ public class SampleService {
                 requireInternalNoUnique(bo.getInternalNo(), exists.getId());
             }
             UnitRef unit = segmentWriter.resolveInternalUnit(bo.getSourceUnitId(), bo.getSourceUnitName());
+            // 操作人：带了账号 id 以它为准；只带名字（旧版客户端）按名单对一次，对不上就只存文字
+            StaffRef operator = staffDirectory.resolve("操作人", bo.getOperatorId(), bo.getOperatorName(),
+                StaffRef.of(exists.getOperatorId(), exists.getOperatorName()));
             LambdaUpdateWrapper<Sample> patch = new LambdaUpdateWrapper<Sample>()
                 .eq(Sample::getId, exists.getId())
                 // 显式补 update_by / update_time：用 `update(null, wrapper)` 时 MyBatis-Plus 的
@@ -144,7 +151,8 @@ public class SampleService {
                 .set(Sample::getProcessTime, bo.getProcessTime())
                 .set(Sample::getHasQcSheet, trimToNull(bo.getHasQcSheet()))
                 .set(Sample::getHasViabilityReport, trimToNull(bo.getHasViabilityReport()))
-                .set(Sample::getOperatorName, trimToNull(bo.getOperatorName()));
+                .set(Sample::getOperatorId, operator.id())
+                .set(Sample::getOperatorName, operator.name());
             // 送检段：与核验抽屉、外部重提同一组列（SampleSubmitSegmentWriter）
             segmentWriter.applyTo(patch, kind, segmentOf(bo), unit);
             sampleMapper.update(null, patch);
@@ -225,9 +233,12 @@ public class SampleService {
         entity.setProcessTime(bo.getProcessTime());
         entity.setHasQcSheet(trimToNull(bo.getHasQcSheet()));
         entity.setHasViabilityReport(trimToNull(bo.getHasViabilityReport()));
-        entity.setOperatorName(StringUtils.isNotBlank(bo.getOperatorName())
-            ? bo.getOperatorName().trim()
-            : currentNickname());
+        // 操作人：没填默认当前登录人；填了的按内部人员名单落（账号 id + 姓名快照）
+        StaffRef operator = bo.getOperatorId() == null && StringUtils.isBlank(bo.getOperatorName())
+            ? staffDirectory.currentUser()
+            : staffDirectory.resolve("操作人", bo.getOperatorId(), bo.getOperatorName(), null);
+        entity.setOperatorId(operator.id());
+        entity.setOperatorName(operator.name());
     }
 
     /**
@@ -248,11 +259,6 @@ public class SampleService {
         seg.setHasPathology(bo.getHasPathology());
         seg.setRemark(bo.getRemark());
         return seg;
-    }
-
-    private String currentNickname() {
-        LoginUser loginUser = LoginHelper.getLoginUser();
-        return loginUser == null ? null : loginUser.getNickname();
     }
 
     private static String trimToNull(String value) {

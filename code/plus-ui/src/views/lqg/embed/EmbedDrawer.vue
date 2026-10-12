@@ -82,8 +82,9 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
+              <!-- 包埋人（CR-20261012-22）：从内部人员名单里选 -->
               <el-form-item :label="t('lqg.embed.drawer.embedBy')" prop="embedBy">
-                <el-input v-model="form.embedBy" maxlength="50" clearable />
+                <StaffSelect v-model:id="form.embedById" v-model:name="form.embedBy" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -164,8 +165,9 @@
         <el-form label-width="180px">
           <el-row :gutter="12">
             <el-col :span="12">
+              <!-- 操作人（CR-20261012-22）：从内部人员名单里选；新增时默认当前登录人 -->
               <el-form-item :label="t('lqg.embed.drawer.operatorName')">
-                <el-input v-model="form.operatorName" maxlength="50" clearable />
+                <StaffSelect v-model:id="form.operatorId" v-model:name="form.operatorName" />
               </el-form-item>
             </el-col>
             <el-col :span="24">
@@ -246,6 +248,10 @@ import type { EmbedFillForm, EmbedForm, EmbedMarkerVO, EmbedVO } from '@/api/lqg
 import { listSamples } from '@/api/lqg/sample';
 import type { SampleVO } from '@/api/lqg/sample';
 import { STAIN_ORDER, hasOtherStain, stainProblem, toggleStain } from './stain';
+import StaffSelect from '@/components/lqg/StaffSelect/index.vue';
+import { defaultPerson } from '@/components/lqg/StaffSelect/staff';
+import { useStaff } from '@/components/lqg/StaffSelect/useStaff';
+import { useUserStore } from '@/store/modules/user';
 import { fillText, invalidFill, labChanges } from './verifyFill';
 import type { FillLabKey } from './verifyFill';
 import { useI18n } from 'vue-i18n';
@@ -299,6 +305,7 @@ const emptyForm = (): EmbedForm & Partial<EmbedVO> => ({
   tissueProcessTime: null,
   agaroseEmbedTime: null,
   embedBy: null,
+  embedById: null,
   dehydrateTime: null,
   agaroseSendTime: null,
   paraffinEmbedTime: null,
@@ -307,6 +314,7 @@ const emptyForm = (): EmbedForm & Partial<EmbedVO> => ({
   stainOther: null,
   markers: [],
   operatorName: null,
+  operatorId: null,
   remark: null,
   verifyStatus: null,
   invalidReason: null,
@@ -375,9 +383,17 @@ const invalidRules: ElFormRules = {
 // 有改动时按 ESC / 点 × / 点「取消」先问一句；点遮罩不再关（工作台 UX 测试 WEB-04）
 const closeGuard = useCloseGuard(() => form.value, () => visible.value && !loading.value);
 
-const openAdd = (presetSample?: SampleVO | null) => {
+const { load: loadStaff } = useStaff();
+const userStore = useUserStore();
+
+const openAdd = async (presetSample?: SampleVO | null) => {
   mode.value = 'create';
   form.value = emptyForm();
+  // 操作人默认当前登录人（在内部人员名单里才带；包埋人不默认，谁包的选谁）—— 先带出来再打开，
+  // 关闭前「有没有改动」的基线里要包含它
+  const me = defaultPerson(await loadStaff(), userStore.userId);
+  form.value.operatorId = me.id;
+  form.value.operatorName = me.name;
   markers.value = [];
   sampleOptions.value = presetSample ? [presetSample] : [];
   if (presetSample) {
@@ -485,6 +501,7 @@ const fillPayload = (): EmbedFillForm => {
     tissueProcessTime: f.tissueProcessTime ?? null,
     agaroseEmbedTime: f.agaroseEmbedTime ?? null,
     embedBy: f.embedBy ?? null,
+    embedById: f.embedById ?? null,
     dehydrateTime: f.dehydrateTime ?? null,
     agaroseSendTime: f.agaroseSendTime ?? null,
     paraffinEmbedTime: f.paraffinEmbedTime ?? null,
@@ -492,6 +509,7 @@ const fillPayload = (): EmbedFillForm => {
     stainTypes: f.stainTypes ?? [],
     stainOther: f.stainOther ?? null,
     operatorName: f.operatorName ?? null,
+    operatorId: f.operatorId ?? null,
     remark: f.remark ?? null
   };
   processFields.forEach((field: ProcessField) => {
@@ -512,7 +530,7 @@ const payload = (): EmbedForm => ({
 });
 
 /** 实验室补填项的界面名（沿用抽屉里的字段标签） */
-const LAB_LABEL_KEY: Partial<Record<FillLabKey, string>> = { stainTypes: 'stain', markers: 'marker' };
+const LAB_LABEL_KEY: Partial<Record<FillLabKey, string>> = { stainTypes: 'stain', markers: 'marker', embedById: 'embedBy', operatorId: 'operatorName' };
 const labLabel = (key: FillLabKey) => t('lqg.embed.drawer.' + (LAB_LABEL_KEY[key] ?? key));
 
 const validateStain = (): boolean => {
@@ -619,7 +637,8 @@ const openInvalidDialog = () => {
   invalidDialog.reason = '';
   // 抽屉里改过、却不会随判无效保存的实验室补填项：弹窗里明说（FIX V02b，不静默丢）。
   // 没有快照（详情没读成功）就按「打开时全空」比，填了的一律算改过 —— 宁可多提示，不许漏
-  invalidDialog.dropped = labChanges(fillSnapshot.value ?? {}, fillPayload()).map(labLabel);
+  // 包埋人、操作人各是一对键（姓名 + 账号 id），换了人两个键都变 → 字段名只报一次
+  invalidDialog.dropped = [...new Set(labChanges(fillSnapshot.value ?? {}, fillPayload()).map(labLabel))];
   invalidDialog.visible = true;
 };
 

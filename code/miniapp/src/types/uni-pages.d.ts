@@ -23,6 +23,7 @@ type _LocationUrl =
   "/pages/qc/preview" |
   "/pages/sample/detail-ext" |
   "/pages/sample/form" |
+  "/pages/stat/operator" |
   "/pages/verify/embed" |
   "/pages/verify/index" |
   "/pages/verify/sample";

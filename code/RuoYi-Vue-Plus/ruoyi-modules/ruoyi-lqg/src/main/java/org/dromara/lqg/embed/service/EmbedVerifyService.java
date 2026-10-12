@@ -165,7 +165,7 @@ public class EmbedVerifyService {
             // 改判有效必须清掉旧的 invalid_reason
             .set(Embed::getInvalidReason, null)
             .set(Embed::getParaffinBlockNo, blockNo);
-        fillWriter.applyTo(patch, prepared);
+        fillWriter.applyTo(patch, prepared, embed);
         embedMapper.update(null, patch);
         fillWriter.replaceMarkers(embed.getId(), prepared);
         log.info("石蜡包埋判有效：id={} blockNo={} verifyBy={} 一并保存的补填键={}", embed.getId(), blockNo, operatorId,
@@ -190,7 +190,7 @@ public class EmbedVerifyService {
             .set(Embed::getInvalidReason, reason)
             .set(Embed::getVerifyBy, operatorId)
             .set(Embed::getVerifyTime, now);
-        fillWriter.applyTo(patch, prepared);
+        fillWriter.applyTo(patch, prepared, embed);
         embedMapper.update(null, patch);
         fillWriter.replaceMarkers(embed.getId(), prepared);
         log.info("石蜡包埋判无效：id={} reason={} verifyBy={} 一并保存的补填键={}", embed.getId(), reason, operatorId,

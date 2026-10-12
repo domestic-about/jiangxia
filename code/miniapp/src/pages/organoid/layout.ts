@@ -146,6 +146,8 @@ const LABELS: Record<OrganoidFieldKey, string> = {
 const CONTROLS: Partial<Record<OrganoidFieldKey, OrganoidControl>> = {
   sourceUnitName: 'select',
   species: 'select',
+  // 操作人：底部弹框从内部人员名单里选（StaffSheet，CR-20261012-22），不再手填
+  operatorName: 'select',
   receiveDate: 'date',
   processTime: 'datetime',
   hasViabilityReport: 'seg',

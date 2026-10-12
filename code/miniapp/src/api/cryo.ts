@@ -17,6 +17,7 @@
 import type { LedgerFilters, LedgerRow } from '@/api/ledger'
 import { PAGE_SIZE } from '@/utils/paging'
 import { http } from '@/utils/request'
+import { personIdOf } from '@/utils/staff'
 import { wasEdited } from '@/utils/edited'
 
 // ── 行 / 详情形状 ────────────────────────────────────────────────────────────
@@ -39,6 +40,8 @@ export interface CryoBatchRow extends LedgerRow {
   /** 暂存 -80：Y 是 / N 否（「否」= 直接进液氮） */
   inMinus80?: string | null
   frozenBy?: string | null
+  /** 冻存人账号 id（CR-20261012-22：从内部人员名单里选；历史手填的姓名没有它） */
+  frozenById?: string | number | null
   toLn2Time?: string | null
   ln2Location?: string | null
   remark?: string | null
@@ -78,6 +81,8 @@ export interface CryoFormValue {
   inMinus80: string
   ln2Location: string
   frozenBy: string
+  /** 冻存人账号 id（'' = 没填，或历史手填的姓名没关联账号） */
+  frozenById: string
   remark: string
   /**
    * -80度超低温冰箱转移至液氮时间（`yyyy-MM-dd`）：新增 / 修改时可直接选（飞书 2026-10-03 小程序行12，与工作台抽屉一致）；
@@ -100,6 +105,7 @@ export function emptyCryoForm(): CryoFormValue {
     inMinus80: 'Y',
     ln2Location: '',
     frozenBy: '',
+    frozenById: '',
     remark: '',
     toLn2Time: '',
   }
@@ -132,6 +138,7 @@ export function toCryoFormValue(detail: Partial<CryoBatchRow> | null | undefined
     inMinus80: str(detail.inMinus80).toUpperCase() === 'N' ? 'N' : 'Y',
     ln2Location: str(detail.ln2Location),
     frozenBy: str(detail.frozenBy),
+    frozenById: str(detail.frozenById),
     remark: str(detail.remark),
     toLn2Time: dayOf(detail.toLn2Time),
   }
@@ -157,6 +164,8 @@ export function cryoPayload(form: CryoFormValue): Record<string, unknown> {
     ln2Location: form.ln2Location.trim(),
     toLn2Time: form.toLn2Time || null,
     frozenBy: form.frozenBy.trim(),
+    // 冻存人是一对键（姓名 + 账号 id，CR-20261012-22）：后端带了 id 以它为准
+    frozenById: personIdOf(form.frozenById),
     remark: form.remark.trim(),
   }
 }

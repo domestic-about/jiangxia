@@ -7,7 +7,7 @@
 //
 // 两组键（与后端 EmbedFillRules 逐字一致；口径 UI:mp.embed.form、FLOW:F-EMBED-01.step6 / step7）：
 //   · FILL_SUBMIT_KEYS：外部送样填的两项 —— 判为有效、判为无效都随核验一起保存；
-//   · FILL_LAB_KEYS：实验室补填的 13 项（「实验室核验有效后填」）—— 只随「判为有效并保存」保存；
+//   · FILL_LAB_KEYS：实验室补填的 15 项（「实验室核验有效后填」）—— 只随「判为有效并保存」保存；
 //     判为无效不收（后端带了就 400），所以抽屉在判无效前把「改过却不会保存」的几项明说出来，不静默丢。
 //
 // ★ 为什么单独放在 .ts：组件里没法单测（verifyFill.spec.ts 直接跑这几个函数）。
@@ -18,12 +18,16 @@ import type { EmbedFillForm } from '@/api/lqg/embed';
 /** 外部送样填的两项：判为有效、判为无效都随核验一起保存 */
 export const FILL_SUBMIT_KEYS = ['sampleType', 'organoidSourceType'] as const;
 
-/** 实验室补填的 13 项：只随「判为有效并保存」一起保存 */
+/**
+ * 实验室补填的 15 项：只随「判为有效并保存」一起保存。
+ * 包埋人、操作人各是一对键：姓名 + 账号 id（embedById / operatorId，CR-20261012-22 从内部人员名单里选）。
+ */
 export const FILL_LAB_KEYS = [
   'tissueReceiveTime',
   'tissueProcessTime',
   'agaroseEmbedTime',
   'embedBy',
+  'embedById',
   'dehydrateTime',
   'agaroseSendTime',
   'paraffinEmbedTime',
@@ -32,6 +36,7 @@ export const FILL_LAB_KEYS = [
   'stainOther',
   'markers',
   'operatorName',
+  'operatorId',
   'remark'
 ] as const;
 
@@ -52,11 +57,15 @@ const canonical = (key: FillLabKey, value: unknown): unknown => {
   if (typeof value === 'string') {
     return value.trim() || null;
   }
+  // 账号 id：后端按数值或字符串下发都有，比较时统一成字符串
+  if (key === 'embedById' || key === 'operatorId') {
+    return String(value);
+  }
   return value;
 };
 
 /**
- * 实验室补填的 13 项里，抽屉打开以来**改过**的那几项（按抽屉里的顺序）。
+ * 实验室补填的 15 项里，抽屉打开以来**改过**的那几项（按抽屉里的顺序）。
  *
  * @param before 抽屉打开时的补填段快照
  * @param now    现在的补填段

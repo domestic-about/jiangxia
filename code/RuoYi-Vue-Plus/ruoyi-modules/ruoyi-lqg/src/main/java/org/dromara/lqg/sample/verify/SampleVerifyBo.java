@@ -14,7 +14,7 @@ import java.util.Date;
 /**
  * 核验入参（doc/api-contract.md 的 {@code PUT /lqg/sample/{id}/verify}）：
  * {@code {action:"valid"|"invalid", receiveDate, internalNo, isFixed, processTime, hasQcSheet,
- * hasViabilityReport, operatorName, reason}}。
+ * hasViabilityReport, operatorId, operatorName, reason}}。
  *
  * <p>★ 必填是**按 action 分化**的，所以不在这里用 Bean Validation 表达（那会把 valid / invalid
  * 两组必填混成一组超集）：{@code action=valid} 时 {@code receiveDate} + {@code internalNo} 必填，
@@ -88,6 +88,12 @@ public class SampleVerifyBo implements Serializable {
      */
     @Schema(description = "操作人姓名")
     private String operatorName;
+
+    /**
+     * 操作人 user_id（从内部人员名单里选，CR-20261012-22；带了就以它为准）
+     */
+    @Schema(description = "操作人 user_id")
+    private Long operatorId;
 
     /**
      * 无效原因（action=invalid 必填；外部可见）

@@ -37,7 +37,7 @@ class CryoShapeContractTest {
     /** field-ssot.yaml 的 t_lqg_cryo_batch 业务列 + {@code @TableLogic} 的 del_flag（其余公共字段在 BaseEntity 上）。 */
     private static final Set<String> BATCH_FIELDS = Set.of(
         "id", "sampleId", "cryoName", "passage", "freezeTime", "initQty", "density",
-        "inMinus80", "frozenBy", "toLn2Time", "ln2Location", "remark", "delFlag");
+        "inMinus80", "frozenBy", "frozenById", "toLn2Time", "ln2Location", "remark", "delFlag");
 
     /** field-ssot.yaml 的 t_lqg_cryo_flow 业务列 + del_flag。 */
     private static final Set<String> FLOW_FIELDS = Set.of(
@@ -47,7 +47,7 @@ class CryoShapeContractTest {
     /** 入参白名单（POST / PUT 的全部可写字段）。 */
     private static final Set<String> SUBMIT_FIELDS = Set.of(
         "id", "sampleId", "cryoName", "passage", "freezeTime", "initQty", "density",
-        "inMinus80", "frozenBy", "toLn2Time", "ln2Location", "remark");
+        "inMinus80", "frozenBy", "frozenById", "toLn2Time", "ln2Location", "remark");
 
     private static Set<String> declaredFieldNames(Class<?> type) {
         return Arrays.stream(type.getDeclaredFields())

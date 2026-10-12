@@ -86,6 +86,8 @@ export interface SampleVO {
   hasQcSheet?: string | null;
   hasViabilityReport?: string | null;
   operatorName?: string | null;
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22；历史手填的姓名没有它） */
+  operatorId?: string | number | null;
   remark?: string | null;
   createTime?: string | null;
   /** ★ null = 从未修改（不是「等于创建时间」） */
@@ -121,6 +123,8 @@ export interface SampleQuery {
   organoidType?: string | null;
   internalNo?: string | null;
   operatorName?: string | null;
+  /** 按人筛（CR-20261012-22）：u:<账号 id> / n:<没关联账号的姓名> / none */
+  operatorKey?: string | null;
   /** 加密列：只支持精确匹配（框旁边标「精确匹配」） */
   donorName?: string | null;
   hospitalNo?: string | null;
@@ -150,6 +154,8 @@ export interface SampleForm {
   hasQcSheet?: string | null;
   hasViabilityReport?: string | null;
   operatorName?: string | null;
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22；历史手填的姓名没有它） */
+  operatorId?: string | number | null;
   remark?: string | null;
 }
 
@@ -189,6 +195,8 @@ export interface SampleVerifyForm {
   hasQcSheet?: string | null;
   hasViabilityReport?: string | null;
   operatorName?: string | null;
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22；历史手填的姓名没有它） */
+  operatorId?: string | number | null;
   /** action=invalid 必填 */
   reason?: string | null;
   /** 核验抽屉里的送检段（整段；与核验结论同一事务保存，FIX V02） */

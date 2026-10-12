@@ -161,6 +161,13 @@ public class SampleQueryBo extends PageQuery {
     private String operatorName;
 
     /**
+     * 按人筛（CR-20261012-22，统计页点数字带过来）：{@code u:<账号 id>} / {@code n:<没关联账号的姓名>} / {@code none}（没填）。
+     * 口径见 {@code PersonKey}。
+     */
+    @Schema(description = "操作人（按人：u:<账号 id> / n:<姓名> / none）")
+    private String operatorKey;
+
+    /**
      * 排序模式（SAMPLE-MP-001 / CR-20260918-07）：只认一个字面量 {@code recent}。
      *
      * <p>{@code recent} = 「我的 → 历史编辑记录」的取数口，与其它筛选<b>联动</b>：

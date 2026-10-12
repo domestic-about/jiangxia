@@ -169,6 +169,14 @@
       "style": {
         "navigationBarTitleText": "预览"
       }
+    },
+    {
+      "path": "pages/stat/operator",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "操作人统计",
+        "enablePullDownRefresh": true
+      }
     }
   ],
   "subPackages": [],

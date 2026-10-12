@@ -9,6 +9,7 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
+import org.dromara.lqg.auth.staff.directory.PersonKey;
 import org.dromara.lqg.sample.domain.Sample;
 import org.dromara.lqg.sample.domain.bo.SampleQueryBo;
 import org.dromara.lqg.sample.domain.vo.SampleVo;
@@ -284,7 +285,10 @@ public class SampleQueryService {
             .like(StringUtils.isNotBlank(q.getTissueType()), Sample::getTissueType, trim(q.getTissueType()))
             // 类器官类型：工作台「类器官收样记录」页的那一格（CR-20260924-10 拆页后，组织类型那一格在这页没有意义）
             .like(StringUtils.isNotBlank(q.getOrganoidType()), Sample::getOrganoidType, trim(q.getOrganoidType()))
-            .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()))
+            .like(StringUtils.isNotBlank(q.getOperatorName()), Sample::getOperatorName, trim(q.getOperatorName()));
+        // 按人（CR-20261012-22）：与操作人统计同一个口径
+        PersonKey.apply(wrapper, Sample::getOperatorId, Sample::getOperatorName, q.getOperatorKey());
+        wrapper
             // ★ 表格页搜索框（SAMPLE-MP-002 / 契约第 49 行）：内部编号等值 OR 来源单位模糊。
             //   单独一个括号（`w -&gt;` 那层会加括号），不把别的筛选卷进 OR 里。
             .and(StringUtils.isNotBlank(q.getKeyword()), w -> w
@@ -428,6 +432,7 @@ public class SampleQueryService {
         vo.setProcessTime(sample.getProcessTime());
         vo.setHasQcSheet(sample.getHasQcSheet());
         vo.setHasViabilityReport(sample.getHasViabilityReport());
+        vo.setOperatorId(sample.getOperatorId());
         vo.setOperatorName(sample.getOperatorName());
         vo.setRemark(sample.getRemark());
         vo.setCreateTime(sample.getCreateTime());

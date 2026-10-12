@@ -179,7 +179,8 @@ def sample(sid, no, kind, source, submitter, status, unit_id, unit_name, created
         verify_status=status, source_unit_id=unit_id, source_unit_name=unit_name, create_by=submitter, create_time=created, **kw)
 
 
-recv = dict(is_fixed="Y", has_qc_sheet="Y", has_viability_report="Y", operator_name="李工", verify_by=9000000101)
+# 操作人 / 包埋人 / 冻存人（CR-20261012-22）：从内部人员名单里选 → 姓名旁边多一栏账号 id。seed 里写「李工」的都关联到李工的账号（9000000101）
+recv = dict(is_fixed="Y", has_qc_sheet="Y", has_viability_report="Y", operator_name="李工", operator_id=9000000101, verify_by=9000000101)
 # 种属 species（CR-20261009-18；2026-10-10 Kevin：给现有模拟数据加上种属，甲方要逐表验「选了种属只出相应的记录」）。
 # 分配要让五张表每张都筛得出东西 —— 石蜡块、冻存批次、质控文档读的是所挂样本的种属：
 #   人     1001 T-hli01（2 个石蜡块、2 批冻存、3 份文档）· 1002 待核验（挂着一条待核验的送样）· 1003 无效
@@ -208,7 +209,7 @@ sample(9000001008, "SJ90000008", "tissue", "internal", 9000000101, "valid", None
        hospital_no="ZY0000008", tissue_type="肝组织", receive_date=d(45), internal_no="T-hli05", process_time=ts(45), verify_time=ts(45), species="移植猪", **recv)
 # 代数 passage（CR-20260924-10，类器官收样记录在「类器官类型」后加的一项）：唯一的类器官样本带上 P3，H5 / 工作台 / 导出里 T-oco01 都能看到带值的代数
 sample(9000001009, "SJ90000009", "organoid", "internal", 9000000101, "valid", 9000009002, "B 大学", ts(60), organoid_type="结直肠类器官", passage="P3",
-       receive_date=d(60), internal_no="T-oco01", process_time=ts(60), has_viability_report="Y", operator_name="李工", verify_by=9000000101, verify_time=ts(60),
+       receive_date=d(60), internal_no="T-oco01", process_time=ts(60), has_viability_report="Y", operator_name="李工", operator_id=9000000101, verify_by=9000000101, verify_time=ts(60),
        species="鼠兔")
 sample(9000001010, "SJ90000010", "tissue", "external", 9000000111, "valid", 9000009001, "A 医院", today(3), donor_name="已删除供体", gender="male",
        tissue_type="肝组织", receive_date=d(10), internal_no="T-del99", del_flag="1", species="鸡")
@@ -222,8 +223,8 @@ E = "t_lqg_embed"
 INT_BY_STAFF = dict(submit_source="internal", submitter_id=9000000101, verify_status="valid", verify_by=9000000101, create_by=9000000101)
 INT_BY_ADMIN = dict(submit_source="internal", submitter_id=9000000100, verify_status="valid", verify_by=9000000100)
 ins(E, id=9000002001, sample_id=9000001001, paraffin_block_no="T-E01-1", sample_type="组织", tissue_receive_time=d(30), tissue_process_time=d(30),
-    agarose_embed_time=d(29), embed_by="李工", dehydrate_time=d(28), agarose_send_time=d(28), paraffin_embed_time=d(27), section_time=d(26),
-    stain_types="HE,IHC", operator_name="李工", **INT_BY_STAFF)
+    agarose_embed_time=d(29), embed_by="李工", embed_by_id=9000000101, dehydrate_time=d(28), agarose_send_time=d(28), paraffin_embed_time=d(27), section_time=d(26),
+    stain_types="HE,IHC", operator_name="李工", operator_id=9000000101, **INT_BY_STAFF)
 ins(E, id=9000002002, sample_id=9000001001, paraffin_block_no="T-E01-2", sample_type="类器官", organoid_source_type="肝类器官", agarose_embed_time=d(12), **INT_BY_ADMIN)
 ins(E, id=9000002003, sample_id=9000001004, paraffin_block_no="T-E02-1", sample_type="组织", paraffin_embed_time=d(20), section_time=d(19), stain_types="NONE", **INT_BY_STAFF)
 ins(E, id=9000002004, sample_id=9000001006, paraffin_block_no="T-E04-1", sample_type="组织", section_time=d(10), stain_types="OTHER", stain_other="Masson", **INT_BY_ADMIN)
@@ -239,18 +240,18 @@ ins(M, id=9000002103, embed_id=9000002004, marker_name=None, expression="weak", 
 begin("06-cryo.sql", "t_lqg_sample", "t_lqg_cryo_batch", "t_lqg_cryo_flow")
 section("冻存批次。期望：超期 = {3001, 3005}；剩余 3001→6 3002→4 3003→4 3004→0 3005→2 3006→5 3007→5；李工（staff）建的 = 3001、3003 + 软删的 3008 → 内部历史编辑记录期望 {3001, 3003}")
 B = "t_lqg_cryo_batch"
-ins(B, id=9000003001, sample_id=9000001001, cryo_name="T-hli01-GZ-N-P2-EM2-2e5", passage="P2", freeze_time=d(20), init_qty=8, density="2e5", in_minus80="Y", frozen_by="李工",
+ins(B, id=9000003001, sample_id=9000001001, cryo_name="T-hli01-GZ-N-P2-EM2-2e5", passage="P2", freeze_time=d(20), init_qty=8, density="2e5", in_minus80="Y", frozen_by="李工", frozen_by_id=9000000101,
     create_by=9000000101)
-ins(B, id=9000003002, sample_id=9000001009, cryo_name="T-oco01-JC-T-P3-EM1-5e5", passage="P3", freeze_time=d(5), init_qty=4, density="5e5", in_minus80="Y", frozen_by="李工")
-ins(B, id=9000003003, sample_id=9000001008, cryo_name="T-hli05-GZ-N-P7-EM2-2e5", passage="P7", freeze_time=d(40), init_qty=6, density="2e5", in_minus80="Y", frozen_by="李工",
+ins(B, id=9000003002, sample_id=9000001009, cryo_name="T-oco01-JC-T-P3-EM1-5e5", passage="P3", freeze_time=d(5), init_qty=4, density="5e5", in_minus80="Y", frozen_by="李工", frozen_by_id=9000000101)
+ins(B, id=9000003003, sample_id=9000001008, cryo_name="T-hli05-GZ-N-P7-EM2-2e5", passage="P7", freeze_time=d(40), init_qty=6, density="2e5", in_minus80="Y", frozen_by="李工", frozen_by_id=9000000101,
     to_ln2_time=d(30), ln2_location="2号罐-3架-B5", create_by=9000000101)
-ins(B, id=9000003004, sample_id=9000001001, cryo_name="T-hli01-GZ-N-P5-EM2-1e5", passage="P5", freeze_time=d(14), init_qty=3, density="1e5", in_minus80="Y", frozen_by="李工",
+ins(B, id=9000003004, sample_id=9000001001, cryo_name="T-hli01-GZ-N-P5-EM2-1e5", passage="P5", freeze_time=d(14), init_qty=3, density="1e5", in_minus80="Y", frozen_by="李工", frozen_by_id=9000000101,
     remark="病灶：满 14 天但已取空 → 不算超期")
-ins(B, id=9000003005, sample_id=9000001004, cryo_name="T-hli02-GZ-N-P2-EM2-2e5", passage="P2", freeze_time=d(14), init_qty=2, density="2e5", in_minus80="Y", frozen_by="李工",
+ins(B, id=9000003005, sample_id=9000001004, cryo_name="T-hli02-GZ-N-P2-EM2-2e5", passage="P2", freeze_time=d(14), init_qty=2, density="2e5", in_minus80="Y", frozen_by="李工", frozen_by_id=9000000101,
     remark="病灶：恰好第 14 天 → 算超期（已超 0 天）")
-ins(B, id=9000003006, sample_id=9000001008, cryo_name="T-hli05-GZ-N-P8-EM2-2e5", passage="P8", freeze_time=d(13), init_qty=5, density="2e5", in_minus80="Y", frozen_by="李工",
+ins(B, id=9000003006, sample_id=9000001008, cryo_name="T-hli05-GZ-N-P8-EM2-2e5", passage="P8", freeze_time=d(13), init_qty=5, density="2e5", in_minus80="Y", frozen_by="李工", frozen_by_id=9000000101,
     remark="病灶：第 13 天 → 不算超期")
-ins(B, id=9000003007, sample_id=9000001009, cryo_name="T-oco01-JC-T-P4-EM1-5e5", passage="P4", freeze_time=d(60), init_qty=5, density="5e5", in_minus80="N", frozen_by="李工",
+ins(B, id=9000003007, sample_id=9000001009, cryo_name="T-oco01-JC-T-P4-EM1-5e5", passage="P4", freeze_time=d(60), init_qty=5, density="5e5", in_minus80="N", frozen_by="李工", frozen_by_id=9000000101,
     ln2_location="1号罐-1架-A2", remark="病灶：直接进液氮 → 永不超期")
 ins(B, id=9000003008, sample_id=9000001008, cryo_name="T-hli05-DEL", passage="P1", freeze_time=d(50), init_qty=9, in_minus80="Y", del_flag="1", create_by=9000000101)
 F = "t_lqg_cryo_flow"

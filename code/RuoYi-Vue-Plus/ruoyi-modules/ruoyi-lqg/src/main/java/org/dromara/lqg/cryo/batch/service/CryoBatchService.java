@@ -9,6 +9,8 @@ import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.satoken.utils.LoginHelper;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryService;
+import org.dromara.lqg.auth.staff.directory.StaffRef;
 import org.dromara.lqg.cryo.batch.CryoBalanceChecker;
 import org.dromara.lqg.cryo.batch.domain.CryoBatch;
 import org.dromara.lqg.cryo.batch.domain.CryoFlow;
@@ -72,6 +74,8 @@ public class CryoBatchService {
     private final CryoBatchMapper cryoBatchMapper;
     private final CryoFlowMapper cryoFlowMapper;
     private final SampleMapper sampleMapper;
+    /** 冻存人从内部人员名单里选（CR-20261012-22） */
+    private final StaffDirectoryService staffDirectory;
 
     /**
      * 新建冻存批次（{@code POST /lqg/cryo/batch}）。
@@ -104,6 +108,11 @@ public class CryoBatchService {
         String ln2Location = CryoBalanceChecker.requireLn2Location(inMinus80, bo.getToLn2Time(),
             trimToNull(bo.getLn2Location()));
 
+        // ⑥ 冻存人：没填默认当前登录人；填了的按内部人员名单落（账号 id + 姓名快照，CR-20261012-22）
+        StaffRef frozenBy = bo.getFrozenById() == null && StringUtils.isBlank(bo.getFrozenBy())
+            ? staffDirectory.currentUser()
+            : staffDirectory.resolve("冻存人", bo.getFrozenById(), bo.getFrozenBy(), null);
+
         Long userId = currentUserId();
         return DataPermissionHelper.ignore(() -> {
             CryoBatch entity = new CryoBatch();
@@ -114,8 +123,8 @@ public class CryoBatchService {
             entity.setInitQty(initQty);
             entity.setDensity(trimToNull(bo.getDensity()));
             entity.setInMinus80(inMinus80);
-            entity.setFrozenBy(StringUtils.isNotBlank(bo.getFrozenBy())
-                ? bo.getFrozenBy().trim() : currentNickname());
+            entity.setFrozenById(frozenBy.id());
+            entity.setFrozenBy(frozenBy.name());
             entity.setToLn2Time(bo.getToLn2Time());
             entity.setLn2Location(ln2Location);
             entity.setRemark(trimToNull(bo.getRemark()));
@@ -213,8 +222,15 @@ public class CryoBatchService {
             }
             // ── 其余标量：没传 = 不动；传了空值 = 清空
             patch.set(body.has("density"), CryoBatch::getDensity, trimToNull(bo.getDensity()))
-                .set(body.has("frozenBy"), CryoBatch::getFrozenBy, trimToNull(bo.getFrozenBy()))
                 .set(body.has("remark"), CryoBatch::getRemark, trimToNull(bo.getRemark()));
+            // ── 冻存人：一对列（账号 id + 姓名快照）。两个键都没出现 = 不动；出现了任何一个 → 按内部人员名单落
+            if (body.has("frozenById") || body.has("frozenBy")) {
+                StaffRef frozenBy = staffDirectory.resolve("冻存人",
+                    body.has("frozenById") ? bo.getFrozenById() : null,
+                    body.has("frozenBy") ? bo.getFrozenBy() : null,
+                    StaffRef.of(exists.getFrozenById(), exists.getFrozenBy()));
+                patch.set(CryoBatch::getFrozenById, frozenBy.id()).set(CryoBatch::getFrozenBy, frozenBy.name());
+            }
             cryoBatchMapper.update(null, patch);
             log.info("修改冻存批次：id={} 改动键={} operator={}", exists.getId(), body.keys(), userId);
             return null;
@@ -305,11 +321,6 @@ public class CryoBatchService {
         } catch (Exception ignored) {
             return null;
         }
-    }
-
-    private static String currentNickname() {
-        LoginUser loginUser = LoginHelper.getLoginUser();
-        return loginUser == null ? null : loginUser.getNickname();
     }
 
     /**

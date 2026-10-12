@@ -172,6 +172,9 @@ const LABELS: Record<EmbedFieldKey, string> = {
 /** 控件类型（落地规范 §5.4 / §5.5：日期与选择走底部弹框，按钮组不换成下拉或开关） */
 const CONTROLS: Partial<Record<EmbedFieldKey, EmbedControl>> = {
   sampleId: 'select',
+  // 包埋人 / 操作人：底部弹框从内部人员名单里选（StaffSheet，CR-20261012-22），不再手填
+  embedBy: 'select',
+  operatorName: 'select',
   tissueReceiveTime: 'date',
   tissueProcessTime: 'date',
   agaroseEmbedTime: 'date',

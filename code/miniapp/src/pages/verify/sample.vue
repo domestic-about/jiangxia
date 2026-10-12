@@ -11,10 +11,13 @@ import ReasonSheet from '@/components/lqg/ReasonSheet.vue'
 import SegButtons from '@/components/lqg/SegButtons.vue'
 import SourceUnitSheet from '@/components/lqg/SourceUnitSheet.vue'
 import SpeciesSheet from '@/components/lqg/SpeciesSheet.vue'
+import StaffSheet from '@/components/lqg/StaffSheet.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
 import { DEFAULT_SPECIES, fetchSpeciesOptions } from '@/utils/species'
+import type { PersonValue } from '@/utils/staff'
+import { defaultPerson, fetchStaffOptions } from '@/utils/staff'
 // ★ 显式 .vue 路径导入（SAMPLE-MP-001 坑 6：只靠 easycom 会让该模块的 .js 产物消失）
 import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue'
 import { backAfterVerify, verifyFailed } from './feedback'
@@ -67,6 +70,8 @@ const unitSheetRef = ref<{ open: () => void } | null>(null)
 /** 种属（CR-20261009-18）：字典常用值 + 底部面板；老记录没有种属的，核验时要补选 */
 const speciesOptions = ref<string[]>([...DEFAULT_SPECIES])
 const speciesSheetRef = ref<{ open: () => void } | null>(null)
+/** 操作人：从内部人员名单里选（CR-20261012-22） */
+const staffSheetRef = ref<{ open: () => void } | null>(null)
 const reasonRef = ref<{ open: () => void, reset: () => void } | null>(null)
 const pickerRef = ref<{ open: () => void } | null>(null)
 const pickerField = ref<SampleFieldKey>('receiveDate')
@@ -111,7 +116,9 @@ async function load() {
     }
     const data = await fetchVerifySample(sampleId.value)
     detail.value = data as Record<string, unknown>
-    original.value = toVerifySampleForm(detail.value, store.name)
+    // 操作人没填过 → 默认当前登录人（在内部人员名单里就带上账号 id，CR-20261012-22）
+    const me = defaultPerson(await fetchStaffOptions(), store.me?.userId, store.name)
+    original.value = toVerifySampleForm(detail.value, me.name, me.id)
     form.value = { ...original.value }
     manualUnit.value = original.value.sourceUnitId === null && !!original.value.sourceUnitName.trim()
     uni.setNavigationBarTitle({ title: `核验 · ${kindTitle.value}` })
@@ -211,9 +218,19 @@ function onPick(key: SampleFieldKey) {
     speciesSheetRef.value?.open()
     return
   }
+  if (key === 'operatorName') {
+    staffSheetRef.value?.open()
+    return
+  }
   pickerField.value = key
   pickerValue.value = toMs(fieldValue(key))
   pickerRef.value?.open()
+}
+
+/** 选了操作人：账号 id 与姓名一起落 */
+function onOperatorPicked(person: PersonValue) {
+  form.value.operatorId = person.id
+  setField('operatorName', person.name)
 }
 
 function onPicked(event: { value: number | string }) {
@@ -368,6 +385,14 @@ function openInvalid() {
       :maxlength="MAX_INVALID_REASON"
       :notes="['判为无效只保存原因和送检信息的修改，收样信息不保存']"
       @confirm="(reason: string) => submit('invalid', reason)"
+    />
+
+    <!-- 操作人：底部弹框从内部人员名单里选（CR-20261012-22） -->
+    <StaffSheet
+      ref="staffSheetRef"
+      title="操作人"
+      :model-value="{ id: form.operatorId, name: form.operatorName }"
+      @update:model-value="onOperatorPicked"
     />
 
     <SpeciesSheet

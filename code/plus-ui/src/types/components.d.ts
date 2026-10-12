@@ -94,6 +94,7 @@ declare module 'vue' {
     SegButtons: typeof import('./../components/lqg/SegButtons/index.vue')['default']
     SizeSelect: typeof import('./../components/SizeSelect/index.vue')['default']
     SpeciesSelect: typeof import('./../components/lqg/SpeciesSelect/index.vue')['default']
+    StaffSelect: typeof import('./../components/lqg/StaffSelect/index.vue')['default']
     SubmitVerify: typeof import('./../components/Process/submitVerify.vue')['default']
     SvgIcon: typeof import('./../components/SvgIcon/index.vue')['default']
     TableEmpty: typeof import('./../components/lqg/TableEmpty/index.vue')['default']

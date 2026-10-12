@@ -89,6 +89,20 @@ public class EmbedQueryBo extends PageQuery {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate sectionTimeEnd;
 
+    @Schema(description = "石蜡包埋时间起（含）yyyy-MM-dd（CR-20261012-22：操作人统计按这个时间）")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate paraffinEmbedTimeBegin;
+
+    @Schema(description = "石蜡包埋时间止（含）yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate paraffinEmbedTimeEnd;
+
+    @Schema(description = "包埋人（按人：u:<账号 id> / n:<姓名> / none，CR-20261012-22，口径见 PersonKey）")
+    private String embedByKey;
+
+    @Schema(description = "操作人（按人：u:<账号 id> / n:<姓名> / none，CR-20261012-22）")
+    private String operatorKey;
+
     @Schema(description = "pending / valid / invalid")
     private String verifyStatus;
 

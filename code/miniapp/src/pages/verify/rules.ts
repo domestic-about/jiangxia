@@ -1,5 +1,6 @@
 import type { EmbedFormValue } from '@/api/embed'
 import { stainProblem } from '@/pages/embed/stain'
+import { personIdOf } from '@/utils/staff'
 
 // 小程序核验页的表单规则（纯函数）：哪些字段、哪些必填、提交体怎么拼。
 //
@@ -47,9 +48,11 @@ export interface VerifySampleForm {
   hasQcSheet: string
   hasViabilityReport: string
   operatorName: string
+  /** 操作人账号 id（从内部人员名单里选，CR-20261012-22）；与 operatorName 是一对，不是页面上单独的一格 */
+  operatorId: string
 }
 
-export type SampleFieldKey = Exclude<keyof VerifySampleForm, 'sourceUnitId'>
+export type SampleFieldKey = Exclude<keyof VerifySampleForm, 'sourceUnitId' | 'operatorId'>
 
 /**
  * 送检信息（合作单位填的，核验时可以直接改）。顺序 = 填写页的顺序；
@@ -96,6 +99,8 @@ export type SampleControl = 'text' | 'date' | 'datetime' | 'select' | 'seg' | 't
 const SAMPLE_CONTROL: Partial<Record<SampleFieldKey, SampleControl>> = {
   sourceUnitName: 'select',
   species: 'select',
+  // 操作人：底部弹框从内部人员名单里选（StaffSheet，CR-20261012-22）
+  operatorName: 'select',
   gender: 'seg',
   hasPathology: 'seg',
   isFixed: 'seg',
@@ -153,8 +158,13 @@ function str(value: unknown): string {
   return value === null || value === undefined ? '' : String(value)
 }
 
-/** 详情 → 表单值；操作人没填过就默认当前登录人（可改，与工作台核验入参的口径一致） */
-export function toVerifySampleForm(detail: Record<string, unknown> | null | undefined, me = ''): VerifySampleForm {
+/**
+ * 详情 → 表单值；操作人没填过就默认当前登录人（可改，与工作台核验入参的口径一致）。
+ *
+ * @param me   当前登录人的姓名
+ * @param meId 当前登录人的账号 id（在内部人员名单里才给；CR-20261012-22）
+ */
+export function toVerifySampleForm(detail: Record<string, unknown> | null | undefined, me = '', meId = ''): VerifySampleForm {
   const d = detail ?? {}
   const unitId = d.sourceUnitId
   return {
@@ -177,6 +187,8 @@ export function toVerifySampleForm(detail: Record<string, unknown> | null | unde
     hasQcSheet: str(d.hasQcSheet),
     hasViabilityReport: str(d.hasViabilityReport),
     operatorName: str(d.operatorName) || me,
+    // 账号 id 跟着姓名走：记录上已有操作人就用它的（可能为空 = 历史手填），没有才默认当前登录人
+    operatorId: str(d.operatorName) ? str(d.operatorId) : meId,
   }
 }
 
@@ -270,6 +282,12 @@ export function sampleVerifyBody(
         const value = key === 'processTime' ? now.processTime.replace('T', ' ') : now[key].trim()
         body[key] = value || null
       })
+    // 操作人是一对键（姓名 + 账号 id，CR-20261012-22）：后端带了 id 以它为准。
+    // 没有账号 id（历史手填的姓名、或名单没拉到时默认带的姓名）就不带这个键 —— 后端按姓名处理
+    const operatorId = personIdOf(now.operatorId)
+    if (operatorId) {
+      body.operatorId = operatorId
+    }
   }
   else {
     body.reason = reason.trim()
@@ -326,12 +344,16 @@ export function sampleProblem(kind: SampleKind, action: VerifyAction, now: Verif
 /** 合作单位送样时填的两项：判有效、判无效都能一起改（与后端 `EmbedFillRules`、工作台 `verifyFill.ts` 一致） */
 export const EMBED_SUBMIT_KEYS = ['sampleType', 'organoidSourceType'] as const
 
-/** 实验室补填的 13 项：只随「判为有效并保存」一起保存（判无效后端不收，带了回 400） */
+/**
+ * 实验室补填的 15 项：只随「判为有效并保存」一起保存（判无效后端不收，带了回 400）。
+ * 包埋人、操作人各是一对键：姓名 + 账号 id（`embedById` / `operatorId`，CR-20261012-22 从内部人员名单里选）。
+ */
 export const EMBED_LAB_KEYS = [
   'tissueReceiveTime',
   'tissueProcessTime',
   'agaroseEmbedTime',
   'embedBy',
+  'embedById',
   'dehydrateTime',
   'agaroseSendTime',
   'paraffinEmbedTime',
@@ -340,6 +362,7 @@ export const EMBED_LAB_KEYS = [
   'stainOther',
   'markers',
   'operatorName',
+  'operatorId',
   'remark',
 ] as const
 
@@ -353,6 +376,7 @@ export const EMBED_LABEL: Record<EmbedFillKey, string> = {
   tissueProcessTime: '组织处理时间',
   agaroseEmbedTime: '琼脂糖包埋样本时间',
   embedBy: '包埋人',
+  embedById: '包埋人',
   dehydrateTime: '脱水时间',
   agaroseSendTime: '琼脂糖包埋样本送样时间',
   paraffinEmbedTime: '石蜡包埋时间',
@@ -361,6 +385,7 @@ export const EMBED_LABEL: Record<EmbedFillKey, string> = {
   stainOther: '染色具体名称',
   markers: 'mark 的表达情况',
   operatorName: '操作人',
+  operatorId: '操作人',
   remark: '备注',
 }
 
@@ -380,7 +405,7 @@ function fillValue(form: EmbedFormValue, key: EmbedFillKey): unknown {
   return text || null
 }
 
-/** 补填段里改过的键（顺序 = 两项 + 13 项的顺序） */
+/** 补填段里改过的键（顺序 = 两项 + 15 项的顺序） */
 export function embedChanges(before: EmbedFormValue, now: EmbedFormValue): EmbedFillKey[] {
   return EMBED_ALL_KEYS.filter(key => JSON.stringify(fillValue(before, key)) !== JSON.stringify(fillValue(now, key)))
 }
@@ -393,11 +418,13 @@ export function embedDroppedOnInvalid(before: EmbedFormValue, now: EmbedFormValu
   return embedChanges(before, now)
     .filter(key => (EMBED_LAB_KEYS as readonly string[]).includes(key))
     .map(key => EMBED_LABEL[key])
+    // 包埋人、操作人各是一对键，换了人两个键都变 → 字段名只报一次
+    .filter((label, index, all) => all.indexOf(label) === index)
 }
 
 /**
  * 核验请求体（`PUT /lqg/embed/{id}/verify`）。`fill` 是补丁：只带改过的键；一项没改就不带。
- * - 判有效：石蜡块编号 + 改过的补填项（15 项里任意）；
+ * - 判有效：石蜡块编号 + 改过的补填项（17 项里任意）；
  * - 判无效：原因 + 改过的「样本类型 / 类器官来源类型」（实验室补填项判无效不收）。
  */
 export function embedVerifyBody(

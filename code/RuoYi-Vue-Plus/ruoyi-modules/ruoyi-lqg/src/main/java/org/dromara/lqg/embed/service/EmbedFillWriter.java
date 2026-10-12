@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.utils.StringUtils;
+import org.dromara.lqg.auth.staff.directory.StaffDirectoryService;
+import org.dromara.lqg.auth.staff.directory.StaffRef;
 import org.dromara.lqg.embed.domain.Embed;
 import org.dromara.lqg.embed.domain.EmbedMarker;
 import org.dromara.lqg.embed.domain.bo.EmbedFillBo;
@@ -39,6 +41,8 @@ public class EmbedFillWriter {
 
     private final EmbedMarkerMapper embedMarkerMapper;
     private final EmbedDictService dictService;
+    /** 包埋人 / 操作人从内部人员名单里选（CR-20261012-22） */
+    private final StaffDirectoryService staffDirectory;
 
     /**
      * 校验过的补丁：等着拼进调用方那一条 UPDATE、再整组替换 marker。
@@ -87,11 +91,13 @@ public class EmbedFillWriter {
      *
      * @param patch    调用方那一条 UPDATE
      * @param prepared {@link #prepare} 的结果；{@code null} = 什么都不拼
+     * @param existing 库里现在的那一行（包埋人 / 操作人「没换人就原样留着」要对着它判）
      */
-    public void applyTo(LambdaUpdateWrapper<Embed> patch, Prepared prepared) {
+    public void applyTo(LambdaUpdateWrapper<Embed> patch, Prepared prepared, Embed existing) {
         if (prepared == null) {
             return;
         }
+        applyPeople(patch, prepared, existing);
         EmbedFillBo bo = prepared.body().value();
         // 染色：传了就整组替换（含 stainOther 的置空 / 必填）；只给 stainOther 时单独改
         if (prepared.stains() != null) {
@@ -106,13 +112,34 @@ public class EmbedFillWriter {
             .set(prepared.has("tissueReceiveTime"), Embed::getTissueReceiveTime, bo.getTissueReceiveTime())
             .set(prepared.has("tissueProcessTime"), Embed::getTissueProcessTime, bo.getTissueProcessTime())
             .set(prepared.has("agaroseEmbedTime"), Embed::getAgaroseEmbedTime, bo.getAgaroseEmbedTime())
-            .set(prepared.has("embedBy"), Embed::getEmbedBy, trimToNull(bo.getEmbedBy()))
             .set(prepared.has("dehydrateTime"), Embed::getDehydrateTime, bo.getDehydrateTime())
             .set(prepared.has("agaroseSendTime"), Embed::getAgaroseSendTime, bo.getAgaroseSendTime())
             .set(prepared.has("paraffinEmbedTime"), Embed::getParaffinEmbedTime, bo.getParaffinEmbedTime())
             .set(prepared.has("sectionTime"), Embed::getSectionTime, bo.getSectionTime())
-            .set(prepared.has("operatorName"), Embed::getOperatorName, trimToNull(bo.getOperatorName()))
             .set(prepared.has("remark"), Embed::getRemark, trimToNull(bo.getRemark()));
+    }
+
+    /**
+     * 包埋人、操作人（CR-20261012-22）：各是一对列（账号 id + 姓名快照）。补丁里这一对的两个键<b>都没出现</b> = 不动；
+     * 出现了任何一个 → 按内部人员名单落（带了 id 以它为准；只带名字的旧版客户端按名单对一次；都是空值 = 清空）。
+     * 选了名单外的账号 → 400，此时调用方的 UPDATE 还没执行。
+     */
+    private void applyPeople(LambdaUpdateWrapper<Embed> patch, Prepared prepared, Embed existing) {
+        EmbedFillBo bo = prepared.body().value();
+        if (prepared.has("embedById") || prepared.has("embedBy")) {
+            StaffRef ref = staffDirectory.resolve("包埋人",
+                prepared.has("embedById") ? bo.getEmbedById() : null,
+                prepared.has("embedBy") ? bo.getEmbedBy() : null,
+                existing == null ? null : StaffRef.of(existing.getEmbedById(), existing.getEmbedBy()));
+            patch.set(Embed::getEmbedById, ref.id()).set(Embed::getEmbedBy, ref.name());
+        }
+        if (prepared.has("operatorId") || prepared.has("operatorName")) {
+            StaffRef ref = staffDirectory.resolve("操作人",
+                prepared.has("operatorId") ? bo.getOperatorId() : null,
+                prepared.has("operatorName") ? bo.getOperatorName() : null,
+                existing == null ? null : StaffRef.of(existing.getOperatorId(), existing.getOperatorName()));
+            patch.set(Embed::getOperatorId, ref.id()).set(Embed::getOperatorName, ref.name());
+        }
     }
 
     /**
@@ -128,7 +155,21 @@ public class EmbedFillWriter {
         insertMarkers(embedId, prepared.markers());
     }
 
-    // ── 新增路径也用的两块（同一份规则） ─────────────────────────────────────
+    // ── 新增路径也用的几块（同一份规则） ─────────────────────────────────────
+
+    /**
+     * 新增时的一栏人名（没有库里现值可对）：带了账号 id 以它为准；只带名字按名单对一次。
+     */
+    public StaffRef resolvePerson(String label, Long id, String name) {
+        return staffDirectory.resolve(label, id, name, null);
+    }
+
+    /**
+     * 新增时操作人没填 → 当前登录人。
+     */
+    public StaffRef currentUser() {
+        return staffDirectory.currentUser();
+    }
 
     /**
      * 染色组合 + 字典校验并按固定顺序规范化（{@link StainRules#normalize}）。
