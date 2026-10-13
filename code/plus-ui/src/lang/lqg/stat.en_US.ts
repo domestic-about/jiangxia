@@ -2,7 +2,14 @@
 export default {
   operator: {
     title: 'Operator statistics',
-    subtitle: 'How many records each person handled per sheet in a period. Sheets are counted separately and never summed; QC sheets are not counted. Click a number to open the matching list.',
+    subtitle: 'One row per person: how many records they handled in each sheet. Columns are counted separately and never summed across; QC sheets are not counted. Click a number to open the matching list.',
+    filter: {
+      range: 'Period',
+      person: 'Person',
+      sheet: 'Sheet',
+      all: 'All',
+      clear: 'Clear filters'
+    },
     preset: {
       week: 'This week',
       month: 'This month',
@@ -33,10 +40,11 @@ export default {
     noneTip: 'Records where this field is empty. Open the list to fill it in.',
     empty: 'No records in this period',
     note: {
-      tissue: 'Approved records only',
-      organoid: 'Approved records only',
-      embed: 'Approved blocks only; blocks without a paraffin embedding date appear under "All" only',
-      cryo: 'Counted by the person who froze the batch; tubes = sum of frozen quantity (not the current remainder)'
-    }
+      tissue: 'Approved records, by operator and receive date',
+      organoid: 'Approved records, by operator and receive date',
+      embed: 'Approved blocks, one column each for embedder and operator, by paraffin embedding date (blocks without that date appear under "All" only)',
+      cryo: 'By the person who froze the batch and the freeze date; tubes = sum of frozen quantity (not the current remainder)'
+    },
+    noteCommon: 'Columns are counted separately and never summed across; QC sheets are not counted. Click a column header to sort by it.'
   }
 };

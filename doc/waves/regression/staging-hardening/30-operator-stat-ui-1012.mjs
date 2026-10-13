@@ -1,6 +1,6 @@
 // CR-20261012-22 界面回归（本机工作台 :8082、小程序 H5 :9100、后端 :8081、库 lqg-dev-postgres）：
 //   node doc/waves/regression/staging-hardening/30-operator-stat-ui-1012.mjs
-// ① 工作台「操作人统计」：四张表各算各的、时间段、数字点过去列表筛出来的就是这么多条
+// ① 工作台「操作人统计」：一张表（一行一个人、一列是一张表里的一个数，CR-20261013-23）、操作人 / 表类型 / 时间段三个筛选、数字点过去列表筛出来的就是这么多条
 // ② 工作台三个抽屉：操作人 / 包埋人 / 冻存人是「选人」，不再是输入框
 // ③ 小程序：选人底部弹框（不能手填）、「我的 → 操作人统计」
 // 自己会 reseed，建一个测试用的内部人员「刘佳」（13900002201）和几条记录；结束时删掉并 reseed 回验收基线。截图在 shots-30/。
@@ -59,31 +59,71 @@ try {
   check('左侧菜单有「操作人统计」，在「冻存管理」后面、「人员与单位」前面', mi('操作人统计') > mi('冻存管理') && mi('操作人统计') < mi('人员与单位') && mi('冻存管理') >= 0, menu.join(' / '))
 
   await p.goto(`${WEB}/operator-stat`, { waitUntil: 'networkidle' }); await wait(p, 2500)
-  const sheetCard = key => p.locator(`.lqg-opstat__sheet[data-sheet="${key}"]`)
-  const titles = (await p.locator('.lqg-opstat__sheet-title').allInnerTexts()).map(s => s.trim())
-  check('四张表各一块，顺序固定', JSON.stringify(titles) === JSON.stringify(['样本记录信息表', '类器官送样记录', '石蜡包埋送样记录', '-80 冻存记录']), titles.join(' / '))
+  // ★ CR-20261013-23：四张小表并成一张 —— 一行一个人，六列依次是
+  //   样本记录信息表 · 操作人（条）｜类器官送样记录 · 操作人（条）｜石蜡包埋 · 包埋人（块）｜石蜡包埋 · 操作人（块）｜-80 冻存 · 批次（批）｜-80 冻存 · 支数（支）
+  const statTable = p.locator('.lqg-opstat__table')
+  const groupTitles = async () => (await statTable.locator('.lqg-opstat__group-title').allInnerTexts()).map(s => s.trim())
+  const leafHeads = async () => (await statTable.locator('.el-table__header-wrapper tr').last().locator('th').allInnerTexts()).map(s => s.replace(/\s+/g, '').trim()).filter(Boolean)
+  const statRows = async () => (await statTable.locator('.el-table__body-wrapper tbody tr.el-table__row').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').trim())
+  const statTotal = async () => (await statTable.locator('.el-table__footer-wrapper tr').innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+  const cellLink = (name, col) => statTable.locator('.el-table__body-wrapper tbody tr.el-table__row', { hasText: name }).first().locator('td').nth(col + 1).locator('a.lqg-opstat__num')
+  const statFilter = key => p.locator(`.lqg-opstat__filter .el-select[data-filter="${key}"]`)
+  const filterShown = async key => (await statFilter(key).locator('.el-select__selected-item, .el-select__placeholder').allInnerTexts()).map(s => s.trim()).filter(Boolean).join('')
+  const visibleOptions = async () => (await p.locator('.el-select-dropdown:visible .el-select-dropdown__item:visible').allInnerTexts()).map(s => s.trim())
+  const pickOption = async (key, label) => {
+    await statFilter(key).click(); await wait(p, 500)
+    await p.locator('.el-select-dropdown:visible .el-select-dropdown__item:visible', { hasText: new RegExp(`^${label}$`) }).click(); await wait(p, 600)
+  }
+
+  check('只有一张表（不再是四张小表）', (await p.locator('.lqg-opstat .el-table').count()) === 1 && (await p.locator('.lqg-opstat__sheet').count()) === 0)
+  let titles = await groupTitles()
+  check('表头第一层是四张表的名字，顺序固定', JSON.stringify(titles) === JSON.stringify(['样本记录信息表', '类器官送样记录', '石蜡包埋送样记录', '-80 冻存记录']), titles.join(' / '))
+  let heads = await leafHeads()
+  check('表头第二层：每张表里的每个数一列（石蜡包埋两列、冻存两列）', JSON.stringify(heads) === JSON.stringify(['操作人（条）', '操作人（条）', '包埋人（块）', '操作人（块）', '批次（批）', '支数（支）']), heads.join(' / '))
   const activePreset = async () => (await p.locator('.lqg-opstat__bar .el-radio-button.is-active').innerText()).trim()
-  check('默认看「本月」', (await activePreset()) === '本月', await activePreset())
-  const rowsOf = async key => (await sheetCard(key).locator('.el-table__body-wrapper tbody tr').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').trim())
-  const totalOf = async key => (await sheetCard(key).locator('.el-table__footer-wrapper tr').innerText()).replace(/\s+/g, ' ').trim()
-  let rows = await rowsOf('tissue')
-  check('本月 · 样本记录信息表：刘佳 2、袁琴琴 1（标「未关联账号」），本月之前的李工不在', rows.some(r => /^刘佳 2$/.test(r)) && rows.some(r => /^袁琴琴 未关联账号 1$/.test(r)) && !rows.some(r => r.startsWith('李工')), rows.join(' | '))
-  check('合计行 = 各行之和', (await totalOf('tissue')) === '合计 3', await totalOf('tissue'))
+  check('默认看「本月」；操作人、表类型默认「全部」', (await activePreset()) === '本月' && (await filterShown('person')) === '全部' && (await filterShown('sheet')) === '全部', `${await activePreset()} / ${await filterShown('person')} / ${await filterShown('sheet')}`)
+  let rows = await statRows()
+  check('本月：一行一个人 —— 刘佳 2 条样本、包埋 1 操作 1、冻存 1 批 5 支；袁琴琴标「未关联账号」；李工本月没有收样（0）', rows.includes('刘佳 2 0 1 1 1 5') && rows.includes('袁琴琴 未关联账号 1 0 0 0 0 0') && rows.filter(r => r.startsWith('李工')).every(r => r.startsWith('李工 0 0 ')), rows.join(' | '))
   await p.screenshot({ path: `${SHOTS}/web-1-stat-month.png`, fullPage: true })
 
   await p.locator('.lqg-opstat__bar .el-radio-button', { hasText: '全部' }).click(); await wait(p, 1800)
-  rows = await rowsOf('tissue')
-  check('全部 · 样本记录信息表：李工 5、刘佳 2、袁琴琴 1（按数量从多到少）', JSON.stringify(rows) === JSON.stringify(['李工 5', '刘佳 2', '袁琴琴 未关联账号 1']), rows.join(' | '))
+  rows = await statRows()
+  check('全部：李工、刘佳（关联了账号的按姓名）→ 袁琴琴（未关联）→ 未填（最后）；同一个人在四张表里的数并在一行', JSON.stringify(rows) === JSON.stringify(['李工 5 1 1 1 7 33', '刘佳 2 0 1 1 1 5', '袁琴琴 未关联账号 1 0 0 0 0 0', '未填 0 0 3 3 0 0']), rows.join(' | '))
+  check('合计行 = 每一列各行之和（没有横向相加的「总计」列）', (await statTotal()) === '合计 8 1 5 5 8 38', await statTotal())
   check('全部 · 时间段写「全部时间」', (await p.locator('.lqg-opstat__range-text').innerText()).trim() === '全部时间')
-  rows = await rowsOf('embed')
-  const embedHead = (await sheetCard('embed').locator('.el-table__header-wrapper th').allInnerTexts()).map(s => s.replace(/\s+/g, '').trim())
-  check('石蜡包埋：包埋人、操作人各一列', JSON.stringify(embedHead) === JSON.stringify(['姓名', '包埋人（块）', '操作人（块）']), embedHead.join(' / '))
-  check('石蜡包埋：李工 1 / 1、刘佳 1 / 1、没填的 3 / 3 排在最后', rows[rows.length - 1] === '未填 3 3' && rows.includes('李工 1 1') && rows.includes('刘佳 1 1'), rows.join(' | '))
-  rows = await rowsOf('cryo')
-  check('-80 冻存：批次、支数两列（李工 7 批 33 支、刘佳 1 批 5 支）', rows.includes('李工 7 33') && rows.includes('刘佳 1 5') && (await totalOf('cryo')) === '合计 8 38', `${rows.join(' | ')} / ${await totalOf('cryo')}`)
-  const subtitle = (await p.locator('.lqg-opstat__subtitle').innerText()).trim()
-  check('页头说清：各算各的、不加在一起、质控表不统计', /各算各的/.test(subtitle) && /质控表不统计/.test(subtitle), subtitle)
+  const notes = (await p.locator('.lqg-opstat__notes').innerText()).replace(/\s+/g, ' ')
+  check('表下面说清每张表怎么数的：各算各的、不横向相加、质控表不统计、支数不是当前剩余', /不横向相加/.test(notes) && /质控表不统计/.test(notes) && /不是当前剩余/.test(notes) && /石蜡包埋时间/.test(notes), notes.slice(0, 120))
   await p.screenshot({ path: `${SHOTS}/web-2-stat-all.png`, fullPage: true })
+
+  // 操作人筛选
+  await statFilter('person').click(); await wait(p, 500)
+  let popts = await visibleOptions()
+  check('「操作人」下拉：内部人员名单 + 数据里没关联账号的手填姓名（带标注）+ 未填', JSON.stringify(popts) === JSON.stringify(['刘佳', '李工', '测试管理员', '袁琴琴（未关联账号）', '未填']), popts.join(' / '))
+  await p.keyboard.press('Escape'); await wait(p, 300)
+  await pickOption('person', '刘佳')
+  rows = await statRows()
+  check('选「刘佳」：只剩她那一行，不再重复显示合计', JSON.stringify(rows) === JSON.stringify(['刘佳 2 0 1 1 1 5']) && (await statTotal()) === '', `${rows.join(' | ')} / 合计「${await statTotal()}」`)
+  await p.screenshot({ path: `${SHOTS}/web-3-stat-person.png`, fullPage: true })
+  await pickOption('person', '测试管理员')
+  rows = await statRows()
+  check('★ 选一个这段时间没做过的人：给一行 0（不是空表）', JSON.stringify(rows) === JSON.stringify(['测试管理员 0 0 0 0 0 0']), rows.join(' | '))
+  // 表类型筛选
+  await p.locator('.lqg-opstat__filter button', { hasText: '清空筛选' }).click(); await wait(p, 500)
+  await pickOption('sheet', '-80 冻存记录')
+  titles = await groupTitles(); heads = await leafHeads(); rows = await statRows()
+  check('表类型选「-80 冻存记录」：只剩这张表的两列，只列在这张表里有记录的人', JSON.stringify(titles) === JSON.stringify(['-80 冻存记录']) && JSON.stringify(heads) === JSON.stringify(['批次（批）', '支数（支）']) && JSON.stringify(rows) === JSON.stringify(['李工 7 33', '刘佳 1 5']) && (await statTotal()) === '合计 8 38', `${titles.join('/')} · ${rows.join(' | ')} · ${await statTotal()}`)
+  await p.screenshot({ path: `${SHOTS}/web-4-stat-sheet.png`, fullPage: true })
+  await pickOption('person', '李工')
+  rows = await statRows()
+  check('两个一起筛：李工在 -80 冻存里的数', JSON.stringify(rows) === JSON.stringify(['李工 7 33']), rows.join(' | '))
+  await p.locator('.lqg-opstat__filter button', { hasText: '清空筛选' }).click(); await wait(p, 500)
+  check('点「清空筛选」：回到六列、全部人', (await leafHeads()).length === 6 && (await statRows()).length === 4 && (await filterShown('person')) === '全部')
+  // 点表头按这一列排序
+  await statTable.locator('.el-table__header-wrapper th', { hasText: '支数（支）' }).click(); await wait(p, 500)
+  const asc = (await statRows()).map(r => r.split(' ')[0])
+  await statTable.locator('.el-table__header-wrapper th', { hasText: '支数（支）' }).click(); await wait(p, 500)
+  const desc = (await statRows()).map(r => r.split(' ')[0])
+  check('点表头「支数」排序：升序李工在最后、降序李工在最前', asc[asc.length - 1] === '李工' && desc[0] === '李工', `升 ${asc.join(',')} / 降 ${desc.join(',')}`)
 
   // 自定义：只填结束日期 = 这一天及之前
   await p.locator('.lqg-opstat__bar .el-radio-button', { hasText: '自定义' }).click(); await wait(p, 500)
@@ -92,31 +132,31 @@ try {
   await endInput.fill(ymd(yesterday)); await endInput.press('Enter'); await wait(p, 300)
   await p.locator('.lqg-opstat__bar button', { hasText: '查询' }).click(); await wait(p, 1800)
   const rangeText = (await p.locator('.lqg-opstat__range-text').innerText()).trim()
-  rows = await rowsOf('tissue')
-  check('自定义只填结束日期：写「… 及之前」，今天新录的刘佳 / 袁琴琴不在里面', rangeText === `${ymd(yesterday)} 及之前` && JSON.stringify(rows) === JSON.stringify(['李工 5']), `${rangeText} · ${rows.join(' | ')}`)
-  await p.screenshot({ path: `${SHOTS}/web-3-stat-custom.png`, fullPage: true })
+  rows = await statRows()
+  check('自定义只填结束日期：写「… 及之前」，今天新录的刘佳 / 袁琴琴不在里面', rangeText === `${ymd(yesterday)} 及之前` && rows.some(r => r.startsWith('李工 5 1 ')) && !rows.some(r => /^(刘佳|袁琴琴)/.test(r)), `${rangeText} · ${rows.join(' | ')}`)
+  await p.screenshot({ path: `${SHOTS}/web-5-stat-custom.png`, fullPage: true })
 
   // 数字点过去：列表筛出来的就是这么多条
   await p.locator('.lqg-opstat__bar .el-radio-button', { hasText: '本月' }).click(); await wait(p, 1800)
   const bodyRows = () => p.locator('.el-table__body-wrapper tbody tr.el-table__row').count()
   const filterText = async label => (await p.locator('.el-form-item', { has: p.locator('.el-form-item__label', { hasText: new RegExp(`^${label}$`) }) }).first().locator('.el-select__selected-item, .el-select__placeholder').allInnerTexts()).map(s => s.trim()).filter(Boolean).join('')
-  await sheetCard('tissue').locator('tr', { hasText: '刘佳' }).locator('a.lqg-opstat__num').click(); await wait(p, 3000)
-  check('点样本记录信息表里刘佳的「2」→ 到样本记录信息表，筛出来正好 2 条', p.url().includes('/sample?') && (await bodyRows()) === 2, `${p.url().replace(WEB, '')} · ${await bodyRows()} 行`)
+  await cellLink('刘佳', 0).click(); await wait(p, 3000)
+  check('点刘佳那一行「样本记录信息表」的 2 → 到样本记录信息表，筛出来正好 2 条', p.url().includes('/sample?') && (await bodyRows()) === 2, `${p.url().replace(WEB, '')} · ${await bodyRows()} 行`)
   check('筛选框里是「刘佳」，核验状态是有效', (await filterText('操作人')) === '刘佳' && /有效/.test(await filterText('核验状态')), `${await filterText('操作人')} / ${await filterText('核验状态')}`)
-  await p.screenshot({ path: `${SHOTS}/web-4-sample-by-person.png` })
+  await p.screenshot({ path: `${SHOTS}/web-6-sample-by-person.png` })
 
   await p.goto(`${WEB}/operator-stat`, { waitUntil: 'networkidle' }); await wait(p, 2500)
-  await sheetCard('tissue').locator('tr', { hasText: '袁琴琴' }).locator('a.lqg-opstat__num').click(); await wait(p, 3000)
+  await cellLink('袁琴琴', 0).click(); await wait(p, 3000)
   check('点「袁琴琴（未关联账号）」的 1 → 筛出那条手填的记录，筛选框写明是未关联账号', (await bodyRows()) === 1 && (await filterText('操作人')) === '袁琴琴（未关联账号）', `${await bodyRows()} 行 · ${await filterText('操作人')}`)
 
   await p.goto(`${WEB}/operator-stat`, { waitUntil: 'networkidle' }); await wait(p, 2500)
-  await sheetCard('embed').locator('tr', { hasText: '刘佳' }).locator('a.lqg-opstat__num').first().click(); await wait(p, 3000)
-  check('点石蜡包埋「包埋人」列里刘佳的 1 → 到石蜡包埋，包埋人筛选是刘佳，1 条', p.url().includes('/embed?') && (await bodyRows()) === 1 && (await filterText('包埋人')) === '刘佳' && (await filterText('操作人')) === '全部', `${await bodyRows()} 行 · 包埋人 ${await filterText('包埋人')} / 操作人 ${await filterText('操作人')}`)
-  await p.screenshot({ path: `${SHOTS}/web-5-embed-by-person.png` })
+  await cellLink('刘佳', 2).click(); await wait(p, 3000)
+  check('点刘佳那一行石蜡包埋「包埋人」列的 1 → 到石蜡包埋，包埋人筛选是刘佳、操作人不筛，1 条', p.url().includes('/embed?') && (await bodyRows()) === 1 && (await filterText('包埋人')) === '刘佳' && (await filterText('操作人')) === '全部', `${await bodyRows()} 行 · 包埋人 ${await filterText('包埋人')} / 操作人 ${await filterText('操作人')}`)
+  await p.screenshot({ path: `${SHOTS}/web-7-embed-by-person.png` })
 
   await p.goto(`${WEB}/operator-stat`, { waitUntil: 'networkidle' }); await wait(p, 2500)
-  await sheetCard('cryo').locator('tr', { hasText: '刘佳' }).locator('a.lqg-opstat__num').last().click(); await wait(p, 3000)
-  check('点 -80 冻存里刘佳的支数 → 到冻存管理，冻存人筛选是刘佳，1 批', p.url().includes('/cryo?') && (await bodyRows()) === 1 && (await filterText('冻存人')) === '刘佳', `${await bodyRows()} 行 · ${await filterText('冻存人')}`)
+  await cellLink('刘佳', 5).click(); await wait(p, 3000)
+  check('点刘佳那一行 -80 冻存「支数」的 5 → 到冻存管理，冻存人筛选是刘佳，1 批', p.url().includes('/cryo?') && (await bodyRows()) === 1 && (await filterText('冻存人')) === '刘佳', `${await bodyRows()} 行 · ${await filterText('冻存人')}`)
 
   // ── ② 工作台 · 三个抽屉里是「选人」────────────────────────────────────────
   console.log('② 工作台 · 抽屉里的操作人 / 包埋人 / 冻存人')
@@ -145,7 +185,7 @@ try {
   await formItem('操作人').locator('input').fill('刘'); await wait(p, 500)
   await p.locator('.el-select-dropdown:visible .el-select-dropdown__item', { hasText: '刘佳' }).click(); await wait(p, 400)
   check('选了刘佳', (await selected('操作人')) === '刘佳', await selected('操作人'))
-  await p.screenshot({ path: `${SHOTS}/web-6-sample-drawer.png` })
+  await p.screenshot({ path: `${SHOTS}/web-8-sample-drawer.png` })
   await closeDrawer()
 
   // 历史手填的记录：看得见是谁、带标注
@@ -157,7 +197,7 @@ try {
   await p.goto(`${WEB}/embed`, { waitUntil: 'networkidle' }); await wait(p, 2500)
   await p.locator('button', { hasText: /新增/ }).first().click(); await wait(p, 1500)
   check('新增石蜡包埋：包埋人、操作人都是下拉；操作人默认当前登录人，包埋人空着', (await formItem('包埋人').locator('.el-select').count()) === 1 && (await formItem('操作人').locator('.el-select').count()) === 1 && (await selected('操作人')) === '测试管理员' && (await selected('包埋人')) === '请选择', `包埋人 ${await selected('包埋人')} / 操作人 ${await selected('操作人')}`)
-  await p.screenshot({ path: `${SHOTS}/web-7-embed-drawer.png` })
+  await p.screenshot({ path: `${SHOTS}/web-9-embed-drawer.png` })
   await closeDrawer()
 
   await p.goto(`${WEB}/cryo`, { waitUntil: 'networkidle' }); await wait(p, 2500)
