@@ -38,6 +38,8 @@ export interface CryoBatchVO {
   cryoName?: string | null;
   /** 代数，形如 P2 */
   passage?: string | null;
+  /** 传代周期：每 X 天，选填 */
+  passageCycleDays?: number | null;
   freezeTime?: string | null;
   /** ★ 冻存数量/支 = **初始**支数（不是剩余） */
   initQty?: number | null;
@@ -121,6 +123,7 @@ export interface CryoBatchForm {
   sampleId?: string | number | null;
   cryoName?: string | null;
   passage?: string | null;
+  passageCycleDays?: number | null;
   freezeTime?: string | null;
   /** ★ 初始支数，可改（后端锁批次行后逐笔校验，任一步 < 0 → 400） */
   initQty?: number | null;

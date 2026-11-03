@@ -323,7 +323,9 @@ phase_status() {
 #     服务器上 `--skip-build`（守卫再跑一遍）→ miniprogram-ci 上传 + 生成体验版二维码。
 # 前置：.env 里配 LQG_WX_APPID 与 LQG_MINIPROGRAM_KEY（本机绝对路径；密钥绝不进仓库）。
 phase_miniapp() {
-  local mode="test" mpd="${LQG_DEPLOY_DIR}/miniapp"
+  # ★ 2026-10-21 起缺省 staging：appid 换成甲方生产小程序后，体验版不再带「测试身份登录」入口
+  #   （env/.env.test 的 VITE_MOCK_LOGIN=1 只该留给本地开发者工具）。要旧行为：LQG_MP_MODE=test。
+  local mode="${LQG_MP_MODE:-staging}" mpd="${LQG_DEPLOY_DIR}/miniapp"
   [ -n "${LQG_WX_APPID:-}" ] || die "缺 LQG_WX_APPID（写进 code/deploy/test/.env）"
   [ -n "${LQG_MINIPROGRAM_KEY:-}" ] || die "缺 LQG_MINIPROGRAM_KEY=<private.<appid>.key 的绝对路径>（写进 .env）"
   [ -f "${LQG_MINIPROGRAM_KEY}" ] || die "上传密钥文件不存在：${LQG_MINIPROGRAM_KEY}"

@@ -423,8 +423,8 @@ records:
       - id: FLOW:F-CRYO-01.step1
         label: 新建冻存批次
         actor: 内部人员(mp/admin)
-        action: 选样本 → 冻存样品名称（用「内部编号-」预填，手改）、代数（P+数字）、冻存时间、数量、密度、是否暂存 -80、冻存人；选「否」时必须填液氮储存位置
-        writes: [FIELD:t_lqg_cryo_batch.sample_id, FIELD:t_lqg_cryo_batch.cryo_name, FIELD:t_lqg_cryo_batch.passage, FIELD:t_lqg_cryo_batch.freeze_time, FIELD:t_lqg_cryo_batch.init_qty, FIELD:t_lqg_cryo_batch.density, FIELD:t_lqg_cryo_batch.in_minus80, FIELD:t_lqg_cryo_batch.frozen_by, FIELD:t_lqg_cryo_batch.frozen_by_id, FIELD:t_lqg_cryo_batch.ln2_location, FIELD:t_lqg_cryo_batch.remark]
+        action: 选样本 → 冻存样品名称（用「内部编号-」预填，手改）、代数（P+数字）、传代周期（选填，每 X 天，手动填正整数）、冻存时间、数量、密度、是否暂存 -80、冻存人；选「否」时必须填液氮储存位置
+        writes: [FIELD:t_lqg_cryo_batch.sample_id, FIELD:t_lqg_cryo_batch.cryo_name, FIELD:t_lqg_cryo_batch.passage, FIELD:t_lqg_cryo_batch.passage_cycle_days, FIELD:t_lqg_cryo_batch.freeze_time, FIELD:t_lqg_cryo_batch.init_qty, FIELD:t_lqg_cryo_batch.density, FIELD:t_lqg_cryo_batch.in_minus80, FIELD:t_lqg_cryo_batch.frozen_by, FIELD:t_lqg_cryo_batch.frozen_by_id, FIELD:t_lqg_cryo_batch.ln2_location, FIELD:t_lqg_cryo_batch.remark]
         produces: 批次建立，剩余 = 初始支数；同一样本可有多条不同代数的批次。之后批次的每一项都可以改（含初始支数，校验见 FLOW:F-CRYO-02.step5）
       - id: FLOW:F-CRYO-01.step2
         label: 计算超期清单
@@ -455,7 +455,7 @@ records:
       - id: FLOW:F-CRYO-01.step5
         label: 按模板导出 Excel
         actor: 内部人员(admin)
-        action: 导出「-80 冻存」9 列，表头与列序和模板逐字一致；其后追加两列「代数」「当前剩余/支」
+        action: 导出「-80 冻存」9 列，表头与列序和模板逐字一致；其后依次追加「代数」「当前剩余/支」「种属」「传代周期」（每 X 天，未填留空；CR-20261031-24）
         produces: xlsx 文件
     related_reqs: [REQ-CRYO-001, REQ-CRYO-002, REQ-CRYO-003, REQ-CRYO-007, REQ-CRYO-008, REQ-CRYO-901, REQ-SAMPLE-008, REQ-SAMPLE-013]
 

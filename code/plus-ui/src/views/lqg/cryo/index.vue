@@ -209,6 +209,11 @@
         <el-table-column :label="t('lqg.species.label')" prop="species" width="90" align="center" :show-overflow-tooltip="true">
           <template #default="scope">{{ speciesText(scope.row.species) }}</template>
         </el-table-column>
+        <el-table-column :label="t('lqg.cryo.col.passageCycle')" prop="passageCycleDays" width="140" align="center">
+          <template #default="scope">{{
+            scope.row.passageCycleDays == null ? '—' : t('lqg.cryo.cell.passageCycle', { days: scope.row.passageCycleDays })
+          }}</template>
+        </el-table-column>
         <!-- 以下三列模板里没有，工作台自己要看：所挂样本的内部编号、当前位置、最后修改。
              ★ 内部编号点回样本（2026-09-24 本机验收「反向可回」）：按样本类别回到它所在那一页并打开它 -->
         <el-table-column :label="t('lqg.cryo.col.internalNo')" prop="internalNo" width="120" :show-overflow-tooltip="true">

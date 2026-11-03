@@ -1,6 +1,7 @@
 package org.dromara.lqg.cryo.batch.domain.bo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -44,6 +45,10 @@ public class CryoBatchSubmitBo implements Serializable {
 
     @Schema(description = "代数，形如 P3")
     private String passage;
+
+    @Schema(description = "传代周期：每 X 天（选填，正整数；null 清空）")
+    @JsonDeserialize(using = PassageCycleDaysDeserializer.class)
+    private Integer passageCycleDays;
 
     @Schema(description = "冻存时间 yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd")

@@ -34,6 +34,8 @@ export interface CryoBatchRow extends LedgerRow {
   sampleId?: string | number | null
   cryoName?: string | null
   passage?: string | null
+  /** 传代周期：每 X 天，选填 */
+  passageCycleDays?: number | null
   freezeTime?: string | null
   initQty?: number | null
   density?: string | null
@@ -75,6 +77,7 @@ export interface CryoFormValue {
   sampleLabel: string
   cryoName: string
   passage: string
+  passageCycleDays: string
   freezeTime: string
   initQty: string
   density: string
@@ -98,6 +101,7 @@ export function emptyCryoForm(): CryoFormValue {
     sampleLabel: '',
     cryoName: '',
     passage: '',
+    passageCycleDays: '',
     freezeTime: '',
     initQty: '',
     density: '',
@@ -131,6 +135,7 @@ export function toCryoFormValue(detail: Partial<CryoBatchRow> | null | undefined
     sampleLabel: [str(detail.internalNo), str(detail.submitNo)].filter(Boolean).join(' · '),
     cryoName: str(detail.cryoName),
     passage: str(detail.passage),
+    passageCycleDays: str(detail.passageCycleDays),
     freezeTime: dayOf(detail.freezeTime),
     initQty: detail.initQty === null || detail.initQty === undefined ? '' : String(detail.initQty),
     density: str(detail.density),
@@ -157,6 +162,7 @@ export function cryoPayload(form: CryoFormValue): Record<string, unknown> {
     sampleId: form.sampleId || null,
     cryoName: form.cryoName.trim(),
     passage: form.passage.trim(),
+    passageCycleDays: form.passageCycleDays.trim() === '' ? null : Number(form.passageCycleDays),
     freezeTime: form.freezeTime || null,
     initQty: form.initQty === '' ? null : Number(form.initQty),
     density: form.density.trim(),
@@ -192,6 +198,10 @@ export function cryoFormProblem(form: CryoFormValue): string {
   }
   if (!form.freezeTime) {
     return '请选择冻存时间'
+  }
+  const cycle = form.passageCycleDays.trim()
+  if (cycle && (!/^[0-9]+$/.test(cycle) || Number(cycle) <= 0 || Number(cycle) > 2147483647)) {
+    return '请填写有效的传代周期天数（正整数）'
   }
   // 转液氮不得早于冻存（后端 CryoBalanceChecker.requireLn2NotBeforeFreeze 同一条）
   if (form.toLn2Time && form.toLn2Time < form.freezeTime) {
@@ -298,6 +308,9 @@ function asCryoRow(row: LedgerRow): CryoBatchRow {
 export function cryoLedgerCell(row: LedgerRow, key: string): string {
   const r = asCryoRow(row)
   const field = KEY_ALIAS[key] ?? key
+  if (field === 'passageCycleDays') {
+    return r.passageCycleDays == null ? '—' : `每 ${r.passageCycleDays} 天`
+  }
   if (field === 'inMinus80') {
     // 「暂存 -80 度超低温冰箱」是模板里的按钮类字段 → 显示 是 / 否（UI:mp.ledger）
     return str(r.inMinus80).toUpperCase() === 'N' ? '否' : r.inMinus80 ? '是' : '—'

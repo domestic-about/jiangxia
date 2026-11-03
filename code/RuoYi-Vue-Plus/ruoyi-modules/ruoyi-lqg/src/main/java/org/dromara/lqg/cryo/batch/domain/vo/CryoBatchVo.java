@@ -54,6 +54,9 @@ public class CryoBatchVo implements Serializable {
     @Schema(description = "代数，形如 P3")
     private String passage;
 
+    @Schema(description = "传代周期：每 X 天（空 = 未填写）")
+    private Integer passageCycleDays;
+
     @Schema(description = "冻存时间")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate freezeTime;

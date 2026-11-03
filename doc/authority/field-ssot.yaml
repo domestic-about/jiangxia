@@ -234,6 +234,7 @@ tables:
       - { name: id, type: id, nullable: false, comment: "主键" }
       - { name: sample_id, type: id, nullable: false, comment: "FK→t_lqg_sample.id（内部编号贯穿：冻存必须挂到一个样本上）" }
       - { name: cryo_name, type: str, length: 100, nullable: false, comment: "冻存样品名称（如 hli39-GZ-N-P3-EM2-2e5），手填，系统不解析；选样本后用「内部编号-」预填" }
+      - { name: passage_cycle_days, type: int, nullable: true, comment: "传代周期：每 X 天，选填正整数，手动输入；历史记录留空，不参与冻存超期判定。迁移 V202610311000（CR-20261031-24）" }
       - { name: passage, type: str, length: 10, nullable: false, comment: "★ 代数，形如 P3（正则 ^P\\d{1,3}$）；同一样本多条批次的代数不要求连续" }
       - { name: freeze_time, type: date, nullable: false, comment: "冻存时间（超期提醒从它起算）" }
       - { name: init_qty, type: int, nullable: false, comment: "冻存数量/支（初始支数，>0；可改，改后按时间逐笔算剩余不得为负，见 FLOW:F-CRYO-02.step5）" }

@@ -125,6 +125,20 @@
               <el-input v-model="form.passage" :placeholder="t('lqg.cryo.drawer.passagePlaceholder')" maxlength="10" clearable />
             </el-form-item>
           </el-col>
+          <el-col :span="24">
+            <el-form-item :label="t('lqg.cryo.drawer.passageCycle')" prop="passageCycleDays">
+              <el-input
+                v-model="form.passageCycleDays"
+                inputmode="numeric"
+                maxlength="10"
+                :placeholder="t('lqg.cryo.drawer.passageCyclePlaceholder')"
+                clearable
+              >
+                <template #prepend>{{ t('lqg.cryo.drawer.every') }}</template>
+                <template #append>{{ t('lqg.cryo.drawer.days') }}</template>
+              </el-input>
+            </el-form-item>
+          </el-col>
         </el-row>
       </el-form>
     </template>
@@ -185,6 +199,7 @@ const emptyForm = () => ({
   species: null as string | null,
   cryoName: null as string | null,
   passage: null as string | null,
+  passageCycleDays: '',
   freezeTime: null as string | null,
   initQty: null as number | null,
   density: null as string | null,
@@ -230,6 +245,19 @@ const rules = computed<ElFormRules>(() => ({
     }
   ],
   freezeTime: [{ required: true, message: t('lqg.cryo.drawer.freezeTimeRequired'), trigger: 'change' }],
+  passageCycleDays: [
+    {
+      validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+        const cycle = value.trim();
+        callback(
+          cycle && (!/^[0-9]+$/.test(cycle) || Number(cycle) <= 0 || Number(cycle) > 2147483647)
+            ? new Error(t('lqg.cryo.drawer.passageCycleInvalid'))
+            : undefined
+        );
+      },
+      trigger: 'blur'
+    }
+  ],
   initQty: [{ required: true, message: t('lqg.cryo.drawer.initQtyRequired'), trigger: 'change' }],
   inMinus80: [{ required: true, message: t('lqg.cryo.drawer.inMinus80Required'), trigger: 'change' }],
   // 直接进液氮或登记了转液氮时间 → 必须有位置（后端 CryoBalanceChecker.requireLn2Location 同判据）
@@ -286,6 +314,7 @@ const open = async (row: CryoBatchVO) => {
       species: detail.species ?? null,
       cryoName: detail.cryoName ?? null,
       passage: detail.passage ?? null,
+      passageCycleDays: String(detail.passageCycleDays ?? ''),
       freezeTime: detail.freezeTime ?? null,
       initQty: detail.initQty ?? null,
       density: detail.density ?? null,
@@ -335,6 +364,7 @@ const payload = (): CryoBatchForm => ({
   sampleId: form.value.sampleId,
   cryoName: form.value.cryoName,
   passage: normalizePassage(form.value.passage),
+  passageCycleDays: form.value.passageCycleDays.trim() === '' ? null : Number(form.value.passageCycleDays),
   freezeTime: form.value.freezeTime,
   initQty: form.value.initQty,
   density: form.value.density,

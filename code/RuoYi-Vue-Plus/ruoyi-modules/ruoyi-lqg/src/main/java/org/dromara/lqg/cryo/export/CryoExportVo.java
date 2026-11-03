@@ -17,12 +17,12 @@ import java.io.Serializable;
  * 与甲方模板原件 {@code _input/templates/-80冻存模板.xlsx} 第 1 行逐字不等 → 红。
  * 甲方拿导出去对纸质记录，列名变了就对不上。
  *
- * <p>★★ <b>列 = 模板 9 列 + 追加 2 列</b>（权威 FLOW:F-CRYO-01.step5：「导出『-80 冻存』9 列，
- * 表头与列序和模板逐字一致；其后追加两列『代数』『当前剩余/支』」）：
+ * <p>★★ <b>列 = 模板 9 列 + 追加 4 列</b>（权威 FLOW:F-CRYO-01.step5：「导出『-80 冻存』9 列，
+ * 表头与列序和模板逐字一致；其后追加『代数』『当前剩余/支』『种属』『传代周期』」）：
  * <pre>
  * 冻存时间 / 冻存样品 / 冻存数量/支 / 冻存密度 / 暂存-80度超低温冰箱 / 冻存人 /
  * -80度超低温冰箱转移至液氮时间 / 液氮储存位置 / 备注             ← 模板原件 9 列，逐字同序
- * 代数 / 当前剩余/支 / 种属                                     ← 只许追加在模板列之后（种属：CR-20261009-18）
+ * 代数 / 当前剩余/支 / 种属 / 传代周期                                     ← 只许追加在模板列之后（种属：CR-20261009-18）
  * </pre>
  * ★ 追加列<b>只能挂在第 9 列之后</b>：插到中间任何一个位置表头顺序就不等（accept 1 counterfeit）。
  *
@@ -43,7 +43,7 @@ import java.io.Serializable;
  */
 @Data
 @ExcelIgnoreUnannotated
-@Schema(description = "-80 冻存导出视图（模板 9 列 + 代数 + 当前剩余/支 + 种属）")
+@Schema(description = "-80 冻存导出视图（模板 9 列 + 代数 + 当前剩余/支 + 种属 + 传代周期）")
 public class CryoExportVo implements Serializable {
 
     @Serial
@@ -113,5 +113,9 @@ public class CryoExportVo implements Serializable {
     @ExcelProperty(value = "种属", index = 11)
     @Schema(description = "所挂样本的种属；样本没填留空")
     private String species;
+
+    @ExcelProperty(value = "传代周期", index = 12)
+    @Schema(description = "每 X 天；未填写留空（CR-20261031-24）")
+    private String passageCycle;
 
 }

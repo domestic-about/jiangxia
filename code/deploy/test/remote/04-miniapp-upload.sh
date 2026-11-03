@@ -15,14 +15,15 @@ cd /opt/lqg-test
 
 set -a; . /opt/lqg-test/.env; set +a
 MP_DIR=/opt/lqg-test/miniapp
+MODE="${LQG_MP_MODE:-staging}"   # 与 deploy.sh phase_miniapp 同一口径（2026-10-21 起缺省 staging）
 log() { echo "[$(date '+%F %T')] $*"; }
 
 log "===== 1) 检查物料 ====="
 [ -f "${MP_DIR}/scripts/upload-mp.mjs" ] || { log "  ✗ 缺 ${MP_DIR}/scripts/upload-mp.mjs（deploy.sh 的上传阶段没跑？）"; exit 1; }
-[ -d "${MP_DIR}/dist/build/mp-weixin-test" ] || { log "  ✗ 缺构建产物 ${MP_DIR}/dist/build/mp-weixin-test"; exit 1; }
+[ -d "${MP_DIR}/dist/build/mp-weixin-${MODE}" ] || { log "  ✗ 缺构建产物 ${MP_DIR}/dist/build/mp-weixin-${MODE}"; exit 1; }
 [ -f "${MP_DIR}/private.key" ] || { log "  ✗ 缺上传密钥 ${MP_DIR}/private.key"; exit 1; }
 chmod 600 "${MP_DIR}/private.key"
-log "  产物文件数：$(find "${MP_DIR}/dist/build/mp-weixin-test" -type f | wc -l | tr -d ' ')"
+log "  产物文件数：$(find "${MP_DIR}/dist/build/mp-weixin-${MODE}" -type f | wc -l | tr -d ' ')"
 log "  密钥权限：$(stat -c '%a' "${MP_DIR}/private.key")"
 
 log "===== 2) miniprogram-ci 依赖（装在独立目录，只装一次）====="
@@ -43,7 +44,7 @@ else
   log "  已装并软链：$(node -e "console.log(require('${MP_DIR}/node_modules/miniprogram-ci/package.json').version)")"
 fi
 
-log "===== 3) 上传（node scripts/upload-mp.mjs --mode=test --skip-build）====="
+log "===== 3) 上传（node scripts/upload-mp.mjs --mode=${MODE} --skip-build）====="
 cd "${MP_DIR}"
 # appid 从 code/miniapp/env/.env 同步过来的那份读（deploy.sh 也允许用 LQG_WX_APPID 覆盖）
 export LQG_WX_APPID="${LQG_WX_APPID:-}"
@@ -54,7 +55,7 @@ VER_ARGS=()
 [ -n "${LQG_MINIPROGRAM_VERSION:-}" ] && VER_ARGS=(--version="${LQG_MINIPROGRAM_VERSION}")
 log "  版本号：${LQG_MINIPROGRAM_VERSION:-（未配，用脚本缺省的 <version>.<mode>.<commit>）}"
 set +e
-node scripts/upload-mp.mjs --mode=test --skip-build "${VER_ARGS[@]+"${VER_ARGS[@]}"}" 2>&1 | tee /tmp/lqg-mp-upload.out | grep -vE '^\s*\[object Object\]' | tail -30
+node scripts/upload-mp.mjs --mode=${MODE} --skip-build "${VER_ARGS[@]+"${VER_ARGS[@]}"}" 2>&1 | tee /tmp/lqg-mp-upload.out | grep -vE '^\s*\[object Object\]' | tail -30
 rc="${PIPESTATUS[0]}"
 set -e
 

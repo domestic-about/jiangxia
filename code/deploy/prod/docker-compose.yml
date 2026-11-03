@@ -112,7 +112,7 @@ services:
     # （开发机是 arm64、生产机是 amd64）。基础镜像 gotenberg/gotenberg:8 必须在服务器上能拉到。
     # ★ 不映射任何宿主端口（accept 2 的第 1 段就是打 3000）。
     build:
-      context: ../common/gotenberg
+      context: ./gotenberg   # deploy.sh upload 把 code/deploy/common/gotenberg 传到 ${LQG_DATA_DIR}/gotenberg
       dockerfile: Dockerfile
     image: lqg-gotenberg:8
     container_name: lqg-prod-gotenberg
@@ -237,15 +237,16 @@ services:
     depends_on:
       - backend
     # ★★ 全套里**唯一**映射宿主端口的服务（accept 2 第 1 段 / 第 2 段都查这一点）。
+    # 2026-10-21：公网 80/443 归宿主宝塔 nginx（不停），这里只发布到本机回环，宝塔反代进来。
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:${LQG_LOCAL_WEB_PORT:-18080}:8080"
     volumes:
       # 网页工作台静态产物（plus-ui 的 dist，由 deploy.sh rsync 到 ${LQG_DATA_DIR}/www）
       - ${LQG_DATA_DIR:-/opt/lqg}/www:/usr/share/nginx/html:ro
       - ./nginx/workspace.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/proxy-headers.inc:/etc/nginx/conf.d/lqg-proxy-headers.inc:ro
       - ./nginx/security-headers.inc:/etc/nginx/conf.d/lqg-security-headers.inc:ro
+      - ./nginx/app-locations.inc:/etc/nginx/conf.d/lqg-app-locations.inc:ro
       # 证书目录（只读）：${LQG_DATA_DIR}/certs/<域名>/fullchain.pem。由宿主的 acme.sh 续期，
       # 续期后 deploy.sh 的 cron 钩子 `docker exec lqg-prod-nginx nginx -s reload` 重新加载。
       - ${LQG_DATA_DIR:-/opt/lqg}/certs:/etc/nginx/certs:ro

@@ -54,6 +54,7 @@ export default {
   },
 
   cell: {
+    passageCycle: '每 {days} 天',
     openSample: '回到这条样本'
   },
 
@@ -69,6 +70,7 @@ export default {
 
   // ── 表格列（模板 9 列 + 代数 / 当前剩余（与导出同序）+ 内部编号 / 当前位置 / 最后修改 + 操作） ──
   col: {
+    passageCycle: '传代周期',
     freezeTime: '冻存时间',
     cryoName: '冻存样品',
     initQty: '冻存数量/支',
@@ -127,6 +129,11 @@ export default {
 
   // ── 新增 / 编辑抽屉 ───────────────────────────────────────────────────────
   drawer: {
+    passageCycle: '传代周期',
+    passageCyclePlaceholder: '选填天数',
+    passageCycleInvalid: '请填写有效的传代周期天数（正整数）',
+    every: '每',
+    days: '天',
     addTitle: '新增冻存批次',
     editTitle: '编辑冻存批次',
     sectionBatch: '批次信息',

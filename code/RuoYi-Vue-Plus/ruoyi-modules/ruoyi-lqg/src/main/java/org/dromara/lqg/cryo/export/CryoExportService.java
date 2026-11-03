@@ -37,7 +37,7 @@ import java.util.Map;
  *   <li>「当前剩余/支」= {@code remainingQty}（读时算，与接口 / 库内独立汇总同源）；</li>
  *   <li>日期（冻存时间 / 转液氮时间）= {@code yyyy-MM-dd}，空 → 空格子。</li>
  * </ul>
- * ★ 列序 = 模板 9 列 + 追加「代数」「当前剩余/支」两列；追加列不插到中间（表头逐字按序比对）。
+ * ★ 列序 = 模板 9 列 + 追加「代数」「当前剩余/支」「种属」「传代周期」四列；追加列不插到中间（表头逐字按序比对）。
  *
  * @author CRYO-WEB-001
  */
@@ -108,6 +108,7 @@ public class CryoExportService {
         vo.setLn2Location(row.getLn2Location());
         vo.setRemark(row.getRemark());
         vo.setPassage(row.getPassage());
+        vo.setPassageCycle(row.getPassageCycleDays() == null ? null : "每 " + row.getPassageCycleDays() + " 天");
         vo.setRemainingQty(numberText(row.getRemainingQty()));
         return vo;
     }
@@ -153,7 +154,7 @@ public class CryoExportService {
     }
 
     /**
-     * 导出的列名清单（12 列 = 模板 9 列 + 代数 + 当前剩余/支 + 种属）—— 给验收脚本 / 单测对表头用。
+     * 导出的列名清单（13 列 = 模板 9 列 + 代数 + 当前剩余/支 + 种属 + 传代周期）—— 给验收脚本 / 单测对表头用。
      */
     public static Map<String, Integer> headerIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
@@ -169,6 +170,7 @@ public class CryoExportService {
         out.put("代数", 9);
         out.put("当前剩余/支", 10);
         out.put("种属", 11);
+        out.put("传代周期", 12);
         return out;
     }
 

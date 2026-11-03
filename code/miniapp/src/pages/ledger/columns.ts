@@ -120,6 +120,7 @@ const COLUMNS: Record<SheetKey, LedgerColumns> = {
       { key: 'remainingQty', label: '当前剩余/支' },
       // 追加列（CR-20261009-18）：所挂样本的种属，fixture 的 cryo.extra
       { key: 'species', label: '种属' },
+      { key: 'passageCycleDays', label: '传代周期' },
     ],
   },
 }

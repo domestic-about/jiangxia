@@ -99,6 +99,7 @@ public class CryoBatchService {
         }
         // ③ 代数格式 / 冻存时间 / 初始支数 / 是否暂存 -80
         String passage = CryoBalanceChecker.requirePassage(bo.getPassage());
+        Integer passageCycleDays = requirePassageCycleDays(bo.getPassageCycleDays());
         LocalDate freezeTime = CryoBalanceChecker.requireFreezeTime(bo.getFreezeTime());
         int initQty = CryoBalanceChecker.requirePositiveInitQty(bo.getInitQty());
         String inMinus80 = CryoBalanceChecker.requireInMinus80(bo.getInMinus80());
@@ -119,6 +120,7 @@ public class CryoBatchService {
             entity.setSampleId(bo.getSampleId());
             entity.setCryoName(cryoName);
             entity.setPassage(passage);
+            entity.setPassageCycleDays(passageCycleDays);
             entity.setFreezeTime(freezeTime);
             entity.setInitQty(initQty);
             entity.setDensity(trimToNull(bo.getDensity()));
@@ -187,6 +189,9 @@ public class CryoBatchService {
             // ── 代数：传了就必须是 ^P\d{1,3}$（空值同样被拒）
             if (body.has("passage")) {
                 patch.set(CryoBatch::getPassage, CryoBalanceChecker.requirePassage(bo.getPassage()));
+            }
+            if (body.has("passageCycleDays")) {
+                patch.set(CryoBatch::getPassageCycleDays, requirePassageCycleDays(bo.getPassageCycleDays()));
             }
             // ── 冻存时间：传了就不能为空，并重算「转液氮不得早于冻存」
             LocalDate freezeTime = exists.getFreezeTime();
@@ -309,6 +314,13 @@ public class CryoBatchService {
 
     private static String trimToNull(String value) {
         return StringUtils.isBlank(value) ? null : value.trim();
+    }
+
+    private static Integer requirePassageCycleDays(Integer days) {
+        if (days != null && days <= 0) {
+            throw new ServiceException("传代周期天数必须是正整数", 400);
+        }
+        return days;
     }
 
     /**

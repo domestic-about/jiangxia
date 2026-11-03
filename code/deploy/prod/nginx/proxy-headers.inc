@@ -7,9 +7,9 @@
 proxy_set_header Host              $host;
 proxy_set_header X-Real-IP         $remote_addr;
 proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Proto $lqg_fwd_proto;
 proxy_set_header X-Forwarded-Host  $host;
-proxy_set_header X-Forwarded-Port  $server_port;
+proxy_set_header X-Forwarded-Port  $lqg_fwd_port;
 proxy_http_version 1.1;
 # 后端有 SSE（plus-ui 的 VITE_APP_SSE=true），长连接别被默认 60s 掐掉
 proxy_set_header Connection        "";

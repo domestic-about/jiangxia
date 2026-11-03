@@ -12,6 +12,7 @@ import {
   cryoLedgerSub,
   cryoLedgerTone,
   cryoPayload,
+  cryoPatch,
   cryoPlaceText,
   cryoQtyText,
   cryoTabText,
@@ -161,6 +162,15 @@ describe('cryoFormProblem：只管「填没填、格式对不对」', () => {
     expect(cryoFormProblem(valid())).toBe('')
   })
 
+  it('传代周期选填；正整数有效，零、负数、小数、文字和溢出不能提交', () => {
+    for (const days of ['', ' ', '1', '7', ' 14 ', '2147483647']) {
+      expect(cryoFormProblem({ ...valid(), passageCycleDays: days }), days).toBe('')
+    }
+    for (const days of ['0', '-1', '3.5', '每7天', 'abc', '1e2', '2147483648']) {
+      expect(cryoFormProblem({ ...valid(), passageCycleDays: days }), days).toContain('传代周期')
+    }
+  })
+
   it('样本 / 名称 / 代数 / 日期 / 数量逐条挡住', () => {
     expect(cryoFormProblem({ ...valid(), sampleId: '' })).toContain('选择样本')
     expect(cryoFormProblem({ ...valid(), cryoName: ' ' })).toContain('冻存样品名称')
@@ -234,6 +244,23 @@ describe('取用登记行的纯文案', () => {
     expect(isEdited({ edited: true })).toBe(true)
     expect(editedText({ edited: true, updateByName: '李工' })).toBe('已改 · 李工')
     expect(editedText({ edited: false, updateByName: '李工' })).toBe('')
+  })
+})
+
+describe('传代周期：保存、修改、清空与表格 / 详情展示', () => {
+  it('新增提交数值天数；修改回填与提交保持同一值', () => {
+    expect(cryoPayload({ ...emptyCryoForm(), passageCycleDays: ' 7 ' }).passageCycleDays).toBe(7)
+    const form = toCryoFormValue({ passageCycleDays: 14 })
+    expect(form.passageCycleDays).toBe('14')
+    expect(cryoPatch('3001', form)).toMatchObject({ id: '3001', passageCycleDays: 14 })
+  })
+
+  it('历史记录没有天数时留空；清空发 null；读取与展示不造默认值', () => {
+    expect(toCryoFormValue({}).passageCycleDays).toBe('')
+    expect(cryoPayload(emptyCryoForm()).passageCycleDays).toBeNull()
+    expect(cryoPatch('3001', { ...toCryoFormValue({ passageCycleDays: 7 }), passageCycleDays: '' }).passageCycleDays).toBeNull()
+    expect(cryoLedgerCell(row({ passageCycleDays: 7 }), 'passageCycleDays')).toBe('每 7 天')
+    expect(cryoLedgerCell(row(), 'passageCycleDays')).toBe('—')
   })
 })
 

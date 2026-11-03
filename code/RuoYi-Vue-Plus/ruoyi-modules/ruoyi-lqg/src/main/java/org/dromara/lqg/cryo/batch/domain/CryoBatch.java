@@ -58,6 +58,9 @@ public class CryoBatch extends BaseEntity {
      */
     private String passage;
 
+    /** 传代周期：每 X 天，选填；不参与 -80 冻存超期判定。 */
+    private Integer passageCycleDays;
+
     /**
      * 冻存时间（超期提醒从它起算）
      */

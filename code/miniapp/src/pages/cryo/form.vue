@@ -461,6 +461,24 @@ async function submit() {
         <wd-cell v-else title="代数" value-align="right">
           <text class="cryo__ro">{{ form.passage || '—' }}</text>
         </wd-cell>
+
+        <wd-cell v-if="editable" title="传代周期">
+          <view class="cryo__cycle">
+            <text>每</text>
+            <input
+              v-model="form.passageCycleDays"
+              class="cryo__cycle-in"
+              type="number"
+              :maxlength="10"
+              placeholder="选填天数"
+              aria-label="传代周期天数"
+            >
+            <text>天</text>
+          </view>
+        </wd-cell>
+        <wd-cell v-else title="传代周期" value-align="right">
+          <text class="cryo__ro">{{ form.passageCycleDays ? `每 ${form.passageCycleDays} 天` : '—' }}</text>
+        </wd-cell>
       </view>
 
       <view class="lqg-bar-spacer" />
@@ -500,6 +518,22 @@ async function submit() {
 <style lang="scss" scoped>
 .cryo {
   padding: var(--lqg-sp-5) 0 0;
+}
+
+.cryo__cycle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--lqg-sp-3);
+  color: var(--lqg-ink);
+}
+
+.cryo__cycle-in {
+  flex: 0 1 80px;
+  width: 80px;
+  min-width: 0;
+  text-align: center;
+  font-size: var(--lqg-fs-title);
 }
 
 .cryo__sec {

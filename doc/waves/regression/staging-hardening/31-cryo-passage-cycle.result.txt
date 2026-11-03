@@ -1,0 +1,32 @@
+CR-20261031-24 · 本地验收（2026-10-31，Asia/Shanghai）
+
+PASS 小程序 type-check；369 项单测
+PASS 工作台 142 项单测；test 构建
+PASS 后端业务模块 499 项单测；admin 完整打包
+PASS 微信小程序 mp-weixin 编译（含手机输入框宽度修正）
+PASS authority_check、check_authority_xref、git diff --check
+PASS 迁移先在开发库事务内验证并回滚，原有 8 条记录保持周期为空；之后本机 Flyway 成功执行 V202610311000
+
+说明：后端测试使用 -Djava.awt.headless=true，并开放测试用本机临时端口；小程序构建使用 CHOKIDAR_USEPOLLING=true。
+工作台全量 vue-tsc 有 25 个原有报错文件，逐一与 HEAD 比对内容相同；本次修改的冻存文件无报错。
+微信包编译已验证；真机效果待发布后确认。未提交 / 推送 / 部署 / 上传体验版。
+
+两端真实页面、API、实际 Excel 文件联调：
+PASS 工作台新建：手动填写每 7 天并保存
+PASS 工作台列表显示每 7 天
+PASS 小程序编辑回填工作台填写的 7 天
+PASS 小程序拦截小数，保存值仍为 7 天
+PASS 手机宽度下「每 / 天」均在输入行内完整显示
+PASS 小程序修改为每 14 天，后端保存成功
+PASS 小程序只读页显示每 14 天
+PASS 小程序清空后真的写成 null
+PASS 工作台重新编辑回填为空
+PASS 工作台拦截零天
+PASS 工作台修改为每 21 天
+PASS API 拒绝零、负数、小数与溢出，原值保持 21 天
+PASS 旧客户端省略周期字段时保留原值
+PASS 两端详情读取同一个周期值
+PASS 实际 Excel 文件为 13 列，末列传代周期 = 每 21 天
+PASS 小程序批次详情弹层显示每 21 天
+全部 16 项通过；截图与导出文件：/tmp/jiangxia-cryo-cycle
+已删除本轮创建的测试批次

@@ -11,6 +11,8 @@ import org.dromara.lqg.cryo.batch.domain.CryoBatch;
 import org.dromara.lqg.cryo.batch.domain.bo.CryoBatchSubmitBo;
 import org.dromara.lqg.cryo.batch.mapper.CryoBatchMapper;
 import org.dromara.lqg.sample.domain.bo.PatchBody;
+import org.dromara.lqg.sample.domain.Sample;
+import org.dromara.lqg.sample.mapper.SampleMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -84,6 +86,45 @@ class CryoBatchPatchSemanticsTest {
 
     // ── 夹具 ─────────────────────────────────────────────────────────────────
 
+    @Test
+    void creatingStoresCycleAndLeavesLegacyBodyEmpty() throws Exception {
+        Fake fake = new Fake();
+        String fields = "\"sampleId\":9000001001,\"cryoName\":\"周期测试\",\"passage\":\"P3\","
+            + "\"freezeTime\":\"2026-10-30\",\"initQty\":5,\"inMinus80\":\"Y\"";
+        fake.service().create(parse("{" + fields + ",\"passageCycleDays\":7}").value());
+        assertEquals(7, fake.inserts.get(0).getPassageCycleDays());
+        fake.service().create(parse("{" + fields + "}").value());
+        assertEquals(null, fake.inserts.get(1).getPassageCycleDays());
+        assertThrows(ServiceException.class,
+            () -> fake.service().create(parse("{" + fields + ",\"passageCycleDays\":0}").value()));
+        assertEquals(2, fake.inserts.size());
+    }
+
+    @Test
+    void passageCycleSupportsSetClearAndAbsent() throws Exception {
+        Fake fake = new Fake();
+        fake.service().update(parse("{\"id\":9000003003,\"passageCycleDays\":7}"));
+        assertEquals(7, setValues(fake.updates.get(0)).get("passage_cycle_days"));
+        fake.service().update(parse("{\"id\":9000003003,\"remark\":\"只改备注\"}"));
+        assertFalse(setValues(fake.updates.get(1)).containsKey("passage_cycle_days"));
+        for (String empty : List.of("null", "\"\"", "\"  \"")) {
+            fake.service().update(parse("{\"id\":9000003003,\"passageCycleDays\":" + empty + "}"));
+            Map<String, Object> values = setValues(fake.updates.get(fake.updates.size() - 1));
+            assertTrue(values.containsKey("passage_cycle_days") && values.get("passage_cycle_days") == null);
+        }
+    }
+
+    @Test
+    void invalidCycleCannotWriteOrBeTruncated() {
+        Fake fake = new Fake();
+        for (String invalid : List.of("0", "-1", "3.5", "3.0", "2147483648", "\"3.5\"", "\"abc\"", "true", "[]")) {
+            ServiceException e = assertThrows(ServiceException.class,
+                () -> fake.service().update(parse("{\"id\":9000003003,\"passageCycleDays\":" + invalid + "}")), invalid);
+            assertEquals(400, e.getCode(), invalid);
+        }
+        assertTrue(fake.updates.isEmpty(), "非法天数必须在写入前拒绝");
+    }
+
     private static PatchBody<CryoBatchSubmitBo> parse(String json) throws Exception {
         return PatchBody.parse(MAPPER, MAPPER.readTree(json), CryoBatchSubmitBo.class);
     }
@@ -103,6 +144,7 @@ class CryoBatchPatchSemanticsTest {
     private static final class Fake {
 
         final List<LambdaUpdateWrapper<?>> updates = new ArrayList<>();
+        final List<CryoBatch> inserts = new ArrayList<>();
 
         CryoBatchService service() {
             CryoBatchMapper batchMapper = (CryoBatchMapper) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -122,9 +164,24 @@ class CryoBatchPatchSemanticsTest {
                         updates.add((LambdaUpdateWrapper<?>) args[1]);
                         yield 1;
                     }
+                    case "insert" -> {
+                        CryoBatch batch = (CryoBatch) args[0];
+                        batch.setId(9000003010L + inserts.size());
+                        inserts.add(batch);
+                        yield 1;
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
-            return new CryoBatchService(batchMapper, null, null, StaffDirectoryStub.empty());
+            SampleMapper samples = (SampleMapper) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[]{SampleMapper.class}, (proxy, method, args) -> {
+                    if (!method.getName().equals("selectById")) {
+                        throw new UnsupportedOperationException(method.getName());
+                    }
+                    Sample sample = new Sample();
+                    sample.setVerifyStatus("valid");
+                    return sample;
+                });
+            return new CryoBatchService(batchMapper, null, samples, StaffDirectoryStub.empty());
         }
     }
 

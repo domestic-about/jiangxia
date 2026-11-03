@@ -464,6 +464,7 @@ public class CryoQueryService {
         vo.setSampleId(batch.getSampleId());
         vo.setCryoName(batch.getCryoName());
         vo.setPassage(batch.getPassage());
+        vo.setPassageCycleDays(batch.getPassageCycleDays());
         vo.setFreezeTime(batch.getFreezeTime());
         vo.setInitQty(batch.getInitQty());
         vo.setDensity(batch.getDensity());

@@ -43,6 +43,7 @@ export default {
   },
 
   cell: {
+    passageCycle: 'Every {days} days',
     openSample: 'Back to this sample'
   },
 
@@ -56,6 +57,7 @@ export default {
   },
 
   col: {
+    passageCycle: 'Passage cycle',
     freezeTime: 'Freeze time',
     cryoName: 'Cryo sample',
     initQty: 'Frozen qty (tubes)',
@@ -111,6 +113,11 @@ export default {
   },
 
   drawer: {
+    passageCycle: 'Passage cycle',
+    passageCyclePlaceholder: 'Days (optional)',
+    passageCycleInvalid: 'Enter a valid passage cycle in whole days',
+    every: 'Every',
+    days: 'days',
     addTitle: 'New cryo batch',
     editTitle: 'Edit cryo batch',
     sectionBatch: 'Batch',

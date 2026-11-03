@@ -9,6 +9,7 @@
 #   bash deploy.sh artifacts      # 只在本机构建产物（后端 jar + plus-ui dist production）
 #   bash deploy.sh upload         # 只上传（rsync）
 #   bash deploy.sh up             # 只在服务器上：建镜像 + 起容器 + 等健康
+#   bash deploy.sh host-nginx     # 只在服务器上：宝塔 vhost + 宝塔 ACME 证书 + 反代（ICP 通过后；生产机有宝塔时用这个）
 #   bash deploy.sh cert           # 只在服务器上：acme.sh 签证书 + 续期 cron（含 reload nginx）
 #   bash deploy.sh oss-init       # 只在服务器上：执行 oss-init.sql（写 sys_oss_config 一行）
 #   bash deploy.sh cron           # 只在服务器上：装 healthcheck 的每 5 分钟 cron
@@ -290,6 +291,8 @@ phase_cert()  {
   run_remote_phase cert 03-cert.sh 900
 }
 phase_oss()   { run_remote_phase oss  04-oss-init.sh 300; }
+# 宝塔 vhost + 证书（ICP 备案通过之后才能跑；替代 03-cert.sh 的 acme.sh 路线）
+phase_host_nginx() { run_remote_phase host-nginx 02-host-nginx.sh 900; }
 phase_cron()  { run_remote_phase cron 05-cron.sh 120; }
 
 # ── 5. 从本机验收 ───────────────────────────────────────────────────────────────
@@ -370,6 +373,7 @@ case "${cmd}" in
   up)        ensure_env_file; load_env; sync_build_commit; ssh_ok; phase_up ;;
   cert)      ensure_env_file; load_env; ssh_ok; phase_cert ;;
   oss-init)  ensure_env_file; load_env; ssh_ok; phase_oss ;;
+  host-nginx) ensure_env_file; load_env; ssh_ok; phase_host_nginx ;;
   cron|healthcheck) ensure_env_file; load_env; ssh_ok; phase_cron ;;
   verify)    ensure_env_file; load_env; phase_verify ;;
   status)    ensure_env_file; load_env; ssh_ok; phase_status ;;
