@@ -129,8 +129,8 @@ function baseUrlProblems(url) {
   if (parsed.protocol !== 'https:') problems.push(`接口地址不是 https：${url}（小程序正式版的 request 合法域名只认 https）`)
   const why = privateHostReason(parsed.hostname)
   if (why) problems.push(`接口地址是${why}：${url}（真机上连不到，正式包里不许出现）`)
-  // 测试环境域名只对 production 算问题（test / staging 本来就指它）
-  if (IS_PROD && /(^|\.)tianda\.studio$/i.test(parsed.hostname)) problems.push(`接口地址是测试环境域名：${url}（线上用户的数据会写进测试库）`)
+  // 2026-11-03 起生产暂用 songjian.tianda.studio（Kevin 定的），原先「tianda.studio = 测试域名」那条拦截撤掉。
+  // ★ 前提：这个域名解析到的必须是跑 prod profile 的生产后端，不能再是测试机（测试库会被 reseed 清掉）。
   if (/(^|\.)(example\.(com|org|net)|invalid|test)$/i.test(parsed.hostname)) problems.push(`接口地址是占位域名：${url}`)
   if (parsed.pathname && parsed.pathname !== '/') problems.push(`接口地址不要带路径：${url}`)
   return problems
