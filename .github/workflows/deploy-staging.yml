@@ -15,15 +15,10 @@
 #      LQG_TEST_SSH_KEY        ← CI 专用 SSH 私钥（公钥已加到测试机 root 的 authorized_keys）
 #      LQG_TEST_HOST           ← 测试机 IP（118.178.109.11）
 #
-# 2. **小程序上传**（`deploy.sh miniapp`）**不在本工作流里**（2026-09-30 起由 miniapp-staging.yml 自动做：
-#    macOS runner 构建 → 测试机固定 IP 上传；下面是为什么不能在这里用 Linux runner 直接传）：
-#    微信要求上传来源 IP 在「开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」里，
-#    而 GitHub 托管 runner 的出口 IP 每次都不同（官方只公布 IP 段、不给固定 IP）→ 白名单根本没法配。
-#    所以小程序仍由**固定 IP 的机器**发：本机或测试机，命令 `bash code/deploy/test/deploy.sh miniapp`。
-#    （构建必须留 macOS：不同 OS 产物不同，体验版真机上会渲染空 —— gotchas §6.5。）
+# 2. **小程序不在测试环境里**（2026-11-03 起）：测试体验版那套已删，小程序只有生产一条线，
+#    push main 由 miniapp-prod.yml 在 macOS runner 上构建并上传生产小程序。
 #
-# 3. **部署脚本自己带自检**：`deploy.sh` 会跑准备度/端口/构建产物检查，
-#    其中 `phase_miniapp` 之外的部分都在这里跑；`miniapp` 阶段被 `all` 排除（见第 2 条）。
+# 3. **部署脚本自己带自检**：`deploy.sh` 会跑准备度/端口/构建产物检查。
 #
 # 另外：`deploy.sh` 的远端长操作（docker build / 首次 Flyway）是**分离执行 + 短命令轮询**，
 # 所以这个 job 不需要长连接保活；超时给 40 分钟（冷缓存 maven 首次下载约 3–8 分钟）。
@@ -35,7 +30,7 @@
 #     要恢复初始测试数据：Actions → deploy-staging → Run workflow，勾 reseed。
 #   · 前端只建一遍（deploy.sh 里 artifacts 建完，upload 不再重建）。
 #   · 只有工作台 / 后端 / 部署相关文件变了才部署：纯文档、台账（watchdog.log 每次都在变）、
-#     小程序（小程序不走 CI，见第 2 条）的提交不再触发一次十几分钟的部署。
+#     小程序（见第 2 条）的提交不再触发一次十几分钟的部署。
 
 name: deploy-staging
 
@@ -174,5 +169,4 @@ jobs:
             echo "- 分支：\`${GITHUB_REF_NAME}\`　提交：\`${GITHUB_SHA:0:12}\`"
             echo "- 站点：https://songjian.tianda.studio"
             echo "- 提交号自查：\`GET /lqg/sys/ping\` 的 \`buildCommit\` 应等于上面的提交号"
-            echo "- 小程序体验版由另一个工作流 miniapp-staging 自动上传（小程序文件有变更时）"
           } >> "$GITHUB_STEP_SUMMARY"

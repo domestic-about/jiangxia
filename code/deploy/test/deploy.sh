@@ -12,9 +12,7 @@
 #   bash deploy.sh prove-ports  # accept[2] 等价取证：发夹探针+安全组+ss -lntp（本机 nc 不可用）
 #   bash deploy.sh reseed       # 只在服务器上：把 doc/verify/seed 灌进 lqg_test
 #                               #   ★ 会 TRUNCATE 全部业务表、删掉微信绑定的用户 —— 甲方在测试站录的数据全没
-#   bash deploy.sh miniapp      # 小程序体验版：本机构建 → 同步 → 在服务器上传（固定 IP）
-#                               #   ★ 不在 all 里：它依赖微信侧 IP 白名单（外部前提），失败不该带崩部署
-#   bash deploy.sh verify       # 从本机打 https://<域名>/lqg/sys/ping 与工作台首页
+#   bash deploy.sh verify      # 从本机打 https://<域名>/lqg/sys/ping 与工作台首页
 #   bash deploy.sh status       # 测试机现状（只读）
 #   bash deploy.sh down         # docker compose down（保留数据卷；不会碰别人的容器）
 #
@@ -312,106 +310,6 @@ phase_status() {
   "${SSH[@]}" "bash '${LQG_DEPLOY_DIR}/remote/status.sh'" || "${SSH[@]}" "bash -s" < "${HERE}/remote/status.sh"
 }
 
-# ── 小程序体验版上传（2026-09-28 加）─────────────────────────────────────────
-# 为什么要有这一阶段、以及为什么上传在服务器上做：
-#   · 微信要求上传来源 IP 在「开发管理 → 开发设置 → 小程序代码上传 → IP 白名单」里；
-#     开发机常年跑在代理后面（TUN 模式，`curl --noproxy '*'` 与直连拿到的是同一个代理出口 IP），
-#     那个 IP 不稳定、也不该长期占据白名单 → 上传挪到固定公网 IP 的测试机上。
-#   · 但**构建必须在 macOS 上**（gotchas §6.5：不同 OS 产物不同，体验版真机上会渲染空）——
-#     本机，或 GitHub 的 macOS runner（2026-09-30 起 push staging 由 .github/workflows/miniapp-staging.yml 自动跑本阶段）。
-#   · 所以流程是：本机 `--build-only`（构建 + 配置守卫 + 产物守卫，两道都过）→ 同步物料 →
-#     服务器上 `--skip-build`（守卫再跑一遍）→ miniprogram-ci 上传 + 生成体验版二维码。
-# 前置：.env 里配 LQG_WX_APPID 与 LQG_MINIPROGRAM_KEY（本机绝对路径；密钥绝不进仓库）。
-phase_miniapp() {
-  # ★ 2026-10-21 起缺省 staging：appid 换成甲方生产小程序后，体验版不再带「测试身份登录」入口
-  #   （env/.env.test 的 VITE_MOCK_LOGIN=1 只该留给本地开发者工具）。要旧行为：LQG_MP_MODE=test。
-  local mode="${LQG_MP_MODE:-staging}" mpd="${LQG_DEPLOY_DIR}/miniapp"
-  [ -n "${LQG_WX_APPID:-}" ] || die "缺 LQG_WX_APPID（写进 code/deploy/test/.env）"
-  [ -n "${LQG_MINIPROGRAM_KEY:-}" ] || die "缺 LQG_MINIPROGRAM_KEY=<private.<appid>.key 的绝对路径>（写进 .env）"
-  [ -f "${LQG_MINIPROGRAM_KEY}" ] || die "上传密钥文件不存在：${LQG_MINIPROGRAM_KEY}"
-
-  say "⑧ 小程序体验版：本机构建（mode=${mode}）"
-  ( cd "${ROOT}/code/miniapp" && LQG_WX_APPID="${LQG_WX_APPID}" pnpm upload:mp --mode="${mode}" --build-only ) \
-    || die "本机构建或发布守卫没过（原因见上）"
-
-  # ★ 2026-09-28 加：产物「自定义组件死键」自检（Kevin 报过小程序点不动、H5 正常，见台账 #361）。
-  #   判据查编译产物：父组件对自定义组件绑了 bindX，子组件必须真的 emit('X')。
-  #   放在这里 = **带死键的包发不出去**（比事后再查便宜得多）。
-  python3 "${ROOT}/doc/waves/tools/check-mp-component-events.py" \
-    "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" \
-    || die "小程序产物里有『自定义组件死键』—— 小程序里点了没反应（H5 反而正常）；修法见上面的清单"
-
-  # ★ 2026-10-10 加：产物「转发给朋友」自检（CR-20261010-19）。
-  #   在假的微信运行环境里加载产物，逐页确认注册了 onShareAppMessage、卡片是固定标题 + 固定封面 + 落地首页
-  #   （封面不固定时微信拿当前页截图当封面，会把表单上的患者信息发出去）。
-  #   退出码 1 = 转发真的有问题 → 拦住上传；退出码 2 = 检查脚本自己没跑起来 → 只提示，不拦发版。
-  local share_rc=0
-  node "${ROOT}/doc/waves/tools/check-mp-share.mjs" \
-    "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" || share_rc=$?
-  if [ "${share_rc}" -eq 1 ]; then
-    die "小程序产物的『转发给朋友』有问题（页面没注册上，或卡片内容 / 封面不对）；详见上面的清单"
-  elif [ "${share_rc}" -ne 0 ]; then
-    warn "『转发给朋友』自检没跑起来（退出码 ${share_rc}，不是转发坏了）—— 本次不拦，上传后请在体验版里手动转发一次确认"
-  fi
-
-  # ★ 2026-09-30 起缺省走「本机编译上传 + 测试机固定 IP 出口」（tunnel）：
-  #   在测试机上编译会被 OOM 杀（miniprogram-ci 编译子进程约 2.5–3 GB，测试机和别的项目合用、可用常年 3 GB 出头），
-  #   而 miniprogram-ci 被杀后 promise 不结束 —— CI 上表现为退出码 13 或一直挂着。
-  #   现在编译在本机 / CI 的 macOS runner 上做，只把发给微信的 https 请求经 `ssh -W` 从测试机转出去
-  #   （code/deploy/test/wx-egress-proxy.mjs），微信看到的仍是白名单里的测试机 IP；测试机上不装不改任何东西。
-  #   旧路子（同步到测试机、测试机上编译上传）保留：LQG_MP_UPLOAD_VIA=server。
-  if [ "${LQG_MP_UPLOAD_VIA:-tunnel}" = "tunnel" ]; then
-    local port="${LQG_WX_PROXY_PORT:-18899}" proxy_pid ver_args=() rc
-    say "⑧ 上传：本机编译，经 ${LQG_TEST_HOST} 的固定 IP 发给微信（代理 127.0.0.1:${port}）"
-    node "${HERE}/wx-egress-proxy.mjs" --ssh "root@${LQG_TEST_HOST}" --port "${port}" &
-    proxy_pid=$!
-    sleep 1
-    kill -0 "${proxy_pid}" 2>/dev/null || die "出口代理没起来（端口 ${port} 被占？可设 LQG_WX_PROXY_PORT）"
-    [ -n "${LQG_MINIPROGRAM_VERSION:-}" ] && ver_args=(--version="${LQG_MINIPROGRAM_VERSION}")
-    set +e
-    ( cd "${ROOT}/code/miniapp" && \
-      HTTPS_PROXY="http://127.0.0.1:${port}" https_proxy="http://127.0.0.1:${port}" \
-      HTTP_PROXY="http://127.0.0.1:${port}" http_proxy="http://127.0.0.1:${port}" NO_PROXY="" no_proxy="" \
-      LQG_WX_APPID="${LQG_WX_APPID}" LQG_WX_PRIVATE_KEY="${LQG_MINIPROGRAM_KEY}" LQG_BUILD_COMMIT="${BUILD_COMMIT}" \
-      node scripts/upload-mp.mjs --mode="${mode}" --skip-build "${ver_args[@]+"${ver_args[@]}"}" ) 2>&1 \
-      | grep -vE '^\s*\[object Object\]'
-    rc="${PIPESTATUS[0]}"
-    set -e
-    kill "${proxy_pid}" 2>/dev/null; wait "${proxy_pid}" 2>/dev/null || true
-    if [ "${rc}" != "0" ]; then
-      die "小程序上传失败（退出码 ${rc}）。invalid ip = 测试机 IP 不在微信上传白名单；-10008 = 密钥与 appid 不匹配"
-    fi
-    say "  ✓ 上传成功；体验版二维码在本机 code/miniapp/dist/（**不要提交进仓库**）"
-    say "  ⚠ 上传成功后还要在「微信公众平台 → 版本管理」把该版本**设为体验版**并添加体验成员"
-    return 0
-  fi
-
-  say "⑧ 同步物料 → ${LQG_TEST_HOST}:${mpd}"
-  "${SSH[@]}" "install -d '${mpd}/dist/build'"
-  # openrsync（macOS 自带）在「文件 + 带尾斜杠目录」混在一条命令里会摊平，所以逐条来
-  rsync -az -e "ssh -o BatchMode=yes" "${ROOT}/code/miniapp/scripts" "root@${LQG_TEST_HOST}:${mpd}/"
-  rsync -az -e "ssh -o BatchMode=yes" "${ROOT}/code/miniapp/package.json" "root@${LQG_TEST_HOST}:${mpd}/"
-  rsync -az --delete -e "ssh -o BatchMode=yes" "${ROOT}/code/miniapp/env" "root@${LQG_TEST_HOST}:${mpd}/"
-  rsync -az --delete -e "ssh -o BatchMode=yes" \
-    "${ROOT}/code/miniapp/dist/build/mp-weixin-${mode}" "root@${LQG_TEST_HOST}:${mpd}/dist/build/"
-  # 上传密钥：只往服务器放，600；仓库里永远没有它
-  rsync -az -e "ssh -o BatchMode=yes" "${LQG_MINIPROGRAM_KEY}" "root@${LQG_TEST_HOST}:${mpd}/private.key"
-  "${SSH[@]}" "chmod 600 '${mpd}/private.key'"
-  # 本阶段可能被单独调用（没有先跑 upload），远端脚本自己送一份
-  rsync -az -e "ssh -o BatchMode=yes" "${HERE}/remote/04-miniapp-upload.sh" "root@${LQG_TEST_HOST}:${LQG_DEPLOY_DIR}/remote/"
-
-  run_remote_phase "04-miniapp-upload" "04-miniapp-upload.sh" 900
-
-  # 把体验版二维码取回来（在服务器上生成的，落到本机 dist/，该目录已被 gitignore）
-  if "${SSH[@]}" "ls '${mpd}'/dist/体验版二维码-*.png >/dev/null 2>&1"; then
-    rsync -az -e "ssh -o BatchMode=yes" "root@${LQG_TEST_HOST}:${mpd}/dist/体验版二维码-*.png" \
-      "${ROOT}/code/miniapp/dist/" 2>/dev/null \
-      && say "  ✓ 体验版二维码已取回：code/miniapp/dist/（**不要提交进仓库**）" \
-      || warn "  二维码回传失败（不影响上传结果，可在服务器 ${mpd}/dist/ 取）"
-  fi
-  say "  ⚠ 上传成功后还要在「微信公众平台 → 版本管理」把该版本**设为体验版**并添加体验成员"
-}
-
 phase_down() {
   warn "只 down 本项目（lqg-test）；别人的容器一个都不动"
   "${SSH[@]}" "cd '${LQG_DEPLOY_DIR}' && docker compose -f docker-compose.yml --env-file .env down"
@@ -446,9 +344,6 @@ main() {
       phase_reseed
       phase_verify
       phase_prove_ports
-      # ★ 小程序上传**故意不放进 all**：它依赖一个微信侧的外部前提（上传来源 IP 在白名单里，
-      #   见台账 #353）。放进来会让「一个只能由甲方/微信后台操作的前提」把整个测试环境部署搞失败。
-      #   全自动化 = `deploy.sh all && deploy.sh miniapp`（后者失败不影响前者已部署好的环境）。
       ;;
     artifacts) phase_artifacts ;;
     upload)    sync_build_commit; phase_upload ;;
@@ -456,11 +351,10 @@ main() {
     nginx)     phase_nginx ;;
     reseed)    phase_reseed ;;
     verify)    phase_verify ;;
-    miniapp)   phase_miniapp ;;
     prove-ports) phase_prove_ports ;;
     status)    phase_status ;;
     down)      phase_down ;;
-    *) die "用法：bash deploy.sh {all|bootstrap|artifacts|upload|up|nginx|reseed|verify|miniapp|prove-ports|status|down}" ;;
+    *) die "用法：bash deploy.sh {all|bootstrap|artifacts|upload|up|nginx|reseed|verify|prove-ports|status|down}" ;;
   esac
   say "完成：${cmd}"
 }

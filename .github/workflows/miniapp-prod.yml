@@ -1,0 +1,111 @@
+# 生产小程序自动上传（main 分支 = 生产）
+#
+# 口径（Kevin 2026-11-03）：小程序不再有测试体验版，本地测完直接上生产；push main、且小程序相关文件有变更
+# → 自动构建并上传到生产小程序 wx79a34651bb295631（ci 机器人 1）。
+#
+#   · **构建必须在 macOS 上**（栈包 gotchas §6.5：不同 OS 产物不同，Linux 构建的包真机上组件渲染为空）
+#     → 本工作流跑在 GitHub 的 macOS runner 上。
+#   · 生产小程序**没开**「小程序代码上传 IP 白名单」，runner 直接发给微信，不经任何服务器转发。
+#     要是以后开了白名单，这里会报 invalid ip —— 那就得改回「经固定 IP 机器出口」的做法。
+#   · 上传只是把代码送进「微信公众平台 → 版本管理」的开发版；**提交审核、发布仍由人在后台点**。
+#
+# 需要的 Secret：
+#   LQG_WX_PRIVATE_KEY   ← 生产小程序代码上传密钥 private.wx79a34651bb295631.key 的**全文**（仓库里永远没有它）
+#
+# appid 与接口地址在仓库里：code/miniapp/env/.env（VITE_WX_APPID）、env/.env.production（VITE_SERVER_BASEURL）。
+
+name: miniapp-prod
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'code/miniapp/**'
+      - '!code/miniapp/**/*.md'
+      - 'doc/waves/tools/check-mp-component-events.py'
+      - 'doc/waves/tools/check-mp-share.mjs'
+      - '.github/workflows/miniapp-prod.yml'
+  workflow_dispatch: {}
+
+# 同一时刻只传一个；连着推两次时，后一次排队等前一次（不并发抢同一个机器人）
+concurrency:
+  group: miniapp-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: 构建并上传生产小程序
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 写上传密钥（来自 Secrets）
+        env:
+          LQG_WX_PRIVATE_KEY_CONTENT: ${{ secrets.LQG_WX_PRIVATE_KEY }}
+        run: |
+          umask 077
+          [ -n "$LQG_WX_PRIVATE_KEY_CONTENT" ] || { echo "::error::缺 Secret LQG_WX_PRIVATE_KEY（小程序代码上传密钥全文）"; exit 1; }
+          printf '%s\n' "$LQG_WX_PRIVATE_KEY_CONTENT" > "$RUNNER_TEMP/private.wx.key"
+          chmod 600 "$RUNNER_TEMP/private.wx.key"
+          echo "✓ 上传密钥已就位（内容不打印）"
+
+      - name: 装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 装 Node（带 pnpm store 缓存）
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: code/miniapp/pnpm-lock.yaml
+
+      - name: 装小程序依赖
+        run: cd code/miniapp && pnpm install --frozen-lockfile
+
+      - name: 构建 + 发布守卫（接口地址 / appid / mock 登录）
+        run: cd code/miniapp && pnpm upload:mp --mode=production --build-only
+
+      # 父组件对自定义组件绑了 bindX，子组件必须真的 emit('X')；否则小程序里点了没反应（H5 反而正常，台账 #361）
+      - name: 产物自检：自定义组件死键
+        run: python3 doc/waves/tools/check-mp-component-events.py code/miniapp/dist/build/mp-weixin-production
+
+      # 逐页确认注册了 onShareAppMessage、卡片是固定标题 + 固定封面 + 落地首页（CR-20261010-19）。
+      # 退出码 1 = 转发真的有问题 → 拦住上传；退出码 2 = 检查脚本自己没跑起来 → 只提示，不拦发版。
+      - name: 产物自检：转发给朋友
+        run: |
+          rc=0
+          node doc/waves/tools/check-mp-share.mjs code/miniapp/dist/build/mp-weixin-production || rc=$?
+          if [ "$rc" -eq 1 ]; then
+            echo "::error::小程序产物的『转发给朋友』有问题（页面没注册上，或卡片内容 / 封面不对）；详见上面的清单"
+            exit 1
+          elif [ "$rc" -ne 0 ]; then
+            echo "::warning::『转发给朋友』自检没跑起来（退出码 $rc，不是转发坏了）—— 本次不拦，上传后请在开发版里手动转发一次确认"
+          fi
+
+      - name: 上传到微信（ci 机器人 1）
+        env:
+          LQG_BUILD_COMMIT: ${{ github.sha }}
+        run: |
+          cd code/miniapp
+          LQG_WX_PRIVATE_KEY="$RUNNER_TEMP/private.wx.key" LQG_BUILD_COMMIT="${LQG_BUILD_COMMIT:0:12}" \
+            node scripts/upload-mp.mjs --mode=production --skip-build 2>&1 | grep -vE '^\s*\[object Object\]'
+          exit "${PIPESTATUS[0]}"
+
+      - name: 小结
+        if: always()
+        run: |
+          {
+            echo "### 生产小程序（main）"
+            echo ""
+            echo "- 提交：\`${GITHUB_SHA:0:12}\`（版本描述里带这个提交号，微信后台「版本管理」可对上）"
+            echo "- 版本号：code/miniapp/package.json 的 version；上传方：ci 机器人 1"
+            echo "- 下一步（人工）：微信公众平台 → 版本管理 → 开发版本 → 提交审核 → 审核通过后发布"
+          } >> "$GITHUB_STEP_SUMMARY"

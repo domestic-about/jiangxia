@@ -14,7 +14,7 @@ interface ImportMetaEnv {
   readonly VITE_APP_CLIENT_ID: string
   readonly VITE_APP_TENANT_ID: string
   readonly VITE_DELETE_CONSOLE: string
-  /** 测试身份登录入口开关：只在 .env.development / .env.test 里是 '1'（ADR-0008）；代码里用 __LQG_MOCK_LOGIN__ 判断 */
+  /** 测试身份登录入口开关：只在 .env.development 里是 '1'（ADR-0008）；代码里用 __LQG_MOCK_LOGIN__ 判断 */
   readonly VITE_MOCK_LOGIN?: string
   readonly DEV: boolean
   readonly PROD: boolean

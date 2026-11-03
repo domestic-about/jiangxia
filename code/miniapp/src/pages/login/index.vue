@@ -29,7 +29,7 @@ const labName = LEGAL_OPERATOR
 const agreed = ref(false)
 const submitting = ref(false)
 
-// 只有 dev / test 构建 + VITE_MOCK_LOGIN=1 才挂这个入口；判据只有一份：vite.config.ts 里 define 的
+// 只有 dev 构建 + VITE_MOCK_LOGIN=1 才挂这个入口；判据只有一份：vite.config.ts 里 define 的
 // 构建期常量 `__LQG_MOCK_LOGIN__`。面板文案、身份清单在 api/mock-seeds.ts —— 关着时这里直接取
 // null / 空数组，模板里只剩一个恒假的 wx:if，文案、清单与 mock-seeds 模块都不进生产包。
 //
@@ -37,10 +37,8 @@ const submitting = ref(false)
 //   那两种写法打包器都看不出它恒假，`onMockLogin` 与整份 seed 清单会原样留在生产包里
 //   （D8 独立验收实测过：旧写法的生产包里 api/mock-seeds.js 带着全部手机号）。
 //
-// ★ SYS-STAGING-001 起 test 也算：测试环境的体验版就是给甲方试用 seed 数据的，
-//   而甲方主体的 appid 还没拿到（SYS-RELEASE-001），真实微信登录换不出 seed 里绑定的 openid
-//   → 登进去是个空系统。ADR-0008 本来就允许 test profile 开 mock（后端 application-test.yml
-//   的 mock-login=true）。生产构建（mode=production）不在此列。
+// ★ 2026-11-03 起小程序只剩生产一条发布线（测试体验版那套 mode=test / staging 已删），
+//   所以入口只在本地开发构建里有；生产构建（mode=production）恒关。
 //
 // 注意：模板里**不要**写 `<!-- #ifdef/#ifndef -->` 条件编译注释——uni 的 html
 // 预处理器会和 @uni-ku/root 的根节点注入打架，构建报

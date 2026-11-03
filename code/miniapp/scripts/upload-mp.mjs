@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 /**
- * 小程序上传（SYS-STAGING-001 起；V07 补发布守卫与参数）
+ * 小程序上传（SYS-STAGING-001 起；V07 补发布守卫与参数；2026-11-03 起只剩生产一条线）
  *
- *   LQG_WX_APPID=wx.... LQG_WX_PRIVATE_KEY=/abs/path/private.wx....key \
- *   pnpm upload:mp --mode=test|staging|production [--robot=N] [--version=x.y.z] [--desc=说明] [--skip-build] [--build-only]
+ *   LQG_WX_PRIVATE_KEY=/abs/path/private.wx....key pnpm upload:mp \
+ *     [--mode=production] [--robot=N] [--version=x.y.z] [--desc=说明] [--skip-build] [--build-only]
+ *
+ * push main 时由 .github/workflows/miniapp-prod.yml 在 macOS runner 上自动跑（微信侧没开上传 IP 白名单）。
  *
  * 参数：
- *   --mode=        vite mode，决定加载 env/.env + env/.env.<mode>，缺省 test（与旧用法一致）
+ *   --mode=        vite mode，决定加载 env/.env + env/.env.<mode>，缺省 production
  *   --robot=N      miniprogram-ci 机器人编号 1–30；缺省 production=1，其余=2（与 dongjiaoshan 同一分工）
  *   --version=     上传版本号；缺省 production = package.json 的 version，其余 = <version>.<mode>.<提交号>
  *   --desc=        版本描述（微信后台「项目备注」列）；缺省按 mode 生成一句中文
  *   --skip-build   不重新构建，直接上传 dist/build/mp-weixin-<mode> 里现成的产物（守卫照样检查它）
- *   --build-only   **只构建 + 过两道守卫，不上传**（2026-09-28 加）。用途：微信要求上传来源 IP 在
- *                  「小程序代码上传」白名单里，而开发机常年在代理后面（出口 IP 不稳），所以
- *                  构建留本机（项目纪律：不同 OS 产物不同）、**上传改到固定 IP 的服务器上**跑。
- *                  deploy.sh 的 miniapp 阶段就是「本机 --build-only → 同步产物 → 服务器 --skip-build」。
+ *   --build-only   **只构建 + 过两道守卫，不上传**：本地发版前自检、或 CI 先构建再跑产物自检时用。
  *
  * 流程（栈包 gotchas §6.5：**只走本地构建 + miniprogram-ci，不用 CI 机器构建**）：
  *   0. **发布守卫**（只在 production 模式拦截，其它模式只提示）：
@@ -40,7 +39,7 @@ const HERE = path.resolve(import.meta.dirname, '..')
 
 // ── 参数 ──────────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
-  const out = { mode: 'test', robot: null, version: null, desc: null, skipBuild: false, buildOnly: false }
+  const out = { mode: 'production', robot: null, version: null, desc: null, skipBuild: false, buildOnly: false }
   for (const arg of argv) {
     if (arg.startsWith('--mode=')) out.mode = arg.slice('--mode='.length)
     else if (arg.startsWith('--robot=')) out.robot = arg.slice('--robot='.length)
@@ -63,7 +62,7 @@ const die = (msg, code = 2) => {
 
 const args = parseArgs(process.argv.slice(2))
 const MODE = args.mode
-if (!/^[a-z]+$/.test(MODE)) die(`--mode 只收小写字母（如 test / staging / production），收到「${MODE}」`)
+if (!/^[a-z]+$/.test(MODE)) die(`--mode 只收小写字母（如 production），收到「${MODE}」`)
 const IS_PROD = MODE === 'production'
 const OUT_DIR = path.join(HERE, 'dist', 'build', `mp-weixin-${MODE}`)
 
@@ -228,7 +227,7 @@ else {
 // 构建后：产物层面的守卫
 report('产物', artifactProblems(OUT_DIR, BASE_URL))
 
-// --build-only：构建与两道守卫都过了就收工（上传留给固定 IP 的服务器，见文件头说明）
+// --build-only：构建与两道守卫都过了就收工（不上传）
 if (args.buildOnly) {
   console.log(`[upload:mp] ✓ --build-only：产物已就位 ${path.relative(HERE, OUT_DIR)}（本次不上传）`)
   process.exit(0)
@@ -238,7 +237,7 @@ if (args.buildOnly) {
 if (appidProblems(APPID).length) {
   die(
     `${appidProblems(APPID)[0]}。\n`
-    + `  需要 Kevin 做：① 给出小程序 appid（测试用乙方测试号或甲方主体号）；\n`
+    + `  需要 Kevin 做：① 给出小程序 appid（甲方生产小程序）；\n`
     + `                ② 在「微信公众平台 → 开发管理 → 开发设置」生成**上传密钥**并下载 private.<appid>.key；\n`
     + `                ③ 把接口域名加进「服务器域名 → request 合法域名」（必须 https 且已备案）。\n`
     + `  构建产物已就位：${path.relative(HERE, OUT_DIR)}（拿到凭据后重跑，可加 --skip-build）`,
@@ -263,7 +262,8 @@ const commit = process.env.LQG_BUILD_COMMIT || (() => {
 })()
 const version = args.version || (IS_PROD ? pkg.version : `${pkg.version}.${MODE}.${commit}`)
 if (IS_PROD && !/^\d+\.\d+\.\d+$/.test(version)) die(`production 的版本号必须是 x.y.z，收到「${version}」`)
-const desc = args.desc || (IS_PROD ? `正式版 ${version}` : `测试环境体验版（${MODE}，提交 ${commit}）`)
+// 正式版每次 push 都用 package.json 的同一个版本号覆盖机器人 1 的开发版，靠描述里的提交号区分是哪一次
+const desc = args.desc || (IS_PROD ? `正式版 ${version}（提交 ${commit}）` : `开发版（${MODE}，提交 ${commit}）`)
 
 const ci = (await import('miniprogram-ci')).default
 const project = new ci.Project({
@@ -279,7 +279,7 @@ const project = new ci.Project({
 //   ci.upload / ci.preview 的 promise **既不成功也不失败**：没有活动句柄时 Node 以退出码 13 退出
 //   （Detected unsettled top-level await），有句柄时就永远挂着。
 //   这个定时器同时做两件事：撑住事件循环；超过 10 分钟还没结束就明确报错退出，不让 CI 干等。
-//   （根治是别在内存紧的机器上编译 —— 见 code/deploy/test/wx-egress-proxy.mjs。）
+//   （根治是别在内存紧的机器上编译 —— 现在在 GitHub 的 macOS runner 上编译。）
 const WATCHDOG_MS = Number(process.env.LQG_MP_UPLOAD_TIMEOUT_MS || 10 * 60 * 1000)
 const watchdog = setTimeout(() => {
   console.error(`\n[upload:mp] ✗ ${Math.round(WATCHDOG_MS / 60000)} 分钟还没结束，判为卡死（多半是编译子进程被 OOM 杀了：看 dmesg | grep -i 'killed process'）`)

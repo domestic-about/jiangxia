@@ -14,7 +14,7 @@
 
 用法：
     python3 doc/waves/tools/check-mp-component-events.py [产物目录]
-默认产物目录 code/miniapp/dist/build/mp-weixin-test。
+默认产物目录 code/miniapp/dist/build/mp-weixin-production（upload-mp.mjs 的生产构建产物）。
 
 退出码：0 = 全过；1 = 有「绑了但子组件不触发」的事件（就是 Kevin 那个 bug）。
 """
@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-ART = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "code/miniapp/dist/build/mp-weixin-test"
+ART = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "code/miniapp/dist/build/mp-weixin-production"
 # ★ macOS 上 /tmp → /private/tmp 是软链，后面用 resolve() 解析组件路径，两边都要规范化，否则 relative_to 会炸
 ART = ART.resolve()
 

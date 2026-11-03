@@ -39,6 +39,9 @@ private.*.key
 *.key
 !**/*.key.example
 
+# 生产小程序 appid / AppSecret / 上传私钥（Kevin 2026-11-03 放在这里；整个目录**绝不进仓库**）
+secret/
+
 # 2026-09-28：误提交过的东西，一律挡住
 doc/.tmp/
 code/RuoYi-Vue-Plus/logs/
