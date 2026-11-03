@@ -26,6 +26,8 @@
 
 ## 与 `code/deploy/test/` 的四处关键差异（别互相抄）
 
+> 2026-11-04：测试环境（`code/deploy/test/`、deploy-staging 流水线、118.178.109.11）已撤掉，`songjian.tianda.studio` 转为**生产域名**，解析到 47.111.98.230。下表只留作历史对照。
+
 | | test（`songjian.tianda.studio`） | prod（本目录） |
 |---|---|---|
 | TLS 在哪终止 | **宿主宝塔 nginx**（那台机器上还有别的项目） | **nginx 容器**（生产机器上只有我们） |

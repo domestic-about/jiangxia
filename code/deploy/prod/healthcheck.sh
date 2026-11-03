@@ -30,6 +30,9 @@ DISK_PCT="${LQG_HEALTH_DISK_PCT:-80}"
 CERT_DAYS="${LQG_HEALTH_CERT_DAYS:-15}"
 DOMAIN="${LQG_PROD_DOMAIN:-}"
 CERT="${DATA_DIR}/certs/${DOMAIN}/fullchain.pem"
+# 生产机上 TLS 由宿主宝塔 nginx 终止（02-host-nginx.sh）：有宝塔站点证书就查那一张
+BT_CERT="/www/server/panel/vhost/cert/${DOMAIN}/fullchain.pem"
+[ -n "${DOMAIN}" ] && [ -s "${BT_CERT}" ] && CERT="${BT_CERT}"
 
 ALERTS=()
 add() { ALERTS+=("$1"); }

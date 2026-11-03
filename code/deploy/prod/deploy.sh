@@ -5,6 +5,7 @@
 #   cp .env.example .env && chmod 600 .env      # 填真域名 / 主机 / AK；.env 不进仓库
 #
 #   bash deploy.sh all            # 全部：产物 → 上传 → 起容器 → 宿主准备 → 证书 → OSS 初始化 → 自检
+#   bash deploy.sh ci             # 日常发版：自检 → 产物 → 上传 → 起容器 → 验收（push main 时 deploy-prod.yml 自动跑）
 #   bash deploy.sh preflight      # 只做前置自检（.env 完整性 / 脚本语法 / compose 校验 / 端口纪律）
 #   bash deploy.sh artifacts      # 只在本机构建产物（后端 jar + plus-ui dist production）
 #   bash deploy.sh upload         # 只上传（rsync）
@@ -26,7 +27,7 @@
 #    本机 SSH 长连接会被透明代理掐断。远端脚本一律 `nohup` 跑、输出落 log、
 #    用 `.done` 文件带退出码，本机只做短命令 tail。
 # 3. **生产禁飞区**：本脚本只写 ${LQG_DATA_DIR}（默认 /opt/lqg）、只碰 lqg-prod-* 容器，
-#    绝不 down/kill 别人的东西，也**绝不**去动测试机（118.178.109.11 上是 test 环境）。
+#    绝不 down/kill 别人的东西（测试环境已于 2026-11-04 撤掉，只剩这一套生产）。
 #
 # 依赖：本机 mvn / pnpm / rsync / ssh / jq / git；生产机 docker + compose + openssl + curl。
 set -euo pipefail
@@ -61,8 +62,7 @@ load_env() {
   # ★ 禁飞区：生产库名不许含 test（reseed.sh 的护栏靠这个字符串）；
   #   生产域名不许是测试域名；生产主机不许是测试机 IP（B2 的核心口径）。
   case "${LQG_DB_NAME}" in *test*) die "LQG_DB_NAME='${LQG_DB_NAME}' 含 test —— 生产库名不许含 test（reseed.sh 的护栏就是查这个）";; esac
-  case "${LQG_PROD_DOMAIN}" in *tianda.studio*) die "LQG_PROD_DOMAIN='${LQG_PROD_DOMAIN}' 是测试域名 —— 生产要自己的已备案域名（B2）";; esac
-  case "${LQG_PROD_HOST}" in 118.178.109.11) die "LQG_PROD_HOST 是测试机 IP（上面跑的是 test 环境，profile=test）—— 不许当生产用（B2）";; esac
+  # 2026-11-04：测试环境撤掉，songjian.tianda.studio 转为生产域名 —— 原先「tianda.studio = 测试域名 / 118.178.109.11 = 测试机」两条拦截一并删除。
   case "${LQG_ENCRYPT_PASSWORD:-}" in ""|change-me-encrypt) die "LQG_ENCRYPT_PASSWORD 还是占位值 —— 生产字段加密口令必须是真的（且 ≠ LqgTestAesKey#01）";; esac
   case "${LQG_ENCRYPT_PASSWORD}" in LqgTestAesKey#01) die "LQG_ENCRYPT_PASSWORD 是**测试口令** —— 生产必须换一个（ADR-0006）";; esac
   case "${#LQG_ENCRYPT_PASSWORD}" in 16|24|32) ;; *) die "LQG_ENCRYPT_PASSWORD 长度 ${#LQG_ENCRYPT_PASSWORD}：AES 口令必须是 16 / 24 / 32 个字符（gen-secrets.sh 生成 32 位）";; esac
@@ -189,8 +189,17 @@ ssh_ok() {
 # ── 2. 本地构建产物 ─────────────────────────────────────────────────────────────
 phase_artifacts() {
   say "① 后端 jar（本地 mvn package；BUILD_COMMIT 由镜像阶段的 build-arg 注入，jar 里不落）"
+  # maven settings 可覆盖（沿用原测试环境脚本的口径）：本机用仓库里的 .mvn-settings.xml（阿里云镜像，快）；
+  # CI（deploy-prod.yml）传 LQG_MVN_SETTINGS=.github/maven-settings.xml（阿里云 + Central 兜底），none = 不带 -s。
+  local mvn_settings=(-s "${ROOT}/.mvn-settings.xml")
+  case "${LQG_MVN_SETTINGS:-}" in
+    "")   ;;
+    none) mvn_settings=() ;;
+    *)    mvn_settings=(-s "${LQG_MVN_SETTINGS}") ;;
+  esac
   ( cd "${ROOT}/code/RuoYi-Vue-Plus" \
-      && mvn -q -s "${ROOT}/.mvn-settings.xml" -Dmaven.repo.local="${ROOT}/.m2repo" \
+      && mvn -q ${mvn_settings[@]+"${mvn_settings[@]}"} -Dmaven.repo.local="${ROOT}/.m2repo" \
+           -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=60 \
            -pl ruoyi-admin -am -DskipTests package ) \
     || die "mvn package 失败"
   [ -f "${ROOT}/code/RuoYi-Vue-Plus/ruoyi-admin/target/ruoyi-admin.jar" ] || die "没有产出 ruoyi-admin.jar"
@@ -269,7 +278,8 @@ run_remote_phase() {
   local LOGDIR="${LQG_DATA_DIR}/logs"
   say "▶ 远端分离执行 ${name}（日志 ${LOGDIR}/${name}.log）"
   "${SSH[@]}" "install -d '${LOGDIR}'; rm -f '${LOGDIR}/${name}.done'; chmod +x '${LQG_DATA_DIR}/remote/${script}'"
-  "${SSH[@]}" "cd '${LQG_DATA_DIR}' && nohup bash -c 'bash ${LQG_DATA_DIR}/remote/${script}; echo \$? > ${LOGDIR}/${name}.done' > ${LOGDIR}/${name}.log 2>&1 & echo started"
+  # LQG_REBUILD_GOTENBERG：本机 `LQG_REBUILD_GOTENBERG=1 bash deploy.sh up` 透传给 01-up.sh（默认不重建 gotenberg）
+  "${SSH[@]}" "cd '${LQG_DATA_DIR}' && LQG_REBUILD_GOTENBERG='${LQG_REBUILD_GOTENBERG:-0}' nohup bash -c 'bash ${LQG_DATA_DIR}/remote/${script}; echo \$? > ${LOGDIR}/${name}.done' > ${LOGDIR}/${name}.log 2>&1 & echo started"
   local waited=0
   while [ "${waited}" -lt "${timeout}" ]; do
     sleep 10; waited=$((waited + 10))
@@ -365,6 +375,15 @@ case "${cmd}" in
     phase_cert
     phase_oss
     phase_cron
+    phase_verify
+    ;;
+  # 日常发版（deploy-prod.yml 与本机都用它）：证书归宝塔管、OSS 与 cron 只装一次，所以不跑 cert / oss / cron
+  ci)
+    phase_preflight
+    ssh_ok
+    phase_artifacts
+    phase_upload
+    phase_up
     phase_verify
     ;;
   preflight) phase_preflight ;;

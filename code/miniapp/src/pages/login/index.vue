@@ -12,7 +12,7 @@ import { useUserStore } from '@/store/user'
 // （`open-type="getPhoneNumber"`）。**没有**「内部登录 / 外部登录」两个入口，没有账号密码框。
 // 拒绝授权手机号 → 停在本页并提示「需要手机号才能送检和查看结果」。
 //
-// 流程：wx.login 拿 code → 按钮回调拿 phoneCode → POST /auth/login（grantType=xcx）
+// 流程：wx.login 拿 code → 按钮回调拿 phoneCode → POST /auth/mp/login（grantType=xcx）
 // → 存 token → GET /mp/me 入 store → 进首页。
 //
 // 测试身份登录入口（ADR-0008）：开了 mock 登录的构建（本地开发、测试环境体验版）里才有；

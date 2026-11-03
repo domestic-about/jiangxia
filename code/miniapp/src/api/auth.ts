@@ -9,9 +9,11 @@ export interface LoginPayload {
 
 // 小程序登录（grantType=xcx）。
 // clientId / tenantId 由请求头与 body 一起带；mock 路径见 src/api/mock-seeds.ts。
+// ★ 走 /auth/mp/login 而不是 /auth/login：生产的 /auth/login 要求接口加密（@ApiEncrypt），
+//   小程序不带加密头会被拒成 403「没有访问权限」（2026-11-03 生产实测）。
 export function login(payload: LoginPayload) {
   return http.post<LoginResult>(
-    '/auth/login',
+    '/auth/mp/login',
     {
       clientId: (import.meta.env.VITE_APP_CLIENT_ID as string) || '',
       grantType: 'xcx',

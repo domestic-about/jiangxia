@@ -21,7 +21,7 @@ export interface MpMe {
   ext: MpExtProfile | null
 }
 
-/** `POST /auth/login` 的响应 data（若依：access_token） */
+/** `POST /auth/mp/login` 的响应 data（若依：access_token） */
 export interface LoginResult {
   access_token: string
   expires_in?: number

@@ -1,0 +1,124 @@
+# 生产环境自动部署（main 分支 = 生产 songjian.tianda.studio，主机 47.111.98.230）
+#
+# 口径（2026-11-04 与 Kevin 定）：测试环境已撤，只有生产一套；push main 即部署后端 + 网页工作台，
+# 和原来 deploy-staging 的体验一样——提交了就能在 Actions 里看到它开始部署。
+# 小程序不在这里：push main 由 miniapp-prod.yml 在 macOS runner 上构建并上传（审核 / 发布仍人工）。
+#
+# 需要 2 个 Secret（都由 Kevin 设，AI 写 Secret 会被权限拦）：
+#   LQG_PROD_ENV       ← 本机 `code/deploy/prod/.env` 的**全文**（gh secret set LQG_PROD_ENV < code/deploy/prod/.env）
+#                        改了 .env（口令 / AppSecret / AK）要同步更新这个 Secret，否则下次部署会把旧值推回服务器。
+#   LQG_PROD_SSH_KEY   ← CI 专用 SSH 私钥（公钥加到生产机 root 的 authorized_keys）
+#
+# 跑的是 `deploy.sh ci`：自检 → 构建 jar 与工作台 → rsync 上传 → 服务器上建后端镜像、起容器（Flyway 迁移随后端启动）
+# → 从 runner 验收。证书归宝塔管、OSS 与 healthcheck cron 只装一次，不在日常发版里。
+# 基础镜像已钉 digest、gotenberg 默认不重建（见 remote/01-up.sh 第 3 步），日常部署只重建后端那一层。
+
+name: deploy-prod
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'code/**'
+      - '!code/miniapp/**'
+      - '!code/**/*.md'
+      - '.github/workflows/deploy-prod.yml'
+      - '.github/maven-settings.xml'
+  workflow_dispatch: # 手动重跑 / 回到某次提交时用
+    inputs:
+      rebuild_gotenberg:
+        description: '同时重建 gotenberg 镜像（改了字体 / 升级 gotenberg 才勾；会拉 1.7G 基础镜像）'
+        type: boolean
+        default: false
+
+# 生产部署串行化：后一次排队等前一次跑完，不并发改同一台机器
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: 部署到生产环境
+    runs-on: ubuntu-22.04
+    timeout-minutes: 50
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 写部署用 .env（来自 Secret）
+        # ★ 走 `env:` 传值，不把 Secret 插值进脚本正文：.env 注释里有反引号，插进双引号串会被 bash 当命令替换执行
+        #   （原 deploy-staging 首次试跑踩过）。
+        env:
+          LQG_PROD_ENV_CONTENT: ${{ secrets.LQG_PROD_ENV }}
+        run: |
+          umask 077
+          printf '%s\n' "$LQG_PROD_ENV_CONTENT" > code/deploy/prod/.env
+          chmod 600 code/deploy/prod/.env
+          for k in LQG_PROD_SSH LQG_PROD_DOMAIN LQG_DB_PASSWORD LQG_ENCRYPT_PASSWORD LQG_JWT_SECRET LQG_WX_SECRET; do
+            grep -q "^${k}=." code/deploy/prod/.env || { echo "::error::LQG_PROD_ENV 里缺 ${k}"; exit 1; }
+          done
+          echo "✓ .env 已就位（内容不打印）"
+
+      - name: 装 CI 专用 SSH 私钥
+        env:
+          LQG_PROD_SSH_KEY_CONTENT: ${{ secrets.LQG_PROD_SSH_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$LQG_PROD_SSH_KEY_CONTENT" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          target="$(sed -n 's/^LQG_PROD_SSH=//p' code/deploy/prod/.env)"
+          port="$(sed -n 's/^LQG_PROD_SSH_PORT=//p' code/deploy/prod/.env)"
+          ssh-keyscan -p "${port:-22}" -H "${target#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -p "${port:-22}" "$target" 'echo "✓ SSH 通：$(hostname)"'
+
+      - name: 装 JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 装 Node（带 pnpm store 缓存）
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: code/plus-ui/pnpm-lock.yaml
+
+      - name: 装工作台依赖
+        run: cd code/plus-ui && pnpm install --frozen-lockfile
+
+      - name: maven 本地仓缓存
+        # key 带 maven-settings.xml 的哈希、不设 restore-keys、只在成功时保存 —— 防「半拉子仓投毒」（原 deploy-staging 09-28 踩过）
+        uses: actions/cache@v4
+        with:
+          path: .m2repo
+          key: m2-${{ runner.os }}-${{ hashFiles('code/RuoYi-Vue-Plus/**/pom.xml', '.github/maven-settings.xml') }}
+
+      - name: 部署（自检 → 产物 → 上传 → 起容器与 Flyway 迁移 → 验收）
+        env:
+          # 仓库里的 .mvn-settings.xml 只留阿里云一个源（单机加速用），CI 里它缺件；用带 Central 兜底的那份。
+          # ★ 必须是绝对路径：deploy.sh 会 cd 进 code/RuoYi-Vue-Plus 再跑 mvn。
+          LQG_MVN_SETTINGS: ${{ github.workspace }}/.github/maven-settings.xml
+          LQG_REBUILD_GOTENBERG: ${{ inputs.rebuild_gotenberg && '1' || '0' }}
+        run: mkdir -p .m2repo && bash code/deploy/prod/deploy.sh ci
+
+      - name: 小结
+        if: always()
+        run: |
+          {
+            echo "### 生产部署（main）"
+            echo ""
+            echo "- 提交：\`${GITHUB_SHA:0:7}\`（= 后端镜像 tag lqg-backend:${GITHUB_SHA:0:7}）"
+            echo "- 站点：https://songjian.tianda.studio"
+            echo "- 回滚：本机 \`bash code/deploy/prod/deploy.sh rollback <上一个提交号>\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -2,7 +2,7 @@
 # 用法（构建上下文 = **本模块目录** code/RuoYi-Vue-Plus/ruoyi-admin，jar 在 ./target/）：
 #   docker build --build-arg BUILD_COMMIT="$(git rev-parse --short=12 HEAD)" \
 #     -t lqg-test-backend:"$(git rev-parse --short=12 HEAD)" code/RuoYi-Vue-Plus/ruoyi-admin
-# 测试机上的实际调用见 code/deploy/test/docker-compose.yml 的 backend.build 与 deploy.sh。
+# 生产机上的实际调用见 code/deploy/prod/docker-compose.yml 的 backend.build 与 remote/01-up.sh。
 #
 # ★ 为什么是「单阶段 COPY 已打好的 jar」而不是票面 §2 字面的多阶段（偏差 + 理由）：
 #   开发机是 linux/aarch64、测试机是 x86_64（实测，见 doc/waves/ops/tianda-test-env.md §4.5）。
@@ -16,7 +16,8 @@
 #   2. 新增 BUILD_COMMIT → ENV：SysPingController 的 @Value("${BUILD_COMMIT:...}") 读它，
 #      出现在 GET /lqg/sys/ping 的 buildCommit 里（accept 第 1 条断它与本地 HEAD 对得上）；
 #   3. 去掉 snail-job 端口暴露（本项目不跑 SnailJob，见 application-test.yml 的 snail-job.enabled=false）。
-FROM eclipse-temurin:21-jre-jammy
+#   ★ 2026-11-04 钉死 digest（生产机上已拉好的那份）：浮动标签一更新，每次部署都要重拉基础镜像（实测 43 分钟）。
+FROM eclipse-temurin:21-jre-jammy@sha256:1eac8b8fee11ca7d6725a48bc5d41992ed1561504ebae25490d2d062847e8269
 
 LABEL maintainer="lqg"
 

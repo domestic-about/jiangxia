@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
  */
 class WxIdentityResolverMockIdentitiesTest {
 
-    /** 与 application-dev.yml / application-test.yml 里那份逐字一致 */
+    /** 与 application-dev.yml 里那份逐字一致（application-test.yml 随测试环境于 2026-11-04 删除） */
     private static final String LIST =
         "staff:13800000001,extA:13800000011,extB:13800000012,extC:13800000013,"
             + "extD:13800000014,extE:13800000015,extF:13800000016,newbie1:13800000099,newbie2:13800000099";

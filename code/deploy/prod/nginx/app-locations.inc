@@ -42,7 +42,13 @@ location ^~ /prod-api/ {
 # ── 2) 小程序 / doc/verify/api.sh 直连的根路径接口（**不剥前缀**）──────────────
 #    小程序 env/.env.production 的 VITE_SERVER_BASEURL=https://<域名>，请求 /auth/login、/mp/...；
 #    api.sh 请求 /auth/login、/lqg/sys/ping —— 都不带 /prod-api。
+#    ★ 工作台的页面路由也是这几个前缀（/system/user、/lqg/sample …）：浏览器在深链上刷新是
+#      GET + Accept: text/html，原先被当成接口转给后端，回 JSON 405/404（2026-11-03 生产实测）。
+#      浏览器页面导航改回 index.html 交给前端路由；小程序 wx.request / curl 不带 text/html，照旧进后端。
 location ~ ^/(auth|lqg|mp|system|monitor|resource|tool|workflow)/ {
+    if ($http_accept ~* "text/html") {
+        rewrite ^ /index.html last;
+    }
     proxy_pass http://backend:8080;
     include /etc/nginx/conf.d/lqg-proxy-headers.inc;
 }

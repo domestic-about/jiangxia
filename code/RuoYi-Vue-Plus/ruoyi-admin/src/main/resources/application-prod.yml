@@ -10,18 +10,17 @@ spring.servlet.multipart.location: /ruoyi/server/temp
 #   SYS-PROD-001 票面点名的**三个危险开关**（分别管：小程序测试登录入口 / 识别按次收费通道 /
 #   识别测试桩实现）**在本文件里一个字都不出现**，连注释里也不写它们的键名。
 #   ⚠️ 「连注释里也不写」是刻意的：那条 accept 是字面 grep 三个键名，键名哪怕只出现在解释性
-#   注释里，断言同样会红。想看这三个键的名字与来由，去读 `application-test.yml` 的页首契约段
-#   与 `doc/_adr/0008-*.md`（文件名里带键名的那个 ADR —— 本行刻意不写全名）。
+#   注释里，断言同样会红。想看这三个键的名字与来由，去读 `doc/_adr/0008-*.md`
+#   （文件名里带键名的那个 ADR —— 本行刻意不写全名）；测试环境与 application-test.yml 已于 2026-11-04 删除。
 #   理由（ADR-0008 及同批护栏的同一思路）：写一行「关」看起来更安全，实际是把它变成
-#   「离被改成 true 只差一次手滑」，而且会让 `application-test.yml` 页首那条
-#   「test 出现 / prod 不出现」的分界契约失效。缺省值在代码里已经在安全的那一侧：
+#   「离被改成 true 只差一次手滑」。缺省值在代码里已经在安全的那一侧：
 #     小程序测试登录       缺省 false（WxIdentityResolver / SysPingController 都读这个缺省）
 #     识别 provider        缺省 none（OcrProperties → NoneOcrProvider：提示「请手动填写」）
 #     识别按次收费通道     缺省 false
 #   真要在生产打开按次收费通道，由部署方在环境变量 / 外部配置里显式注入并留下甲方书面同意
 #   （合同第二条第 5 款）——那是一条有签字的变更，不是一行「顺手写上」的配置。
 #
-# ★ 与 `application-test.yml` 的差别（三处，都是刻意为之）：
+# ★ 与原测试环境（application-test.yml，2026-11-04 已删）的差别（三处，都是刻意为之）：
 #   1. `mybatis-encryptor.password` 从**环境变量**取（生产口令 ≠ 测试的 LqgTestAesKey#01）；
 #   2. `captcha.enable` **不关**（test 关它只是为了 doc/verify/api.sh 的裸 curl 能登录；
 #      生产该开着——谁都能对着 /auth/login 撞口令是不可接受的）。verify.prod.env 里配的是

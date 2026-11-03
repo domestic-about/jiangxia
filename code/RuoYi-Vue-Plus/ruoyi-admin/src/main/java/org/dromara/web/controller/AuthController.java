@@ -86,7 +86,27 @@ public class AuthController {
     @ApiEncrypt
     @PostMapping("/login")
     public R<LoginVo> login(@RequestBody String body) {
+        return doLogin(body, JsonUtils.parseObject(body, LoginBody.class));
+    }
+
+    /**
+     * 小程序登录（只认 grantType=xcx，不走接口加密）
+     * <p>
+     * 2026-11-03 生产实测：生产 api-decrypt 开着，/auth/login 带 @ApiEncrypt，小程序没有 RSA+AES 加密层，
+     * 不带 encrypt-key 头的登录被 CryptoFilter 拒成 403「没有访问权限，请联系管理员授权」。
+     * xcx 的入参只有一次性的微信 code（全程 https），加密不带来额外保护，所以单开这个入口；
+     * 口令 / 短信等其余登录方式在这里一律拒绝，仍然只能走加密的 /auth/login。
+     */
+    @PostMapping("/mp/login")
+    public R<LoginVo> mpLogin(@RequestBody String body) {
         LoginBody loginBody = JsonUtils.parseObject(body, LoginBody.class);
+        if (ObjectUtil.isNull(loginBody) || !"xcx".equals(loginBody.getGrantType())) {
+            return R.fail(MessageUtils.message("auth.grant.type.error"));
+        }
+        return doLogin(body, loginBody);
+    }
+
+    private R<LoginVo> doLogin(String body, LoginBody loginBody) {
         ValidatorUtils.validate(loginBody);
         // 授权类型和客户端id
         String clientId = loginBody.getClientId();

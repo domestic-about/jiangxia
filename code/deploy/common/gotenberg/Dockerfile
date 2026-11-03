@@ -18,7 +18,9 @@
 #
 # 字体装到系统字体目录（不是用户目录）：LibreOffice 以 gotenberg 用户跑 soffice，
 # 系统目录一定在 fontconfig 的搜索路径里。
-FROM gotenberg/gotenberg:8
+# ★ 钉死 digest（= 8.39.0，2026-11-04 生产机上已拉好的那份）：浮动的 :8 一发版，每次部署都要重拉 1.7G
+#   基础镜像（生产机实测 2.9 小时）。升级时改这一行，见 code/deploy/prod/remote/01-up.sh 第 3 步。
+FROM gotenberg/gotenberg@sha256:13672f317b443c793e972b1bd2155ec62a3e7b6891b411e8196442cc053ee5f5
 
 USER root
 

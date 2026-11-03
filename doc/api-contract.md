@@ -35,7 +35,7 @@
 
 | 方法 路径 | 说明 | 关键形状 |
 |---|---|---|
-| `POST /auth/login` | 小程序登录：`{clientId, grantType:"xcx", tenantId:"000000", xcxCode, phoneCode}` | `data.access_token`。dev / test 下 `xcxCode="mock:<key>"`、`phoneCode="mock:<手机号>"` 走 mock（ADR-0008） |
+| `POST /auth/mp/login` | 小程序登录（只认 grantType=xcx、不走接口加密；生产的 `/auth/login` 要求加密头，2026-11-03 起小程序改走这里）：`{clientId, grantType:"xcx", tenantId:"000000", xcxCode, phoneCode}` | `data.access_token`。dev / test 下 `xcxCode="mock:<key>"`、`phoneCode="mock:<手机号>"` 走 mock（ADR-0008） |
 | `GET /mp/me` | 当前身份 | `data:{userId, name, phoneMasked, identity:"internal"\|"external", ext:{unitId, unitName, groupId, groupName, unitNameInput, groupNameInput, bindStatus, rejectReason}\|null}` |
 | `GET /mp/ext/units` | 单位—组别选择器数据 | `data:[{unitId, unitName, groups:[{groupId, groupName}]}]`，只含 active |
 | `PUT /mp/ext/profile` | 外部填 / 改姓名、单位、组别；**仅限外部角色**（`lqg_external`），内部账号 `code=403`（CR-20260923-09） | `{realName, unitId?, groupId?, unitNameInput?, groupNameInput?}` → `bindStatus=pending` |

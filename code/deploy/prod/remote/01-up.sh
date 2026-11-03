@@ -21,9 +21,9 @@ for bin in docker openssl curl; do
 done
 docker compose version >/dev/null 2>&1 || { echo "[error] 缺 docker compose 插件（v2）"; exit 1; }
 
-# ★ 禁飞区复核：库名不含 test、域名不是测试域名、主机不是测试机
+# ★ 禁飞区复核：库名不含 test（reseed.sh 的护栏靠这个字符串挡住误灌生产）
+#   2026-11-04 起 songjian.tianda.studio 是生产域名，原先拦它的那条删掉了。
 case "${LQG_DB_NAME:-lqg}" in *test*) echo "[error] LQG_DB_NAME 含 test"; exit 1;; esac
-case "${LQG_PROD_DOMAIN}" in *tianda.studio*) echo "[error] 生产域名是测试域名"; exit 1;; esac
 
 echo "=== [up] 1/6 目录与权限 ==="
 install -d -m 755 "${LQG_DATA_DIR}/logs/backend" "${LQG_DATA_DIR}/logs/nginx" \
@@ -54,7 +54,17 @@ if [ ! -s "${LQG_DATA_DIR}/certs/${LQG_PROD_DOMAIN}/fullchain.pem" ]; then
 fi
 
 echo "=== [up] 3/6 建镜像（生产机原生 amd64）==="
-docker compose build backend gotenberg
+# ★ 2026-11-04：两个 Dockerfile 的 FROM 原先是浮动标签（gotenberg:8 / temurin:21-jre-jammy），上游一发版
+#   每次部署都要重拉整套基础镜像 —— 实测 gotenberg 8.38.1→8.39.0 拉了 2.9 小时、temurin 43 分钟。
+#   现在 FROM 钉死 digest：BuildKit 不再去 registry 解析浮动标签，基础层用构建缓存里那份。
+# gotenberg 只是官方镜像 + 字体，几乎不变：本机已有 lqg-gotenberg:8 就不重建；
+# 改了字体 / 升级 gotenberg 时显式要：LQG_REBUILD_GOTENBERG=1 bash deploy.sh up
+if docker image inspect lqg-gotenberg:8 >/dev/null 2>&1 && [ "${LQG_REBUILD_GOTENBERG:-0}" != "1" ]; then
+  echo "  … 已有 lqg-gotenberg:8，跳过重建（要重建：LQG_REBUILD_GOTENBERG=1）"
+  docker compose build backend
+else
+  docker compose build backend gotenberg
+fi
 
 echo "=== [up] 4/6 拉镜像 + 起容器 ==="
 docker compose up -d

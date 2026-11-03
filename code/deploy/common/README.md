@@ -1,5 +1,7 @@
 # code/deploy/common —— 各环境复用的部署资产
 
+> 2026-11-04：测试环境已撤，下文提到的 `code/deploy/test/` 已删除（见 git 历史）；生产仍在用 `gotenberg/`。
+
 | 文件 | 用途 | 谁在用 |
 |---|---|---|
 | `Dockerfile.backend` | 后端镜像：**多阶段**（maven 构建 → JRE 21 运行），构建参数 `BUILD_COMMIT` 注入 `/lqg/sys/ping` 的 `buildCommit` | **与运行机同架构**的场合：amd64 CI runner、x86 服务器直接建。上下文 = `code/RuoYi-Vue-Plus` |
