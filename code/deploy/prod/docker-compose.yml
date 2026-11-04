@@ -206,6 +206,8 @@ services:
       # 真实微信小程序凭据（甲方主体，SYS-RELEASE-001 到位后填；邮箱等运营参数同源）
       LQG_WX_APPID: ${LQG_WX_APPID:-}
       LQG_WX_SECRET: ${LQG_WX_SECRET:-}
+      # 拍照识别方案：缺省 wechat（微信官方通用印刷体识别）；要退回一律手填就在 .env 里写 LQG_OCR_PROVIDER=none
+      LQG_OCR_PROVIDER: ${LQG_OCR_PROVIDER:-wechat}
     # ★ 不映射任何宿主端口（accept 2 第 1 段打 8080）。nginx 容器用服务名 backend:8080 进。
     volumes:
       # 日志落数据盘，排查不用进容器；后端 logback 写 ./logs（WORKDIR=/app）

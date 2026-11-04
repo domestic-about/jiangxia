@@ -7,6 +7,7 @@ import org.dromara.lqg.ocr.provider.NoneOcrProvider;
 import org.dromara.lqg.ocr.provider.OcrProvider;
 import org.dromara.lqg.ocr.provider.PaidOcrProvider;
 import org.dromara.lqg.ocr.provider.StubOcrProvider;
+import org.dromara.lqg.ocr.provider.WechatOcrProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -116,6 +117,9 @@ public class OcrProviderFactory {
         }
         if (provider instanceof StubOcrProvider) {
             return StubOcrProvider.NAME;
+        }
+        if (provider instanceof WechatOcrProvider) {
+            return WechatOcrProvider.NAME;
         }
         String simple = provider.getClass().getSimpleName();
         return simple.isEmpty() ? "ocrProvider" : Character.toLowerCase(simple.charAt(0)) + simple.substring(1);

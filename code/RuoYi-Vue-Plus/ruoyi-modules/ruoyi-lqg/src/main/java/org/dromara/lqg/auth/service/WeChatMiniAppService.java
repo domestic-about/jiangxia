@@ -61,6 +61,21 @@ public class WeChatMiniAppService {
     }
 
     /**
+     * 小程序的 access_token（WxJava 内存缓存、到期自动续；与登录共用同一份，不会互相顶掉）。
+     * 给服务端调用类的微信接口用（拍照识别的通用印刷体 OCR，见 {@code WechatOcrProvider}）。
+     *
+     * @param forceRefresh true = 先作废缓存再取（微信回 40001 / 42001 说 token 失效时重试用）
+     */
+    public String accessToken(boolean forceRefresh) {
+        try {
+            return wxMaService.getAccessToken(forceRefresh);
+        } catch (WxErrorException e) {
+            log.warn("取 access_token 失败：{}", e.getMessage());
+            throw new ServiceException("微信服务暂不可用：" + e.getMessage());
+        }
+    }
+
+    /**
      * 「手机号快速验证」：动态 code 换**微信背书的手机号**。
      *
      * @param phoneCode 小程序 {@code getPhoneNumber} 回调里的 code

@@ -15,7 +15,8 @@ spring.servlet.multipart.location: /ruoyi/server/temp
 #   理由（ADR-0008 及同批护栏的同一思路）：写一行「关」看起来更安全，实际是把它变成
 #   「离被改成 true 只差一次手滑」。缺省值在代码里已经在安全的那一侧：
 #     小程序测试登录       缺省 false（WxIdentityResolver / SysPingController 都读这个缺省）
-#     识别 provider        缺省 none（OcrProperties → NoneOcrProvider：提示「请手动填写」）
+#     识别 provider        缺省 none（OcrProperties → NoneOcrProvider：提示「请手动填写」）；
+#                          生产在下面 `lqg.ocr.provider` 显式选了微信官方的通用印刷体识别（2026-11-04）
 #     识别按次收费通道     缺省 false
 #   真要在生产打开按次收费通道，由部署方在环境变量 / 外部配置里显式注入并留下甲方书面同意
 #   （合同第二条第 5 款）——那是一条有签字的变更，不是一行「顺手写上」的配置。
@@ -196,7 +197,7 @@ mybatis-encryptor:
 
 --- # 本项目（ruoyi-lqg）自有配置
 # ★ 只写「必须显式给」的键。票面点名的那三个危险开关**故意不出现**（键名见页首契约的说明），
-#   它们缺省就在安全的那一侧。这个 `lqg:` 块下面只有 doc / wx 两组，不需要再加别的组。
+#   它们缺省就在安全的那一侧。这个 `lqg:` 块下面有 doc / wx / ocr 三组（ocr 只写 provider，见下）。
 lqg:
   # 文档渲染（DOC-PDF-001 / ADR-0005）：docx → PDF 的转换容器（Gotenberg）。
   #   生产里 backend 与 gotenberg 在同一个 compose 网络 → 走**服务名**（宿主上一个端口都不映射）。
@@ -212,3 +213,8 @@ lqg:
     miniapp:
       appid: ${LQG_WX_APPID:}
       secret: ${LQG_WX_SECRET:}
+  # 拍照识别（ADR-0007）：用微信官方「通用印刷体识别」（WechatOcrProvider，复用上面的小程序 appid / secret）。
+  #   免费额度内不产生费用；只识别印刷体，手写识别不出时小程序照旧提示手填。
+  #   要退回「一律手填」：部署时设 LQG_OCR_PROVIDER=none。
+  ocr:
+    provider: ${LQG_OCR_PROVIDER:wechat}
