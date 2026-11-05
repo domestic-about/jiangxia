@@ -63,11 +63,15 @@ public class WechatOcrProvider implements OcrProvider {
     /** token 失效的 errcode（40001 invalid credential / 40014 invalid access_token / 42001 access_token expired）：刷新后重试一次。 */
     private static final List<Integer> TOKEN_INVALID = List.of(40001, 40014, 42001);
 
-    /** 当日额度用完（45009 reach max api daily quota limit）。 */
-    private static final int QUOTA_EXCEEDED = 45009;
+    /**
+     * 额度不足：45009 reach max api daily quota limit（当日用完）；
+     * 101002 / 101003 not enough market quota（服务市场没购买 / 资源包用完 —— 2026-11-05 生产 appid 实测返回 101003：
+     * 免费次数也要先在微信服务市场「购买」微信OCR识别才有）。
+     */
+    private static final List<Integer> QUOTA_EXCEEDED = List.of(45009, 101002, 101003);
 
     static final String MSG_GENERIC = "识别失败，请手动填写";
-    static final String MSG_QUOTA = "今日识别次数已用完，请手动填写";
+    static final String MSG_QUOTA = "识别次数已用完，请手动填写";
 
     /** 裸 Jackson：纯单测里不起 Spring（同 StubOcrProvider 的口径）。 */
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -151,8 +155,11 @@ public class WechatOcrProvider implements OcrProvider {
             if (TOKEN_INVALID.contains(errcode)) {
                 return new Result(List.of(), new ServiceException(MSG_GENERIC), true);
             }
-            String msg = errcode == QUOTA_EXCEEDED ? MSG_QUOTA : MSG_GENERIC;
-            return new Result(List.of(), new ServiceException(msg), false);
+            if (QUOTA_EXCEEDED.contains(errcode)) {
+                log.warn("微信 OCR 额度不足（errcode={}）：到微信服务市场为本小程序购买 / 续购「微信OCR识别」资源包", errcode);
+                return new Result(List.of(), new ServiceException(MSG_QUOTA), false);
+            }
+            return new Result(List.of(), new ServiceException(MSG_GENERIC), false);
         }
         List<String> lines = new ArrayList<>();
         for (JsonNode item : root.path("items")) {

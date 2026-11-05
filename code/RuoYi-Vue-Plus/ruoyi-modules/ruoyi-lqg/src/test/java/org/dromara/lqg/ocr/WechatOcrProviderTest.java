@@ -82,10 +82,13 @@ class WechatOcrProviderTest {
     @DisplayName("当日额度用完（45009）→ 明确告诉用户次数用完；其它错误码不透出 errcode")
     void quotaAndGenericMessages() throws Exception {
         ServiceException quota = (ServiceException) field(parse("{\"errcode\":45009,\"errmsg\":\"reach max api daily quota limit\"}"), "error");
-        assertTrue(quota.getMessage().contains("今日识别次数已用完"));
-        ServiceException other = (ServiceException) field(parse("{\"errcode\":101003,\"errmsg\":\"x\"}"), "error");
+        assertTrue(quota.getMessage().contains("识别次数已用完"));
+        // 2026-11-05 生产 appid 实测：服务市场没购买时回 101003 not enough market quota
+        ServiceException market = (ServiceException) field(parse("{\"errcode\":101003,\"errmsg\":\"not enough market quota\"}"), "error");
+        assertTrue(market.getMessage().contains("识别次数已用完"));
+        ServiceException other = (ServiceException) field(parse("{\"errcode\":47001,\"errmsg\":\"x\"}"), "error");
         assertEquals("识别失败，请手动填写", other.getMessage());
-        assertFalse(other.getMessage().contains("101003"));
+        assertFalse(other.getMessage().contains("47001"));
     }
 
     @Test

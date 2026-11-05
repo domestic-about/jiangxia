@@ -368,6 +368,7 @@ cmd="${1:-all}"
 case "${cmd}" in
   all)
     phase_preflight
+    sync_build_commit   # ★ 镜像 tag / ping 的 buildCommit = 当前提交号（2026-11-05 修：此前 ci / all 不同步，CI 部署一直沿用 .env 里的旧号）
     ssh_ok
     phase_artifacts
     phase_upload
@@ -380,6 +381,7 @@ case "${cmd}" in
   # 日常发版（deploy-prod.yml 与本机都用它）：证书归宝塔管、OSS 与 cron 只装一次，所以不跑 cert / oss / cron
   ci)
     phase_preflight
+    sync_build_commit   # ★ 镜像 tag / ping 的 buildCommit = 当前提交号（2026-11-05 修：此前 ci / all 不同步，CI 部署一直沿用 .env 里的旧号）
     ssh_ok
     phase_artifacts
     phase_upload
