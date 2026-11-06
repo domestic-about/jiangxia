@@ -33,7 +33,7 @@
 - **变更前**：`.github/workflows/miniapp-prod.yml` 的 `runs-on: macos-14`。
 - **变更后**：`runs-on: macos-15-intel`（macOS 15 的 Intel 标准镜像，仍在 GitHub 支持期内；不选 arm64 的 `macos-15`，避免私有仓库没有可用的 arm64 标准 runner）。
 - **影响下游**：仅这一个 workflow；`deploy-prod.yml` 不用 macOS，未改。下次 push main 或手动 `workflow_dispatch` 时生效。
-- **判据**：YAML 解析通过；`runs-on` 与 [actions/runner-images 的 macOS 15 x64 标签](https://github.com/actions/runner-images/blob/main/README.md) 对齐。实际 CI 结果待下一次 Actions 运行确认。
+- **判据**：YAML 解析通过；`runs-on` 与 [actions/runner-images 的 macOS 15 x64 标签](https://github.com/actions/runner-images/blob/main/README.md) 对齐。实际运行 [miniapp-prod #42158791332](https://github.com/domestic-about/jiangxia/actions/runs/42158791332) 全绿（构建、两道产物自检、上传微信均通过，2m35s）。
 - **决策**：✅ 接受；用 `macos-15-intel` 而不是 `macos-15`，优先保证私有仓库能排到机器。
 - **签字**：Kevin @ 2026-11-06（对话中「部署失败：如图」并要求修复）。
 
