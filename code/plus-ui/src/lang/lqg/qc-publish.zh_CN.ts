@@ -26,6 +26,8 @@ export default {
     notGenerated: '这份文档还没生成过页面图',
     preview: '预览',
     pageNo: '第 {n} 页',
+    pageFailed: '页面图加载失败',
+    pageRetry: '点此重试',
     downloadTitle: '下载（与左侧预览同一份产物）',
     downloadWord: '下载 Word',
     downloadPdf: '下载 PDF',

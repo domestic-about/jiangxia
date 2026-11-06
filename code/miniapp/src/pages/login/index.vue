@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import LineIcon from '@/components/ui/LineIcon.vue'
 import type { MockSeed } from '@/api/mock-seeds'
 import { HOME_PAGE } from '@/router/config'
 import { MOCK_PANEL, MOCK_SEEDS, mockCodes } from '@/api/mock-seeds'
@@ -8,9 +9,10 @@ import { useUserStore } from '@/store/user'
 
 // 登录页（UI:mp.login）。
 //
-// 一屏：实验室名称与一句话说明 → 协议勾选 → 一个主按钮「微信手机号快捷登录」
-// （`open-type="getPhoneNumber"`）。**没有**「内部登录 / 外部登录」两个入口，没有账号密码框。
-// 拒绝授权手机号 → 停在本页并提示「需要手机号才能送检和查看结果」。
+// 一屏：品牌区（实验室名 + 一句话）→ 协议勾选 + 一个主按钮「微信手机号快捷登录」
+// → 「登录后可以」四张能力卡 + 三步说明。**没有**「内部登录 / 外部登录」两个入口，
+// 没有账号密码框。拒绝授权手机号 → 停在本页并提示「需要手机号才能送检和查看结果」。
+// 2026-11-06 验收问题：原版中间大片留白、下半屏全空，补上能力卡与三步说明（CR-20261106-25）。
 //
 // 流程：wx.login 拿 code → 按钮回调拿 phoneCode → POST /auth/mp/login（grantType=xcx）
 // → 存 token → GET /mp/me 入 store → 进首页。
@@ -28,6 +30,14 @@ const store = useUserStore()
 const labName = LEGAL_OPERATOR
 const agreed = ref(false)
 const submitting = ref(false)
+
+/** 登录后能做什么：只写入口与价值，不写数字 / 统计（登录页不编造业务数据） */
+const FEATURES = [
+  { icon: 'sample', title: '送检登记', desc: '在线填写送检单，随时补改' },
+  { icon: 'organoid', title: '收样与质控', desc: '处理进度、质控文档一处看' },
+  { icon: 'embed', title: '石蜡包埋', desc: '送样与包埋情况全程留痕' },
+  { icon: 'cryo', title: '冻存管理', desc: '-80 与液氮流转清楚可查' },
+]
 
 // 只有 dev 构建 + VITE_MOCK_LOGIN=1 才挂这个入口；判据只有一份：vite.config.ts 里 define 的
 // 构建期常量 `__LQG_MOCK_LOGIN__`。面板文案、身份清单在 api/mock-seeds.ts —— 关着时这里直接取
@@ -133,9 +143,12 @@ function openPrivacy() {
 <template>
   <view class="login">
     <view class="login__hero">
-      <text class="login__lab">{{ labName }}</text>
-      <text class="login__title">类器官送检</text>
-      <text class="login__slogan">送检、收样、包埋、冻存，一个入口记到底</text>
+      <view class="login__mark">类</view>
+      <view class="login__head">
+        <text class="login__title">类器官送检</text>
+        <text class="login__lab">{{ labName }}</text>
+      </view>
+      <text class="login__slogan">在线填写送检表单，查看样本处理进度与质控文档</text>
     </view>
 
     <view class="lqg-card login__card">
@@ -160,7 +173,43 @@ function openPrivacy() {
         微信手机号快捷登录
       </button>
 
-      <text class="login__tip">首次登录会用你的微信手机号创建账号，不需要注册</text>
+      <text class="login__tip">首次登录会用你的微信手机号自动创建账号，不需要注册</text>
+      <view class="login__identity">
+        <LineIcon name="phone" :size="15" />
+        <text class="login__identity-t">内部人员与合作伙伴同一个入口，身份由中心按手机号确认</text>
+      </view>
+    </view>
+
+    <!-- 登录后能做什么：填满原先的大片留白，同时把「外部也能直接用」讲清楚 -->
+    <view class="login__section">
+      <text class="login__section-t">登录后可以</text>
+      <text class="login__section-x">一个入口记到底</text>
+    </view>
+    <view class="login__features">
+      <view v-for="item in FEATURES" :key="item.icon" class="login__feature">
+        <view class="lqg-well login__feature-icon">
+          <LineIcon :name="item.icon" :size="20" />
+        </view>
+        <view class="login__feature-body">
+          <text class="login__feature-t">{{ item.title }}</text>
+          <text class="login__feature-d">{{ item.desc }}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="login__steps">
+      <view class="login__step">
+        <text class="login__step-no">1</text>
+        <text class="login__step-t">微信授权</text>
+      </view>
+      <view class="login__step">
+        <text class="login__step-no">2</text>
+        <text class="login__step-t">填写送检单</text>
+      </view>
+      <view class="login__step">
+        <text class="login__step-no">3</text>
+        <text class="login__step-t">看进度与文档</text>
+      </view>
     </view>
 
     <!-- 测试身份入口：只在开了 mock 登录的构建里有内容（文案与清单都来自 api/mock-seeds.ts） -->
@@ -181,20 +230,36 @@ function openPrivacy() {
 
 <style lang="scss" scoped>
 .login {
-  padding: var(--lqg-sp-8) var(--lqg-gutter);
+  min-height: 100vh;
+  padding: var(--lqg-sp-8) var(--lqg-gutter) calc(var(--lqg-sp-8) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
 }
 
 .login__hero {
   display: flex;
   flex-direction: column;
-  gap: var(--lqg-sp-3);
-  padding: 40px 0 var(--lqg-sp-8);
+  gap: var(--lqg-sp-4);
+  padding: 24px 0 var(--lqg-sp-7);
 }
 
-.login__lab {
-  font-size: var(--lqg-fs-base);
-  font-weight: var(--lqg-fw-medium);
+.login__mark {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: var(--lqg-primary-soft);
   color: var(--lqg-primary);
+  font-size: 28px;
+  font-weight: var(--lqg-fw-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lqg-sp-2);
 }
 
 .login__title {
@@ -203,15 +268,22 @@ function openPrivacy() {
   color: var(--lqg-ink);
 }
 
+.login__lab {
+  font-size: var(--lqg-fs-base);
+  font-weight: var(--lqg-fw-medium);
+  color: var(--lqg-primary);
+}
+
 .login__slogan {
   font-size: var(--lqg-fs-body);
+  line-height: 1.6;
   color: var(--lqg-ink-2);
 }
 
 .login__card {
   display: flex;
   flex-direction: column;
-  gap: var(--lqg-sp-7);
+  gap: var(--lqg-sp-6);
 }
 
 .login__agree {
@@ -260,6 +332,7 @@ function openPrivacy() {
 }
 
 .login__btn {
+  width: 100%;
   height: var(--lqg-btn-h);
   line-height: var(--lqg-btn-h);
   font-size: var(--lqg-fs-lg);
@@ -280,8 +353,121 @@ function openPrivacy() {
   text-align: center;
 }
 
+.login__identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lqg-sp-2);
+  padding: var(--lqg-sp-4) var(--lqg-sp-5);
+  border-radius: var(--lqg-radius-ctl);
+  background: var(--lqg-inset);
+  color: var(--lqg-ink-2);
+}
+
+.login__identity-t {
+  flex: 1;
+  font-size: var(--lqg-fs-sm);
+  line-height: 1.5;
+}
+
+.login__section {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 22px var(--lqg-sp-2) var(--lqg-sp-4);
+}
+
+.login__section-t {
+  font-size: var(--lqg-fs-title);
+  font-weight: var(--lqg-fw-semibold);
+  color: var(--lqg-ink);
+}
+
+.login__section-x {
+  font-size: var(--lqg-fs-sm);
+  color: var(--lqg-ink-3);
+}
+
+.login__features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--lqg-gap);
+}
+
+.login__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lqg-sp-4);
+  padding: var(--lqg-sp-5);
+  border-radius: var(--lqg-radius-card);
+  background: var(--lqg-card);
+  box-shadow: var(--lqg-shadow-sm);
+}
+
+.login__feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--lqg-radius-ctl);
+}
+
+.login__feature-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.login__feature-t {
+  font-size: var(--lqg-fs-base);
+  font-weight: var(--lqg-fw-medium);
+  color: var(--lqg-ink);
+}
+
+.login__feature-d {
+  font-size: var(--lqg-fs-xs);
+  line-height: 1.45;
+  color: var(--lqg-ink-3);
+}
+
+.login__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--lqg-sp-2);
+  margin-top: var(--lqg-sp-7);
+  padding: var(--lqg-sp-5) var(--lqg-sp-3);
+  border-radius: var(--lqg-radius-card);
+  background: var(--lqg-primary-soft);
+}
+
+.login__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--lqg-sp-2);
+  min-width: 0;
+}
+
+.login__step-no {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--lqg-primary);
+  color: var(--lqg-on-primary);
+  font-size: var(--lqg-fs-xs);
+  font-weight: var(--lqg-fw-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login__step-t {
+  font-size: var(--lqg-fs-xs);
+  color: var(--lqg-primary-deep);
+  white-space: nowrap;
+}
+
 .login__mock {
-  margin-top: var(--lqg-gap);
+  margin-top: var(--lqg-sp-7);
   display: flex;
   flex-direction: column;
   gap: var(--lqg-sp-3);

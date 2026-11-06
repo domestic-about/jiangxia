@@ -88,7 +88,20 @@
     <div v-if="!busy && status === 'done'" class="lqg-preview-pane__pages">
       <div v-for="page in pages" :key="page.pageNo" class="lqg-preview-pane__page">
         <div class="lqg-preview-pane__page-no">{{ t('lqg.qc.preview.pageNo', { n: page.pageNo }) }}</div>
-        <el-image :src="page.url" fit="contain" class="lqg-preview-pane__page-img" :preview-src-list="pageUrls" />
+        <el-image
+          :src="page.url"
+          fit="contain"
+          class="lqg-preview-pane__page-img"
+          :preview-src-list="pageUrls"
+          @error="handlePageImageError"
+        >
+          <template #error>
+            <view class="lqg-preview-pane__page-error" @click="retryPages">
+              <span>{{ t('lqg.qc.preview.pageFailed') }}</span>
+              <span class="lqg-preview-pane__page-retry">{{ t('lqg.qc.preview.pageRetry') }}</span>
+            </view>
+          </template>
+        </el-image>
       </div>
     </div>
 
@@ -182,6 +195,8 @@ const audience = ref<DocAudience>(props.initialAudience === 'external' ? 'extern
 const status = ref<'none' | 'pending' | 'done' | 'failed'>('none');
 const errorMsg = ref<string | null>(null);
 const pages = ref<{ pageNo: number; url: string }[]>([]);
+/** 页面图打不开（多为 10 分钟签名链接过期 / 对象缺失）：自动重取一次地址，仍失败则给「点此重试」 */
+const pageRetried = ref(false);
 /** 内部版照出但取不到的图（#217）：张数 + 明细 */
 const missingImageCount = ref(0);
 const missingImages = ref<string | null>(null);
@@ -233,6 +248,7 @@ const applyPages = (data: DocPagesWithSettings) => {
   status.value = (data.status as typeof status.value) || 'done';
   errorMsg.value = data.errorMsg ?? null;
   pages.value = status.value === 'done' ? data.pages || [] : [];
+  pageRetried.value = false;
   missingImageCount.value = Number(data.missingImageCount || 0);
   missingImages.value = data.missingImages ?? null;
   internalNoShown.value = data.internalNoShown === true;
@@ -245,6 +261,20 @@ let disposed = false;
 onBeforeUnmount(() => {
   disposed = true;
 });
+
+/** 页面图加载失败：第一次自动重取一次（签名链接可能过期），再失败就让用户点重试 */
+const handlePageImageError = async () => {
+  if (pageRetried.value) {
+    return;
+  }
+  pageRetried.value = true;
+  await loadPages();
+};
+
+const retryPages = async () => {
+  pageRetried.value = false;
+  await loadPages();
+};
 
 const loadPages = async () => {
   if (!props.sampleId || disposed) return;
@@ -491,5 +521,21 @@ watch(
     font-size: 12px;
     color: var(--lqg-ink-3);
   }
+}
+
+.lqg-preview-pane__page-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 160px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.lqg-preview-pane__page-retry {
+  color: var(--el-color-primary);
+  cursor: pointer;
 }
 </style>

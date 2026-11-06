@@ -11,7 +11,7 @@
 --   或手工（AK 从 /opt/lqg/.env 取，不要打进 shell 历史）：
 --     docker exec -i lqg-prod-postgres psql -v ON_ERROR_STOP=1 -U lqg -d lqg \
 --       -v bucket="$LQG_OSS_BUCKET" -v endpoint="$LQG_OSS_ENDPOINT" -v region="$LQG_OSS_REGION" \
---       -v ak="$LQG_OSS_ACCESS_KEY_ID" -v sk="$LQG_OSS_ACCESS_KEY_SECRET" -v prefix="${LQG_OSS_PREFIX:-lqg/}" \
+--       -v ak="$LQG_OSS_ACCESS_KEY_ID" -v sk="$LQG_OSS_ACCESS_KEY_SECRET" -v prefix="${LQG_OSS_PREFIX:-lqg}" \
 --       < oss/oss-init.sql
 --
 -- ★ 变量由 `-v` 传入；下面用 `:'var'`（**带冒号**）引用 —— libpq 会按字面量安全转义，
@@ -26,7 +26,7 @@
 -- ★ status = '0' = **默认配置**（0=是 / 1=否）。上游 seed 里 minio 那行是 status='0'，
 --   所以这里要先把别的行降级，再把 aliyun 这行提为默认 —— 否则后端取到的是别人的桶。
 --
--- ★ prefix = 'lqg/'：业务对象前缀。备份走 `backup/`（SYS-BACKUP-001），两个前缀分开，
+-- ★ prefix = 'lqg'：业务对象前缀。备份走 `backup/`（SYS-BACKUP-001），两个前缀分开，
 --   免得生命周期规则把业务文件一起过期掉。
 
 BEGIN;

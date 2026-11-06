@@ -65,7 +65,7 @@
             <span v-else class="lqg-extuser__none">{{ t('lqg.auth.extuser.neverLogin') }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.extuser.colAction')" align="center" width="130" class-name="small-padding fixed-width">
+        <el-table-column :label="t('lqg.auth.extuser.colAction')" align="center" width="210" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button
               v-hasPermi="['lqg:auth:extuser:verify']"
@@ -75,6 +75,15 @@
               @click="handleVerify(scope.row)"
             >
               {{ scope.row.bindStatus === 'verified' ? t('lqg.auth.extuser.regroup') : t('lqg.auth.extuser.verify') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['lqg:auth:staff:grant']"
+              link
+              type="success"
+              icon="Promotion"
+              @click="handlePromote(scope.row)"
+            >
+              {{ t('lqg.auth.extuser.promote') }}
             </el-button>
           </template>
         </el-table-column>
@@ -162,11 +171,37 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 设为内部人员：外部账号原地升级（AUTH-STAFF-001 的 grant 接口），不新建账号、不动微信绑定 -->
+    <el-dialog v-model="promote.visible" :title="t('lqg.auth.extuser.promoteTitle')" width="520px" append-to-body :close-on-click-modal="false">
+      <el-form ref="promoteFormRef" :model="promote.form" :rules="promote.rules" label-width="120px">
+        <el-form-item :label="t('lqg.auth.extuser.dialogUser')">
+          <span>{{ promote.row?.name }} · <span class="lqg-mono">{{ promote.row?.phone }}</span></span>
+        </el-form-item>
+        <el-form-item :label="t('lqg.auth.extuser.promoteRole')" prop="roleKey">
+          <el-select v-model="promote.form.roleKey" style="width: 100%">
+            <el-option :label="t('lqg.auth.extuser.promoteRoleInternal')" value="lqg_internal" />
+            <el-option :label="t('lqg.auth.extuser.promoteRoleAdmin')" value="lqg_admin" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('lqg.auth.extuser.promotePassword')" prop="password">
+          <el-input v-model="promote.form.password" type="password" show-password :placeholder="t('lqg.auth.extuser.promotePasswordPlaceholder')" />
+        </el-form-item>
+        <el-alert type="warning" :closable="false" show-icon :title="t('lqg.auth.extuser.promoteHint')" />
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" :loading="promote.submitting" @click="submitPromote">确 定</el-button>
+          <el-button @click="promote.visible = false">取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="LqgAuthExtUser" lang="ts">
 import { listExtUsers, listGroups, listUnits, verifyExtUser } from '@/api/lqg/auth/group';
+import { grantStaff } from '@/api/lqg/auth/staff';
 import type { ExtUserVO, SourceUnitVO, UnitGroupVO } from '@/api/lqg/auth/group';
 import { useI18n } from 'vue-i18n';
 
@@ -208,6 +243,59 @@ const getList = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// ── 设为内部人员 ─────────────────────────────────────────────────────────────
+const promoteFormRef = ref<ElFormInstance>();
+const promote = reactive<{
+  visible: boolean;
+  submitting: boolean;
+  row: ExtUserVO | null;
+  form: { roleKey: 'lqg_internal' | 'lqg_admin'; password: string };
+  rules: ElFormRules;
+}>({
+  visible: false,
+  submitting: false,
+  row: null,
+  form: { roleKey: 'lqg_internal', password: '' },
+  rules: {
+    roleKey: [{ required: true, message: t('lqg.auth.extuser.promoteRoleRequired'), trigger: 'change' }],
+    password: [
+      { required: true, message: t('lqg.auth.extuser.promotePasswordRequired'), trigger: 'blur' },
+      { min: 6, message: t('lqg.auth.extuser.promotePasswordMin'), trigger: 'blur' }
+    ]
+  }
+});
+
+const handlePromote = (row: ExtUserVO) => {
+  promote.row = row;
+  promote.form = { roleKey: 'lqg_internal', password: '' };
+  promote.visible = true;
+  promoteFormRef.value?.clearValidate();
+};
+
+const submitPromote = () => {
+  promoteFormRef.value?.validate(async (valid: boolean) => {
+    if (!valid || !promote.row) {
+      return;
+    }
+    promote.submitting = true;
+    try {
+      const res = await grantStaff({
+        phone: promote.row.phone,
+        name: promote.row.name,
+        roleKey: promote.form.roleKey,
+        password: promote.form.password
+      });
+      proxy?.$modal.msgSuccess(
+        res.data?.upgraded ? t('lqg.auth.extuser.promotedExisting') : t('lqg.auth.extuser.promotedCreated')
+      );
+      promote.visible = false;
+      getList();
+    } finally {
+      promote.submitting = false;
+    }
+  });
 };
 
 const getUnits = async () => {

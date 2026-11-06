@@ -120,6 +120,19 @@ export default {
     approved: '已通过核验',
     rejected: '已驳回',
     regrouped: '已改归组',
-    emptyGroup: '该单位下还没有启用中的组别，请先到「来源单位与组别」里建一个。'
+    emptyGroup: '该单位下还没有启用中的组别，请先到「来源单位与组别」里建一个。',
+    promote: '设为内部人员',
+    promoteTitle: '设为内部人员',
+    promoteRole: '内部角色',
+    promoteRoleInternal: '内部人员',
+    promoteRoleAdmin: '实验室管理员',
+    promotePassword: '工作台初始密码',
+    promotePasswordPlaceholder: '至少 6 位；对方登录工作台时使用',
+    promoteHint: '原账号原地升级，不新建账号、不影响微信绑定；对方下一次登录小程序即为内部身份，访问内部接口需要重新登录一次。',
+    promoteRoleRequired: '请选择内部角色',
+    promotePasswordRequired: '请填写工作台初始密码',
+    promotePasswordMin: '密码至少 6 位',
+    promotedExisting: '已把原外部账号升级为内部人员',
+    promotedCreated: '已创建内部账号',
   }
 };

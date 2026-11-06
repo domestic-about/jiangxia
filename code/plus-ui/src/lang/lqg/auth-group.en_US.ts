@@ -107,6 +107,19 @@ export default {
     approved: 'Approved',
     rejected: 'Rejected',
     regrouped: 'Group changed',
-    emptyGroup: 'This unit has no active group. Create one in "Source Units and Groups" first.'
+    emptyGroup: 'This unit has no active group. Create one in "Source Units and Groups" first.',
+    promote: 'Make internal',
+    promoteTitle: 'Make Internal User',
+    promoteRole: 'Internal role',
+    promoteRoleInternal: 'Internal staff',
+    promoteRoleAdmin: 'Lab administrator',
+    promotePassword: 'Initial workspace password',
+    promotePasswordPlaceholder: 'At least 6 characters; used to sign in to the workspace',
+    promoteHint: 'The existing account is upgraded in place — no duplicate account and the WeChat binding stays. The user becomes internal on the next mini-program login and must sign in again to access internal APIs.',
+    promoteRoleRequired: 'Pick an internal role',
+    promotePasswordRequired: 'Enter the initial workspace password',
+    promotePasswordMin: 'At least 6 characters',
+    promotedExisting: 'External account upgraded to internal',
+    promotedCreated: 'Internal account created',
   }
 };

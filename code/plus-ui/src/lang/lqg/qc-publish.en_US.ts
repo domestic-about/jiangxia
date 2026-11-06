@@ -17,6 +17,8 @@ export default {
     notGenerated: 'No page images generated for this document yet',
     preview: 'Preview',
     pageNo: 'Page {n}',
+    pageFailed: 'Page image failed to load',
+    pageRetry: 'Retry',
     downloadTitle: 'Download (same artifact as the preview)',
     downloadWord: 'Download Word',
     downloadPdf: 'Download PDF',

@@ -138,13 +138,14 @@ public class OssClient {
      * @throws OssException 如果上传失败，抛出自定义异常
      */
     public UploadResult upload(Path filePath, String key, String md5Digest, String contentType) {
+        final String uploadKey = normalizeKey(key);
         try {
             // 构建上传请求对象
             FileUpload fileUpload = transferManager.uploadFile(
                 x -> {
                     x.source(filePath).putObjectRequest(
                         y -> y.bucket(properties.getBucketName())
-                            .key(key)
+                            .key(uploadKey)
                             .contentMD5(StringUtils.isNotEmpty(md5Digest) ? md5Digest : null)
                             .contentType(contentType)
                             // 用于设置对象的访问控制列表（ACL）。不同云厂商对ACL的支持和实现方式有所不同，
@@ -162,7 +163,7 @@ public class OssClient {
             String eTag = uploadResult.response().eTag();
 
             // 提取上传结果中的 ETag，并构建一个自定义的 UploadResult 对象
-            return UploadResult.builder().url(getUrl() + StringUtils.SLASH + key).filename(key).eTag(eTag).build();
+            return UploadResult.builder().url(getUrl() + StringUtils.SLASH + uploadKey).filename(uploadKey).eTag(eTag).build();
         } catch (Exception e) {
             // 捕获异常并抛出自定义异常
             throw new OssException("上传文件失败，请检查配置信息:[" + e.getMessage() + "]");
@@ -183,6 +184,7 @@ public class OssClient {
      * @throws OssException 如果上传失败，抛出自定义异常
      */
     public UploadResult upload(InputStream inputStream, String key, Long length, String contentType) {
+        final String uploadKey = normalizeKey(key);
         // 如果输入流不是 ByteArrayInputStream，则将其读取为字节数组再创建 ByteArrayInputStream
         if (!(inputStream instanceof ByteArrayInputStream)) {
             inputStream = new ByteArrayInputStream(IoUtil.readBytes(inputStream));
@@ -199,7 +201,7 @@ public class OssClient {
                 x -> {
                     x.requestBody(body).putObjectRequest(
                         y -> y.bucket(properties.getBucketName())
-                            .key(key)
+                            .key(uploadKey)
                             .contentType(contentType)
                             // 用于设置对象的访问控制列表（ACL）。不同云厂商对ACL的支持和实现方式有所不同，
                             // 因此根据具体的云服务提供商，你可能需要进行不同的配置（自行开启，阿里云有acl权限配置，腾讯云没有acl权限配置）
@@ -220,7 +222,7 @@ public class OssClient {
             String eTag = uploadResult.response().eTag();
 
             // 提取上传结果中的 ETag，并构建一个自定义的 UploadResult 对象
-            return UploadResult.builder().url(getUrl() + StringUtils.SLASH + key).filename(key).eTag(eTag).build();
+            return UploadResult.builder().url(getUrl() + StringUtils.SLASH + uploadKey).filename(uploadKey).eTag(eTag).build();
         } catch (Exception e) {
             throw new OssException("上传文件失败，请检查配置信息:[" + e.getMessage() + "]");
         }
@@ -241,7 +243,7 @@ public class OssClient {
             x -> {
                 x.destination(tempFilePath).getObjectRequest(
                     y -> y.bucket(properties.getBucketName())
-                        .key(removeBaseUrl(path))
+                        .key(normalizeKey(removeBaseUrl(path)))
                         .build()
                 );
                 if (log.isDebugEnabled()) {
@@ -284,7 +286,7 @@ public class OssClient {
                 // 使用发布订阅转换器
                 .responseTransformer(AsyncResponseTransformer.toPublisher())
                 // 文件对象
-                .getObjectRequest(y -> y.bucket(properties.getBucketName()).key(key).build());
+                .getObjectRequest(y -> y.bucket(properties.getBucketName()).key(normalizeKey(key)).build());
             if (log.isDebugEnabled()) {
                 typedBuilder.addTransferListener(LoggingTransferListener.create());
             }
@@ -327,7 +329,7 @@ public class OssClient {
         try {
             client.deleteObject(
                 x -> x.bucket(properties.getBucketName())
-                    .key(removeBaseUrl(path))
+                    .key(normalizeKey(removeBaseUrl(path)))
                     .build());
         } catch (Exception e) {
             throw new OssException("删除文件失败，请检查配置信息:[" + e.getMessage() + "]");
@@ -346,7 +348,7 @@ public class OssClient {
                 x -> x.signatureDuration(expiredTime)
                     .getObjectRequest(
                         y -> y.bucket(properties.getBucketName())
-                            .key(objectKey)
+                            .key(normalizeKey(objectKey))
                             .build())
                     .build())
             .url();
@@ -366,7 +368,7 @@ public class OssClient {
                 x -> x.signatureDuration(expiredTime)
                     .putObjectRequest(
                         y -> y.bucket(properties.getBucketName())
-                            .key(objectKey)
+                            .key(normalizeKey(objectKey))
                             .metadata(metadata)
                             .build())
                     .build())
@@ -514,8 +516,13 @@ public class OssClient {
         // 生成日期路径
         String datePath = DateUtils.datePath();
         // 拼接路径
-        String path = StringUtils.isNotEmpty(prefix) ?
-            prefix + StringUtils.SLASH + datePath + StringUtils.SLASH + uuid : datePath + StringUtils.SLASH + uuid;
+        // ★ CR-20261106-25：prefix 可能来自 sys_oss_config.prefix（生产配的是 `lqg/`），
+        //   原来直接 `prefix + "/" + datePath` 会拼出 `lqg//2026/...`。阿里云 OSS 对
+        //   `//` 路径返回 ERR_CONNECTION_CLOSED，前端表现就是「上传成功但图片打不开、
+        //   预览加载失败」。这里先去掉 prefix 末尾的斜杠，再统一拼一次。
+        String cleanPrefix = StringUtils.isNotEmpty(prefix) ? prefix.replaceAll("/+$", "") : "";
+        String path = StringUtils.isNotEmpty(cleanPrefix) ?
+            cleanPrefix + StringUtils.SLASH + datePath + StringUtils.SLASH + uuid : datePath + StringUtils.SLASH + uuid;
         return path + suffix;
     }
 
@@ -526,7 +533,18 @@ public class OssClient {
      * @return 去除基础URL后的相对路径
      */
     public String removeBaseUrl(String path) {
-        return path.replace(getUrl() + StringUtils.SLASH, "");
+        return normalizeKey(path.replace(getUrl() + StringUtils.SLASH, ""));
+    }
+
+    /**
+     * 对象键归一化：把连续斜杠压成一个。
+     *
+     * <p>★ CR-20261106-25：历史数据里有 `lqg//2026/...` 的键（prefix 尾斜杠 + 拼接再补斜杠）。
+     * 阿里云 OSS 对这种路径会直接断连接；上传时 OSS 前端通常已把路径归一化，实际对象在
+     * `lqg/2026/...`。读写、签名、删除前统一归一化，既防新键再写坏，也把历史坏键救回来。
+     */
+    static String normalizeKey(String key) {
+        return StringUtils.isEmpty(key) ? key : key.replaceAll("/{2,}", "/");
     }
 
     /**
