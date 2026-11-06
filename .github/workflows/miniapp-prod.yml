@@ -5,6 +5,9 @@
 #
 #   · **构建必须在 macOS 上**（栈包 gotchas §6.5：不同 OS 产物不同，Linux 构建的包真机上组件渲染为空）
 #     → 本工作流跑在 GitHub 的 macOS runner 上。
+#   · 2026-11-06：`macos-14` 已随 GitHub 的 macOS 14 镜像退役（2026-11-02）失效，报
+#     「configuration 'macos-14-arm64-us-default' is not supported」；改用仍在支持期内的
+#     **Intel** 标准镜像 `macos-15-intel`（不选 arm64 的 `macos-15`，避免私有仓库无 arm64 标准 runner）。
 #   · 生产小程序**没开**「小程序代码上传 IP 白名单」，runner 直接发给微信，不经任何服务器转发。
 #     要是以后开了白名单，这里会报 invalid ip —— 那就得改回「经固定 IP 机器出口」的做法。
 #   · 上传只是把代码送进「微信公众平台 → 版本管理」的开发版；**提交审核、发布仍由人在后台点**。
@@ -38,7 +41,7 @@ permissions:
 jobs:
   upload:
     name: 构建并上传生产小程序
-    runs-on: macos-14
+    runs-on: macos-15-intel
     timeout-minutes: 30
 
     steps:

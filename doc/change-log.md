@@ -24,6 +24,19 @@
 
 ## CR 列表
 
+## CR-20261106-26: GitHub Actions 小程序生产上传改用仍在支持期的 macOS 15 Intel runner
+
+- **提出人**：Kevin（2026-11-06 部署失败截图：`miniapp-prod #4`，`The configuration 'macos-14-arm64-us-default' is not supported`）。
+- **范围归属**：CI / 部署修复，不涉及业务口径。
+- **影响 ticket**：无 ticket 变更；影响 `SYS-STAGING-001` / `SYS-RELEASE-001` 的自动上传链路。
+- **背景**：GitHub 的 macOS 14 runner 镜像已在 2026-11-02 退役（`macos-14` / `macos-14-large` / `macos-14-xlarge`）；`runs-on: macos-14` 在私有仓库被解析成不受支持的 arm64 配置，job 直接 cancelled，后面的构建、自检、上传全部没跑。
+- **变更前**：`.github/workflows/miniapp-prod.yml` 的 `runs-on: macos-14`。
+- **变更后**：`runs-on: macos-15-intel`（macOS 15 的 Intel 标准镜像，仍在 GitHub 支持期内；不选 arm64 的 `macos-15`，避免私有仓库没有可用的 arm64 标准 runner）。
+- **影响下游**：仅这一个 workflow；`deploy-prod.yml` 不用 macOS，未改。下次 push main 或手动 `workflow_dispatch` 时生效。
+- **判据**：YAML 解析通过；`runs-on` 与 [actions/runner-images 的 macOS 15 x64 标签](https://github.com/actions/runner-images/blob/main/README.md) 对齐。实际 CI 结果待下一次 Actions 运行确认。
+- **决策**：✅ 接受；用 `macos-15-intel` 而不是 `macos-15`，优先保证私有仓库能排到机器。
+- **签字**：Kevin @ 2026-11-06（对话中「部署失败：如图」并要求修复）。
+
 ## CR-20261106-25: 验收测试表 3 行问题——超管口令、登录页留白、外部登录与登录态、上传图片与预览打不开
 
 - **提出人**：甲方验收测试表 `doc/test/kevin-test.xlsx`（Kevin 于 2026-11-06 转达并要求「按验收流程检查并修复」）。
