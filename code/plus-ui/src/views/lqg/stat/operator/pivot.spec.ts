@@ -14,7 +14,7 @@ const row = (key: string, name: string, values: Record<string, number>, extra: P
 // 测试站 2026-10-13 的那一屏（今年）：李工 5 / 6 / 包埋 1 操作 3 / 9 批 41 支；石蜡包埋另有「未填」包埋 3 操作 1
 const SHEETS: OperatorStatSheet[] = [
   { sheet: 'tissue', title: '样本记录信息表', dateLabel: '收样日期', metrics: [{ key: 'count', label: '操作人', unit: '条' }], totals: { count: 6 }, rows: [row('u:101', '李工', { count: 5 }, { me: true }), row('n:袁琴琴', '袁琴琴', { count: 1 })] },
-  { sheet: 'organoid', title: '类器官送样记录', dateLabel: '收样日期', metrics: [{ key: 'count', label: '操作人', unit: '条' }], totals: { count: 6 }, rows: [row('u:101', '李工', { count: 6 }, { me: true })] },
+  { sheet: 'organoid', title: '类器官收样记录', dateLabel: '收样日期', metrics: [{ key: 'count', label: '操作人', unit: '条' }], totals: { count: 6 }, rows: [row('u:101', '李工', { count: 6 }, { me: true })] },
   {
     sheet: 'embed',
     title: '石蜡包埋送样记录',
@@ -43,7 +43,7 @@ describe('pivot（不筛）', () => {
   const table = pivot(SHEETS);
 
   it('列 = 四张表按序、每张表里的每个数一列（共 6 列），表头第一层是表名', () => {
-    expect(table.groups.map((g) => g.title)).toEqual(['样本记录信息表', '类器官送样记录', '石蜡包埋送样记录', '-80 冻存记录']);
+    expect(table.groups.map((g) => g.title)).toEqual(['样本记录信息表', '类器官收样记录', '石蜡包埋送样记录', '-80 冻存记录']);
     expect(table.groups.flatMap((g) => g.columns.map((c) => c.id))).toEqual([
       'tissue.count',
       'organoid.count',

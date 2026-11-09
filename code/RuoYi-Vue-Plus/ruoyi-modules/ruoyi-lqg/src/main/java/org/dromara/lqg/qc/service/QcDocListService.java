@@ -95,6 +95,13 @@ public class QcDocListService {
                 Sample::getSpecies, trim(q.getSpecies()))
             .ge(StringUtils.isNotBlank(q.getReceiveBegin()), Sample::getReceiveDate, parseDate(q.getReceiveBegin()))
             .le(StringUtils.isNotBlank(q.getReceiveEnd()), Sample::getReceiveDate, parseDate(q.getReceiveEnd()));
+        String typeName = trim(q.getTypeName());
+        if (typeName != null) {
+            // 与显示值一致：按本行类别只匹配它实际使用的类型字段。
+            w.and(types -> types
+                .and(t -> t.eq(Sample::getSampleKind, "tissue").like(Sample::getTissueType, typeName))
+                .or(t -> t.eq(Sample::getSampleKind, "organoid").like(Sample::getOrganoidType, typeName)));
+        }
         String keyword = trim(q.getKeyword());
         if (keyword != null) {
             w.and(k -> k.like(Sample::getInternalNo, keyword)

@@ -70,7 +70,7 @@ public class SampleExportService {
     /**
      * organoid 工作表 / 下载文件名。
      */
-    public static final String ORGANOID_SHEET_NAME = "类器官送样记录";
+    public static final String ORGANOID_SHEET_NAME = "类器官收样记录";
 
     /**
      * 样本类别（{@code t_lqg_sample.sample_kind}，字典 {@code lqg_sample_kind}）。
@@ -145,7 +145,7 @@ public class SampleExportService {
      */
     public void exportOrganoid(SampleQueryBo query, HttpServletResponse response) {
         List<SampleOrganoidExportVo> rows = organoidRowsOf(query);
-        log.info("导出类器官送样记录：{} 行（sample_kind=organoid，筛选 sourceUnitId={} verifyStatus={}）",
+        log.info("导出类器官收样记录：{} 行（sample_kind=organoid，筛选 sourceUnitId={} verifyStatus={}）",
             rows.size(), query == null ? null : query.getSourceUnitId(),
             query == null ? null : query.getVerifyStatus());
         LqgExcel.export(rows, ORGANOID_SHEET_NAME, SampleOrganoidExportVo.class, response);

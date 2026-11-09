@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { APP_NAME } from './src/config/app'
 import { defineManifestConfig } from '@uni-helper/vite-plugin-uni-manifest'
 import { loadEnv } from 'vite'
 
@@ -14,7 +15,6 @@ function resolveMode(): string {
 
 const env = loadEnv(resolveMode(), `${process.cwd()}/env`)
 const {
-  VITE_APP_TITLE,
   VITE_UNI_APPID,
   VITE_WX_APPID,
   VITE_APP_PUBLIC_BASE,
@@ -25,9 +25,9 @@ const {
  * 本项目只发微信小程序（SYS-MP-001）；app / 其它平台不配置。
  */
 export default defineManifestConfig({
-  name: VITE_APP_TITLE,
+  name: APP_NAME,
   appid: VITE_UNI_APPID,
-  description: '类器官送检与样本管理系统 · 小程序',
+  description: `${APP_NAME} · 小程序`,
   versionName: '1.0.1',
   versionCode: '101',
   transformPx: false,

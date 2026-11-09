@@ -10,7 +10,7 @@
     ★ 怎么画全在 relation.ts 的 relationOf（纯函数，spec 覆盖），这里只管摆。
   -->
   <div class="lqg-rel">
-    <div class="lqg-rel__line">
+    <div v-if="section === 'embed'" class="lqg-rel__line">
       <el-link
         v-if="cell.blocks.to"
         type="primary"
@@ -48,7 +48,7 @@
         {{ t('lqg.sample.relation.pending', { n: cell.pending.count }) }}
       </span>
     </div>
-    <div class="lqg-rel__line">
+    <div v-if="section === 'cryo'" class="lqg-rel__line">
       <el-link
         v-if="cell.cryo.to"
         type="primary"
@@ -87,6 +87,7 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps<{
   /** 样本行（用它的 id / verifyStatus / hint.blockCount / relation） */
   row: SampleVO;
+  section: 'embed' | 'cryo';
 }>();
 
 const { t } = useI18n();

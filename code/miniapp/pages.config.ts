@@ -1,5 +1,5 @@
 import { defineUniPages } from '@uni-helper/vite-plugin-uni-pages'
-import { DOC_TAB_NAME } from './src/config/app'
+import { APP_NAME, DOC_TAB_NAME } from './src/config/app'
 
 /**
  * 小程序页面配置（由 @uni-helper/vite-plugin-uni-pages 生成 pages.json，**别手改产物**）。
@@ -14,7 +14,7 @@ import { DOC_TAB_NAME } from './src/config/app'
 export default defineUniPages({
   globalStyle: {
     navigationStyle: 'default',
-    navigationBarTitleText: '类器官送检',
+    navigationBarTitleText: APP_NAME,
     navigationBarBackgroundColor: '#FFFFFF',
     navigationBarTextStyle: 'black',
     backgroundColor: '#F3F6F6',

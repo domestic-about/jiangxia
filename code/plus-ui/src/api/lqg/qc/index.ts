@@ -266,9 +266,11 @@ export type QcDocStatus = 'draft' | 'published' | null;
 
 /** 列表筛选 */
 export interface QcDocListQuery extends PageQuery {
+  /** 人员在样本表手填的组织 / 类器官类型，模糊匹配 */
+  typeName?: string;
   /** 内部编号 / 来源单位 / 送检单号，模糊匹配 */
   keyword?: string;
-  /** tissue（样本记录信息表）/ organoid（类器官送样记录） */
+  /** tissue（样本记录信息表）/ organoid（类器官收样记录） */
   sampleKind?: string;
   /** 种属（等值；__none__ = 还没填，CR-20261009-18） */
   species?: string | null;

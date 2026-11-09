@@ -9,6 +9,8 @@ export default {
     subtitle:
       'Organoid sample quality control records: one row per valid sample; the three status columns are its sample QC sheet, organoid QC sheet and organoid quality score sheet. Click "Open" to edit them.',
     filter: {
+      typeName: 'Tissue category',
+      typeNamePlaceholder: 'Liver / bile duct / kidney',
       keyword: 'Keyword',
       keywordPlaceholder: 'No. / source unit',
       sampleKind: 'Sample type',
@@ -19,7 +21,7 @@ export default {
     },
     kind: {
       tissue: 'Sample records',
-      organoid: 'Organoid submissions'
+      organoid: 'Organoid receipt records'
     },
     progress: {
       none: 'Not started',
@@ -35,7 +37,7 @@ export default {
       internalNo: 'Internal no.',
       sampleKind: 'Sample type',
       sourceUnit: 'Source unit',
-      typeName: 'Tissue / organoid type',
+      typeName: 'Tissue category',
       receiveDate: 'Received on',
       sampleQc: 'Sample QC',
       organoidQc: 'Organoid QC',

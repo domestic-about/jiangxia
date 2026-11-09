@@ -74,7 +74,7 @@ public class OperatorStatService {
             List<Sheet> sheets = List.of(
                 OperatorStatAssembler.sheet(SHEET_TISSUE, "样本记录信息表", "收样日期",
                     List.of(new Metric("count", "操作人", "条")), tissue, names, me),
-                OperatorStatAssembler.sheet(SHEET_ORGANOID, "类器官送样记录", "收样日期",
+                OperatorStatAssembler.sheet(SHEET_ORGANOID, "类器官收样记录", "收样日期",
                     List.of(new Metric("count", "操作人", "条")), organoid, names, me),
                 OperatorStatAssembler.sheet(SHEET_EMBED, "石蜡包埋送样记录", "石蜡包埋时间",
                     List.of(new Metric("embedBy", "包埋人", "块"), new Metric("operator", "操作人", "块")), embed, names, me),

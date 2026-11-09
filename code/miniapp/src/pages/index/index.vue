@@ -29,9 +29,10 @@ import { UNBOUND_HINT, normalizeBindStatus, unitGroupWithStatus } from '@/utils/
 // - 宫格图标是线性图标（Kevin 2026-09-24 本机验收：单字方块换成与「我的」同一套图标）
 // - 点哪格都是进该表的填写页新增一条（内部外部一样）
 // - 身份只认 /mp/me 的 identity：缺失 / 空 / 不认识 → 一个入口都不渲染，**绝不默认当内部**
+// definePage 元数据由构建插件静态解析，此处需写字面量；平台名与 config/app.ts 保持一致。
 definePage({
   style: {
-    navigationBarTitleText: '类器官送检',
+    navigationBarTitleText: '类器官送样信息平台',
   },
 })
 

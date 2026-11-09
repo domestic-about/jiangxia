@@ -174,7 +174,7 @@ onReachBottom(() => {
             <text class="qcl__no lqg-mono">{{ row.internalNo || '—' }}</text>
             <text class="qcl__progress" :class="`qcl__progress--${row.progress}`">{{ progressText(row.progress, row.publishedCount) }}</text>
           </view>
-          <text class="qcl__sub">{{ row.sourceUnitName || '—' }} · {{ row.species || '种属未填' }} · {{ row.sampleKind === 'organoid' ? '类器官送样记录' : '样本记录信息表' }} · 收样 {{ row.receiveDate || '—' }}</text>
+          <text class="qcl__sub">{{ row.sourceUnitName || '—' }} · {{ row.species || '种属未填' }} · {{ row.sampleKind === 'organoid' ? '类器官收样记录' : '样本记录信息表' }} · 收样 {{ row.receiveDate || '—' }}</text>
           <view class="qcl__docs">
             <view v-for="tab in QC_TABS" :key="tab.type" class="qcl__doc">
               <text class="qcl__doc-name">{{ tab.short }}</text>

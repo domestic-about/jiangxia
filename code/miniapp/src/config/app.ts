@@ -6,3 +6,6 @@
 //   页面内的板块标题在运行时引它；只有一处字面量，改一处两边都跟着变。
 export const DOC_TAB_NAME = '质控文档'
 export const DOC_SECTION_NAME = '类器官样本质量控制记录表'
+
+/** 平台名称（飞书小程序行26，2026-11-09） */
+export const APP_NAME = '类器官送样信息平台'

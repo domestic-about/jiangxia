@@ -231,7 +231,7 @@ const rules = computed<ElFormRules>(() => ({
   cryoName: [{ required: true, message: t('lqg.cryo.drawer.cryoNameRequired'), trigger: 'blur' }],
   passage: [
     { required: true, message: t('lqg.cryo.drawer.passageRequired'), trigger: 'blur' },
-    // 小写 p 先转大写再判（与类器官送样同一套 normalizePassage）；格式不对单独一句，不再说「必填」（工作台 UX 测试 WEB-18）
+    // 小写 p 先转大写再判（与类器官收样同一套 normalizePassage）；格式不对单独一句，不再说「必填」（工作台 UX 测试 WEB-18）
     {
       validator: (_rule: unknown, value: string | null, callback: (error?: Error) => void) => {
         const v = normalizePassage(value);

@@ -53,7 +53,7 @@
                 </span>
               </el-form-item>
             </el-col>
-            <!-- 种属（CR-20261009-18）：是样本的属性，随所挂样本带出、这里不改（改在样本记录信息表 / 类器官送样记录） -->
+            <!-- 种属（CR-20261009-18）：是样本的属性，随所挂样本带出、这里不改（改在样本记录信息表 / 类器官收样记录） -->
             <el-col :span="12">
               <el-form-item :label="t('lqg.species.label')">
                 <span>{{ speciesText(form.species) }}</span>

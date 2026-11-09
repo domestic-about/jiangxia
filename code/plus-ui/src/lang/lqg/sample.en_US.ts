@@ -8,11 +8,11 @@ export default {
   page: {
     tissue: {
       title: 'Sample records',
-      subtitle: 'One row per tissue sample; its paraffin blocks and cryo batches are in the "Paraffin / Cryo" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
+      subtitle: 'One row per tissue sample; its paraffin blocks and cryo batches are in the separate "Paraffin embedding" and "Cryopreservation" columns — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
     },
     organoid: {
-      title: 'Organoid submissions',
-      subtitle: 'One row per organoid submission; its paraffin blocks and cryo batches are in the "Paraffin / Cryo" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
+      title: 'Organoid receipt records',
+      subtitle: 'One row per organoid receipt; its paraffin blocks and cryo batches are in the separate "Paraffin embedding" and "Cryopreservation" columns — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
     }
   },
   search: 'Search',
@@ -48,18 +48,20 @@ export default {
 
   toolbar: {
     addTissue: 'New sample record',
-    addOrganoid: 'New organoid submission',
+    addOrganoid: 'New organoid receipt',
     exportTissue: 'Export sample records',
-    exportOrganoid: 'Export organoid submissions',
+    exportOrganoid: 'Export organoid receipt records',
     exportTissueFile: 'Sample records',
-    exportOrganoidFile: 'Organoid submissions',
+    exportOrganoidFile: 'Organoid receipt records',
     exportTissueDone: 'Sample records exported (current filter)',
-    exportOrganoidDone: 'Organoid submissions exported (current filter)',
+    exportOrganoidDone: 'Organoid receipt records exported (current filter)',
     exportEmpty: 'No sample matches the current filter; no file was generated',
     refresh: 'Refresh'
   },
 
   col: {
+    embed: 'Paraffin embedding',
+    cryo: 'Cryopreservation',
     internalNo: 'Internal no.',
     submitNo: 'Submit no.',
     sourceUnit: 'Source unit',
@@ -156,7 +158,7 @@ export default {
 
   drawer: {
     addTissue: 'New sample record',
-    addOrganoid: 'New organoid submission',
+    addOrganoid: 'New organoid receipt',
     edit: 'Edit sample',
     verify: 'Verify sample',
     view: 'Sample detail',

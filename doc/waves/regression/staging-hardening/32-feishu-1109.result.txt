@@ -1,0 +1,34 @@
+PASS 组织类别沿用样本手填值，三条样本保存并回读
+PASS 组织类别筛选「肝」只返回对应样本
+PASS 组织类别筛选「肾」只返回对应样本
+PASS 组织类别筛选「胆管」只返回对应样本
+PASS 组织类别筛选与样本身份筛选同时生效
+PASS 空组织类别筛选回到全部
+PASS 质控列表组织类别是文本输入，显示「肝」而非表名
+PASS 重置清空组织类别
+PASS tissue 表拆出石蜡包埋、冻存独立列
+PASS tissue 处理时间表头未被固定列覆盖
+PASS tissue 石蜡包埋入口携带正确样本
+PASS tissue 冻存入口携带正确样本
+PASS organoid 表拆出石蜡包埋、冻存独立列
+PASS organoid 处理时间表头未被固定列覆盖
+PASS 工作台菜单与页面统一收样名称
+PASS organoid 石蜡包埋入口携带正确样本
+PASS organoid 冻存入口携带正确样本
+PASS 临时样本已清理，列表无活动测试记录
+
+补充验证（2026-11-09）：
+- 飞书CLI revision 337：小程序26–27，网页工作台22–25，共6条；44个图片单元格提图字节映射经独立QA核对。
+- 小程序类型检查通过，369 tests passed；工作台142 tests passed。
+- QcDocListServiceTest 4 tests / MpExportContractTest 11 tests，均0 failures / 0 errors。
+- 后端package、工作台build:dev、小程序production/dev微信编译、H5编译通过。
+- 工作台全量vue-tsc有53条既有错误，改动路径无新增。
+- 小程序原生登录页新平台名PASS；首页新名入口、历史收样页签、表单收样标题经真实DevTools截图核验PASS。
+  原生网络边界：DevTools域名校验拦截localhost；登录后原生渲染使用wx.request注入真实本机/me身份与空列表；不能据此声称原生网络联调通过。
+  注入结束已恢复wx.request并移除模拟器token。
+- 独立QA：6/6 PASS；另独立真实API检查36组类别筛选、菜单/统计与双端实际XLSX新表名。
+- 临时创建样本通过业务API删除；不改既有业务记录、不reseed。
+- 原图、导出及截图仅存/tmp/jiangxia-acceptance-20261109，不提交到仓库。
+- 发布状态：本机验证；未提交/推送/部署/上传小程序；未回填飞书。
+- 常规H5→微信构建顺序验证通过（Vite启动自动清除旧生成元数据，未手动清理）；微信页面无重复且平台/收样标题正确。
+- 清理：本轮启动的18081/18082/19100及19420自动化端口均已释放；保留本机Docker基础设施。

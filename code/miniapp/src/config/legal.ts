@@ -1,3 +1,5 @@
+import { APP_NAME } from './app'
+
 // 《用户协议》《隐私政策》里的主体名称与联系方式（V06）——**只在这一个文件里改**，两页一起变。
 //
 // - 主体名称：缺省取合同甲方（doc/commercial/ 开发合同首页的「甲方（委托方）」）。小程序以甲方主体
@@ -10,7 +12,7 @@
 export const LEGAL_OPERATOR = '湖北江夏实验室类器官研究中心'
 
 /** 小程序的名字（正文里「本小程序」指的就是它） */
-export const LEGAL_SERVICE = '类器官送检'
+export const LEGAL_SERVICE = APP_NAME
 
 /** 联系方式：留空的项在页面上显示 {@link LEGAL_PENDING_TEXT} */
 export const LEGAL_CONTACT: { phone: string, email: string } = {

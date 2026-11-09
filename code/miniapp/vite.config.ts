@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import Uni from '@uni-helper/plugin-uni'
@@ -19,6 +20,10 @@ import ViteRestart from 'vite-plugin-restart'
 // - manifest.json 由 @uni-helper/vite-plugin-uni-manifest 从 manifest.config.ts 生成
 export default defineConfig(({ mode }) => {
   const { UNI_PLATFORM } = process.env
+
+  // pages.json 是纯生成物；uni-pages 会把旧平台标题作为条件块合并回来。
+  // 改名后切换 H5 / 微信编译会因此出现旧名或重复路由，每次启动从源码重建。
+  fs.rmSync(path.resolve(process.cwd(), 'src/pages.json'), { force: true })
 
   const env = loadEnv(mode, path.resolve(process.cwd(), 'env'))
   // 测试身份登录入口（ADR-0008）的构建期开关：只有 development mode 且 VITE_MOCK_LOGIN=1

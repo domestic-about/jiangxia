@@ -8,7 +8,7 @@
         </div>
       </template>
 
-      <!-- 筛选：关键字 / 样本类别 / 填写进度 / 收样日期区间 -->
+      <!-- 筛选：关键字 / 组织类别 / 填写进度 / 收样日期区间 -->
       <el-form :model="queryParams" label-width="86px" class="lqg-qclist__filter" @submit.prevent>
         <el-row :gutter="12">
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
@@ -23,11 +23,15 @@
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
-            <el-form-item :label="t('lqg.qc.list.filter.sampleKind')">
-              <el-select v-model="queryParams.sampleKind" clearable class="lqg-qclist__control" @change="handleQuery">
-                <el-option :label="t('lqg.qc.list.kind.tissue')" value="tissue" />
-                <el-option :label="t('lqg.qc.list.kind.organoid')" value="organoid" />
-              </el-select>
+            <el-form-item :label="t('lqg.qc.list.filter.typeName')">
+              <el-input
+                v-model="queryParams.typeName"
+                :placeholder="t('lqg.qc.list.filter.typeNamePlaceholder')"
+                clearable
+                class="lqg-qclist__control"
+                @keyup.enter="handleQuery"
+                @clear="handleQuery"
+              />
             </el-form-item>
           </el-col>
           <!-- 种属（CR-20261009-18） -->
@@ -76,8 +80,8 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.sampleKind')" prop="sampleKind" width="125">
-          <template #default="scope">{{ t(`lqg.qc.list.kind.${scope.row.sampleKind}`) }}</template>
+        <el-table-column :label="t('lqg.qc.list.col.typeName')" prop="typeName" min-width="125" show-overflow-tooltip>
+          <template #default="scope">{{ scope.row.typeName || '—' }}</template>
         </el-table-column>
         <el-table-column :label="t('lqg.qc.list.col.sourceUnit')" prop="sourceUnitName" min-width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.sourceUnitName || '—' }}</template>
@@ -135,7 +139,7 @@ import { speciesText } from '@/components/lqg/SpeciesSelect/species';
 
 // 「质控文档」板块（CR-20260930-11，飞书「网页工作台」第 17 行，甲方 2026-09-30 确认）：
 // 三份质控表单独成一个板块 —— 一行一个已核验有效的样本，三列是三份表各自的状态，
-// 可按关键字 / 样本类别 / 填写进度 / 收样日期筛选，点「进入」到质控文档编辑页。
+// 可按关键字 / 组织类别 / 填写进度 / 收样日期筛选，点「进入」到质控文档编辑页。
 // ★ 编辑页带 `from=qc-docs`：那边的「返回」据此回到本页，而不是样本表。
 
 const { t } = useI18n();
@@ -156,7 +160,7 @@ const queryParams = reactive<QcDocListQuery>({
   pageNum: 1,
   pageSize: 20,
   keyword: undefined,
-  sampleKind: undefined,
+  typeName: undefined,
   species: null,
   progress: undefined
 });
@@ -191,7 +195,7 @@ const handleQuery = () => {
 
 const resetQuery = () => {
   queryParams.keyword = undefined;
-  queryParams.sampleKind = undefined;
+  queryParams.typeName = undefined;
   queryParams.species = null;
   queryParams.progress = undefined;
   receiveRange.value = null;

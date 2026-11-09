@@ -31,8 +31,11 @@ public class QcDocListQueryBo extends PageQuery {
     @Schema(description = "内部编号 / 来源单位 / 送检单号，模糊匹配")
     private String keyword;
 
-    @Schema(description = "tissue（样本记录信息表）/ organoid（类器官送样记录）；空 = 全部")
+    @Schema(description = "tissue（样本记录信息表）/ organoid（类器官收样记录）；空 = 全部")
     private String sampleKind;
+
+    @Schema(description = "组织类别：人员手填的组织 / 类器官类型，模糊匹配；空 = 全部")
+    private String typeName;
 
     @Schema(description = "种属（等值；传 __none__ 查还没填的；空 = 全部，CR-20261009-18）")
     private String species;

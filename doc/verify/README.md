@@ -1,5 +1,23 @@
 # 验收执行器 + 确定性测试数据
 
+## 线上测试问题取数（2026-11-09）
+
+先执行只读 CLI 流程，不用浏览器页面文本或截图抄表：
+
+```bash
+python3 doc/tools/fetch_test_feedback.py --output /tmp/jiangxia-feedback
+```
+
+脚本使用已有的 `lark-cli` bot 配置，保存带权威 `[row=N]` 行号及 revision 的原始响应、原表 XLSX、`pending.json` 和逐单元格截图索引。
+只取「小程序」「网页工作台」两页，按 **C 列非空、H 列为空** 定位新增问题；江夏 H 列是乙方解决方式、I 列是备注，不能照搬东角山的回填列。
+参考 `../dongjiaoshan/.claude/skills/kdocs-test-autopilot/SKILL.md` 的取图、复述与独立 QA 方法，但江夏现行口径以本项目 CR 与 API 契约为准。
+
+必须先看每条对应原图，再修改与验收。飞书当前导出采用 Excel `richData` 单元格图，旧 `drawingN.xml` 提图器会返回 0 张；本脚本同时支持两种格式，不能把“未抽出图片”当成原条目无图。
+截图和导出放 `/tmp` 等临时目录，不提交到仓库。取数不改 CLI 身份策略或绑定；只对子进程去除 `HERMES_HOME`，与东角山已有 adapter 一致。
+
+修复后运行本机业务联调；小程序可视验收以微信开发者工具 automator 为准，H5 只辅助定位。批次完成后进行 fresh-context 独立 QA。
+确认上线后才按授权回填解决方式；本地验证通过不等于线上发布。完整旧流程见 `doc/handover/AI接管交接-20261003.md` §4，发布目标需按当前分支与工作流核对，不能直接套用该历史文档的 staging 推送命令。
+
 全部 ticket 的 accept 只许用这里的几个执行器。**别在 accept 里自造鉴权、连库、造数据的样板**——那是假绿的温床。
 accept 的 `run` 一律按 **bash** 语义写（别依赖变量的分词展开，zsh 不拆），cwd = 项目根。
 

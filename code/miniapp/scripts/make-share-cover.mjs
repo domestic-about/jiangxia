@@ -34,7 +34,7 @@ const constant = (name) => {
 const primary = token('lqg-primary')
 const deep = token('lqg-primary-deep')
 const operator = constant('LEGAL_OPERATOR')
-const service = constant('LEGAL_SERVICE')
+const service = readFileSync(path.join(root, 'src/config/app.ts'), 'utf8').match(/export const APP_NAME = '([^']+)'/)[1]
 
 /** 细胞团：中心一个环 + 外圈 7 个实心圆（与工作台 favicon 同一个图形） */
 function mark(size) {
@@ -59,7 +59,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   .wrap { position: absolute; inset: 0; padding: 44px 44px 0; display: flex; flex-direction: column; }
   .mark { width: 92px; height: 92px; }
   .lab { margin-top: 34px; font-size: 21px; line-height: 1.3; opacity: .86; letter-spacing: .5px; }
-  .title { margin-top: 8px; font-size: 62px; line-height: 1.15; font-weight: 700; letter-spacing: 2px; }
+  .title { margin-top: 8px; font-size: 38px; line-height: 1.15; font-weight: 700; letter-spacing: 2px; }
   .line { margin-top: 22px; width: 44px; height: 4px; border-radius: 2px; background: #fff; opacity: .9; }
   .slogan { margin-top: 18px; font-size: 19px; line-height: 1.4; opacity: .82; }
 </style></head><body>

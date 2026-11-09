@@ -11,6 +11,8 @@ export default {
     subtitle:
       '类器官样本质量控制记录表：一行是一个已核验有效的样本，右边三列是它的样本质控表、类器官质控表、类器官质量评分表各自的状态。点「进入」编辑这个样本的三份文档。',
     filter: {
+      typeName: '组织类别',
+      typeNamePlaceholder: '肝 / 胆管 / 肾等',
       keyword: '关键字',
       keywordPlaceholder: '内部编号 / 来源单位',
       sampleKind: '样本类别',
@@ -21,7 +23,7 @@ export default {
     },
     kind: {
       tissue: '样本记录信息表',
-      organoid: '类器官送样记录'
+      organoid: '类器官收样记录'
     },
     progress: {
       none: '未开始',
@@ -37,7 +39,7 @@ export default {
       internalNo: '内部编号',
       sampleKind: '样本类别',
       sourceUnit: '来源单位',
-      typeName: '组织 / 类器官类型',
+      typeName: '组织类别',
       receiveDate: '收样日期',
       sampleQc: '样本质控表',
       organoidQc: '类器官质控表',

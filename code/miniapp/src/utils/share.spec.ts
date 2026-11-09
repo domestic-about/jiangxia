@@ -25,8 +25,8 @@ describe('sharePayload', () => {
   })
 
   it('标题是固定文案：运营方 + 小程序名', () => {
-    expect(sharePayload().title).toBe(`${LEGAL_OPERATOR} · 类器官送检`)
-    expect(SHARE_TITLE).toBe('湖北江夏实验室类器官研究中心 · 类器官送检')
+    expect(sharePayload().title).toBe(`${LEGAL_OPERATOR} · 类器官送样信息平台`)
+    expect(SHARE_TITLE).toBe('湖北江夏实验室类器官研究中心 · 类器官送样信息平台')
   })
 
   it('每次给的都是同一份内容（与当前页、登录身份无关）', () => {

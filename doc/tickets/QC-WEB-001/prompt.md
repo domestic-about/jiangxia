@@ -25,6 +25,7 @@ touches:
   - code/plus-ui/src/views/lqg/sample/index.vue
 adr_refs: []
 blueprint_refs:
+  - UI:admin.qc.list
   - UI:admin.qc.editor
   - FLOW:F-QC-01.step1
   - FLOW:F-QC-01.step2

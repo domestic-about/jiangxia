@@ -4,6 +4,7 @@ import LineIcon from '@/components/ui/LineIcon.vue'
 import type { MockSeed } from '@/api/mock-seeds'
 import { HOME_PAGE } from '@/router/config'
 import { MOCK_PANEL, MOCK_SEEDS, mockCodes } from '@/api/mock-seeds'
+import { APP_NAME } from '@/config/app'
 import { LEGAL_OPERATOR } from '@/config/legal'
 import { useUserStore } from '@/store/user'
 
@@ -145,7 +146,7 @@ function openPrivacy() {
     <view class="login__hero">
       <view class="login__mark">类</view>
       <view class="login__head">
-        <text class="login__title">类器官送检</text>
+        <text class="login__title">{{ APP_NAME }}</text>
         <text class="login__lab">{{ labName }}</text>
       </view>
       <text class="login__slogan">在线填写送检表单，查看样本处理进度与质控文档</text>
