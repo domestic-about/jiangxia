@@ -122,7 +122,8 @@ check('全局混入里没有 onShareTimeline（不开朋友圈）', !mixins.some
 
 // 卡片内容：直接调混入里的那个函数（运行时调的就是它），不依赖下面的页面实例模拟
 const EXPECT = {
-  title: '湖北江夏实验室类器官研究中心 · 类器官送检',
+  // CR-20261109-27：独立期望值使用本轮确认的平台新名称，不从产物读取以免自证。
+  title: '湖北江夏实验室类器官研究中心 · 类器官送样信息平台',
   path: '/pages/index/index',
   imageUrl: '/static/share/cover.png',
 }
