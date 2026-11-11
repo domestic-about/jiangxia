@@ -24,3 +24,13 @@ PASS 第29条转液氮两行表头保留
 - authority_lint diff/impact/check已运行，414条权威×44ticket锚点检查PASS；历史快照有30处未消化差异，不force覆盖。
 - 33是上一批冻结证据，其30–32排版期望由本CR和34脚本覆盖，未篡改历史验证记录。
 - 本次已授权生产部署，发布与飞书纠正结果另补。
+
+发布与同步：
+- 业务提交733b62dec00e85c0d2168293c7276cc0e818ad54，deploy-prod #42984273313 SUCCESS。
+- https://github.com/domestic-about/jiangxia/actions/runs/42984273313
+- 生产镜像lqg-backend:733b62d，5容器healthy，公网首页及6个相关JS共7文件SHA256一致。实际样本/质控JS固定操作与135px原列宽断言PASS；保留日期与转液氮实现。
+- 首页SHA256：43d993b22c36440e784dcc34a3413a030f9dad244b5c4c5e8ad92b5ba6a0c944
+- 匿名ping业务码401；未绕过验证码宣称完成线上登录态测试。本机页面与真实请求由独立QA验证。
+- 飞书H30:H32写前匹配旧值和描述，更新为按确认恢复原效果；3格逐字回读PASS，revision369→370，其余格不变。
+- 小程序无改动，无重复上传。自起18081/18082/19100已关闭，自动生成类型文件已恢复。
+- CI日志、production-proof.json和飞书前后响应保存在/tmp/jiangxia-restore-3032-release；客户原表不提交仓库。
