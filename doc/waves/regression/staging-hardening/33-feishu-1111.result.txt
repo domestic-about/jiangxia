@@ -61,4 +61,14 @@ PASS 临时样本与下游记录已清理
 - authority_lint diff/impact/check运行；414权威×44ticket锚点检查PASS。snapshot因30处历史+本批未消化差异拒绝，未force覆盖旧快照。
 - 原图、XLSX、原生截图、独立报告和日志仅存/tmp/jiangxia-acceptance-20261111，不提交客户截图。
 - 本次启动的18081/18082/19100/19420均已释放；保留Docker基础设施。恢复构建生成的pages/manifest和自动类型文件。
-- 本批为本地修改；尚未提交、部署或回填飞书。
+- 初验时为本地修改；随后按Kevin授权执行生产发布，结果见下节。
+
+发布与回填（2026-11-11，Kevin明确授权）：
+- 业务提交 acb812e30d96520fcacacf01d91a8da7a952d58a 已推送main。
+- deploy-prod #42973653248 SUCCESS：https://github.com/domestic-about/jiangxia/actions/runs/42973653248
+- miniapp-prod #42973653238 SUCCESS：https://github.com/domestic-about/jiangxia/actions/runs/42973653238
+- 生产5个容器healthy，后端镜像lqg-backend:acb812e；公网首页与6个相关JS文件逐一SHA256和服务器一致，实际访问均200。匿名ping业务码401，未绕过验证码执行生产登录。
+- 首页SHA256：11c7ed91d3e4cc8038f5d1232113c9a0f1b1b4bba51ee9df37b13636b72775e3
+- 微信：macOS构建与发布/死键/分享守卫通过，机器人1上传版本1.0.1，描述“正式版 1.0.1（提交 acb812e30d96）”；仅开发版本，待人工提交审核并正式发布。
+- 飞书：H27:H32六格，写前匹配原文与空值，allow-overwrite=false；写后逐字回读PASS，revision368→369，其他格不变。回填文案明确当前生产/开发版阶段。
+- 临时发布证据：/tmp/jiangxia-release-20261111（CI日志、production-proof.json、writeback-before/result/after.json）；客户原表和截图不进仓库。
