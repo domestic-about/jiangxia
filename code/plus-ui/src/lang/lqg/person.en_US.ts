@@ -1,5 +1,6 @@
 // Person picker (CR-20261012-22): operator / embedder / freezer are picked from the internal staff directory. Key path lqg.person.*
 export default {
+  statPeriod: 'Statistics period: {begin} to {end}',
   placeholder: 'Select',
   filterPlaceholder: 'All',
   none: 'Not set',

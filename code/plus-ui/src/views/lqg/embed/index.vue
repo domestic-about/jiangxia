@@ -76,32 +76,16 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
-          <el-col :xs="24" :sm="24" :md="16" :lg="12">
+          <!-- 单日筛选：与其它筛选同宽，列表和导出都按所选当天查询。 -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.embed.filter.sectionTimeRange')">
-              <el-date-picker
-                v-model="sectionTimeRange"
-                type="daterange"
-                value-format="YYYY-MM-DD"
-                :start-placeholder="t('lqg.embed.filter.sectionTimeBegin')"
-                :end-placeholder="t('lqg.embed.filter.sectionTimeEnd')"
-                class="lqg-embed__control lqg-range"
-                clearable
-              />
+              <SingleDateFilter v-model="sectionTimeRange" :placeholder="t('lqg.embed.filter.sectionTimeRange')" />
             </el-form-item>
           </el-col>
           <!-- 石蜡包埋时间、包埋人、操作人（CR-20261012-22）：操作人统计按这三项算，点统计页的数字会带着它们过来 -->
-          <el-col :xs="24" :sm="24" :md="16" :lg="12">
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.person.paraffinRange')" label-width="104px">
-              <el-date-picker
-                v-model="paraffinTimeRange"
-                type="daterange"
-                value-format="YYYY-MM-DD"
-                :start-placeholder="t('lqg.person.rangeBegin')"
-                :end-placeholder="t('lqg.person.rangeEnd')"
-                class="lqg-embed__control lqg-range"
-                clearable
-              />
+              <SingleDateFilter v-model="paraffinTimeRange" :placeholder="t('lqg.person.paraffinRange')" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
@@ -149,13 +133,7 @@
       </el-row>
 
       <!-- 宽表：模板 16 列 + 前面两个徽标列；待核验行浅黄底且置顶（后端排序） -->
-      <el-table
-        v-loading="loading"
-        :data="rows"
-        border
-        :row-class-name="rowClassName"
-       
-      >
+      <el-table v-loading="loading" :data="rows" border :row-class-name="rowClassName" scroll-always-on>
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.embed.empty')" @retry="getList" /></template>
         <el-table-column :label="t('lqg.embed.col.submitSource')" prop="submitSource" width="90" align="center">
           <template #default="scope">
@@ -246,7 +224,7 @@
             <span v-else>{{ scope.row.updateTime }}<span class="lqg-embed__muted"> · {{ scope.row.updateByName }}</span></span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.action')" width="180" align="center" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column :label="t('lqg.embed.col.action')" width="180" align="center" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button
               v-hasPermi="[isExternalPending(scope.row) ? 'lqg:embed:verify' : 'lqg:embed:edit']"
@@ -280,6 +258,7 @@
 </template>
 
 <script setup name="LqgEmbed" lang="ts">
+import SingleDateFilter from '@/components/lqg/SingleDateFilter/index.vue';
 import { delEmbed, exportEmbeds, isEditable, isExternalPending, listEmbeds, neverModified } from '@/api/lqg/embed';
 import type { EmbedQuery, EmbedVO } from '@/api/lqg/embed';
 import StaffSelect from '@/components/lqg/StaffSelect/index.vue';

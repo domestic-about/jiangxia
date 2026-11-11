@@ -57,6 +57,8 @@ export default {
   },
 
   col: {
+    toLn2HeaderFromTo: '−80°C → LN₂',
+    toLn2HeaderTime: 'Transfer date',
     passageCycle: 'Passage cycle',
     freezeTime: 'Freeze time',
     cryoName: 'Cryo sample',

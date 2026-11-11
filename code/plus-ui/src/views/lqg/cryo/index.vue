@@ -96,18 +96,10 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
-          <el-col :xs="24" :sm="24" :md="16" :lg="12">
+          <!-- 单日筛选：与其它筛选同宽，列表和导出都按所选当天查询。 -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.cryo.filter.freezeTimeRange')">
-              <el-date-picker
-                v-model="freezeTimeRange"
-                type="daterange"
-                value-format="YYYY-MM-DD"
-                :start-placeholder="t('lqg.cryo.filter.freezeTimeBegin')"
-                :end-placeholder="t('lqg.cryo.filter.freezeTimeEnd')"
-                class="lqg-cryo__control lqg-range"
-                clearable
-              />
+              <SingleDateFilter v-model="freezeTimeRange" :placeholder="t('lqg.cryo.filter.freezeTimeRange')" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
@@ -145,13 +137,7 @@
       <!-- 宽表：模板 9 列（先后逐字照甲方 -80 冻存模板）+ 代数 / 当前剩余（与导出同序）
            + 内部编号 / 当前位置 / 最后修改 + 操作。
            超期行整行浅红 +「已超 N 天」徽标，并由后端置顶（前端不重排）；已取空的「当前剩余」旁标「已取空」。 -->
-      <el-table
-        v-loading="loading"
-        :data="rows"
-        border
-        :row-class-name="rowClassName"
-       
-      >
+      <el-table v-loading="loading" :data="rows" border :row-class-name="rowClassName" scroll-always-on>
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.cryo.empty')" @retry="getList" /></template>
         <el-table-column :label="t('lqg.cryo.col.freezeTime')" prop="freezeTime" width="150" align="center" fixed="left">
           <template #default="scope">
@@ -179,6 +165,11 @@
           <template #default="scope">{{ scope.row.frozenBy || '—' }}</template>
         </el-table-column>
         <el-table-column :label="t('lqg.cryo.col.toLn2Time')" prop="toLn2Time" width="180" align="center">
+          <template #header>
+            <span :title="t('lqg.cryo.col.toLn2Time')" :aria-label="t('lqg.cryo.col.toLn2Time')">
+              {{ t('lqg.cryo.col.toLn2HeaderFromTo') }}<br />{{ t('lqg.cryo.col.toLn2HeaderTime') }}
+            </span>
+          </template>
           <template #default="scope">
             <span v-if="scope.row.toLn2Time">{{ scope.row.toLn2Time }}</span>
             <!-- 还在 -80 的批次：就地给一个「转液氮」入口（行操作之一，UI:admin.cryo.list） -->
@@ -241,7 +232,7 @@
             <span v-else>{{ scope.row.updateTime }}<span class="lqg-cryo__muted"> · {{ scope.row.updateByName || '—' }}</span></span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.action')" width="260" align="center" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column :label="t('lqg.cryo.col.action')" width="260" align="center" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button v-hasPermi="['lqg:cryo:flow']" link type="primary" @click="openFlowDialog('take', scope.row)">
               {{ t('lqg.cryo.rowAction.take') }}
@@ -280,6 +271,7 @@
 </template>
 
 <script setup name="LqgCryo" lang="ts">
+import SingleDateFilter from '@/components/lqg/SingleDateFilter/index.vue';
 import {
   LOCATION_LN2,
   delBatch,

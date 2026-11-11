@@ -1,0 +1,64 @@
+PASS sample receiveDate 单日包含当天并排除前后一天
+PASS sample-organoid receiveDate 单日包含当天并排除前后一天
+PASS qc-docs receiveDate 单日包含当天并排除前后一天
+PASS embed sectionTime 单日包含当天并排除前后一天
+PASS embed paraffinEmbedTime 单日包含当天并排除前后一天
+PASS cryo freezeTime 单日包含当天并排除前后一天
+PASS sample 仅单日输入，无起止日期框
+PASS sample 第1个日期框提交同一天上下界
+PASS sample 操作列不覆盖数据列
+PASS sample 1280px 右侧操作表头完整可见
+PASS sample 1903px 右侧操作表头完整可见
+PASS sample 重置清空日期
+PASS sample-organoid 仅单日输入，无起止日期框
+PASS sample-organoid 第1个日期框提交同一天上下界
+PASS sample-organoid 操作列不覆盖数据列
+PASS sample-organoid 1280px 右侧操作表头完整可见
+PASS sample-organoid 1903px 右侧操作表头完整可见
+PASS sample-organoid 重置清空日期
+PASS qc-docs 仅单日输入，无起止日期框
+PASS qc-docs 第1个日期框提交同一天上下界
+PASS qc-docs 操作列不覆盖数据列
+PASS qc-docs 1280px 右侧操作表头完整可见
+PASS qc-docs 1903px 右侧操作表头完整可见
+PASS qc-docs 重置清空日期
+PASS embed 仅单日输入，无起止日期框
+PASS embed 第1个日期框提交同一天上下界
+PASS embed 第2个日期框提交同一天上下界
+PASS embed 操作列不覆盖数据列
+PASS embed 1280px 右侧操作表头完整可见
+PASS embed 1903px 右侧操作表头完整可见
+PASS embed 重置清空日期
+PASS cryo 仅单日输入，无起止日期框
+PASS cryo 第1个日期框提交同一天上下界
+PASS cryo 操作列不覆盖数据列
+PASS cryo 1280px 右侧操作表头完整可见
+PASS cryo 1903px 右侧操作表头完整可见
+PASS cryo 重置清空日期
+PASS sample 统计时段显式保留
+PASS sample 可清除统计日期条件
+PASS sample-organoid 统计时段显式保留
+PASS sample-organoid 可清除统计日期条件
+PASS embed 统计时段显式保留
+PASS embed 可清除统计日期条件
+PASS cryo 统计时段显式保留
+PASS cryo 可清除统计日期条件
+PASS 临时样本与下游记录已清理
+
+补充验证（2026-11-11）：
+- 飞书CLI revision368：网页工作台27–32，共6条；小程序无新增空H行，逐条查看本批原图。
+- 小程序type-check PASS；369项单测 PASS。工作台142项单测 PASS。
+- 工作台build:dev、小程序build:mp-weixin:dev与build:mp-weixin均PASS。
+- 小程序分享检查23页PASS；81份wxml共191处自定义组件事件绑定PASS。
+- 工作台全量vue-tsc仍为53条既有错误；本批修改文件0条新错误。
+- 定向ESLint：新SingleDateFilter和QC列表0错误；其余3页旧格式告警由25降到22，无新增，不声称整个工作台lint通过。
+- fresh-context独立QA：137项有效浏览器断言PASS，6条反馈逐条PASS；额外解析实际XLSX核对当天日期、行数、编号与列表一致。
+  覆盖选日后未搜索直接导出、选日/清除后列表与导出请求、QC自动查询、统计多日范围保留与关闭、空表在1024/1280/1903px宽度及100%/CSS125%缩放下横滚、目标长表头实际宽度与遮挡命中检查。
+  CSS125%为页面缩放几何验证，不混称为浏览器原生缩放断点验证。
+- 原生微信开发者工具：收样/包埋/冻存表单日期字段；冻存转液氮两行表头、类器官类型、细胞活率表头及质量评分卡片均由实际截图核对PASS，独立QA已逐张查看。
+  边界：DevTools拦截本地域名，原生渲染注入真实本地/me及对应实际列表API结果。布局已验，不等于原生网络联调。已恢复wx.request、移除token并关闭本次验收项目。
+- 本机临时数据：三天各一条组织/类器官样本，以及三条包埋和三条冻存，在finally通过业务API逆序删除；未改既有业务记录、未reseed。
+- authority_lint diff/impact/check运行；414权威×44ticket锚点检查PASS。snapshot因30处历史+本批未消化差异拒绝，未force覆盖旧快照。
+- 原图、XLSX、原生截图、独立报告和日志仅存/tmp/jiangxia-acceptance-20261111，不提交客户截图。
+- 本次启动的18081/18082/19100/19420均已释放；保留Docker基础设施。恢复构建生成的pages/manifest和自动类型文件。
+- 本批为本地修改；尚未提交、部署或回填飞书。

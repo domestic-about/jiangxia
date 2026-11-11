@@ -26,6 +26,8 @@ export type SheetKey = (typeof SHEET_KEYS)[number]
 export interface LedgerColumn {
   key: string
   label: string
+  /** 手机表格中的排版文案；原始 label 与导出模板保持一致 */
+  headerLabel?: string
 }
 
 /** 一张表的列结构：冻结列 + 其余列（顺序即显示顺序） */
@@ -113,7 +115,7 @@ const COLUMNS: Record<SheetKey, LedgerColumns> = {
       { key: 'density', label: '冻存密度' },
       { key: 'location80', label: '暂存-80度超低温冰箱' },
       { key: 'freezeBy', label: '冻存人' },
-      { key: 'toLn2Time', label: '-80度超低温冰箱转移至液氮时间' },
+      { key: 'toLn2Time', label: '-80度超低温冰箱转移至液氮时间', headerLabel: '−80℃→液氮\n转移时间' },
       { key: 'ln2Location', label: '液氮储存位置' },
       { key: 'remark', label: '备注' },
       { key: 'passageNo', label: '代数' },

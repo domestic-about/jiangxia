@@ -47,19 +47,10 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
-          <el-col :xs="24" :sm="24" :md="16" :lg="12">
+          <!-- 单日筛选：与其它筛选同宽，列表和导出都按所选当天查询。 -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.qc.list.filter.receiveRange')">
-              <el-date-picker
-                v-model="receiveRange"
-                type="daterange"
-                value-format="YYYY-MM-DD"
-                :start-placeholder="t('lqg.qc.list.filter.receiveBegin')"
-                :end-placeholder="t('lqg.qc.list.filter.receiveEnd')"
-                class="lqg-qclist__control lqg-range"
-                clearable
-                @change="handleQuery"
-              />
+              <SingleDateFilter v-model="receiveRange" :placeholder="t('lqg.qc.list.filter.receiveRange')" @update:model-value="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :md="8" :lg="6">
@@ -71,7 +62,7 @@
         </el-row>
       </el-form>
 
-      <el-table v-loading="loading" :data="rows" border @row-dblclick="openQc">
+      <el-table v-loading="loading" :data="rows" border scroll-always-on @row-dblclick="openQc">
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.qc.list.empty')" @retry="getList" /></template>
         <el-table-column :label="t('lqg.qc.list.col.internalNo')" prop="internalNo" min-width="110" :show-overflow-tooltip="true">
           <template #default="scope">
@@ -92,7 +83,7 @@
         <el-table-column :label="t('lqg.qc.list.col.receiveDate')" prop="receiveDate" width="100" align="center">
           <template #default="scope">{{ scope.row.receiveDate || '—' }}</template>
         </el-table-column>
-        <el-table-column v-for="c in DOC_COLUMNS" :key="c.key" :label="t(c.labelKey)" width="135" align="center">
+        <el-table-column v-for="c in DOC_COLUMNS" :key="c.key" :label="t(c.labelKey)" :width="c.width" align="center">
           <template #default="scope">
             <el-tag size="small" :type="statusTagType(scope.row[c.key])" effect="light">
               {{ t(`lqg.qc.list.status.${scope.row[c.key] || 'none'}`) }}
@@ -117,7 +108,7 @@
           <!-- 只显示到分钟（秒没有意义，而且整串会被右侧固定列压住） -->
           <template #default="scope">{{ scope.row.lastUpdateTime ? scope.row.lastUpdateTime.slice(0, 16) : '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.action')" width="80" align="center" fixed="right">
+        <el-table-column :label="t('lqg.qc.list.col.action')" width="80" align="center">
           <template #default="scope">
             <el-button link type="primary" @click="openQc(scope.row)">{{ t('lqg.qc.list.open') }}</el-button>
           </template>
@@ -130,6 +121,7 @@
 </template>
 
 <script setup name="LqgQcList" lang="ts">
+import SingleDateFilter from '@/components/lqg/SingleDateFilter/index.vue';
 import { listQcDocs } from '@/api/lqg/qc';
 import type { QcDocListQuery, QcDocListVO, QcDocStatus } from '@/api/lqg/qc';
 import { useI18n } from 'vue-i18n';
@@ -147,9 +139,9 @@ const router = useRouter();
 
 const PROGRESSES = ['none', 'doing', 'done'] as const;
 const DOC_COLUMNS = [
-  { key: 'sampleQcStatus', labelKey: 'lqg.qc.list.col.sampleQc' },
-  { key: 'organoidQcStatus', labelKey: 'lqg.qc.list.col.organoidQc' },
-  { key: 'scoreStatus', labelKey: 'lqg.qc.list.col.score' }
+  { key: 'sampleQcStatus', labelKey: 'lqg.qc.list.col.sampleQc', width: 145 },
+  { key: 'organoidQcStatus', labelKey: 'lqg.qc.list.col.organoidQc', width: 160 },
+  { key: 'scoreStatus', labelKey: 'lqg.qc.list.col.score', width: 190 }
 ] as const;
 
 const loading = ref(false);

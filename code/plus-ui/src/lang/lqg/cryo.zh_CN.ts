@@ -70,6 +70,8 @@ export default {
 
   // ── 表格列（模板 9 列 + 代数 / 当前剩余（与导出同序）+ 内部编号 / 当前位置 / 最后修改 + 操作） ──
   col: {
+    toLn2HeaderFromTo: '−80℃ → 液氮',
+    toLn2HeaderTime: '转移时间',
     passageCycle: '传代周期',
     freezeTime: '冻存时间',
     cryoName: '冻存样品',

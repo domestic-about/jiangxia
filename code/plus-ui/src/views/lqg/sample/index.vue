@@ -55,18 +55,10 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <!-- 日期区间占两格（区间框最窄约 260px，一格只有约 170px，以前会盖住右边那一项的标签 / 按钮） -->
-          <el-col :xs="24" :sm="24" :md="16" :lg="12">
+          <!-- 单日筛选：与其它筛选同宽，列表和导出都按所选当天查询。 -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
             <el-form-item :label="t('lqg.sample.filter.receiveDateRange')">
-              <el-date-picker
-                v-model="receiveDateRange"
-                type="daterange"
-                value-format="YYYY-MM-DD"
-                :start-placeholder="t('lqg.sample.filter.receiveDateBegin')"
-                :end-placeholder="t('lqg.sample.filter.receiveDateEnd')"
-                class="lqg-sample__control lqg-range"
-                clearable
-              />
+              <SingleDateFilter v-model="receiveDateRange" :placeholder="t('lqg.sample.filter.receiveDateRange')" />
             </el-form-item>
           </el-col>
           <!-- 种属（CR-20261009-18）：甲方按种属归类；「未填」= 本需求之前录的、还没补种属的 -->
@@ -142,14 +134,7 @@
       </el-row>
 
       <!-- 宽表（列 = pages.ts 的 sampleColumns：冻结列 + 前置管理列 + 模板列与插入列 + 后置管理列；待核验行浅黄底） -->
-      <el-table
-        v-loading="loading"
-        :data="rows"
-        border
-        :row-class-name="rowClassName"
-        scroll-always-on
-       
-      >
+      <el-table v-loading="loading" :data="rows" border :row-class-name="rowClassName" scroll-always-on>
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.sample.empty')" @retry="getList" /></template>
         <el-table-column
           v-for="column in columns"
@@ -198,7 +183,7 @@
           </template>
         </el-table-column>
         <!-- 「操作」只放对这一条样本本身的动作：编辑（待核验 = 核验）、质控文档、删除 -->
-        <el-table-column :label="t('lqg.sample.col.action')" width="210" align="center" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column :label="t('lqg.sample.col.action')" width="210" align="center" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button
               v-hasPermi="[scope.row.verifyStatus === 'pending' ? 'lqg:sample:verify' : 'lqg:sample:edit']"
@@ -249,6 +234,7 @@
 </template>
 
 <script setup name="LqgSample" lang="ts">
+import SingleDateFilter from '@/components/lqg/SingleDateFilter/index.vue';
 // ============================================================================
 // 工作台「样本记录信息表」（菜单 5210，/sample，component = lqg/sample/index）+ 两页共用的列表组件
 // （UI:admin.sample.list）

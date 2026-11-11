@@ -1,6 +1,7 @@
 // 选人（CR-20261012-22：操作人 / 包埋人 / 冻存人从内部人员名单里选）用到的通用文案；键路径 lqg.person.*
 // 三个抽屉、三张列表的按人筛选、操作人统计页都用这一份。
 export default {
+  statPeriod: '统计时段：{begin} 至 {end}',
   placeholder: '请选择',
   filterPlaceholder: '全部',
   none: '未填',

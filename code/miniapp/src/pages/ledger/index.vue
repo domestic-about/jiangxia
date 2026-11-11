@@ -83,7 +83,7 @@ const cryoSheetRef = ref<{ open: (row: LedgerRow) => void } | null>(null)
 
 const tabs = computed(() => sheetsFor())
 const cols = computed(() => columnsOf(sheet.value))
-const columnLabels = computed(() => cols.value?.columns.map(c => c.label) ?? [])
+const columnLabels = computed(() => cols.value?.columns.map(c => c.headerLabel ?? c.label) ?? [])
 const tableWidth = computed(() => ledgerTableWidth(columnLabels.value.length))
 const tableRows = computed<LedgerTableRow[]>(() => toTableRows(rows.value, sheet.value))
 /**

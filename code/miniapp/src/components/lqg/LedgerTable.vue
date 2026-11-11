@@ -111,8 +111,9 @@ const emit = defineEmits<{ (e: 'row-tap', row: LedgerTableRow): void }>()
    列宽 120 只放得下八九个字，省略成「-80度超低温冰…」就看不出是哪一列）。
    整行表头随最长那一格一起变高（flex 默认拉伸），各格底色连成一片。 */
 .ledger__head .ledger__cell {
-  white-space: normal;
-  word-break: break-all;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: anywhere;
   line-height: 1.35;
 }
 
