@@ -1,0 +1,26 @@
+PASS sample 保留单日日期框
+PASS sample 横滚时操作列保持右侧位置
+PASS sample 横向滚动仍可用
+PASS sample 操作表头可见
+PASS sample-organoid 保留单日日期框
+PASS sample-organoid 横滚时操作列保持右侧位置
+PASS sample-organoid 横向滚动仍可用
+PASS sample-organoid 操作表头可见
+PASS qc-docs 保留单日日期框
+PASS qc-docs 横滚时操作列保持右侧位置
+PASS qc-docs 横向滚动仍可用
+PASS qc-docs 操作表头可见
+PASS 三份质控文档恢复原135px列宽
+PASS 包埋与切片仍为两个独立单日日期框
+PASS 冻存仍为一个单日日期框
+PASS 第29条转液氮两行表头保留
+
+补充验收（CR-20261111-29，Kevin明确要求撤回30–32并部署）：
+- 工作台142项单测通过。
+- fresh-context独立QA93项PASS，报告/tmp/jiangxia-restore-independent-qa/result.json，截图同目录。
+- 对照acb812e3^恢复sample操作fixed right与QC原135px三列、fixed right、滚动条原行为；保留27–29日期与转液氮表头。
+- 实测1024/1280/1920px横滚到中段/末段/回左端，数据列移动、操作列位置固定且按钮可点击。
+- 五页六个单日输入实际请求首尾同日、业务码200、重置正常；不改业务数据，未做小程序改动。
+- authority_lint diff/impact/check已运行，414条权威×44ticket锚点检查PASS；历史快照有30处未消化差异，不force覆盖。
+- 33是上一批冻结证据，其30–32排版期望由本CR和34脚本覆盖，未篡改历史验证记录。
+- 本次已授权生产部署，发布与飞书纠正结果另补。

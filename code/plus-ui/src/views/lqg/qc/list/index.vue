@@ -62,7 +62,7 @@
         </el-row>
       </el-form>
 
-      <el-table v-loading="loading" :data="rows" border scroll-always-on @row-dblclick="openQc">
+      <el-table v-loading="loading" :data="rows" border @row-dblclick="openQc">
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.qc.list.empty')" @retry="getList" /></template>
         <el-table-column :label="t('lqg.qc.list.col.internalNo')" prop="internalNo" min-width="110" :show-overflow-tooltip="true">
           <template #default="scope">
@@ -83,7 +83,7 @@
         <el-table-column :label="t('lqg.qc.list.col.receiveDate')" prop="receiveDate" width="100" align="center">
           <template #default="scope">{{ scope.row.receiveDate || '—' }}</template>
         </el-table-column>
-        <el-table-column v-for="c in DOC_COLUMNS" :key="c.key" :label="t(c.labelKey)" :width="c.width" align="center">
+        <el-table-column v-for="c in DOC_COLUMNS" :key="c.key" :label="t(c.labelKey)" width="135" align="center">
           <template #default="scope">
             <el-tag size="small" :type="statusTagType(scope.row[c.key])" effect="light">
               {{ t(`lqg.qc.list.status.${scope.row[c.key] || 'none'}`) }}
@@ -108,7 +108,7 @@
           <!-- 只显示到分钟（秒没有意义，而且整串会被右侧固定列压住） -->
           <template #default="scope">{{ scope.row.lastUpdateTime ? scope.row.lastUpdateTime.slice(0, 16) : '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.action')" width="80" align="center">
+        <el-table-column :label="t('lqg.qc.list.col.action')" width="80" align="center" fixed="right">
           <template #default="scope">
             <el-button link type="primary" @click="openQc(scope.row)">{{ t('lqg.qc.list.open') }}</el-button>
           </template>
@@ -139,9 +139,9 @@ const router = useRouter();
 
 const PROGRESSES = ['none', 'doing', 'done'] as const;
 const DOC_COLUMNS = [
-  { key: 'sampleQcStatus', labelKey: 'lqg.qc.list.col.sampleQc', width: 145 },
-  { key: 'organoidQcStatus', labelKey: 'lqg.qc.list.col.organoidQc', width: 160 },
-  { key: 'scoreStatus', labelKey: 'lqg.qc.list.col.score', width: 190 }
+  { key: 'sampleQcStatus', labelKey: 'lqg.qc.list.col.sampleQc' },
+  { key: 'organoidQcStatus', labelKey: 'lqg.qc.list.col.organoidQc' },
+  { key: 'scoreStatus', labelKey: 'lqg.qc.list.col.score' }
 ] as const;
 
 const loading = ref(false);

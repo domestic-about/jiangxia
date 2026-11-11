@@ -183,7 +183,7 @@
           </template>
         </el-table-column>
         <!-- 「操作」只放对这一条样本本身的动作：编辑（待核验 = 核验）、质控文档、删除 -->
-        <el-table-column :label="t('lqg.sample.col.action')" width="210" align="center" class-name="small-padding fixed-width">
+        <el-table-column :label="t('lqg.sample.col.action')" width="210" align="center" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button
               v-hasPermi="[scope.row.verifyStatus === 'pending' ? 'lqg:sample:verify' : 'lqg:sample:edit']"
