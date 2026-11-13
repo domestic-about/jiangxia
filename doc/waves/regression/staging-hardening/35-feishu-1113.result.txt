@@ -25,3 +25,14 @@ PASS independent fresh-context QA feedback_1113_qa: all six repair rows, origina
 Evidence (temporary/private, not committed): /tmp/jiangxia-acceptance-20261113,
   /tmp/jiangxia-independent-qa-1113.
 Release and Feishu writeback results recorded separately after production verification.
+
+Release: b7385d9762ded5baa193fa2ba508c67739203dda pushed main.
+PASS deploy-prod43388079825; five healthy containers; backend lqg-backend:b7385d9.
+PASS six public file hashes match server; running jar equals deployed jar SHA256;
+  bytecode contains /access permission checks and new XLSX label. Prior fixed-right/135px retained.
+PASS miniapp-prod43388079747; development version1.0.1 robot1 uploaded; review/release still manual.
+PASS Feishu CLI H29:H32(MP), H34:H36(web), revision395->396->397, seven exact readbacks;
+  other cells unchanged. MP32 platform explanation; MP upload state accurately distinguished.
+PASS cleanup: fixture0/0/0, native QA login cleared/project closed, ports released;
+  four containers originally stopped restored stopped. Repo generated build files restored.
+Release evidence: /tmp/jiangxia-1113-release.
