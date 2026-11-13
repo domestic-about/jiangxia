@@ -12,7 +12,7 @@ export default {
     },
     organoid: {
       title: 'Organoid receipt records',
-      subtitle: 'One row per organoid receipt; its paraffin blocks and cryo batches are in the separate "Paraffin embedding" and "Cryopreservation" columns — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
+      subtitle: 'One row per organoid receipt; its paraffin blocks are in the "Paraffin embedding" column — click a number to open them. Pending partner submissions are highlighted; click "Verify" to handle them.'
     }
   },
   search: 'Search',

@@ -9,7 +9,7 @@ import WdDatetimePicker from 'wot-design-uni/components/wd-datetime-picker/wd-da
 // 登记转液氮表单 · 2026-09-24 甲方「-80 是暂存、液氮是长时间存放」+「小程序和工作台界面都能操作」（G 批 B2）。
 //
 // 只在批次还在 -80、没转过时由批次详情弹层打开（`canRegisterLn2`）。与工作台的转液氮弹窗同一条规则：
-// 转移时间默认今天、不得早于冻存时间；液氮储存位置必填（东西进了液氮罐却没人知道在哪，比没登记更糟）。
+// 转移时间默认今天、不得早于冻存时间；液氮中储存位置必填（东西进了液氮罐却没人知道在哪，比没登记更糟）。
 // 保存后这一批当场变成「液氮」、退出超期提醒（超期是读时算的，不等定时任务）。
 const props = defineProps<{
   batch: CryoBatchRow
@@ -91,7 +91,7 @@ async function submit() {
     <view class="clf__group">
       <FieldRow label="转移至液氮时间" control="date" required :model-value="toLn2Time" @pick="openPicker" />
       <FieldRow
-        label="液氮储存位置"
+        label="液氮中储存位置"
         required
         :maxlength="100"
         :model-value="ln2Location"

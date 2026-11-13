@@ -80,7 +80,7 @@ public class CryoBatchVo implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate toLn2Time;
 
-    @Schema(description = "液氮储存位置")
+    @Schema(description = "液氮中储存位置")
     private String ln2Location;
 
     @Schema(description = "备注")

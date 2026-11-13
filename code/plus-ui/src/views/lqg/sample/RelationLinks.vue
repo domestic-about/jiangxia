@@ -119,6 +119,7 @@ const go = (target: RouteTarget) => {
   .lqg-rel__line {
     display: flex;
     align-items: center;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 8px;
   }

@@ -117,6 +117,7 @@ export const ME_TARGET = {
   unitGroup: '/pages/me/unit-group',
   /** 操作人统计（内部人员，CR-20261012-22）：「内部管理」板块下面那一行 */
   operatorStat: '/pages/stat/operator',
+  peopleReview: '/pages/me/people',
   agreement: '/pages/legal/agreement',
   privacy: '/pages/legal/privacy',
 } as const

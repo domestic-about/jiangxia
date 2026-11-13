@@ -165,7 +165,7 @@ public class CryoExportService {
         out.put("暂存-80度超低温冰箱", 4);
         out.put("冻存人", 5);
         out.put("-80度超低温冰箱转移至液氮时间", 6);
-        out.put("液氮储存位置", 7);
+        out.put("液氮中储存位置", 7);
         out.put("备注", 8);
         out.put("代数", 9);
         out.put("当前剩余/支", 10);

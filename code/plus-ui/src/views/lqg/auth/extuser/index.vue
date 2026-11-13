@@ -31,19 +31,19 @@
       </el-form>
 
       <el-table v-loading="loading" border :data="rows" :empty-text="t('lqg.auth.extuser.empty')">
-        <el-table-column :label="t('lqg.auth.extuser.colName')" align="center" prop="name" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('lqg.auth.extuser.colPhone')" align="center" prop="phone" width="140">
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colName')" prop="name" :show-overflow-tooltip="true" />
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colPhone')" prop="phone" width="140">
           <template #default="scope">
             <span class="lqg-mono">{{ scope.row.phone }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.extuser.colUnit')" align="center" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colUnit')" :show-overflow-tooltip="true">
           <template #default="scope">
             <!-- 自填的单位 / 组别用斜体 + 「自填」标签（UI:admin.auth.extuser） -->
             <span :class="{ 'lqg-extuser__self': scope.row.selfInput }">{{ scope.row.unitName || t('lqg.auth.extuser.notFilled') }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.extuser.colGroup')" align="center" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colGroup')" :show-overflow-tooltip="true">
           <template #default="scope">
             <span :class="{ 'lqg-extuser__self': scope.row.selfInput }">{{ scope.row.groupName || t('lqg.auth.extuser.notFilled') }}</span>
             <el-tag v-if="scope.row.selfInput" type="warning" effect="plain" size="small" class="ml8">
@@ -51,21 +51,21 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.extuser.colStatus')" align="center" width="110">
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colStatus')" width="110">
           <template #default="scope">
             <el-tooltip :disabled="!scope.row.rejectReason" :content="scope.row.rejectReason || ''" placement="top">
               <el-tag :type="statusTagType(scope.row.bindStatus)" effect="plain">{{ statusLabel(scope.row.bindStatus) }}</el-tag>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.extuser.colSampleCount')" align="center" width="110" prop="sampleCount" />
-        <el-table-column :label="t('lqg.auth.extuser.colLastLogin')" align="center" width="170">
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colSampleCount')" width="110" prop="sampleCount" />
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colLastLogin')" width="170">
           <template #default="scope">
             <span v-if="scope.row.lastLoginTime">{{ formatTime(scope.row.lastLoginTime) }}</span>
             <span v-else class="lqg-extuser__none">{{ t('lqg.auth.extuser.neverLogin') }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.extuser.colAction')" align="center" width="210" class-name="small-padding fixed-width">
+        <el-table-column align="center" :label="t('lqg.auth.extuser.colAction')" width="210" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button
               v-hasPermi="['lqg:auth:extuser:verify']"

@@ -105,7 +105,7 @@ export function emptyCryoForm(): CryoFormValue {
     freezeTime: '',
     initQty: '',
     density: '',
-    // 默认「是」（暂存 -80）；选「否」才要液氮储存位置
+    // 默认「是」（暂存 -80）；选「否」才要液氮中储存位置
     inMinus80: 'Y',
     ln2Location: '',
     frozenBy: '',
@@ -211,11 +211,11 @@ export function cryoFormProblem(form: CryoFormValue): string {
     return '冻存数量必须是正整数'
   }
   if (form.inMinus80 === 'N' && !form.ln2Location.trim()) {
-    return '直接进液氮，请填液氮储存位置'
+    return '直接进液氮，请填液氮中储存位置'
   }
   // 已登记转液氮的批次不能把位置清掉（后端同一条：东西进了液氮罐却没人知道在哪）
   if (form.toLn2Time && !form.ln2Location.trim()) {
-    return '已转液氮，请填液氮储存位置'
+    return '已转液氮，请填液氮中储存位置'
   }
   return ''
 }

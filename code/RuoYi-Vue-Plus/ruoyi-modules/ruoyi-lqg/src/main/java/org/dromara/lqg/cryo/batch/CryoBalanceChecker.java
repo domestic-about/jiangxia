@@ -236,7 +236,7 @@ public final class CryoBalanceChecker {
     }
 
     /**
-     * 液氮储存位置判据：<b>直接进液氮（{@code in_minus80='N'}）或已登记转液氮
+     * 液氮中储存位置判据：<b>直接进液氮（{@code in_minus80='N'}）或已登记转液氮
      * （{@code to_ln2_time} 非空）时必填</b>（FIELD:t_lqg_cryo_batch.ln2_location；
      * accept 2 第 3 段点名「东西进了液氮罐却没人知道在哪」要拒）。
      *
@@ -254,7 +254,7 @@ public final class CryoBalanceChecker {
             return ln2Location;
         }
         if (StringUtils.isBlank(ln2Location)) {
-            throw new ServiceException("直接进液氮（暂存 -80 选「否」）必须填液氮储存位置", 400);
+            throw new ServiceException("直接进液氮（暂存 -80 选「否」）必须填液氮中储存位置", 400);
         }
         return ln2Location.trim();
     }

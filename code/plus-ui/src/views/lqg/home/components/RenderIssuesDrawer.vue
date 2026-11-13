@@ -18,23 +18,23 @@
       :title="t('lqg.home.issues.loadFailed', { msg: loadError })"
     />
     <el-table v-loading="loading" :data="rows" size="small" border row-key="key" class="lqg-issues__table" @row-click="openQc">
-      <el-table-column :label="t('lqg.home.issues.colSample')" width="150">
+      <el-table-column align="center" :label="t('lqg.home.issues.colSample')" width="150">
         <template #default="{ row }">
           <div class="lqg-issues__mono">{{ row.internalNo || row.submitNo || row.sampleId }}</div>
           <div class="lqg-issues__minor">{{ row.sourceUnitName || '' }}</div>
         </template>
       </el-table-column>
-      <el-table-column :label="t('lqg.home.issues.colDoc')" width="130">
+      <el-table-column align="center" :label="t('lqg.home.issues.colDoc')" width="130">
         <template #default="{ row }">{{ docLabel(row.docKind) }}</template>
       </el-table-column>
-      <el-table-column :label="t('lqg.home.issues.colAudience')" width="80">
+      <el-table-column align="center" :label="t('lqg.home.issues.colAudience')" width="80">
         <template #default="{ row }">
           <el-tag size="small" effect="plain" :type="row.audience === 'external' ? 'warning' : 'info'">
             {{ row.audience === 'external' ? t('lqg.home.issues.external') : t('lqg.home.issues.internal') }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column :label="t('lqg.home.issues.colIssue')" min-width="260">
+      <el-table-column align="center" :label="t('lqg.home.issues.colIssue')" min-width="260">
         <template #default="{ row }">
           <el-tag size="small" :type="row.issue === 'failed' ? 'danger' : 'warning'" effect="light">
             {{ row.issue === 'failed' ? t('lqg.home.issues.failed') : t('lqg.home.issues.missing', { n: row.missingImageCount || 0 }) }}
@@ -42,8 +42,8 @@
           <div class="lqg-issues__reason">{{ row.issue === 'failed' ? row.errorMsg : row.missingImages }}</div>
         </template>
       </el-table-column>
-      <el-table-column :label="t('lqg.home.issues.colTime')" prop="time" width="165" />
-      <el-table-column :label="t('lqg.home.issues.colAction')" width="170" fixed="right">
+      <el-table-column align="center" :label="t('lqg.home.issues.colTime')" prop="time" width="165" />
+      <el-table-column align="center" :label="t('lqg.home.issues.colAction')" width="170" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click.stop="openQc(row)">{{ t('lqg.home.issues.openQc') }}</el-button>
           <el-button link type="primary" size="small" :loading="busyKey === row.key" @click.stop="regenerate(row)">

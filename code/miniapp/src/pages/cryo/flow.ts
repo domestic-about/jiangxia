@@ -197,7 +197,7 @@ export function ln2Problem(toLn2Time: string, ln2Location: string, freezeTime?: 
     return `转移时间不能早于冻存时间 ${freeze}`
   }
   if (!str(ln2Location).trim()) {
-    return '请填液氮储存位置'
+    return '请填液氮中储存位置'
   }
   return ''
 }

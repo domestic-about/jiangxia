@@ -137,13 +137,13 @@
       <el-table v-loading="loading" :data="rows" border :row-class-name="rowClassName" scroll-always-on>
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.sample.empty')" @retry="getList" /></template>
         <el-table-column
+          align="center"
           v-for="column in columns"
           :key="column.key"
           :label="t(column.labelKey)"
           :prop="column.key"
           :width="column.width"
           :min-width="column.minWidth"
-          :align="column.align"
           :show-overflow-tooltip="column.tooltip === true"
           :fixed="column.fixed"
         >
@@ -172,18 +172,18 @@
              点过去是整张列表、看不出筛过也回不来；现在单独一列写「蜡块 N · 待核验 N · 冻存 N 批」，
              数字可点（带 sampleId 过去，那边顶部有「只看××」提示条、「新增」默认挂这个样本、行上的
              样本编号能点回来）。数量来自列表同一次请求（hint.blockCount + relation），不逐行请求。 -->
-        <el-table-column :label="t('lqg.sample.col.embed')" width="170">
+        <el-table-column align="center" :label="t('lqg.sample.col.embed')" width="170">
           <template #default="scope">
             <RelationLinks :row="scope.row" section="embed" />
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.sample.col.cryo')" width="130">
+        <el-table-column v-if="isTissue" align="center" :label="t('lqg.sample.col.cryo')" width="130">
           <template #default="scope">
             <RelationLinks :row="scope.row" section="cryo" />
           </template>
         </el-table-column>
         <!-- 「操作」只放对这一条样本本身的动作：编辑（待核验 = 核验）、质控文档、删除 -->
-        <el-table-column :label="t('lqg.sample.col.action')" width="210" align="center" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column align="center" :label="t('lqg.sample.col.action')" width="210" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button
               v-hasPermi="[scope.row.verifyStatus === 'pending' ? 'lqg:sample:verify' : 'lqg:sample:edit']"

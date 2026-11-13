@@ -73,7 +73,7 @@ public class CryoBatchSubmitBo implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate toLn2Time;
 
-    @Schema(description = "液氮储存位置（inMinus80='N' 或登记转液氮时必填）")
+    @Schema(description = "液氮中储存位置（inMinus80='N' 或登记转液氮时必填）")
     private String ln2Location;
 
     @Schema(description = "备注")

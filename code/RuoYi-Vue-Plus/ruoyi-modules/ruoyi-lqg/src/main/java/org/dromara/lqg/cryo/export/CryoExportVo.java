@@ -21,7 +21,7 @@ import java.io.Serializable;
  * 表头与列序和模板逐字一致；其后追加『代数』『当前剩余/支』『种属』『传代周期』」）：
  * <pre>
  * 冻存时间 / 冻存样品 / 冻存数量/支 / 冻存密度 / 暂存-80度超低温冰箱 / 冻存人 /
- * -80度超低温冰箱转移至液氮时间 / 液氮储存位置 / 备注             ← 模板原件 9 列，逐字同序
+ * -80度超低温冰箱转移至液氮时间 / 液氮中储存位置 / 备注             ← 模板原件 9 列，逐字同序
  * 代数 / 当前剩余/支 / 种属 / 传代周期                                     ← 只许追加在模板列之后（种属：CR-20261009-18）
  * </pre>
  * ★ 追加列<b>只能挂在第 9 列之后</b>：插到中间任何一个位置表头顺序就不等（accept 1 counterfeit）。
@@ -84,7 +84,7 @@ public class CryoExportVo implements Serializable {
     @Schema(description = "转移至液氮时间 yyyy-MM-dd（空 = 还在 -80）")
     private String toLn2Time;
 
-    @ExcelProperty(value = "液氮储存位置", index = 7)
+    @ExcelProperty(value = "液氮中储存位置", index = 7)
     private String ln2Location;
 
     @ExcelProperty(value = "备注", index = 8)

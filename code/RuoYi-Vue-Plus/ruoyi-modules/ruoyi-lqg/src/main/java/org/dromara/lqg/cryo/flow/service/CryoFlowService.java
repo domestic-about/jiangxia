@@ -280,7 +280,7 @@ public class CryoFlowService {
         LocalDate toLn2Time = parseDate(bo.getToLn2Time(), "转移至液氮时间");
         String ln2Location = trimToNull(bo.getLn2Location());
         if (ln2Location == null) {
-            throw new ServiceException("转液氮必须填液氮储存位置", 400);
+            throw new ServiceException("转液氮必须填液氮中储存位置", 400);
         }
         // 锁批次行：与写流水的并发路径串行化（同一把行锁）
         CryoBatch batch = lockBatch(batchId);

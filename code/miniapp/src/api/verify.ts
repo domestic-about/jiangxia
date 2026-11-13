@@ -55,6 +55,7 @@ export interface HomeTodo {
   pendingSamples?: number | null
   pendingEmbeds?: number | null
   cryoOverdue?: number | null
+  pendingExtUsers?: number | null
   [key: string]: unknown
 }
 

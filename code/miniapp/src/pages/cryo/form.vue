@@ -99,7 +99,7 @@ const flagOptions = [
   { value: 'N', label: '否' },
 ]
 
-/** 选「否」（直接进液氮）或已登记转液氮时，液氮储存位置必填（与后端同一条） */
+/** 选「否」（直接进液氮）或已登记转液氮时，液氮中储存位置必填（与后端同一条） */
 const needLn2Location = computed(() => form.value.inMinus80 === 'N' || !!form.value.toLn2Time)
 
 /**
@@ -333,7 +333,7 @@ async function submit() {
       <NoteBar v-if="mode !== 'new'" text="取走、补入：在「内部管理 → -80 冻存」里点这一批登记" />
 
       <!-- 字段先后照甲方 -80 冻存模板（2026-09-24「请参照我发你的模板，理解先后顺序」）：
-           冻存时间、冻存样品、冻存数量/支、冻存密度、暂存-80、冻存人、转移至液氮时间、液氮储存位置、备注；
+           冻存时间、冻存样品、冻存数量/支、冻存密度、暂存-80、冻存人、转移至液氮时间、液氮中储存位置、备注；
            模板没有的「代数」放在最后。「选择样本」是挂样本用的，放在最前（选了才能预填样品名称）。 -->
       <view class="cryo__group">
         <FieldRow
@@ -428,7 +428,7 @@ async function submit() {
         />
 
         <FieldRow
-          label="液氮储存位置"
+          label="液氮中储存位置"
           :required="needLn2Location" marker-side="after"
           :maxlength="100"
           :readonly="!editable"

@@ -94,16 +94,16 @@
 
       <!-- 点一行按类别进对应的样本表（CR-20260924-10：组织样本 → 样本记录信息表，类器官 → 类器官收样记录） -->
       <el-table v-loading="recentLoading" :data="recent" size="small" border class="lqg-home__recent-table" @row-click="openRecent">
-        <el-table-column prop="submitTime" :label="t('lqg.home.recent.colSubmitTime')" width="180" />
-        <el-table-column prop="submitNo" :label="t('lqg.home.recent.colSubmitNo')" width="140" />
-        <el-table-column :label="t('lqg.home.recent.colSampleKind')" width="130">
+        <el-table-column align="center" prop="submitTime" :label="t('lqg.home.recent.colSubmitTime')" width="180" />
+        <el-table-column align="center" prop="submitNo" :label="t('lqg.home.recent.colSubmitNo')" width="140" />
+        <el-table-column align="center" :label="t('lqg.home.recent.colSampleKind')" width="130">
           <template #default="{ row }">{{ t(samplePageOf(row.sampleKind).titleKey) }}</template>
         </el-table-column>
-        <el-table-column prop="sourceUnitName" :label="t('lqg.home.recent.colSourceUnit')" min-width="160" show-overflow-tooltip />
-        <el-table-column :label="t('lqg.home.recent.colSubmitSource')" width="110">
+        <el-table-column align="center" prop="sourceUnitName" :label="t('lqg.home.recent.colSourceUnit')" min-width="160" show-overflow-tooltip />
+        <el-table-column align="center" :label="t('lqg.home.recent.colSubmitSource')" width="110">
           <template #default="{ row }">{{ sourceLabel(row.submitSource) }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.home.recent.colVerifyStatus')" width="120">
+        <el-table-column align="center" :label="t('lqg.home.recent.colVerifyStatus')" width="120">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.verifyStatus)" size="small" effect="light">{{ statusLabel(row.verifyStatus) }}</el-tag>
           </template>

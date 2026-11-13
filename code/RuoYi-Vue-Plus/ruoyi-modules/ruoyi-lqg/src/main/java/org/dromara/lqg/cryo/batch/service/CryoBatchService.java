@@ -105,7 +105,7 @@ public class CryoBatchService {
         String inMinus80 = CryoBalanceChecker.requireInMinus80(bo.getInMinus80());
         // ④ 转液氮时间不早于冻存时间
         CryoBalanceChecker.requireLn2NotBeforeFreeze(freezeTime, bo.getToLn2Time());
-        // ⑤ 直接进液氮（选「否」）必须有液氮储存位置
+        // ⑤ 直接进液氮（选「否」）必须有液氮中储存位置
         String ln2Location = CryoBalanceChecker.requireLn2Location(inMinus80, bo.getToLn2Time(),
             trimToNull(bo.getLn2Location()));
 

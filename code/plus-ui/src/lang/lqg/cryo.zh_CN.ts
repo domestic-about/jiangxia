@@ -80,7 +80,7 @@ export default {
     inMinus80: '暂存-80度超低温冰箱',
     frozenBy: '冻存人',
     toLn2Time: '-80度超低温冰箱转移至液氮时间',
-    ln2Location: '液氮储存位置',
+    ln2Location: '液氮中储存位置',
     remark: '备注',
     internalNo: '内部编号',
     passage: '代数',
@@ -175,9 +175,9 @@ export default {
     inMinus80Required: '请选择是 / 否',
     frozenBy: '冻存人',
     toLn2Time: '转移至液氮时间',
-    ln2Location: '液氮储存位置',
+    ln2Location: '液氮中储存位置',
     ln2LocationPlaceholder: '如 1号罐-1架-A2',
-    ln2LocationRequired: '选「否」或登记了转液氮时间时必须填液氮储存位置',
+    ln2LocationRequired: '选「否」或登记了转液氮时间时必须填液氮中储存位置',
     remark: '备注'
   },
 
@@ -244,8 +244,8 @@ export default {
     tip: '保存后这一批的位置立即变为液氮，超期提醒和页签数字也会立即更新。',
     time: '转移至液氮时间',
     timeRequired: '转移时间必填，且不能早于冻存时间',
-    location: '液氮储存位置',
-    locationRequired: '液氮储存位置必填',
+    location: '液氮中储存位置',
+    locationRequired: '液氮中储存位置必填',
     save: '保存',
     cancel: '取 消',
     saved: '已登记转液氮'

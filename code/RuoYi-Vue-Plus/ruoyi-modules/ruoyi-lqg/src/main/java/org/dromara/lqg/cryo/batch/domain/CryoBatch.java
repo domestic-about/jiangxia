@@ -97,7 +97,7 @@ public class CryoBatch extends BaseEntity {
     private LocalDate toLn2Time;
 
     /**
-     * 液氮储存位置（一段文本，不建罐 / 架 / 盒字典；登记转液氮时必填）
+     * 液氮中储存位置（一段文本，不建罐 / 架 / 盒字典；登记转液氮时必填）
      */
     private String ln2Location;
 

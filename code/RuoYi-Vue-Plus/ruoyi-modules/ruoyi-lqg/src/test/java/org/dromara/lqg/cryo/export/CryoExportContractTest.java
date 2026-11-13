@@ -81,7 +81,10 @@ class CryoExportContractTest {
     /**
      * 导出视图的 13 列 = 模板 9 列 + 追加 4 列（代数、当前剩余/支、种属、传代周期）。
      */
-    private static final List<String> HEADER = concat(TEMPLATE_HEADER, EXTRA_HEADER);
+    // CR-20261113-30 只改第8列表头，原模板副本仍保留并单独校验。
+    private static final List<String> EXPORT_BASE_HEADER = TEMPLATE_HEADER.stream()
+        .map(label -> "液氮储存位置".equals(label) ? "液氮中储存位置" : label).toList();
+    private static final List<String> HEADER = concat(EXPORT_BASE_HEADER, EXTRA_HEADER);
 
     private static List<String> concat(List<String> a, List<String> b) {
         List<String> out = new ArrayList<>(a.size() + b.size());
@@ -114,7 +117,7 @@ class CryoExportContractTest {
 
         // ★ 追加列必须挂在模板 9 列**之后**：插到中间 = 表头顺序不等（accept 1 counterfeit）
         for (int i = 0; i < TEMPLATE_HEADER.size(); i++) {
-            assertEquals(TEMPLATE_HEADER.get(i), actual.get(i), "第 " + (i + 1) + " 列必须与模板逐字一致");
+            assertEquals(EXPORT_BASE_HEADER.get(i), actual.get(i), "第 " + (i + 1) + " 列遵循模板及CR-20261113-30改名");
         }
         assertEquals(EXTRA_HEADER, actual.subList(9, 13), "追加列只能跟在模板 9 列之后");
 

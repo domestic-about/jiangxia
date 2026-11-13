@@ -135,17 +135,17 @@
       <!-- 宽表：模板 16 列 + 前面两个徽标列；待核验行浅黄底且置顶（后端排序） -->
       <el-table v-loading="loading" :data="rows" border :row-class-name="rowClassName" scroll-always-on>
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.embed.empty')" @retry="getList" /></template>
-        <el-table-column :label="t('lqg.embed.col.submitSource')" prop="submitSource" width="90" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.submitSource')" prop="submitSource" width="90">
           <template #default="scope">
             <dict-tag :options="lqg_submit_source" :value="scope.row.submitSource" />
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.verifyStatus')" prop="verifyStatus" width="100" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.verifyStatus')" prop="verifyStatus" width="100">
           <template #default="scope">
             <dict-tag :options="lqg_verify_status" :value="scope.row.verifyStatus" />
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.paraffinBlockNo')" prop="paraffinBlockNo" width="130" :show-overflow-tooltip="true" fixed="left">
+        <el-table-column align="center" :label="t('lqg.embed.col.paraffinBlockNo')" prop="paraffinBlockNo" width="130" :show-overflow-tooltip="true" fixed="left">
           <template #default="scope">
             <span v-if="scope.row.paraffinBlockNo" class="lqg-embed__mono">{{ scope.row.paraffinBlockNo }}</span>
             <span v-else class="lqg-embed__pending">{{ t('lqg.embed.badge.pendingBlockNo') }}</span>
@@ -153,7 +153,7 @@
         </el-table-column>
         <!-- ★ 样本编号点回样本（2026-09-24 本机验收「反向可回」）：按样本类别回到它所在那一页并打开它；
              待核验的样本还没有内部编号 → 显示送检单号（灰字），同样能点回去 -->
-        <el-table-column :label="t('lqg.embed.col.internalNo')" prop="internalNo" width="130" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.internalNo')" prop="internalNo" width="130" :show-overflow-tooltip="true">
           <template #default="scope">
             <el-link
               v-if="scope.row.sampleId && (scope.row.internalNo || scope.row.submitNo)"
@@ -169,62 +169,62 @@
           </template>
         </el-table-column>
         <!-- 插入列「种属」：紧跟「样本编号」，所挂样本的种属（CR-20261009-18，与导出同一位置） -->
-        <el-table-column :label="t('lqg.species.label')" prop="species" width="90" align="center" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.species.label')" prop="species" width="90" :show-overflow-tooltip="true">
           <template #default="scope">{{ speciesText(scope.row.species) }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.sampleType')" prop="sampleType" width="100" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.sampleType')" prop="sampleType" width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.sampleType || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.organoidSourceType')" prop="organoidSourceType" min-width="140" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.organoidSourceType')" prop="organoidSourceType" min-width="140" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.organoidSourceType || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.tissueReceiveTime')" prop="tissueReceiveTime" width="125" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.tissueReceiveTime')" prop="tissueReceiveTime" width="125">
           <template #default="scope">{{ scope.row.tissueReceiveTime || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.tissueProcessTime')" prop="tissueProcessTime" width="125" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.tissueProcessTime')" prop="tissueProcessTime" width="125">
           <template #default="scope">{{ scope.row.tissueProcessTime || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.agaroseEmbedTime')" prop="agaroseEmbedTime" width="150" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.agaroseEmbedTime')" prop="agaroseEmbedTime" width="150">
           <template #default="scope">{{ scope.row.agaroseEmbedTime || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.embedBy')" prop="embedBy" width="100" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.embedBy')" prop="embedBy" width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.embedBy || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.dehydrateTime')" prop="dehydrateTime" width="125" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.dehydrateTime')" prop="dehydrateTime" width="125">
           <template #default="scope">{{ scope.row.dehydrateTime || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.agaroseSendTime')" prop="agaroseSendTime" width="150" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.agaroseSendTime')" prop="agaroseSendTime" width="150">
           <template #default="scope">{{ scope.row.agaroseSendTime || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.paraffinEmbedTime')" prop="paraffinEmbedTime" width="135" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.paraffinEmbedTime')" prop="paraffinEmbedTime" width="135">
           <template #default="scope">{{ scope.row.paraffinEmbedTime || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.sectionTime')" prop="sectionTime" width="125" align="center">
+        <el-table-column align="center" :label="t('lqg.embed.col.sectionTime')" prop="sectionTime" width="125">
           <template #default="scope">
             <span v-if="scope.row.sectionTime">{{ scope.row.sectionTime }}</span>
             <span v-else class="lqg-embed__muted">{{ t('lqg.embed.rowAction.notSectioned') }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.stain')" width="180" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.stain')" width="180" :show-overflow-tooltip="true">
           <template #default="scope">{{ stainText(scope.row) }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.markerExpression')" min-width="180" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.markerExpression')" min-width="180" :show-overflow-tooltip="true">
           <template #default="scope">{{ markerText(scope.row) }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.operatorName')" prop="operatorName" width="100" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.operatorName')" prop="operatorName" width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.operatorName || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.remark')" prop="remark" min-width="120" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.remark')" prop="remark" min-width="120" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.remark || '—' }}</template>
         </el-table-column>
         <!-- ★ 最后修改：updateTime 为 null = 从没改过（SAMPLE-MP-001 的跨票语义），显式渲染 -->
-        <el-table-column :label="t('lqg.embed.col.updateTime')" prop="updateTime" width="170" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.embed.col.updateTime')" prop="updateTime" width="170" :show-overflow-tooltip="true">
           <template #default="scope">
             <span v-if="neverModified(scope.row)" class="lqg-embed__muted">{{ t('lqg.embed.drawer.lastModifiedNever') }}</span>
             <span v-else>{{ scope.row.updateTime }}<span class="lqg-embed__muted"> · {{ scope.row.updateByName }}</span></span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.embed.col.action')" width="180" align="center" class-name="small-padding fixed-width">
+        <el-table-column align="center" :label="t('lqg.embed.col.action')" width="180" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button
               v-hasPermi="[isExternalPending(scope.row) ? 'lqg:embed:verify' : 'lqg:embed:edit']"

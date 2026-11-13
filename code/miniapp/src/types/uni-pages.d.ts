@@ -16,6 +16,7 @@ type _LocationUrl =
   "/pages/legal/privacy" |
   "/pages/login/index" |
   "/pages/me/index" |
+  "/pages/me/people" |
   "/pages/me/unit-group" |
   "/pages/organoid/form" |
   "/pages/qc/edit" |

@@ -64,26 +64,26 @@
 
       <el-table v-loading="loading" :data="rows" border @row-dblclick="openQc">
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.qc.list.empty')" @retry="getList" /></template>
-        <el-table-column :label="t('lqg.qc.list.col.internalNo')" prop="internalNo" min-width="110" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.qc.list.col.internalNo')" prop="internalNo" min-width="110" :show-overflow-tooltip="true">
           <template #default="scope">
             <el-link type="primary" underline="never" class="lqg-qclist__mono" @click="openQc(scope.row)">
               {{ scope.row.internalNo || '—' }}
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.typeName')" prop="typeName" min-width="125" show-overflow-tooltip>
+        <el-table-column align="center" :label="t('lqg.qc.list.col.typeName')" prop="typeName" min-width="125" show-overflow-tooltip>
           <template #default="scope">{{ scope.row.typeName || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.sourceUnit')" prop="sourceUnitName" min-width="100" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.qc.list.col.sourceUnit')" prop="sourceUnitName" min-width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.sourceUnitName || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.species.label')" prop="species" width="80" align="center" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.species.label')" prop="species" width="80" :show-overflow-tooltip="true">
           <template #default="scope">{{ speciesText(scope.row.species) }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.receiveDate')" prop="receiveDate" width="100" align="center">
+        <el-table-column align="center" :label="t('lqg.qc.list.col.receiveDate')" prop="receiveDate" width="100">
           <template #default="scope">{{ scope.row.receiveDate || '—' }}</template>
         </el-table-column>
-        <el-table-column v-for="c in DOC_COLUMNS" :key="c.key" :label="t(c.labelKey)" width="135" align="center">
+        <el-table-column align="center" v-for="c in DOC_COLUMNS" :key="c.key" :label="t(c.labelKey)" width="135">
           <template #default="scope">
             <el-tag size="small" :type="statusTagType(scope.row[c.key])" effect="light">
               {{ t(`lqg.qc.list.status.${scope.row[c.key] || 'none'}`) }}
@@ -93,7 +93,7 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.progress')" prop="progress" width="115" align="center">
+        <el-table-column align="center" :label="t('lqg.qc.list.col.progress')" prop="progress" width="115">
           <template #default="scope">
             <span :class="['lqg-qclist__progress', `is-${scope.row.progress}`]">
               {{
@@ -104,11 +104,11 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.lastUpdate')" prop="lastUpdateTime" width="170" align="center">
+        <el-table-column align="center" :label="t('lqg.qc.list.col.lastUpdate')" prop="lastUpdateTime" width="170">
           <!-- 只显示到分钟（秒没有意义，而且整串会被右侧固定列压住） -->
           <template #default="scope">{{ scope.row.lastUpdateTime ? scope.row.lastUpdateTime.slice(0, 16) : '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.qc.list.col.action')" width="80" align="center" fixed="right">
+        <el-table-column align="center" :label="t('lqg.qc.list.col.action')" width="80" fixed="right">
           <template #default="scope">
             <el-button link type="primary" @click="openQc(scope.row)">{{ t('lqg.qc.list.open') }}</el-button>
           </template>

@@ -180,8 +180,8 @@ describe('cryoFormProblem：只管「填没填、格式对不对」', () => {
     expect(cryoFormProblem({ ...valid(), initQty: 'x' })).toContain('正整数')
   })
 
-  it('选「否」（直接进液氮）必须有液氮储存位置；选「是」不必填', () => {
-    expect(cryoFormProblem({ ...valid(), inMinus80: 'N', ln2Location: '' })).toContain('液氮储存位置')
+  it('选「否」（直接进液氮）必须有液氮中储存位置；选「是」不必填', () => {
+    expect(cryoFormProblem({ ...valid(), inMinus80: 'N', ln2Location: '' })).toContain('液氮中储存位置')
     expect(cryoFormProblem({ ...valid(), inMinus80: 'N', ln2Location: '1号罐-1架-A2' })).toBe('')
     expect(cryoFormProblem({ ...valid(), inMinus80: 'Y', ln2Location: '' })).toBe('')
   })
@@ -190,7 +190,7 @@ describe('cryoFormProblem：只管「填没填、格式对不对」', () => {
     const moved = toCryoFormValue({ inMinus80: 'Y', toLn2Time: '2026-09-25', ln2Location: null })
     expect(moved.toLn2Time).toBe('2026-09-25')
     expect(moved.ln2Location).toBe('')
-    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-09-25', ln2Location: '' })).toContain('液氮储存位置')
+    expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-09-25', ln2Location: '' })).toContain('液氮中储存位置')
     expect(cryoFormProblem({ ...valid(), toLn2Time: '2026-09-25', ln2Location: '2号罐' })).toBe('')
   })
 

@@ -29,7 +29,7 @@ public class CryoToLn2Bo implements Serializable {
     @Schema(description = "转移至液氮时间 yyyy-MM-dd（不得早于冻存时间）")
     private String toLn2Time;
 
-    @Schema(description = "液氮储存位置（必填）")
+    @Schema(description = "液氮中储存位置（必填）")
     private String ln2Location;
 
 }

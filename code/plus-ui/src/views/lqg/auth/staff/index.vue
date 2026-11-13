@@ -17,25 +17,25 @@
       </el-alert>
 
       <el-table v-loading="loading" border :data="staffList" :empty-text="t('lqg.auth.staff.empty')">
-        <el-table-column :label="t('lqg.auth.staff.colName')" align="center" prop="name" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('lqg.auth.staff.colPhone')" align="center" prop="phone" width="150">
+        <el-table-column align="center" :label="t('lqg.auth.staff.colName')" prop="name" :show-overflow-tooltip="true" />
+        <el-table-column align="center" :label="t('lqg.auth.staff.colPhone')" prop="phone" width="150">
           <template #default="scope">
             <span class="lqg-mono">{{ scope.row.phone }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.staff.colRole')" align="center" width="140">
+        <el-table-column align="center" :label="t('lqg.auth.staff.colRole')" width="140">
           <template #default="scope">
             <el-tag :type="scope.row.roleKey === 'lqg_admin' ? 'success' : 'primary'" effect="plain">{{ roleLabel(scope.row.roleKey) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.staff.colWxBound')" align="center" width="120">
+        <el-table-column align="center" :label="t('lqg.auth.staff.colWxBound')" width="120">
           <template #default="scope">
             <el-tag :type="scope.row.wxBound ? 'success' : 'info'" effect="plain">
               {{ scope.row.wxBound ? t('lqg.auth.staff.wxBound') : t('lqg.auth.staff.wxUnbound') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.auth.staff.colAction')" align="center" width="260" class-name="small-padding fixed-width">
+        <el-table-column align="center" :label="t('lqg.auth.staff.colAction')" width="260" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-tooltip :content="t('lqg.auth.staff.changeRole')" placement="top">
               <el-button v-hasPermi="['lqg:auth:staff:edit']" link type="primary" icon="Edit" @click="handleChangeRole(scope.row)"></el-button>

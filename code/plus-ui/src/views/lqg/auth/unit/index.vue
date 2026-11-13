@@ -29,7 +29,7 @@
             :empty-text="t('lqg.auth.unit.unitEmpty')"
             @current-change="handleSelectUnit"
           >
-            <el-table-column :label="t('lqg.auth.unit.colUnitName')" prop="unitName" :show-overflow-tooltip="true">
+            <el-table-column align="center" :label="t('lqg.auth.unit.colUnitName')" prop="unitName" :show-overflow-tooltip="true">
               <template #default="scope">
                 <span>{{ scope.row.unitName }}</span>
                 <el-tag v-if="scope.row.unitStatus === 'pending'" type="warning" effect="plain" size="small" class="ml8">
@@ -37,13 +37,13 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column :label="t('lqg.auth.unit.colGroupCount')" align="center" width="90" prop="groupCount" />
-            <el-table-column :label="t('lqg.auth.unit.colUnitStatus')" align="center" width="90">
+            <el-table-column align="center" :label="t('lqg.auth.unit.colGroupCount')" width="90" prop="groupCount" />
+            <el-table-column align="center" :label="t('lqg.auth.unit.colUnitStatus')" width="90">
               <template #default="scope">
                 <el-tag :type="statusTagType(scope.row.unitStatus)" effect="plain">{{ statusLabel(scope.row.unitStatus) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column :label="t('lqg.auth.extuser.colAction')" align="center" width="150" class-name="small-padding fixed-width">
+            <el-table-column align="center" :label="t('lqg.auth.extuser.colAction')" width="150" class-name="small-padding fixed-width">
               <template #default="scope">
                 <el-tooltip :content="t('lqg.auth.extuser.colAction')" placement="top">
                   <el-button v-hasPermi="['lqg:auth:unit:edit']" link type="primary" icon="Edit" @click.stop="handleEditUnit(scope.row)"></el-button>
@@ -81,7 +81,7 @@
             :data="groups"
             :empty-text="t('lqg.auth.unit.groupEmpty')"
           >
-            <el-table-column :label="t('lqg.auth.unit.colGroupName')" prop="groupName" :show-overflow-tooltip="true">
+            <el-table-column align="center" :label="t('lqg.auth.unit.colGroupName')" prop="groupName" :show-overflow-tooltip="true">
               <template #default="scope">
                 <span>{{ scope.row.groupName }}</span>
                 <el-tag v-if="scope.row.groupStatus === 'pending'" type="warning" effect="plain" size="small" class="ml8">
@@ -89,13 +89,13 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column :label="t('lqg.auth.unit.colVerifiedCount')" align="center" width="110" prop="verifiedCount" />
-            <el-table-column :label="t('lqg.auth.unit.colGroupStatus')" align="center" width="90">
+            <el-table-column align="center" :label="t('lqg.auth.unit.colVerifiedCount')" width="110" prop="verifiedCount" />
+            <el-table-column align="center" :label="t('lqg.auth.unit.colGroupStatus')" width="90">
               <template #default="scope">
                 <el-tag :type="statusTagType(scope.row.groupStatus)" effect="plain">{{ statusLabel(scope.row.groupStatus) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column :label="t('lqg.auth.extuser.colAction')" align="center" width="150" class-name="small-padding fixed-width">
+            <el-table-column align="center" :label="t('lqg.auth.extuser.colAction')" width="150" class-name="small-padding fixed-width">
               <template #default="scope">
                 <el-tooltip :content="t('lqg.auth.extuser.colAction')" placement="top">
                   <el-button v-hasPermi="['lqg:auth:group:edit']" link type="primary" icon="Edit" @click.stop="handleEditGroup(scope.row)"></el-button>

@@ -82,7 +82,7 @@
         <template #empty>
           <table-empty :error="loadError" :text="t('lqg.stat.operator.empty')" @retry="load" />
         </template>
-        <el-table-column :label="t('lqg.stat.operator.colName')" min-width="180" fixed>
+        <el-table-column align="center" :label="t('lqg.stat.operator.colName')" min-width="180" fixed>
           <template #default="scope">
             <span class="lqg-opstat__name">{{ scope.row.name }}</span>
             <el-tag v-if="scope.row.me" size="small" type="success" effect="plain" class="lqg-opstat__tag">{{ t('lqg.stat.operator.me') }}</el-tag>
@@ -91,7 +91,7 @@
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column v-for="group in table.groups" :key="group.sheet" align="center">
+        <el-table-column align="center" v-for="group in table.groups" :key="group.sheet">
           <template #header>
             <div class="lqg-opstat__group" :data-sheet="group.sheet">
               <span class="lqg-opstat__group-title">{{ group.title }}</span>
@@ -99,10 +99,10 @@
             </div>
           </template>
           <el-table-column
+            align="center"
             v-for="column in group.columns"
             :key="column.id"
             :column-key="column.id"
-            align="right"
             min-width="124"
             sortable
             :sort-method="(a: PivotRow, b: PivotRow) => (a.cells[column.id] ?? 0) - (b.cells[column.id] ?? 0)"

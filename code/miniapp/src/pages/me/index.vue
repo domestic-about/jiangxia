@@ -18,6 +18,8 @@ import {
 import { LOGIN_PAGE, goPage } from '@/router/config'
 import { useUserStore } from '@/store/user'
 import { normalizeIdentity } from '@/types/identity'
+import { fetchReviewAccess } from '@/api/people'
+import { fetchHomeTodo } from '@/api/verify'
 import { bindStatusText, bindStatusTone, unitGroupDisplay } from '@/utils/ext-profile'
 
 // 我的（UI:mp.me）。
@@ -48,6 +50,8 @@ definePage({
 
 const store = useUserStore()
 const failed = ref(false)
+const reviewAllowed = ref(false)
+const pendingPeople = ref(0)
 
 const identity = computed(() => normalizeIdentity(store.identity))
 const sections = computed(() => meSections(store.identity))
@@ -71,17 +75,26 @@ async function refresh() {
   failed.value = false
   try {
     await store.loadMe()
+    reviewAllowed.value = false
+    pendingPeople.value = 0
+    if (normalizeIdentity(store.identity) === 'internal') {
+      try {
+        reviewAllowed.value = await fetchReviewAccess() === true
+        if (reviewAllowed.value) {
+          const todo = await fetchHomeTodo()
+          pendingPeople.value = Number(todo.pendingExtUsers) || 0
+        }
+      }
+      catch { /* 未授予审核权限时不展示入口，不影响其他“我的”功能 */ }
+    }
   }
   catch {
     failed.value = true
   }
 }
 
-onShow(() => {
-  if (!store.me) {
-    refresh()
-  }
-})
+// 返回页面时重新读取权限与待核验数，审核后不会留着旧数字。
+onShow(refresh)
 
 function goLogin() {
   uni.reLaunch({ url: LOGIN_PAGE })
@@ -160,6 +173,14 @@ function logout() {
         <!-- 操作人统计（CR-20261012-22）：按人、按时间段看四张表各做了多少 -->
         <view class="lqg-card lqg-card--flush mine__card mine__card--stat">
           <MeRow
+            v-if="reviewAllowed"
+            icon="unit"
+            title="人员与组别审核"
+            :desc="pendingPeople ? `待核验 ${pendingPeople} 人` : '查看外部用户的单位与组别申请'"
+            @click="goPage(ME_TARGET.peopleReview)"
+          />
+          <MeRow
+            :line="reviewAllowed"
             icon="stat"
             title="操作人统计"
             desc="按人、按时间段看每张表做了多少"

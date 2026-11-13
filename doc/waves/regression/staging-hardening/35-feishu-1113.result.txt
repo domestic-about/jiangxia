@@ -1,0 +1,27 @@
+2026-11-13 / CR-20261113-30 / Feishu revision395
+Source: project Feishu CLI fetch; original XLSX plus all seven issue screenshots read.
+Scope: MP29/30/31, web34/35/36. MP32 is WeChat platform experience-member eligibility, not a business-app fix.
+User clarification: move external-user unit/group review to MP with existing administrator permissions.
+
+PASS web: independent real browser inspection of 10 routes / 11 tables: headers and contents center;
+  tissue preserves cryo+embed; organoid removes only cryo; sticky right actions and QC135px remain.
+PASS exports: web and MP real XLSX, seven data rows, 13-column order retained, column8 “液氮中储存位置”.
+PASS MP native DevTools RC2.02.2607171/lib3.17.6, real localhost18081 API, no network mock:
+  full 类器官 logo, removed identity note; cryo form displays new location label.
+  review explicit action/mode required; merge unit/group pickers; native confirmation locks controls.
+  isolated QA user1794540459052001 actual approve -> verified, unit9000009001/group9000009101.
+  isolated fixture reset -> reject requires reason -> rejected with exact reason.
+  rejected card readonly; back to My pending2; external My has no entry, deep link denied.
+  backend logs and DB independently corroborated real writes. No seed person approved/rejected.
+  fixture user/profile/role association all deleted, independent DB counts 0/0/0.
+PASS permission: new access endpoint staff/admin200 true, extA403. Existing101/102 list+verify retained.
+PASS tests: web142; MP377; backend CryoExportContractTest5.
+PASS MP vue-tsc. Web baseline53 existing errors; no errors in changed files.
+PASS builds: backend package; web build:dev; MP development + production.
+PASS production guards: share24pages, 82wxml/193 custom-component event bindings.
+PASS authority diff/impact/check: 415 anchors x44 tickets; historical snapshot differences not forced.
+PASS independent fresh-context QA feedback_1113_qa: all six repair rows, original screenshots,
+  real pages/exports, 200/201 reason boundary, permission/API/DB/native evidence and cleanup.
+Evidence (temporary/private, not committed): /tmp/jiangxia-acceptance-20261113,
+  /tmp/jiangxia-independent-qa-1113.
+Release and Feishu writeback results recorded separately after production verification.

@@ -139,7 +139,7 @@
            超期行整行浅红 +「已超 N 天」徽标，并由后端置顶（前端不重排）；已取空的「当前剩余」旁标「已取空」。 -->
       <el-table v-loading="loading" :data="rows" border :row-class-name="rowClassName" scroll-always-on>
         <template #empty><TableEmpty :error="loadError" :text="t('lqg.cryo.empty')" @retry="getList" /></template>
-        <el-table-column :label="t('lqg.cryo.col.freezeTime')" prop="freezeTime" width="150" align="center" fixed="left">
+        <el-table-column align="center" :label="t('lqg.cryo.col.freezeTime')" prop="freezeTime" width="150" fixed="left">
           <template #default="scope">
             <div class="lqg-cryo__cell">
               <span>{{ scope.row.freezeTime || '—' }}</span>
@@ -147,24 +147,24 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.cryoName')" prop="cryoName" width="260" :show-overflow-tooltip="true" fixed="left">
+        <el-table-column align="center" :label="t('lqg.cryo.col.cryoName')" prop="cryoName" width="260" :show-overflow-tooltip="true" fixed="left">
           <template #default="scope">
             <span class="lqg-cryo__mono">{{ scope.row.cryoName || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.initQty')" prop="initQty" width="110" align="center">
+        <el-table-column align="center" :label="t('lqg.cryo.col.initQty')" prop="initQty" width="110">
           <template #default="scope">{{ scope.row.initQty ?? '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.density')" prop="density" width="100" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.cryo.col.density')" prop="density" width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.density || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.inMinus80')" prop="inMinus80" width="160" align="center">
+        <el-table-column align="center" :label="t('lqg.cryo.col.inMinus80')" prop="inMinus80" width="160">
           <template #default="scope">{{ flagText(scope.row.inMinus80) }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.frozenBy')" prop="frozenBy" width="100" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.cryo.col.frozenBy')" prop="frozenBy" width="100" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.frozenBy || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.toLn2Time')" prop="toLn2Time" width="180" align="center">
+        <el-table-column align="center" :label="t('lqg.cryo.col.toLn2Time')" prop="toLn2Time" width="180">
           <template #header>
             <span :title="t('lqg.cryo.col.toLn2Time')" :aria-label="t('lqg.cryo.col.toLn2Time')">
               {{ t('lqg.cryo.col.toLn2HeaderFromTo') }}<br />{{ t('lqg.cryo.col.toLn2HeaderTime') }}
@@ -178,16 +178,16 @@
             </el-button>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.ln2Location')" prop="ln2Location" width="150" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.cryo.col.ln2Location')" prop="ln2Location" width="150" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.ln2Location || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.remark')" prop="remark" min-width="140" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.cryo.col.remark')" prop="remark" min-width="140" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.remark || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.passage')" prop="passage" width="80" align="center">
+        <el-table-column align="center" :label="t('lqg.cryo.col.passage')" prop="passage" width="80">
           <template #default="scope">{{ scope.row.passage || '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.remainingQty')" prop="remainingQty" width="130" align="center">
+        <el-table-column align="center" :label="t('lqg.cryo.col.remainingQty')" prop="remainingQty" width="130">
           <template #default="scope">
             <div class="lqg-cryo__cell">
               <span :class="{ 'lqg-cryo__empty-qty': scope.row.emptied }">{{ scope.row.remainingQty ?? '—' }}</span>
@@ -197,17 +197,17 @@
           </template>
         </el-table-column>
         <!-- 追加列「种属」：所挂样本的种属，排在「当前剩余/支」之后（与导出同一位置，CR-20261009-18） -->
-        <el-table-column :label="t('lqg.species.label')" prop="species" width="90" align="center" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.species.label')" prop="species" width="90" :show-overflow-tooltip="true">
           <template #default="scope">{{ speciesText(scope.row.species) }}</template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.passageCycle')" prop="passageCycleDays" width="140" align="center">
+        <el-table-column align="center" :label="t('lqg.cryo.col.passageCycle')" prop="passageCycleDays" width="140">
           <template #default="scope">{{
             scope.row.passageCycleDays == null ? '—' : t('lqg.cryo.cell.passageCycle', { days: scope.row.passageCycleDays })
           }}</template>
         </el-table-column>
         <!-- 以下三列模板里没有，工作台自己要看：所挂样本的内部编号、当前位置、最后修改。
              ★ 内部编号点回样本（2026-09-24 本机验收「反向可回」）：按样本类别回到它所在那一页并打开它 -->
-        <el-table-column :label="t('lqg.cryo.col.internalNo')" prop="internalNo" width="120" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.cryo.col.internalNo')" prop="internalNo" width="120" :show-overflow-tooltip="true">
           <template #default="scope">
             <el-link
               v-if="scope.row.sampleId && scope.row.internalNo"
@@ -222,17 +222,17 @@
             <span v-else class="lqg-cryo__mono">—</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.location')" prop="location" width="110" align="center">
+        <el-table-column align="center" :label="t('lqg.cryo.col.location')" prop="location" width="110">
           <template #default="scope">{{ t('lqg.cryo.location.' + locationKey(scope.row.location)) }}</template>
         </el-table-column>
         <!-- ★ 最后修改：updateTime 为 null = 从没改过（跨票语义），显式渲染 -->
-        <el-table-column :label="t('lqg.cryo.col.updateTime')" prop="updateTime" width="180" :show-overflow-tooltip="true">
+        <el-table-column align="center" :label="t('lqg.cryo.col.updateTime')" prop="updateTime" width="180" :show-overflow-tooltip="true">
           <template #default="scope">
             <span v-if="neverModified(scope.row)" class="lqg-cryo__muted">{{ t('lqg.cryo.drawer.lastModifiedNever') }}</span>
             <span v-else>{{ scope.row.updateTime }}<span class="lqg-cryo__muted"> · {{ scope.row.updateByName || '—' }}</span></span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('lqg.cryo.col.action')" width="260" align="center" class-name="small-padding fixed-width">
+        <el-table-column align="center" :label="t('lqg.cryo.col.action')" width="260" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button v-hasPermi="['lqg:cryo:flow']" link type="primary" @click="openFlowDialog('take', scope.row)">
               {{ t('lqg.cryo.rowAction.take') }}

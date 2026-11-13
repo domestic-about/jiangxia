@@ -39,6 +39,13 @@ public class ExtUserController {
 
     private final ExtUserVerifyService extUserVerifyService;
 
+    /** 小程序入口沿用现有列表与审核权限；不新增角色授权。 */
+    @SaCheckPermission({"lqg:auth:extuser:list", "lqg:auth:extuser:verify"})
+    @GetMapping("/access")
+    public R<Boolean> reviewAccess() {
+        return R.ok(true);
+    }
+
     /**
      * 外部用户列表。
      *

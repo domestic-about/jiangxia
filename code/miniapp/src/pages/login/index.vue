@@ -144,7 +144,7 @@ function openPrivacy() {
 <template>
   <view class="login">
     <view class="login__hero">
-      <view class="login__mark">类</view>
+      <view class="login__mark">类器官</view>
       <view class="login__head">
         <text class="login__title">{{ APP_NAME }}</text>
         <text class="login__lab">{{ labName }}</text>
@@ -175,10 +175,6 @@ function openPrivacy() {
       </button>
 
       <text class="login__tip">首次登录会用你的微信手机号自动创建账号，不需要注册</text>
-      <view class="login__identity">
-        <LineIcon name="phone" :size="15" />
-        <text class="login__identity-t">内部人员与合作伙伴同一个入口，身份由中心按手机号确认</text>
-      </view>
     </view>
 
     <!-- 登录后能做什么：填满原先的大片留白，同时把「外部也能直接用」讲清楚 -->
@@ -245,12 +241,12 @@ function openPrivacy() {
 }
 
 .login__mark {
-  width: 54px;
+  width: 76px;
   height: 54px;
   border-radius: 16px;
   background: var(--lqg-primary-soft);
   color: var(--lqg-primary);
-  font-size: 28px;
+  font-size: 20px;
   font-weight: var(--lqg-fw-semibold);
   display: flex;
   align-items: center;
@@ -352,22 +348,6 @@ function openPrivacy() {
   font-size: var(--lqg-fs-sm);
   color: var(--lqg-ink-3);
   text-align: center;
-}
-
-.login__identity {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--lqg-sp-2);
-  padding: var(--lqg-sp-4) var(--lqg-sp-5);
-  border-radius: var(--lqg-radius-ctl);
-  background: var(--lqg-inset);
-  color: var(--lqg-ink-2);
-}
-
-.login__identity-t {
-  flex: 1;
-  font-size: var(--lqg-fs-sm);
-  line-height: 1.5;
 }
 
 .login__section {
