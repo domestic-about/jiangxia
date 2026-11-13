@@ -1,0 +1,29 @@
+2026-11-13 / CR-20261113-31
+User confirms verified external -> 合作单位 badge plus unit and group; all internal personnel review external profiles; test then commit/deploy.
+
+PASS implementation: home and Me use identity+bindStatus; verified external=合作单位,
+  unbound/pending/rejected/absent/unknown external=外部人员; internal=内部人员.
+  Unit/group remains displayed separately, official names preferred; technical external role unchanged.
+  Home now reloads /mp/me each onShow to avoid stale status after review/profile changes.
+PASS authorization: existing migration granted list+verify to both101(admin)/102(internal).
+  Read-only production query confirms four active role/perms combinations (deduplicated menu perms).
+  No role/menu migration needed; normal staff real API access/list200, external403.
+PASS sample access matrix: own and verified same group visible; same unit different group,
+  cross unit, unverified same group excluded; deleted records excluded.
+PASS actual document positive prerequisite: seed had no generated doc_file rows, so staff rendered
+  only9000001001/organoid_score external; done, zero missing images. Independent18 API requests:
+  A/B list+pages+download succeed, download external object; C/D/E/F listempty/pages404/download404.
+PASS cleanup: exactly three newly generated doc_file rows, three associated sys_oss rows,
+  and three objects deleted; sample and QC content untouched.
+PASS tests: 387 MP tests (including10 identity policy cases); vue-tsc; git diff --check.
+PASS builds: MP development and production; share24pages; 82wxml/193 custom event bindings.
+PASS authority diff/impact/check:415 anchors x44tickets, historical snapshot not forced.
+PASS native: DevTools RC2.02.2607171/lib3.17.6, real localhost18081, no request mocking:
+  extE pending home/Me external badge; extA verified home/Me partner badge+unit/group;
+  staff home/Me internal badge+review entry, review page two pending cards.
+  Deliberately stale client-only pending cache refreshed from real /mp/me ->verified onShow.
+  No seed person reviewed/modified; unchanged review writes were validated earlier in batch35.
+PASS independent fresh-context QA: partner_identity_qa, code/tests/type/API/DB/native evidence.
+  Final complete extE homepage retained as extE-home-final.png (SDK retries had crop artifacts).
+Private temporary evidence: /tmp/jiangxia-partner-1113 (including independent-qa/audit.json).
+Release result recorded after CI upload verification; upload does not equal WeChat formal release.

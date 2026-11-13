@@ -125,6 +125,7 @@ function logout() {
         :name="store.name"
         :phone-masked="store.phoneMasked"
         :identity="identity"
+        :bind-status="store.ext?.bindStatus"
         :org="org"
       />
     </view>

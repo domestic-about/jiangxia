@@ -9,11 +9,14 @@ import { identityLabel, identityTagClass } from '@/types/identity'
 const props = withDefaults(defineProps<{
   name?: string
   identity?: ResolvedIdentity
+  /** 外部档案核验状态；缺失时显示外部人员 */
+  bindStatus?: string | null
   /** 外部那一行：单位 · 组别 · 核验状态 */
   secondary?: string
 }>(), {
   name: '',
   identity: null,
+  bindStatus: null,
   secondary: '',
 })
 
@@ -24,7 +27,7 @@ const greeting = computed(() => {
   return props.name ? `${props.name}，${period}好` : `${period}好`
 })
 
-const label = computed(() => identityLabel(props.identity))
+const label = computed(() => identityLabel(props.identity, props.bindStatus))
 const tagClass = computed(() => identityTagClass(props.identity))
 </script>
 

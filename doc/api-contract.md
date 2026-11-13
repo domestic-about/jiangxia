@@ -44,7 +44,7 @@
 | `GET/POST /lqg/auth/staff`、`PUT /lqg/auth/staff/{userId}/role`、`PUT …/{userId}/reset-pwd`、`DELETE …/{userId}` | 内部人员授权 / 改角色 / 重置密码 / 撤销 | POST `{phone, name, roleKey:"lqg_internal"\|"lqg_admin", password}` → `data:{userId, upgraded:true\|false}`。**改角色后该账号全部 token 失效**（旧 token 回 401），重新登录后按新角色生效；按手机号授权（外部账号原地升级）不踢下线，`/mp/me` 下次请求即显示内部身份，但访问内部接口要重新登录一次（CR-20260923-09） |
 | `GET /lqg/staff/options`、`GET /mp/int/staff/options` | 「选人」用的内部人员名单（CR-20261012-22）：四张表上的操作人 / 包埋人 / 冻存人从这里选 | `data:[{userId, name}, …]`，按姓名排序 = 带内部角色（`lqg_admin` / `lqg_internal`）且账号未停用的人；**只有账号 id 与姓名**（不带手机号、角色）。鉴权是内部角色闸（工作台那条 `lqg_admin` / `lqg_internal` / `superadmin` 任一，小程序那条 `lqg_internal`），**每个内部人员都能调、不要权限串**；外部账号 `code=403`。每次现查不缓存（管理员刚授权的人马上在名单里）。`userId` 超出 JS 安全整数时按字符串下发，回传时原样带回 |
 | `GET/POST/PUT/DELETE /lqg/auth/unit`、`/lqg/auth/group` | 单位、组别维护 | 组别列表带 `verifiedCount` |
-| `GET /lqg/auth/ext-user/access` | 小程序审核入口能力检测（CR-20261113-30）；内部身份且同时具备`lqg:auth:extuser:list`、`lqg:auth:extuser:verify`，沿用原角色权限 | `R<Boolean>`，允许返回true，无权限业务码403；列表及核验接口仍各自校验权限 |
+| `GET /lqg/auth/ext-user/access` | 小程序审核入口能力检测（CR-20261113-30）；内部身份且同时具备`lqg:auth:extuser:list`、`lqg:auth:extuser:verify`，CR-20261113-31确认所有内部人员角色均具备这两项原权限，并非只限管理员；不增加合作单位技术角色 | `R<Boolean>`，允许返回true，无权限业务码403；列表及核验接口仍各自校验权限 |
 | `GET /lqg/auth/ext-user/list`、`PUT /lqg/auth/ext-user/{userId}/verify` | 外部用户与组别核验 | verify：`{action:"approve"\|"reject", unitId?, groupId?, createUnit?, createGroup?, reason?}` |
 
 ## SAMPLE

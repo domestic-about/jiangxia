@@ -18,17 +18,20 @@ const props = withDefaults(defineProps<{
   name?: string
   phoneMasked?: string
   identity?: ResolvedIdentity
+  /** 外部档案核验状态；缺失时显示外部人员 */
+  bindStatus?: string | null
   /** 所属单位那一行（内部：中心名称；合作单位：单位 · 组别）；空串不显示 */
   org?: string
 }>(), {
   name: '',
   phoneMasked: '',
   identity: null,
+  bindStatus: null,
   org: '',
 })
 
 const initial = computed(() => (props.name ? props.name.slice(0, 1) : '·'))
-const label = computed(() => identityLabel(props.identity))
+const label = computed(() => identityLabel(props.identity, props.bindStatus))
 const tagClass = computed(() => identityTagClass(props.identity))
 const phone = computed(() => props.phoneMasked || '手机号未知')
 /** 合作单位用蓝色那一套（与身份徽标同色系），其余一律青绿 */

@@ -75,12 +75,6 @@ async function refresh() {
   }
 }
 
-async function ensureLoaded() {
-  if (!store.me) {
-    await refresh()
-  }
-}
-
 /** 取「待处理」三项的数（只给内部；失败只影响这一块） */
 async function loadTodo() {
   if (!showTodo(store.identity)) {
@@ -99,7 +93,7 @@ async function loadTodo() {
 
 // tab 页每次显示都刷新一次，保证切换单位 / 核验后回来是最新的（「待处理」的数也跟着重取）
 onShow(async () => {
-  await ensureLoaded()
+  await refresh()
   loadTodo()
 })
 
@@ -131,6 +125,7 @@ function retry() {
     <IdentityBar
       :name="store.name"
       :identity="identity"
+      :bind-status="store.ext?.bindStatus"
       :secondary="identity === 'external' ? externalLine : ''"
     />
 

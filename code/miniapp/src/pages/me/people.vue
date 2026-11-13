@@ -96,12 +96,12 @@ onPullDownRefresh(async () => { if (!saving.value) await load(); uni.stopPullDow
   <view class="people">
     <LoadingState v-if="loading" />
     <ErrorState v-else-if="failed" :text="errorText" @retry="load" />
-    <EmptyState v-else-if="!allowed" state="empty" text="当前账号没有人员审核权限，请联系中心管理员" />
+    <EmptyState v-else-if="!allowed" state="empty" text="仅内部人员可审核，请使用内部人员账号" />
     <template v-else>
       <view class="lqg-filter">
         <text v-for="tab in tabs" :key="tab.value" class="lqg-filter__chip" :class="status === tab.value ? 'people__on' : ''" @click="pickStatus(tab.value)">{{ tab.label }}</text>
       </view>
-      <view class="people__note">审核外部用户申请的单位与组别；微信体验成员资格请由微信公众平台管理员处理。</view>
+      <view class="people__note">内部人员均可审核外部用户申请的单位与组别；微信体验成员资格请由微信公众平台管理员处理。</view>
       <EmptyState v-if="!rows.length" state="empty" text="没有符合条件的人员" />
       <view v-for="row in rows" :key="String(row.userId)" class="lqg-card people__card">
         <view class="people__name">{{ row.name || '未填写姓名' }} <text class="people__status">{{ statusText(row.bindStatus) }}</text></view>

@@ -19,13 +19,13 @@ export function normalizeIdentity(raw: unknown): ResolvedIdentity {
   return null
 }
 
-/** 身份徽标文案（UI:mp.home / UI:mp.me：内部人员 / 合作单位） */
-export function identityLabel(identity: ResolvedIdentity): string {
+/** 外部账号仅在单位/组别核验通过后展示为合作单位；不改变账号角色与数据权限。 */
+export function identityLabel(identity: ResolvedIdentity, bindStatus?: unknown): string {
   if (identity === 'internal') {
     return '内部人员'
   }
   if (identity === 'external') {
-    return '合作单位'
+    return bindStatus === 'verified' ? '合作单位' : '外部人员'
   }
   return ''
 }
