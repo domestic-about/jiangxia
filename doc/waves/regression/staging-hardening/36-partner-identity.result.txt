@@ -27,3 +27,10 @@ PASS independent fresh-context QA: partner_identity_qa, code/tests/type/API/DB/n
   Final complete extE homepage retained as extE-home-final.png (SDK retries had crop artifacts).
 Private temporary evidence: /tmp/jiangxia-partner-1113 (including independent-qa/audit.json).
 Release result recorded after CI upload verification; upload does not equal WeChat formal release.
+
+PASS release:964056dfb9a3603d5056f1e3ddd30f5e424a5492 pushed main.
+miniapp-prod43398759282 SUCCESS, production guards24pages/193events passed;
+version1.0.1 robot1 uploaded with exact commit in description. Review/formal release pending.
+Web/backend sources unchanged; live production internal/admin permissions read-only confirmed.
+PASS cleanup: native QA token removed/project closed, ports18081/18082/19100 free,
+  four containers started for this batch restored stopped; generated tracked build files restored.
