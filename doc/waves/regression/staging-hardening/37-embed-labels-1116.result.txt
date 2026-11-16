@@ -28,3 +28,13 @@ No business records created/modified; no reseed performed.
 Evidence temporary/private: /tmp/jiangxia-embed-labels-1116,
   /tmp/jiangxia-embed-labels-independent-1116.
 Release result recorded after real CI/production verification; MP upload is not formal release.
+
+PASS release commit2c01b13233787531ad9ffeb83aec3e71e3a60b46 main.
+Deploy-prod43834140215 SUCCESS; backend lqg-backend:2c01b13, five healthy containers;
+3 public file hashes match server, running/deployed jar hashes equal,
+EmbedExportVo and EmbedExportService bytecode contain both new labels.
+Miniapp-prod43834140216 SUCCESS; robot1 uploaded development version1.0.1 with exact commit;
+production guards24pages/193events pass; WeChat review and formal release pending.
+PASS cleanup: no business writes, QA ports18081/18082/19100 free, own native project closed,
+local native token removed, four development containers originally stopped restored stopped.
+Release proof: /tmp/jiangxia-embed-labels-1116/production-proof.json, release-verified.json.

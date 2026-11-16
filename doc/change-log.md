@@ -34,7 +34,9 @@
 - **变更后**：两端表单、表格、详情、核验字段提示、后端错误/显示注解与真实Excel第6/7列统一为「组织/类器官收样时间」「组织/类器官处理时间」，英文相应为Tissue/organoid receive/process time。原字段tissueReceiveTime/tissueProcessTime、日期值、自动带出规则、接口请求/响应结构及列序保持原状。
 - **模板口径**：原始甲方XLSX和测试资源副本保持原样；现行导出在原16列表头基础上仍插入种属，仅覆盖两处名称。契约测试同时保留原模板逐字对账与新导出17列表头断言，不改历史迁移、旧验收结果或只读requirements/confirmation原口径。
 - **判据**：小程序387、工作台142、后端EmbedExportContractTest5项通过，小程序类型检查、后端package、工作台开发构建、小程序开发/生产构建及24页分享/193处组件事件守卫通过。独立QA确认工作台125px表头完整两行、抽屉180px标签完整；双端真实XLSX共70日期单元格逐一对API，17列顺序及其余数据一致。原生表单长标签及自动带出日期目视PASS；实际原生WXML和120×52.39px表头尺寸核对PASS。未取得日期列横滚截图，不将初始列截图冒充目标列；无布局变更，该证据限度不影响独立QA对本次改名的PASS。详见`doc/waves/regression/staging-hardening/37-embed-labels-1116.result.txt`。
-- **发布状态**：实现与验收中，沿用本会话直接提交部署的授权；小程序上传开发版本与正式审核发布分别记录。
+- **发布状态（2026-11-16）**：提交`2c01b1323378`已推送main，[deploy-prod #43834140215](https://github.com/domestic-about/jiangxia/actions/runs/43834140215) SUCCESS。生产后端`lqg-backend:2c01b13`、5容器healthy，公网首页/新名称语言资源/包埋业务JS共3个文件SHA256与服务器逐一匹配；运行jar与上传jar摘要一致，实际EmbedExportVo/EmbedExportService字节码均含两处新名。首页SHA256 `8f61cc3e1cdfaccd7c71242503eb939fafe1ff239dbc07c8a6a92dab8a0d9795`。
+- **小程序阶段**：[miniapp-prod #43834140216](https://github.com/domestic-about/jiangxia/actions/runs/43834140216) SUCCESS，生产构建和接口/appid/mock、24页分享、193处组件事件守卫通过。ci机器人1上传开发版本1.0.1，描述「正式版 1.0.1（提交 2c01b1323378）」。**已上传开发版本，尚未提交微信审核或正式发布**。发布证据`/tmp/jiangxia-embed-labels-1116/release-verified.json`。
+- **清理**：只读验收未创建业务数据；本机验收端口18081/18082/19100释放，本项目原生验收窗口关闭、测试token清除，本批启动的4个开发容器恢复停止。没有修改或关闭其他项目的开发者工具窗口。
 - **决策**：✅ 接受。
 - **签字依据**：Kevin @ 2026-11-16（本次指令及甲方原图）。
 
