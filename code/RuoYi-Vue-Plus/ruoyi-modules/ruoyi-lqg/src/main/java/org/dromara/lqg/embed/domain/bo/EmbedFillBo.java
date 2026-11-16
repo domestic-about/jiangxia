@@ -44,11 +44,11 @@ public class EmbedFillBo implements Serializable {
     @Schema(description = "类器官来源类型（≤ 100 字）", maxLength = 100)
     private String organoidSourceType;
 
-    @Schema(description = "组织收样时间（新增时默认带样本的收样日期）")
+    @Schema(description = "组织/类器官收样时间（新增时默认带样本的收样日期）")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate tissueReceiveTime;
 
-    @Schema(description = "组织处理时间（新增时默认带样本处理时间的日期部分）")
+    @Schema(description = "组织/类器官处理时间（新增时默认带样本处理时间的日期部分）")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate tissueProcessTime;
 

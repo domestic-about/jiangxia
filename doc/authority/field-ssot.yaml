@@ -188,8 +188,8 @@ tables:
       - { name: paraffin_block_no, type: str, length: 64, nullable: true, unique: uk_embed_block_no, comment: "★ 石蜡块编号（如 E15-1-2026.07.29）：实验室手填、全库唯一（部分唯一索引不约束空值）；外部提交的送样在判有效前为空；对外展示包埋情况时用它，不用内部编号" }
       - { name: sample_type, type: str, length: 50, nullable: true, comment: "样本类型（自由文本，联想词来自字典 lqg_hint_sample_type）" }
       - { name: organoid_source_type, type: str, length: 100, nullable: true, comment: "类器官来源类型" }
-      - { name: tissue_receive_time, type: date, nullable: true, comment: "组织收样时间（默认带样本的收样日期，可改）" }
-      - { name: tissue_process_time, type: date, nullable: true, comment: "组织处理时间（默认带样本处理时间的日期部分，可改）" }
+      - { name: tissue_receive_time, type: date, nullable: true, comment: "组织/类器官收样时间（默认带样本的收样日期，可改）" }
+      - { name: tissue_process_time, type: date, nullable: true, comment: "组织/类器官处理时间（默认带样本处理时间的日期部分，可改）" }
       - { name: agarose_embed_time, type: date, nullable: true, comment: "琼脂糖包埋样本时间" }
       - { name: embed_by, type: str, length: 50, nullable: true, comment: "包埋人姓名（选人时的快照；CR-20261012-22 之前是手填文字）" }
       - { name: embed_by_id, type: id, nullable: true, comment: "包埋人 user_id（CR-20261012-22：从内部人员名单里选）" }

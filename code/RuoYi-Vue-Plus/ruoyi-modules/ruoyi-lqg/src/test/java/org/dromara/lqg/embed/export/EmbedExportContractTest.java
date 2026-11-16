@@ -73,8 +73,12 @@ class EmbedExportContractTest {
         "琼脂糖包埋样本时间", "包埋人", "脱水时间", "琼脂糖包埋样本送样时间", "石蜡包埋时间", "切片时间",
         "染色", "mark的表达情况", "操作人", "备注");
 
-    /** 导出表头 = 模板列 + 插入列（「种属」紧跟「样本编号」，CR-20261009-18）—— 按规则拼，不手抄 */
-    private static final List<String> EXPORT_HEADER = withInserted(HEADER, EmbedExportService.INSERTED_AFTER);
+    /** 导出表头 = 原模板仅两列改名（CR-20261116-32）+「样本编号」后插入「种属」—— 按规则拼，不手抄 */
+    private static final List<String> EXPORT_HEADER = withInserted(HEADER.stream().map(column -> switch (column) {
+        case "组织收样时间" -> "组织/类器官收样时间";
+        case "组织处理时间" -> "组织/类器官处理时间";
+        default -> column;
+    }).toList(), EmbedExportService.INSERTED_AFTER);
 
     private static List<String> withInserted(List<String> template, Map<String, String> insertedAfter) {
         List<String> out = new ArrayList<>(template);
@@ -83,7 +87,7 @@ class EmbedExportContractTest {
     }
 
     @Test
-    @DisplayName("① 导出视图 16 列、表头逐字同序，且与甲方模板原件第 1 行一致；没有顺手多带的列")
+    @DisplayName("① 导出17列：原模板两处改名并插入种属，保留其余列及顺序")
     void exportViewMatchesTemplate() {
         Map<Integer, String[]> byIndex = new TreeMap<>();
         for (Field field : EmbedExportVo.class.getDeclaredFields()) {
@@ -101,7 +105,7 @@ class EmbedExportContractTest {
             assertEquals(1, entry.getValue().length, "ExcelProperty value 应当只有一个列名");
             actual.add(entry.getValue()[0]);
         }
-        assertEquals(EXPORT_HEADER, actual, "导出视图表头 = 甲方模板 16 列逐字同序 + 「样本编号」后插入「种属」");
+        assertEquals(EXPORT_HEADER, actual, "导出视图表头 = 原模板两处改名 + 「样本编号」后插入「种属」");
         assertEquals(17, actual.size(), "模板 16 列 + 插入的「种属」= 17 列，不多不少");
 
         // 「mark的表达情况」这一格单独再断一次：顺手「修正」成 marker 会在这里红

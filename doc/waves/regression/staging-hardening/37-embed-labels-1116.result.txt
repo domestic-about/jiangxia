@@ -1,0 +1,30 @@
+2026-11-16 / CR-20261116-32
+User original screenshot read: rename embed tissue receive/process labels to
+组织/类器官收样时间, 组织/类器官处理时间 in workbench and miniapp.
+
+PASS source scope: internal forms/lists/read-only views/verify messages/validation messages,
+  web zh+en labels, backend API display annotations and actual XLSX headers.
+  JSON keys, database columns, field values/date format/autofill/getters and column order unchanged.
+  Original XLSX/template resource/migrations/readonly original requirements not edited.
+PASS tests: MP387, web142, EmbedExportContractTest5; MP vue-tsc.
+PASS builds: backend package, web build:dev, MP dev+production.
+PASS guards: share24pages, custom events82wxml/193bindings; authority415anchors x44tickets.
+PASS independent fresh-context QA embed_labels_1116_qa:
+  original screenshot and diff reviewed; independently69MP+27web tests passed.
+  Workbench both date headers125px/2 complete lines, drawer labels180px/1 complete line;
+  zero browser pageerrors. No layout adjustment needed.
+  Real web/mp exports17columns x5rows; full data equal; all70date cells compared with real API.
+  Header=original template two exact renames plus existing species insertion only.
+PASS native DevTools RC2.02.2607171/lib3.17.6, real localhost18081 requests:
+  mp-form.png visually confirms both full labels and autofilled2026-10-07 dates.
+  native-ledger.wxml actual rendered17headers: F/G exact new names.
+  native-header-proof.json actual F/G each120x52.39px,lineheight16.2px;
+  retained wrapping style provides two lines; no table layout code changed.
+Evidence limitation: SDK horizontal scroll timed out/shared native window was used by another project.
+  No date-column scroll screenshot claimed; mp-ledger.png is initial-column view only.
+  Computed white-space lookup returnednull, not asserted as runtime pre-line.
+  Independent QA judged text+geometry+native form+unchanged wrapping sufficient for this rename.
+No business records created/modified; no reseed performed.
+Evidence temporary/private: /tmp/jiangxia-embed-labels-1116,
+  /tmp/jiangxia-embed-labels-independent-1116.
+Release result recorded after real CI/production verification; MP upload is not formal release.

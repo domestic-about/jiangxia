@@ -91,12 +91,12 @@ public class Embed extends BaseEntity {
     private String organoidSourceType;
 
     /**
-     * 组织收样时间（新增时默认带样本的收样日期，可改）
+     * 组织/类器官收样时间（新增时默认带样本的收样日期，可改）
      */
     private LocalDate tissueReceiveTime;
 
     /**
-     * 组织处理时间（新增时默认带样本处理时间的日期部分，可改）
+     * 组织/类器官处理时间（新增时默认带样本处理时间的日期部分，可改）
      */
     private LocalDate tissueProcessTime;
 

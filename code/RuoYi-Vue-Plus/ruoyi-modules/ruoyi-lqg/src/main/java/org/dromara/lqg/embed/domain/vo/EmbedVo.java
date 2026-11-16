@@ -77,11 +77,11 @@ public class EmbedVo implements Serializable {
     @Schema(description = "类器官来源类型")
     private String organoidSourceType;
 
-    @Schema(description = "组织收样时间")
+    @Schema(description = "组织/类器官收样时间")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate tissueReceiveTime;
 
-    @Schema(description = "组织处理时间")
+    @Schema(description = "组织/类器官处理时间")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate tissueProcessTime;
 

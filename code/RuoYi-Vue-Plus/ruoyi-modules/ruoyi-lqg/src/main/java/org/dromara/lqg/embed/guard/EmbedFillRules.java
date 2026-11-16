@@ -85,8 +85,8 @@ public final class EmbedFillRules {
         labels.put("organoidSourceType", "类器官来源类型");
         labels.put("embedBy", "包埋人");
         labels.put("embedById", "包埋人");
-        labels.put("tissueReceiveTime", "组织收样时间");
-        labels.put("tissueProcessTime", "组织处理时间");
+        labels.put("tissueReceiveTime", "组织/类器官收样时间");
+        labels.put("tissueProcessTime", "组织/类器官处理时间");
         labels.put("agaroseEmbedTime", "琼脂糖包埋样本时间");
         labels.put("dehydrateTime", "脱水时间");
         labels.put("agaroseSendTime", "琼脂糖包埋样本送样时间");

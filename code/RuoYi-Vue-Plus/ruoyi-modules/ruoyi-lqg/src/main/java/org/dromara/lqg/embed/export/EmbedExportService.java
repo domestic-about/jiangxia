@@ -227,8 +227,8 @@ public class EmbedExportService {
         out.put("种属", 2);
         out.put("样本类型", 3);
         out.put("类器官来源类型", 4);
-        out.put("组织收样时间", 5);
-        out.put("组织处理时间", 6);
+        out.put("组织/类器官收样时间", 5);
+        out.put("组织/类器官处理时间", 6);
         out.put("琼脂糖包埋样本时间", 7);
         out.put("包埋人", 8);
         out.put("脱水时间", 9);

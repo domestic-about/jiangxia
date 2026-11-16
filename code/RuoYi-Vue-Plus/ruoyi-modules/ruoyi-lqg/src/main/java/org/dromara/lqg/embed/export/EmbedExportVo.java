@@ -19,7 +19,7 @@ import java.io.Serializable;
  *
  * <p>★ <b>16 列表头逐字、按序照模板原件</b>（{@code @ExcelProperty(index = …)} 的顺序 = 模板列序）：
  * <pre>
- * 石蜡块编号 / 样本编号 / 样本类型 / 类器官来源类型 / 组织收样时间 / 组织处理时间 /
+ * 石蜡块编号 / 样本编号 / 样本类型 / 类器官来源类型 / 组织/类器官收样时间 / 组织/类器官处理时间 /
  * 琼脂糖包埋样本时间 / 包埋人 / 脱水时间 / 琼脂糖包埋样本送样时间 / 石蜡包埋时间 / 切片时间 /
  * 染色 / mark的表达情况 / 操作人 / 备注
  * </pre>
@@ -64,10 +64,10 @@ public class EmbedExportVo implements Serializable {
     @ExcelProperty(value = "类器官来源类型", index = 4)
     private String organoidSourceType;
 
-    @ExcelProperty(value = "组织收样时间", index = 5)
+    @ExcelProperty(value = "组织/类器官收样时间", index = 5)
     private String tissueReceiveTime;
 
-    @ExcelProperty(value = "组织处理时间", index = 6)
+    @ExcelProperty(value = "组织/类器官处理时间", index = 6)
     private String tissueProcessTime;
 
     @ExcelProperty(value = "琼脂糖包埋样本时间", index = 7)

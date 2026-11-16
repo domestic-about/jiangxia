@@ -356,7 +356,7 @@ records:
       - id: FLOW:F-EMBED-01.step1
         label: 选样本建石蜡块
         actor: 内部人员(mp/admin)
-        action: 从有效样本里选一个（按内部编号搜）→ 填石蜡块编号（全库唯一）；样本类型、类器官来源类型手填；组织收样时间、组织处理时间从样本带出可改
+        action: 从有效样本里选一个（按内部编号搜）→ 填石蜡块编号（全库唯一）；样本类型、类器官来源类型手填；组织/类器官收样时间、组织/类器官处理时间从样本带出可改
         writes: [FIELD:t_lqg_embed.sample_id, FIELD:t_lqg_embed.paraffin_block_no, FIELD:t_lqg_embed.sample_type, FIELD:t_lqg_embed.organoid_source_type, FIELD:t_lqg_embed.tissue_receive_time, FIELD:t_lqg_embed.tissue_process_time]
         produces: 一条包埋记录，工序时间全空
       - id: FLOW:F-EMBED-01.step2

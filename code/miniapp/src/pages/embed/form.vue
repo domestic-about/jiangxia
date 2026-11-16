@@ -331,7 +331,7 @@ function formatMs(ms: number): string {
 
 /**
  * 选了样本：
- *   · 内部 → 带出组织收样时间 / 组织处理时间（可改；用户已经填过的不覆盖）；
+ *   · 内部 → 带出组织/类器官收样时间 / 组织/类器官处理时间（可改；用户已经填过的不覆盖）；
  *   · 外部 → 只记样本与送检单号（样本类型 / 类器官来源类型是外部自己填的两项）。
  */
 function onSamplePicked(sample: SampleLike) {

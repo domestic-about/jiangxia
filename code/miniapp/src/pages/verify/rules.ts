@@ -372,8 +372,8 @@ export type EmbedFillKey = (typeof EMBED_SUBMIT_KEYS)[number] | (typeof EMBED_LA
 export const EMBED_LABEL: Record<EmbedFillKey, string> = {
   sampleType: '样本类型',
   organoidSourceType: '类器官来源类型',
-  tissueReceiveTime: '组织收样时间',
-  tissueProcessTime: '组织处理时间',
+  tissueReceiveTime: '组织/类器官收样时间',
+  tissueProcessTime: '组织/类器官处理时间',
   agaroseEmbedTime: '琼脂糖包埋样本时间',
   embedBy: '包埋人',
   embedById: '包埋人',
