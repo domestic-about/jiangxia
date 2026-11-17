@@ -37,6 +37,10 @@
   3. 新增数据库可空receipt_kind及tissue/organoid检查约束。内部创建、补丁、核验有效的fill支持receiptKind；遗漏不改、显式null/空白清空、非法枚举400且无副作用。内部详情、列表、导出回读本条类别；外部提交/改提与外部VO不开放此实验室字段，核验无效时不得补填。
   4. 类器官小程序内部表单添加备注，创建/修改支持填写和清空；两端列表与Excel备注紧随操作人，Excel共10列（原7列+种属+代数+备注）。复用现有remark，不新增备注数据库列；工作台已有备注填写保持可用。
 - **影响下游**：field-ssot、ui-index、api-contract，双端表单/核验/列表与导出、migration及契约fixture；原始XLSX、只读requirements/confirmation及历史CR不改。
+- **验收**：小程序391、工作台142、后端31项通过；独立fresh-context QA复验API43、Web6、真实XLSX6份/29断言全部PASS。微信开发者工具真实本机接口验证两类别切换/保存/重开、日期保持、备注输入/保存/重开及实际18列表头，原生证据经独立QA目视核对。详见`38-receipt-1117.result.txt`。
+- **发布状态（2026-11-17）**：业务提交`4abc20a23f96`已推送main，[deploy-prod #44098429302](https://github.com/domestic-about/jiangxia/actions/runs/44098429302) SUCCESS。生产后端`lqg-backend:4abc20a`、5容器healthy；Flyway202611171000成功，可空receipt_kind及枚举约束已只读核对。运行jar与上传jarSHA256一致；实际类别读取映射、18列表头及类器官备注导出字节码通过，公网3个资源SHA256与服务器逐一匹配。
+- **小程序阶段**：[miniapp-prod #44098429368](https://github.com/domestic-about/jiangxia/actions/runs/44098429368) SUCCESS；24页分享、195处组件事件守卫通过，ci机器人1上传开发版本1.0.1，描述带提交`4abc20a23f96`。**已上传开发版本，尚未提交微信审核或正式发布**。
+- **清理**：全部自建QA业务记录已通过业务API删除并只读确认active0；未reseed、未改seed或生产业务数据。本项目原生测试token清除、验收窗口关闭；18081/18082/19100释放，本批启动的4个开发容器恢复停止。发布证据`/tmp/jiangxia-receipt-1117/production-proof.json`和`release-verified.json`。
 - **决策**：✅ 接受，修正CR-20261116-32的现行显示口径。
 - **签字依据**：Kevin @ 2026-11-17（本次明确指令；沿用测试通过直接提交部署的授权）。
 

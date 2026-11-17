@@ -37,3 +37,21 @@ Dev-only new migration comment corrected before production; identical SQL, only 
   checksum synchronized from -518877351 to -27330149. No previous migrations changed.
 Evidence private /tmp/jiangxia-receipt-1117, /tmp/jiangxia-receipt-independent-1117.
 Release verification and cleanup results appended after completion.
+
+PASS release commit4abc20a23f96a19b1572412e64dd0863936462c3 main.
+Deploy-prod44098429302 SUCCESS; backend lqg-backend:4abc20a, five healthy containers.
+Production read-only schema assertion: Flyway202611171000 success/checksum -27330149,
+  nullable varchar16 receipt_kind, tissue/organoid check constraint all present.
+Running/uploaded jar SHA256 equal; real embedded query class get/setReceiptKind,
+  embed export category+generic time headers and organoid export remark bytecode verified.
+Three public resource SHA256 match server; index
+  fa822790bd541b7fc9d42942382b8fc91638d39c711fb4c9ad4ce291e45a86cb.
+Miniapp-prod44098429368 SUCCESS, production guards24pages/195events PASS,
+  robot1 uploaded development version1.0.1 with exact commit4abc20a23f96.
+  WeChat audit and formal release remain manual/pending; no formal publication claimed.
+PASS cleanup: independent all own fixtures business-deleted, read-only active0; no seed/reseed.
+  Native own token removed/project closed; QA18081/18082/19100 free;
+  original four stopped dev containers restored stopped; generated tracked files restored.
+Final independent audit PASS /releaseReadiness READY/unresolved0 includes native visual review.
+No arbitrary Feishu row created or overwritten for this direct screenshot/change request.
+Production evidence /tmp/jiangxia-receipt-1117/production-proof.json, release-verified.json.
