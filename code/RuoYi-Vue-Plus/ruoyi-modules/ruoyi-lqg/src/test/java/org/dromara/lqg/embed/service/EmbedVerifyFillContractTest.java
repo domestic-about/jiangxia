@@ -286,7 +286,7 @@ class EmbedVerifyFillContractTest {
     void fillShapeIsPinned() {
         Set<String> fillFields = fields(EmbedFillBo.class);
         assertEquals(new LinkedHashSet<>(EmbedFillRules.ALL_KEYS), fillFields);
-        assertEquals(17, EmbedFillRules.ALL_KEYS.size());
+        assertEquals(18, EmbedFillRules.ALL_KEYS.size());
         assertTrue(EmbedFillRules.SUBMIT_KEYS.stream().noneMatch(EmbedFillRules.LAB_KEYS::contains), "两组不重叠");
         Set<String> submit = new LinkedHashSet<>();
         for (Class<?> k = EmbedSubmitBo.class; k != null && k != Object.class; k = k.getSuperclass()) {

@@ -44,10 +44,10 @@ const internalFields = fixture.internalFields as string[]
 const inserted = fixture.inserted as InsertedField[]
 
 describe('organoidLayout（fixture 驱动）', () => {
-  it('fixture 结构：9 例 / 外部 5 项 / 内部 9 项 / 不可改恰 5 例', () => {
+  it('fixture 结构：9 例 / 外部 5 项 / 内部 10 项 / 不可改恰 5 例', () => {
     expect(cases.length).toBe(9)
     expect(externalFields.length).toBe(5)
-    expect(internalFields.length).toBe(9)
+    expect(internalFields.length).toBe(10)
     expect(cases.filter(c => !c.expect.editable).length).toBe(5)
   })
 
@@ -65,7 +65,7 @@ describe('organoidLayout（fixture 驱动）', () => {
     const insertedKeys = inserted.map(i => i.field)
     expect(externalFields.filter(k => !insertedKeys.includes(k))).toEqual(['sourceUnitName', 'organoidType', 'remark'])
     expect(internalFields.filter(k => !insertedKeys.includes(k))).toEqual([
-      'sourceUnitName', 'organoidType', 'receiveDate', 'internalNo', 'processTime', 'hasViabilityReport', 'operatorName',
+      'sourceUnitName', 'organoidType', 'receiveDate', 'internalNo', 'processTime', 'hasViabilityReport', 'operatorName', 'remark',
     ])
   })
 

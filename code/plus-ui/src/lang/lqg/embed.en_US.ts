@@ -47,14 +47,15 @@ export default {
   },
 
   col: {
+    receiptKind: 'Receipt kind',
     submitSource: 'Source',
     verifyStatus: 'Verify status',
     paraffinBlockNo: 'Block no.',
     internalNo: 'Sample no.',
     sampleType: 'Sample type',
     organoidSourceType: 'Organoid source type',
-    tissueReceiveTime: 'Tissue/organoid receive time',
-    tissueProcessTime: 'Tissue/organoid process time',
+    tissueReceiveTime: 'Receive time',
+    tissueProcessTime: 'Process time',
     agaroseEmbedTime: 'Agarose embedding time',
     embedBy: 'Embedded by',
     dehydrateTime: 'Dehydration time',
@@ -96,6 +97,13 @@ export default {
   },
 
   drawer: {
+    receiptKind: 'Receipt kind',
+    receiptTissue: 'Tissue',
+    receiptOrganoid: 'Organoid',
+    tissueReceiveLabel: 'Tissue receive time',
+    tissueProcessLabel: 'Tissue process time',
+    organoidReceiveLabel: 'Organoid receive time',
+    organoidProcessLabel: 'Organoid process time',
     addTitle: 'New embedding record',
     editTitle: 'Edit embedding record',
     verifyTitle: 'Verify embedding submission',

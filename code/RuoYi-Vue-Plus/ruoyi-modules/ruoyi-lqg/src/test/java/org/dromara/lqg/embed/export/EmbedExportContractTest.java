@@ -75,8 +75,8 @@ class EmbedExportContractTest {
 
     /** 导出表头 = 原模板仅两列改名（CR-20261116-32）+「样本编号」后插入「种属」—— 按规则拼，不手抄 */
     private static final List<String> EXPORT_HEADER = withInserted(HEADER.stream().map(column -> switch (column) {
-        case "组织收样时间" -> "组织/类器官收样时间";
-        case "组织处理时间" -> "组织/类器官处理时间";
+        case "组织收样时间" -> "收样时间";
+        case "组织处理时间" -> "处理时间";
         default -> column;
     }).toList(), EmbedExportService.INSERTED_AFTER);
 
@@ -106,7 +106,7 @@ class EmbedExportContractTest {
             actual.add(entry.getValue()[0]);
         }
         assertEquals(EXPORT_HEADER, actual, "导出视图表头 = 原模板两处改名 + 「样本编号」后插入「种属」");
-        assertEquals(17, actual.size(), "模板 16 列 + 插入的「种属」= 17 列，不多不少");
+        assertEquals(18, actual.size(), "模板 16 列 + 插入的「种属」= 17 列，不多不少");
 
         // 「mark的表达情况」这一格单独再断一次：顺手「修正」成 marker 会在这里红
         assertTrue(actual.contains("mark的表达情况"), "第 14 列必须是「mark的表达情况」（甲方原件的写法）");
@@ -266,7 +266,7 @@ class EmbedExportContractTest {
     @DisplayName("⑤ 表头索引自检表与注解一致（给小程序导出复用）")
     void headerIndexTable() {
         Map<String, Integer> index = EmbedExportService.headerIndex();
-        assertEquals(17, index.size());
+        assertEquals(18, index.size());
         int i = 0;
         for (Map.Entry<String, Integer> entry : new LinkedHashMap<>(index).entrySet()) {
             assertEquals(i++, entry.getValue(), "headerIndex() 的顺序必须与模板列序一致");

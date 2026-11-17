@@ -349,6 +349,7 @@ export const EMBED_SUBMIT_KEYS = ['sampleType', 'organoidSourceType'] as const
  * 包埋人、操作人各是一对键：姓名 + 账号 id（`embedById` / `operatorId`，CR-20261012-22 从内部人员名单里选）。
  */
 export const EMBED_LAB_KEYS = [
+  'receiptKind',
   'tissueReceiveTime',
   'tissueProcessTime',
   'agaroseEmbedTime',
@@ -370,6 +371,7 @@ export type EmbedFillKey = (typeof EMBED_SUBMIT_KEYS)[number] | (typeof EMBED_LA
 
 /** 补填项的中文名（逐字对模板 C 的列名，与填写页同一组） */
 export const EMBED_LABEL: Record<EmbedFillKey, string> = {
+  receiptKind: '收样类别',
   sampleType: '样本类型',
   organoidSourceType: '类器官来源类型',
   tissueReceiveTime: '组织/类器官收样时间',

@@ -56,14 +56,15 @@ export default {
 
   // ── 表格列（模板 16 列 + 前面两个徽标列 + 操作） ────────────────────────────
   col: {
+    receiptKind: '收样类别',
     submitSource: '来源',
     verifyStatus: '核验状态',
     paraffinBlockNo: '石蜡块编号',
     internalNo: '样本编号',
     sampleType: '样本类型',
     organoidSourceType: '类器官来源类型',
-    tissueReceiveTime: '组织/类器官收样时间',
-    tissueProcessTime: '组织/类器官处理时间',
+    tissueReceiveTime: '收样时间',
+    tissueProcessTime: '处理时间',
     agaroseEmbedTime: '琼脂糖包埋样本时间',
     embedBy: '包埋人',
     dehydrateTime: '脱水时间',
@@ -110,6 +111,13 @@ export default {
 
   // ── 抽屉 ──────────────────────────────────────────────────────────────────
   drawer: {
+    receiptKind: '收样类别',
+    receiptTissue: '组织',
+    receiptOrganoid: '类器官',
+    tissueReceiveLabel: '组织收样时间',
+    tissueProcessLabel: '组织处理时间',
+    organoidReceiveLabel: '类器官收样时间',
+    organoidProcessLabel: '类器官处理时间',
     addTitle: '新增石蜡包埋记录',
     editTitle: '编辑石蜡包埋记录',
     verifyTitle: '核验石蜡包埋送样',

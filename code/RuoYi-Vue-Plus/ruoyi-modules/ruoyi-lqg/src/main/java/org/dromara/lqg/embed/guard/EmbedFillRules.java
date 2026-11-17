@@ -47,7 +47,7 @@ public final class EmbedFillRules {
      * （{@code embedById} / {@code operatorId}，CR-20261012-22 从内部人员名单里选）。
      */
     public static final List<String> LAB_KEYS = List.of(
-        "tissueReceiveTime", "tissueProcessTime", "agaroseEmbedTime", "embedBy", "embedById", "dehydrateTime",
+        "receiptKind", "tissueReceiveTime", "tissueProcessTime", "agaroseEmbedTime", "embedBy", "embedById", "dehydrateTime",
         "agaroseSendTime", "paraffinEmbedTime", "sectionTime", "stainTypes", "stainOther", "markers",
         "operatorName", "operatorId", "remark");
 
@@ -82,6 +82,7 @@ public final class EmbedFillRules {
     static {
         Map<String, String> labels = new LinkedHashMap<>();
         labels.put("sampleType", "样本类型");
+        labels.put("receiptKind", "收样类别");
         labels.put("organoidSourceType", "类器官来源类型");
         labels.put("embedBy", "包埋人");
         labels.put("embedById", "包埋人");
@@ -101,6 +102,15 @@ public final class EmbedFillRules {
         labels.put("sampleId", "所挂样本");
         labels.put("paraffinBlockNo", "石蜡块编号");
         LABELS = Collections.unmodifiableMap(labels);
+    }
+
+    public static String normalizeReceiptKind(String value) {
+        if (value == null || value.isBlank()) return null;
+        String kind = value.trim();
+        if (!List.of("tissue", "organoid").contains(kind)) {
+            throw new ServiceException("收样类别只能选择组织或类器官", 400);
+        }
+        return kind;
     }
 
     private EmbedFillRules() {

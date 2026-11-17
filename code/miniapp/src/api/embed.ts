@@ -28,6 +28,7 @@ import { wasEdited } from '@/utils/edited'
  * ★ `internalNo` 是**所挂样本的**内部编号（读时带出、不落库）—— 模板 C 的「样本编号」就是它。
  */
 export interface EmbedDetail extends EmbedRow {
+  receiptKind?: string | null
   internalNo?: string | null
   sourceUnitName?: string | null
   /** 所挂样本的种属（内部详情读时带出，CR-20261009-18；外部详情没有这个键） */
@@ -46,6 +47,7 @@ export interface EmbedDetail extends EmbedRow {
 
 /** 表格页那一行的形状（行仍来自 `/mp/int/embed/list`，字段名 = 模板 C 的列） */
 export type EmbedLedgerRow = LedgerRow & {
+  receiptKind?: string | null
   paraffinBlockNo?: string | null
   sampleId?: string | number | null
   internalNo?: string | null
@@ -81,6 +83,7 @@ export interface EmbedMarkerValue {
 
 /** 石蜡包埋表单值（内外部共用一份；外部只渲染其中的三项） */
 export interface EmbedFormValue {
+  receiptKind?: string
   /** 所挂样本 id（字符串形式，选项里给的就是字符串） */
   sampleId: string
   /** 选样本那一格显示什么（内部编号 / 送检单号）—— 只用于显示，不提交 */
@@ -112,6 +115,7 @@ export function emptyEmbedForm(): EmbedFormValue {
   return {
     sampleId: '',
     sampleLabel: '',
+    receiptKind: '',
     paraffinBlockNo: '',
     sampleType: '',
     organoidSourceType: '',
@@ -147,6 +151,7 @@ export function toEmbedFormValue(detail: Partial<EmbedDetail> | null | undefined
     sampleId: str(detail.sampleId),
     // 选样本那一格的显示值：内部是内部编号，外部（VO 里根本没有这个键）落到送检单号
     sampleLabel: sampleLabelOf(detail),
+    receiptKind: str(detail.receiptKind),
     paraffinBlockNo: str(detail.paraffinBlockNo),
     sampleType: str(detail.sampleType),
     organoidSourceType: str(detail.organoidSourceType),
@@ -208,6 +213,7 @@ function markersPayload(form: EmbedFormValue): Array<Record<string, unknown>> {
 export function internalEmbedPayload(form: EmbedFormValue): Record<string, unknown> {
   return {
     sampleId: form.sampleId,
+    receiptKind: form.receiptKind || null,
     paraffinBlockNo: form.paraffinBlockNo.trim(),
     sampleType: form.sampleType.trim(),
     organoidSourceType: form.organoidSourceType.trim(),
@@ -419,6 +425,7 @@ const EXPR_TEXT: Record<string, string> = { negative: '阴性', weak: '弱表达
 
 /** 数组 / 空值 → 单元格文案（空值给「—」，表格里留空白看不出「没有」还是「没加载」） */
 function cellText(row: EmbedLedgerRow, key: string): string {
+  if (key === 'receiptKind') return row.receiptKind === 'tissue' ? '组织' : row.receiptKind === 'organoid' ? '类器官' : '—'
   if (key === 'stainTypes') {
     const other = str(row.stainOther)
     const list = (row.stainTypes ?? []).filter(Boolean)

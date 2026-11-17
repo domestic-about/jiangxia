@@ -73,6 +73,7 @@ public class EmbedFillWriter {
         }
         EmbedFillRules.throwIfAny(EmbedFillRules.lengthViolations(body));
         EmbedFillBo bo = body.value();
+        if (body.has("receiptKind")) EmbedFillRules.normalizeReceiptKind(bo.getReceiptKind());
         List<String> stains = null;
         if (body.has("stainTypes")) {
             // 传了就整组替换（含 stainOther 的置空 / 必填；传 null / [] = 清空染色）
@@ -108,6 +109,7 @@ public class EmbedFillWriter {
         }
         // 其余标量：没传 = 不动；传了空值 = 清空（FIX V33：以前 null = 不动，日期清不掉）
         patch.set(prepared.has("sampleType"), Embed::getSampleType, trimToNull(bo.getSampleType()))
+            .set(prepared.has("receiptKind"), Embed::getReceiptKind, EmbedFillRules.normalizeReceiptKind(bo.getReceiptKind()))
             .set(prepared.has("organoidSourceType"), Embed::getOrganoidSourceType, trimToNull(bo.getOrganoidSourceType()))
             .set(prepared.has("tissueReceiveTime"), Embed::getTissueReceiveTime, bo.getTissueReceiveTime())
             .set(prepared.has("tissueProcessTime"), Embed::getTissueProcessTime, bo.getTissueProcessTime())

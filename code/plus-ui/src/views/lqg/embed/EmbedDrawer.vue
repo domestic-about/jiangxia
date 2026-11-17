@@ -94,8 +94,16 @@
         <div class="lqg-embed-drawer__section">{{ t('lqg.embed.drawer.sectionProcess') }}</div>
         <el-form label-width="180px">
           <el-row :gutter="12">
+            <el-col :span="24">
+              <el-form-item :label="t('lqg.embed.drawer.receiptKind')">
+                <el-radio-group v-model="form.receiptKind">
+                  <el-radio value="tissue">{{ t('lqg.embed.drawer.receiptTissue') }}</el-radio>
+                  <el-radio value="organoid">{{ t('lqg.embed.drawer.receiptOrganoid') }}</el-radio>
+                </el-radio-group>
+              </el-form-item>
+            </el-col>
             <el-col v-for="field in processFields" :key="field" :span="12">
-              <el-form-item :label="t('lqg.embed.drawer.' + field)">
+              <el-form-item :label="processLabel(field)">
                 <el-date-picker
                   v-model="form[field]"
                   type="date"
@@ -269,6 +277,14 @@ const { lqg_stain_type, lqg_marker_expr, lqg_verify_status } = toRefs<any>(
 type Mode = 'create' | 'edit' | 'verify';
 
 /** 七个工序时间（模板 16 列里的那七列） */
+function processLabel(field: string) {
+  if (field === 'tissueReceiveTime' || field === 'tissueProcessTime') {
+    const kind = form.value.receiptKind;
+    if (kind === 'tissue' || kind === 'organoid') return t(`lqg.embed.drawer.${kind}${field === 'tissueReceiveTime' ? 'ReceiveLabel' : 'ProcessLabel'}`);
+  }
+  return t('lqg.embed.drawer.' + field);
+}
+
 const processFields = [
   'tissueReceiveTime',
   'tissueProcessTime',
@@ -300,6 +316,7 @@ const emptyForm = (): EmbedForm & Partial<EmbedVO> => ({
   species: null,
   paraffinBlockNo: null,
   sampleType: null,
+  receiptKind: null,
   organoidSourceType: null,
   tissueReceiveTime: null,
   tissueProcessTime: null,
@@ -496,6 +513,7 @@ const fillPayload = (): EmbedFillForm => {
   const f = form.value;
   const body: EmbedFillForm = {
     sampleType: f.sampleType ?? null,
+    receiptKind: f.receiptKind ?? null,
     organoidSourceType: f.organoidSourceType ?? null,
     tissueReceiveTime: f.tissueReceiveTime ?? null,
     tissueProcessTime: f.tissueProcessTime ?? null,

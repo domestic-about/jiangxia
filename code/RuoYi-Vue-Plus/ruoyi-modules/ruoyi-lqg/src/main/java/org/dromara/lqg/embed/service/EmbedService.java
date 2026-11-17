@@ -112,6 +112,7 @@ public class EmbedService {
             Date now = new Date();
             Embed entity = new Embed();
             entity.setSampleId(bo.getSampleId());
+            entity.setReceiptKind(EmbedFillRules.normalizeReceiptKind(bo.getReceiptKind()));
             // 内部录入：来源 internal、状态直接 valid、提交人 = 核验人 = 当前用户
             entity.setSubmitSource("internal");
             entity.setSubmitterId(userId);

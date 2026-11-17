@@ -17,7 +17,7 @@ import java.io.Serializable;
  * {@code _input/templates/石蜡包埋送样记录模板.xlsx} 第 1 行逐字不等 → 红。
  * 甲方拿导出去对他们的旧台账，列名变了就对不上。
  *
- * <p>★ <b>16 列表头逐字、按序照模板原件</b>（{@code @ExcelProperty(index = …)} 的顺序 = 模板列序）：
+ * <p>★ <b>18 列 = 原16列 + 种属 + 收样类别；时间表头为收样时间/处理时间，其他列按模板原件</b>（{@code @ExcelProperty(index = …)} 的顺序 = 模板列序）：
  * <pre>
  * 石蜡块编号 / 样本编号 / 样本类型 / 类器官来源类型 / 组织/类器官收样时间 / 组织/类器官处理时间 /
  * 琼脂糖包埋样本时间 / 包埋人 / 脱水时间 / 琼脂糖包埋样本送样时间 / 石蜡包埋时间 / 切片时间 /
@@ -40,7 +40,7 @@ import java.io.Serializable;
  */
 @Data
 @ExcelIgnoreUnannotated
-@Schema(description = "石蜡包埋送样记录导出视图（16 列，与甲方模板逐字同序）")
+@Schema(description = "石蜡包埋送样记录导出视图（18列，原模板加种属/收样类别，两处时间改通用表头）")
 public class EmbedExportVo implements Serializable {
 
     @Serial
@@ -64,45 +64,48 @@ public class EmbedExportVo implements Serializable {
     @ExcelProperty(value = "类器官来源类型", index = 4)
     private String organoidSourceType;
 
-    @ExcelProperty(value = "组织/类器官收样时间", index = 5)
+    @ExcelProperty(value = "收样类别", index = 5)
+    private String receiptKind;
+
+    @ExcelProperty(value = "收样时间", index = 6)
     private String tissueReceiveTime;
 
-    @ExcelProperty(value = "组织/类器官处理时间", index = 6)
+    @ExcelProperty(value = "处理时间", index = 7)
     private String tissueProcessTime;
 
-    @ExcelProperty(value = "琼脂糖包埋样本时间", index = 7)
+    @ExcelProperty(value = "琼脂糖包埋样本时间", index = 8)
     private String agaroseEmbedTime;
 
-    @ExcelProperty(value = "包埋人", index = 8)
+    @ExcelProperty(value = "包埋人", index = 9)
     private String embedBy;
 
-    @ExcelProperty(value = "脱水时间", index = 9)
+    @ExcelProperty(value = "脱水时间", index = 10)
     private String dehydrateTime;
 
-    @ExcelProperty(value = "琼脂糖包埋样本送样时间", index = 10)
+    @ExcelProperty(value = "琼脂糖包埋样本送样时间", index = 11)
     private String agaroseSendTime;
 
-    @ExcelProperty(value = "石蜡包埋时间", index = 11)
+    @ExcelProperty(value = "石蜡包埋时间", index = 12)
     private String paraffinEmbedTime;
 
-    @ExcelProperty(value = "切片时间", index = 12)
+    @ExcelProperty(value = "切片时间", index = 13)
     private String sectionTime;
 
-    @ExcelProperty(value = "染色", index = 13)
+    @ExcelProperty(value = "染色", index = 14)
     @Schema(description = "中文标签顿号连接；其他（具体名称）；无染色")
     private String stain;
 
     /**
      * ★ 甲方模板原件里就是「mark的表达情况」（没有「er」）。
      */
-    @ExcelProperty(value = "mark的表达情况", index = 14)
+    @ExcelProperty(value = "mark的表达情况", index = 15)
     @Schema(description = "名称：表达，中文分号连接；没有名称的只写表达")
     private String markerExpression;
 
-    @ExcelProperty(value = "操作人", index = 15)
+    @ExcelProperty(value = "操作人", index = 16)
     private String operatorName;
 
-    @ExcelProperty(value = "备注", index = 16)
+    @ExcelProperty(value = "备注", index = 17)
     private String remark;
 
 }

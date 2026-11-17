@@ -60,7 +60,7 @@ public class EmbedExportService {
      * <b>插入列</b>（CR-20261009-18）：「种属」紧跟「样本编号」—— 读所挂样本的种属。
      * 模板列一个字不动，规则与 {@code SampleExportService.ORGANOID_INSERTED_AFTER} 同一条。
      */
-    public static final Map<String, String> INSERTED_AFTER = Map.of("种属", "样本编号");
+    public static final Map<String, String> INSERTED_AFTER = Map.of("种属", "样本编号", "收样类别", "类器官来源类型");
 
     /**
      * 多值之间的顿号（染色）。
@@ -109,6 +109,7 @@ public class EmbedExportService {
             vo.setSpecies(row.getSpecies());
             vo.setSampleType(row.getSampleType());
             vo.setOrganoidSourceType(row.getOrganoidSourceType());
+            vo.setReceiptKind("tissue".equals(row.getReceiptKind()) ? "组织" : "organoid".equals(row.getReceiptKind()) ? "类器官" : null);
             vo.setTissueReceiveTime(text(row.getTissueReceiveTime()));
             vo.setTissueProcessTime(text(row.getTissueProcessTime()));
             vo.setAgaroseEmbedTime(text(row.getAgaroseEmbedTime()));
@@ -218,7 +219,7 @@ public class EmbedExportService {
     }
 
     /**
-     * 导出的列名清单（{@code 17} 列 = 模板 16 列逐字同序，「样本编号」后插入「种属」）—— 给验收脚本 / 单测对表头用。
+     * 导出的列名清单（{@code 18} 列 = 原模板16列，插入种属和收样类别，两处时间使用通用表头）—— 给验收脚本 / 单测对表头用。
      */
     public static Map<String, Integer> headerIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
@@ -227,18 +228,19 @@ public class EmbedExportService {
         out.put("种属", 2);
         out.put("样本类型", 3);
         out.put("类器官来源类型", 4);
-        out.put("组织/类器官收样时间", 5);
-        out.put("组织/类器官处理时间", 6);
-        out.put("琼脂糖包埋样本时间", 7);
-        out.put("包埋人", 8);
-        out.put("脱水时间", 9);
-        out.put("琼脂糖包埋样本送样时间", 10);
-        out.put("石蜡包埋时间", 11);
-        out.put("切片时间", 12);
-        out.put("染色", 13);
-        out.put("mark的表达情况", 14);
-        out.put("操作人", 15);
-        out.put("备注", 16);
+        out.put("收样类别", 5);
+        out.put("收样时间", 6);
+        out.put("处理时间", 7);
+        out.put("琼脂糖包埋样本时间", 8);
+        out.put("包埋人", 9);
+        out.put("脱水时间", 10);
+        out.put("琼脂糖包埋样本送样时间", 11);
+        out.put("石蜡包埋时间", 12);
+        out.put("切片时间", 13);
+        out.put("染色", 14);
+        out.put("mark的表达情况", 15);
+        out.put("操作人", 16);
+        out.put("备注", 17);
         return out;
     }
 

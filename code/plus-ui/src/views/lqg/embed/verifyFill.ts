@@ -23,6 +23,7 @@ export const FILL_SUBMIT_KEYS = ['sampleType', 'organoidSourceType'] as const;
  * 包埋人、操作人各是一对键：姓名 + 账号 id（embedById / operatorId，CR-20261012-22 从内部人员名单里选）。
  */
 export const FILL_LAB_KEYS = [
+  'receiptKind',
   'tissueReceiveTime',
   'tissueProcessTime',
   'agaroseEmbedTime',

@@ -54,7 +54,7 @@ describe('补填段的两组键 = 后端 EmbedFillRules', () => {
   it('外部送样两项、实验室补填 15 项，与后端逐字同序', () => {
     expect([...FILL_SUBMIT_KEYS]).toEqual(backendList('SUBMIT_KEYS'));
     expect([...FILL_LAB_KEYS]).toEqual(backendList('LAB_KEYS'));
-    expect(FILL_SUBMIT_KEYS.length + FILL_LAB_KEYS.length).toBe(17);
+    expect(FILL_SUBMIT_KEYS.length + FILL_LAB_KEYS.length).toBe(18);
     expect(FILL_LAB_KEYS.some((k) => (FILL_SUBMIT_KEYS as readonly string[]).includes(k))).toBe(false);
   });
 });

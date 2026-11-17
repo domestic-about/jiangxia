@@ -46,6 +46,7 @@ export const INTERNAL_FIELDS = [
   'processTime',
   'hasViabilityReport',
   'operatorName',
+  'remark',
 ] as const
 
 export type OrganoidFieldKey = (typeof INTERNAL_FIELDS)[number] | (typeof EXTERNAL_FIELDS)[number]

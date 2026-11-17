@@ -5,6 +5,8 @@ import { emptyEmbedForm, toEmbedFormValue } from '@/api/embed'
 import { VERIFIED_EVENT, fetchVerifyEmbed, verifyEmbed } from '@/api/verify'
 import ErrorState from '@/components/lqg/ErrorState.vue'
 import FieldRow from '@/components/lqg/FieldRow.vue'
+import SegButtons from '@/components/lqg/SegButtons.vue'
+import { RECEIPT_OPTIONS, receiptTimeLabel } from '@/pages/embed/receipt'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import MarkerRows from '@/components/lqg/MarkerRows.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
@@ -329,10 +331,13 @@ onUnload(() => uni.$off(VERIFIED_EVENT, refreshSample))
           <text class="lqg-gl__x">可以顺手补填，判为有效时一起保存</text>
         </view>
         <view class="ve__group">
+          <FieldRow label="收样类别" control="seg">
+            <SegButtons v-model="form.receiptKind" :options="RECEIPT_OPTIONS" :disabled="saving || !isPendingNow" />
+          </FieldRow>
           <FieldRow
             v-for="key in PROCESS_KEYS"
             :key="key"
-            :label="EMBED_LABEL[key]"
+            :label="receiptTimeLabel(key, form.receiptKind, EMBED_LABEL[key])"
             :control="isDate(key) ? 'date' : key === 'embedBy' ? 'select' : 'text'"
             :maxlength="isDate(key) ? undefined : 50"
             :model-value="fieldValue(key)"

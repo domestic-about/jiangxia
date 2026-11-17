@@ -381,6 +381,7 @@ public class EmbedQueryService {
         }
         vo.setParaffinBlockNo(embed.getParaffinBlockNo());
         vo.setSampleType(embed.getSampleType());
+        vo.setReceiptKind(embed.getReceiptKind());
         vo.setOrganoidSourceType(embed.getOrganoidSourceType());
         vo.setTissueReceiveTime(embed.getTissueReceiveTime());
         vo.setTissueProcessTime(embed.getTissueProcessTime());

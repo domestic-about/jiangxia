@@ -139,14 +139,15 @@ const TEMPLATE: Record<SampleKind, SampleColumn[]> = {
     col('receiveDate', 'text', { width: 115, align: 'center' }),
     col('processTime', 'text', { width: 165, tooltip: true }),
     col('hasViabilityReport', 'flag', { width: 125, align: 'center' }),
-    col('operatorName', 'text', { width: 100, tooltip: true })
+    col('operatorName', 'text', { width: 100, tooltip: true }),
+    col('remark', 'text', { minWidth: 120, tooltip: true })
   ]
 };
 
-/** 后置管理列：模板里没有、工作台一直有的列（组织样本多一个「有无病理」，类器官多一个「备注」） */
+/** 后置管理列：模板里没有、工作台一直有的列（组织样本多一个「有无病理」；类器官备注已并入现行模板列） */
 const TAIL: Record<SampleKind, SampleColumn[]> = {
   tissue: [col('hasPathology', 'flag', { width: 105, align: 'center' })],
-  organoid: [col('remark', 'text', { minWidth: 120, tooltip: true })]
+  organoid: []
 };
 
 const COMMON_TAIL: SampleColumn[] = [

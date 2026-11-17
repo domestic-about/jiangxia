@@ -42,7 +42,7 @@ describe('类器官内部提交体', () => {
     // 别的字段一个都不能少（合并进 patch 之后是 12 个键：原来 9 个 + 代数 + 种属 + 操作人账号 id）
     expect(Object.keys(body).sort()).toEqual([
       'hasViabilityReport', 'internalNo', 'operatorId', 'operatorName', 'organoidType', 'passage',
-      'processTime', 'receiveDate', 'sampleKind', 'sourceUnitId', 'sourceUnitName', 'species',
+      'processTime', 'receiveDate', 'remark', 'sampleKind', 'sourceUnitId', 'sourceUnitName', 'species',
     ])
   })
 
@@ -51,7 +51,7 @@ describe('类器官内部提交体', () => {
     expect(body).not.toHaveProperty('sampleKind')
     expect(Object.keys(body).sort()).toEqual([
       'hasViabilityReport', 'internalNo', 'operatorId', 'operatorName', 'organoidType', 'passage',
-      'processTime', 'receiveDate', 'sourceUnitId', 'sourceUnitName', 'species',
+      'processTime', 'receiveDate', 'remark', 'sourceUnitId', 'sourceUnitName', 'species',
     ])
     // 数值 / 空值口径不变：选了单位 id 就带 id，处理时间 T → 空格
     expect(body.sourceUnitId).toBe(9000009002)
@@ -98,6 +98,14 @@ describe('类器官收样记录的代数', () => {
     expect(internalOrganoidPatch(f).species).toBe('鼠兔')
     expect(internalOrganoidPayload(f).species).toBe('鼠兔')
     expect(externalOrganoidPayload(f).species).toBe('鼠兔')
+  })
+
+  it('内部新增和修改保存备注，清空时仍带键', () => {
+    const f = filled()
+    expect(internalOrganoidPayload(f).remark).toBe('备注')
+    expect(internalOrganoidPatch(f).remark).toBe('备注')
+    f.remark = '  '
+    expect(internalOrganoidPatch(f)).toHaveProperty('remark', '')
   })
 
   it('清空代数也要发这个键（空串）：补丁语义里「没带 = 不改」，不发就清不掉', () => {

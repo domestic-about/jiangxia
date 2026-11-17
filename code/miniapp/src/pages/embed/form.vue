@@ -30,6 +30,8 @@ type SampleLike = SampleRow & { receiveDate?: string | null, processTime?: strin
 import EmbedCard from '@/components/lqg/EmbedCard.vue'
 import ErrorState from '@/components/lqg/ErrorState.vue'
 import FieldRow from '@/components/lqg/FieldRow.vue'
+import SegButtons from '@/components/lqg/SegButtons.vue'
+import { RECEIPT_OPTIONS, receiptTimeLabel } from './receipt'
 import LoadingState from '@/components/lqg/LoadingState.vue'
 import NoteBar from '@/components/lqg/NoteBar.vue'
 import StatusChip from '@/components/lqg/StatusChip.vue'
@@ -118,7 +120,7 @@ const layout = computed(() => embedLayout(identity.value, verifyStatus.value, mi
 const editable = computed(() => layout.value.editable)
 // 有没保存的改动时按返回先问一句（UX 测试 MP-04）：加载完、可写时记基线
 const leave = useLeaveGuard(() => form.value, () => !loading.value && !failed.value && editable.value)
-const specs = computed<EmbedFieldSpec[]>(() => fieldSpecs(layout.value, editable.value))
+const specs = computed<EmbedFieldSpec[]>(() => fieldSpecs(layout.value, editable.value).map(spec => ({ ...spec, label: receiptTimeLabel(spec.key, form.value.receiptKind, spec.label) })))
 const groups = computed(() => groupSpecs(specs.value))
 /** 只读页右上角的「修改」（CR-20260918-07）：内部 + 这条记录内部可改 */
 const showEditEntry = computed(() => layout.value.showEditEntry)
@@ -455,6 +457,9 @@ async function submit() {
       <view v-for="group in groups" :key="group.key" class="emb__grp">
         <view class="lqg-gl">{{ group.title }}</view>
         <view class="emb__group">
+          <FieldRow v-if="group.key === 'process' && isInternal" label="收样类别" control="seg" :readonly="false">
+            <SegButtons v-model="form.receiptKind" :options="RECEIPT_OPTIONS" :disabled="!editable" />
+          </FieldRow>
           <template v-for="spec in group.specs" :key="spec.key">
             <view v-if="spec.control === 'stain'" class="emb__block">
               <text class="emb__block-t">{{ spec.label }}</text>

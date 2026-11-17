@@ -62,10 +62,10 @@ class SampleExportContractTest {
     @DisplayName("① 两个导出视图的列数 / 列名 / 列序：模板列逐字对甲方原件第 1 行，两张都在「来源单位」后插入「种属」，organoid 另在「类器官类型」后插入「代数」")
     void exportViewsMatchTemplates() {
         assertEquals(15, annotatedHeader(SampleTissueExportVo.class).size(), "tissue = 模板 14 列 + 插入的「种属」");
-        assertEquals(9, annotatedHeader(SampleOrganoidExportVo.class).size(), "organoid = 模板 7 列 + 插入的「种属」「代数」");
+        assertEquals(10, annotatedHeader(SampleOrganoidExportVo.class).size(), "organoid = 模板 7 列 + 插入的「种属」「代数」");
         assertEquals(TISSUE_HEADER, annotatedHeader(SampleTissueExportVo.class));
         assertEquals(ORGANOID_HEADER, annotatedHeader(SampleOrganoidExportVo.class));
-        assertEquals(List.of("来源单位", "种属", "类器官类型", "代数", "收样日期", "内部编号", "处理时间", "细胞活率报告", "操作人"),
+        assertEquals(List.of("来源单位", "种属", "类器官类型", "代数", "收样日期", "内部编号", "处理时间", "细胞活率报告", "操作人", "备注"),
             ORGANOID_HEADER, "插入规则拼出来的表头（防呆：规则本身写反了也要红）");
         assertEquals(List.of("来源单位", "种属", "供体姓名", "性别", "年龄", "住院号", "组织类型", "收样日期", "内部编号",
             "有无固定", "处理时间", "质控表", "细胞活率报告", "操作人", "备注"), TISSUE_HEADER);
@@ -99,6 +99,7 @@ class SampleExportContractTest {
         filled.setSpecies("鼠兔");
         filled.setOrganoidType("结直肠类器官");
         filled.setPassage("P4");
+        filled.setRemark("类器官备注保留");
         filled.setInternalNo("T-oco01");
         org.dromara.lqg.sample.domain.vo.SampleVo blank = new org.dromara.lqg.sample.domain.vo.SampleVo();
         blank.setOrganoidType("肝类器官");
@@ -113,6 +114,8 @@ class SampleExportContractTest {
             };
         List<SampleOrganoidExportVo> out = new SampleExportService(rows).organoidRowsOf(null);
         assertEquals("P4", out.get(0).getPassage());
+        assertEquals("类器官备注保留", out.get(0).getRemark());
+        assertNull(out.get(1).getRemark());
         assertEquals("结直肠类器官", out.get(0).getOrganoidType());
         assertNull(out.get(1).getPassage(), "没填代数 = 空格子");
     }
@@ -125,7 +128,7 @@ class SampleExportContractTest {
             assertTrue(!tissue.contains(banned), "「样本记录信息表」不该出现「" + banned + "」这一列");
         }
         List<String> organoid = annotatedHeader(SampleOrganoidExportVo.class);
-        for (String banned : List.of("供体姓名", "性别", "年龄", "住院号", "组织类型", "有无固定", "质控表", "备注",
+        for (String banned : List.of("供体姓名", "性别", "年龄", "住院号", "组织类型", "有无固定", "质控表",
             "送检单号", "核验状态", "有无病理")) {
             assertTrue(!organoid.contains(banned), "「类器官收样记录」不该出现「" + banned + "」这一列");
         }

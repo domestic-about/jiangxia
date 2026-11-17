@@ -1,0 +1,39 @@
+2026-11-17 / CR-20261117-33 / final user correction: add column.
+Final scope:
+- Manual receiptKind tissue/organoid on each embed record in web/MP internal form and valid verify fill.
+- New receipt category column after organoid source type in web/MP tables and exports;
+  date headers exactly 收样时间 / 处理时间. Embed export18 columns.
+- Selected form labels use 组织 or 类器官 prefix, switching keeps date values.
+- Historical null stays unselected, no inference/backfill; associated sample kind does not override selection.
+- Organoid internal MP remark create/edit/clear; web/MP tables and exports contain remark.
+  Organoid export10 columns, remark after operator. Original XLSX templates untouched.
+PASS root tests MP391, web142, backend31 (including new read-assembly regression), MP typecheck.
+Web full vue-tsc has53 existing baseline errors; none in changed files. No claim whole web types clean.
+PASS builds backend package, web development, MP development+production; config/artifact release guards.
+PASS MP share24 pages; component event guard82 WXML /195 bindings.
+PASS authority416 anchors x44 tickets, xref87/87 requirements and151/176 written fields.
+Authority diff/impact include unconsumed earlier-batch differences; snapshot refused42 changes,
+  no forced snapshot or rewriting completed historical ticket evidence.
+PASS fresh-context independent receipt_1117_qa:
+- MP78, web32, backend31 tests independently run.
+- API43: real create/patch/verify readbacks, clear/omitted/null/invalid kind400 no side effects,
+  external403/injected category protection, conflicting sample-kind/date preservation.
+- Web6: actual radio clicks, both category save/reopen, unchanged dates, notes edit/reopen,
+  actual two export-button downloads, no browser page errors.
+- Six real XLSX files /29 assertions: both API clients + actual web button downloads;
+  original-template-derived exact18/10 headers, category Chinese values and remarks, data equality.
+Initial QA found missing receiptKind in manual EmbedQueryService.toVo; fixed before release,
+  regression tests tissue/organoid/null and conflict with associated sample. Retest PASS.
+PASS native DevTools RC2.02.2607171/lib3.17.6, current dev build, real localhost18081:
+- Actual SegButtons taps tissue/organoid; complete selected date labels/screenshots, dates Nov7/8 unchanged.
+- Both categories saved and reopened with correct selection (native-embed-proof.json).
+- Actual native textarea input via CUA + save, reopen remark 原生验收备注1117;
+  screenshot/WXML confirm persisted value (native-organoid-remark-reopened.*).
+- Actual native ledger rendered category and generic date headers (native-ledger.wxml).
+Native initially failed URL allowlist in new QA project; reused own prior trusted QA project
+  acceptance-1116 rebuilt with current code, same isolated19470 port, no request/identity mocks.
+No reseed, no seed/business data mutations except own disposable QA fixtures.
+Dev-only new migration comment corrected before production; identical SQL, only its local Flyway
+  checksum synchronized from -518877351 to -27330149. No previous migrations changed.
+Evidence private /tmp/jiangxia-receipt-1117, /tmp/jiangxia-receipt-independent-1117.
+Release verification and cleanup results appended after completion.

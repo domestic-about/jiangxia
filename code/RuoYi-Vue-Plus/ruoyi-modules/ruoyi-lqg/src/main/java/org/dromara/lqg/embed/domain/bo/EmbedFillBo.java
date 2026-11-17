@@ -41,6 +41,9 @@ public class EmbedFillBo implements Serializable {
     @Schema(description = "样本类型（≤ 50 字）", maxLength = 50)
     private String sampleType;
 
+    /** 手动选择的收样类别；tissue / organoid，历史未选择为null。 */
+    private String receiptKind;
+
     @Schema(description = "类器官来源类型（≤ 100 字）", maxLength = 100)
     private String organoidSourceType;
 

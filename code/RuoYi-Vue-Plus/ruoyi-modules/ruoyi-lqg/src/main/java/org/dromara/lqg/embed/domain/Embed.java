@@ -85,6 +85,9 @@ public class Embed extends BaseEntity {
      */
     private String sampleType;
 
+    /** 手动选择的收样类别；tissue / organoid，历史未选择为null。 */
+    private String receiptKind;
+
     /**
      * 类器官来源类型
      */

@@ -118,6 +118,7 @@ export function internalOrganoidPatch(form: OrganoidFormValue): Record<string, u
     operatorName: form.operatorName.trim(),
     // 操作人账号 id（CR-20261012-22）：与姓名是一对，后端带了 id 以它为准
     operatorId: personIdOf(form.operatorId),
+    remark: form.remark.trim(),
   }
 }
 

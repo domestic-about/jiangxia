@@ -74,6 +74,9 @@ public class EmbedVo implements Serializable {
     @Schema(description = "样本类型")
     private String sampleType;
 
+    /** 手动选择的收样类别；tissue / organoid，历史未选择为null。 */
+    private String receiptKind;
+
     @Schema(description = "类器官来源类型")
     private String organoidSourceType;
 

@@ -1,5 +1,7 @@
 package org.dromara.lqg.embed.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,6 +45,33 @@ class EmbedQueryContractTest {
     @BeforeAll
     static void initLambdaCache() {
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), Embed.class);
+    }
+
+    @Test
+    @DisplayName("收样类别从本条记录回读，不从关联样本推断；列表、详情和导出共用装配")
+    void receiptKindSurvivesReadAssembly() throws Exception {
+        var resolver = new org.dromara.lqg.sample.service.SampleNameResolver(null);
+        var service = new EmbedQueryService(null, null, null, resolver);
+        var method = EmbedQueryService.class.getDeclaredMethod("toVo", Embed.class,
+            org.dromara.lqg.sample.domain.Sample.class, java.util.List.class, Long.class);
+        method.setAccessible(true);
+        var sample = new org.dromara.lqg.sample.domain.Sample();
+        sample.setSampleKind("organoid");
+        var row = new Embed();
+        row.setReceiptKind("tissue");
+        row.setTissueReceiveTime(java.time.LocalDate.of(2026, 11, 17));
+        var result = (org.dromara.lqg.embed.domain.vo.EmbedVo)
+            method.invoke(service, row, sample, java.util.List.of(), null);
+        assertEquals("tissue", result.getReceiptKind());
+        assertEquals(row.getTissueReceiveTime(), result.getTissueReceiveTime());
+        row.setReceiptKind("organoid");
+        result = (org.dromara.lqg.embed.domain.vo.EmbedVo)
+            method.invoke(service, row, sample, java.util.List.of(), null);
+        assertEquals("organoid", result.getReceiptKind());
+        row.setReceiptKind(null);
+        result = (org.dromara.lqg.embed.domain.vo.EmbedVo)
+            method.invoke(service, row, sample, java.util.List.of(), null);
+        assertNull(result.getReceiptKind());
     }
 
     private static EmbedQueryBo query() {

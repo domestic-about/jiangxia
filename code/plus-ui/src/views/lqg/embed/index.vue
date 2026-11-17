@@ -178,6 +178,9 @@
         <el-table-column align="center" :label="t('lqg.embed.col.organoidSourceType')" prop="organoidSourceType" min-width="140" :show-overflow-tooltip="true">
           <template #default="scope">{{ scope.row.organoidSourceType || '—' }}</template>
         </el-table-column>
+        <el-table-column align="center" :label="t('lqg.embed.col.receiptKind')" width="110">
+          <template #default="scope">{{ scope.row.receiptKind === 'tissue' ? t('lqg.embed.drawer.receiptTissue') : scope.row.receiptKind === 'organoid' ? t('lqg.embed.drawer.receiptOrganoid') : '—' }}</template>
+        </el-table-column>
         <el-table-column align="center" :label="t('lqg.embed.col.tissueReceiveTime')" prop="tissueReceiveTime" width="125">
           <template #default="scope">{{ scope.row.tissueReceiveTime || '—' }}</template>
         </el-table-column>

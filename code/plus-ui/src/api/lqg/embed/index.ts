@@ -49,6 +49,7 @@ export interface EmbedVO {
   sampleKind?: string | null;
   /** 外部送样在核验前为空 */
   paraffinBlockNo?: string | null;
+  receiptKind?: string | null;
   sampleType?: string | null;
   organoidSourceType?: string | null;
   tissueReceiveTime?: string | null;
@@ -122,6 +123,7 @@ export interface EmbedQuery {
  *   是同一个形状、后端同一份规则（EmbedFillWriter）；补丁语义：没带的键不动、带了空值清空、markers 带了就整组替换。
  */
 export interface EmbedFillForm {
+  receiptKind?: string | null;
   sampleType?: string | null;
   organoidSourceType?: string | null;
   tissueReceiveTime?: string | null;

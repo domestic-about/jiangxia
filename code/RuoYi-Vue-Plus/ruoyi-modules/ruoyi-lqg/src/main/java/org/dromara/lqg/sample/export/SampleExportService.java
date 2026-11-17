@@ -37,7 +37,7 @@ import java.util.Map;
  * （内部编号、有无固定等还没填的格子留空）—— ticket §2。
  *
  * <p>★ <b>两张表是同一张 {@code t_lqg_sample} 的两个视图</b>（ADR-0010）：tissue 14 列、
- * organoid 8 列（模板 7 列 + 插入的「代数」，CR-20260924-10），列集不同（见两个导出 VO）。
+ * organoid 10 列（原模板7列 + 种属 + 代数 + 备注，CR-20261117-33），列集不同（见两个导出 VO）。
  *
  * <p>★ <b>格式钉死</b>（accept 1 逐格断的）：
  * <ul>
@@ -116,7 +116,8 @@ public class SampleExportService {
      */
     public static final Map<String, String> ORGANOID_INSERTED_AFTER = insertedAfter(
         "种属", "来源单位",
-        "代数", "类器官类型");
+        "代数", "类器官类型",
+        "备注", "操作人");
 
     /**
      * 「样本记录信息表」的<b>插入列</b>（CR-20261009-18）：「种属」紧跟「来源单位」。
@@ -197,6 +198,7 @@ public class SampleExportService {
             vo.setProcessTime(dateTimeText(row.getProcessTime()));
             vo.setHasViabilityReport(flagText(row.getHasViabilityReport()));
             vo.setOperatorName(row.getOperatorName());
+            vo.setRemark(row.getRemark());
             out.add(vo);
         }
         return out;
@@ -309,7 +311,7 @@ public class SampleExportService {
     }
 
     /**
-     * 「类器官收样记录」的列名清单（{@code 9} 列 = 模板 7 列逐字同序，「来源单位」后插入「种属」、「类器官类型」后插入「代数」）。
+     * 「类器官收样记录」的列名清单（{@code 10} 列 = 原模板7列，加种属、代数、操作人后的备注）。
      */
     public static Map<String, Integer> organoidHeaderIndex() {
         Map<String, Integer> out = new LinkedHashMap<>();
@@ -322,6 +324,7 @@ public class SampleExportService {
         out.put("处理时间", 6);
         out.put("细胞活率报告", 7);
         out.put("操作人", 8);
+        out.put("备注", 9);
         return out;
     }
 

@@ -13,10 +13,10 @@ import java.io.Serializable;
  *
  * <p>★★ <b>与 {@link SampleTissueExportVo} 是同一张 {@code t_lqg_sample} 的两个视图</b>
  * （ADR-0010：一张表承载两种收样记录）：组织样本导 14 列，类器官导 8 列，<b>列集不同</b>
- * （类器官没有供体段、没有固定 / 质控表 / 备注）。拿 tissue 的 VO 导 organoid
+ * （类器官没有供体段、没有固定 / 质控表）。拿 tissue 的 VO 导 organoid
  * → 表头与 {@code _input/templates/类器官收样记录模板.xlsx} 逐字不等红；反过来也一样。
  *
- * <p>★ <b>8 列 = 模板原件 7 列逐字、按序 + 在「类器官类型」后插入「代数」</b>：
+ * <p>★ <b>10 列 = 原模板7列 + 种属 + 代数 + 操作人后的备注</b>：
  * <pre>
  * 来源单位 / 类器官类型 / 代数 / 收样日期 / 内部编号 / 处理时间 / 细胞活率报告 / 操作人
  * </pre>
@@ -33,7 +33,7 @@ import java.io.Serializable;
  */
 @Data
 @ExcelIgnoreUnannotated
-@Schema(description = "类器官收样记录导出视图（模板 7 列逐字同序 + 在「类器官类型」后插入「代数」）")
+@Schema(description = "类器官收样记录导出视图（10列，原模板加种属、代数、备注）")
 public class SampleOrganoidExportVo implements Serializable {
 
     @Serial
@@ -75,5 +75,8 @@ public class SampleOrganoidExportVo implements Serializable {
 
     @ExcelProperty(value = "操作人", index = 8)
     private String operatorName;
+
+    @ExcelProperty(value = "备注", index = 9)
+    private String remark;
 
 }
